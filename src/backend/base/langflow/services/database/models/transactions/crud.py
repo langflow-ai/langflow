@@ -10,6 +10,7 @@ from langflow.services.database.models.transactions.model import (
     TransactionReadResponse,
     TransactionTable,
 )
+from langflow.services.database.utils import materialize_subquery
 from langflow.services.deps import get_settings_service
 
 
@@ -57,10 +58,12 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
         delete_older = delete(TransactionTable).where(
             TransactionTable.flow_id == transaction.flow_id,
             col(TransactionTable.id).in_(
-                select(TransactionTable.id)
-                .where(TransactionTable.flow_id == transaction.flow_id)
-                .order_by(col(TransactionTable.timestamp).desc())
-                .offset(max_entries - 1)  # Keep newest max_entries-1 plus the one we're adding
+                materialize_subquery(
+                    select(TransactionTable.id)
+                    .where(TransactionTable.flow_id == transaction.flow_id)
+                    .order_by(col(TransactionTable.timestamp).desc())
+                    .offset(max_entries - 1)  # Keep newest max_entries-1 plus the one we're adding
+                )
             ),
         )
 

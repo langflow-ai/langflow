@@ -15,6 +15,7 @@ from sqlmodel import JSON, Column, Field, SQLModel
 from langflow.schema.content_block import ContentType
 from langflow.schema.properties import Properties
 from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
+from langflow.services.database.utils import skip_index_on_mysql
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -193,15 +194,21 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         # Session lists group a flow's messages by session_id and take MAX(timestamp);
         # with all three columns in the index that is an index-only scan.
         Index("ix_message_flow_id_session_id_timestamp", "flow_id", "session_id", "timestamp"),
-        Index(
-            "ix_message_session_metadata_tenant",
-            text("(session_metadata->>'tenant_id')"),
-            postgresql_using="btree",
+        # JSON expression index: not supported by MariaDB, skipped there.
+        skip_index_on_mysql(
+            Index(
+                "ix_message_session_metadata_tenant",
+                text("(session_metadata->>'tenant_id')"),
+                postgresql_using="btree",
+            )
         ),
-        Index(
-            "ix_message_session_metadata_user",
-            text("(session_metadata->>'user_id')"),
-            postgresql_using="btree",
+        # JSON expression index: not supported by MariaDB, skipped there.
+        skip_index_on_mysql(
+            Index(
+                "ix_message_session_metadata_user",
+                text("(session_metadata->>'user_id')"),
+                postgresql_using="btree",
+            )
         ),
     )
 

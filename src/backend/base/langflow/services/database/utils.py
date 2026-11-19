@@ -2,16 +2,145 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 from alembic.util.exc import CommandError
 from lfx.log.logger import logger
+from sqlalchemy import Index, Select, inspect, select, tuple_, update
 from sqlmodel import text
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 if TYPE_CHECKING:
+    from collections.abc import Callable, Mapping, Sequence
+
+    from sqlalchemy import ColumnElement, Insert, Table
+    from sqlalchemy.ext.asyncio import AsyncSession as SAAsyncSession
+
     from langflow.services.database.service import DatabaseService
+
+
+SKIP_ON_MYSQL_INFO_KEY = "langflow_skip_on_mysql"
+
+
+def _is_not_mysql(_ddl: object, _target: object, bind: object, **kw: object) -> bool:
+    dialect = kw.get("dialect") or getattr(bind, "dialect", None)
+    # SQLAlchemy uses the "mysql" dialect name for MariaDB as well.
+    return getattr(dialect, "name", None) != "mysql"
+
+
+def skip_index_on_mysql(index: Index) -> Index:
+    """Keep a PostgreSQL/SQLite-only index (e.g. an expression index) off MySQL/MariaDB.
+
+    MariaDB cannot create expression indexes such as ``lower(col)`` or
+    ``json_col->>'key'``. ``ddl_if`` skips the CREATE INDEX there, and the
+    ``info`` marker lets ``alembic/env.py`` skip the index during autogenerate,
+    so ``alembic check`` does not report it as missing.
+    """
+    index.info[SKIP_ON_MYSQL_INFO_KEY] = True
+    return index.ddl_if(callable_=_is_not_mysql)
+
+
+def materialize_subquery(stmt: Select) -> Select:
+    """Wrap a LIMIT/OFFSET subquery so it can feed ``IN``/``NOT IN`` on MySQL/MariaDB.
+
+    MariaDB rejects ``col IN (SELECT ... LIMIT n)`` (error 1235). Selecting from
+    a derived table is accepted everywhere and is equivalent on PostgreSQL and
+    SQLite. Because the derived table has a LIMIT/OFFSET it is always
+    materialized, which also avoids MySQL's "can't specify target table for
+    update in FROM clause" (error 1093) when a DELETE reads its own table.
+    """
+    derived = stmt.subquery()
+    return select(*derived.c)
+
+
+async def update_returning(
+    session: SAAsyncSession,
+    model: type[Any],
+    *where: ColumnElement[bool],
+    values: Mapping[str, Any],
+) -> list[Any]:
+    """Run ``UPDATE model SET values WHERE where`` and return the updated ORM rows.
+
+    Uses ``UPDATE ... RETURNING`` where the dialect supports it (PostgreSQL,
+    SQLite). MariaDB and MySQL do not, so there the matching rows are locked
+    with ``SELECT ... FOR UPDATE``, updated by primary key and read back in the
+    same transaction. The lock keeps it as atomic as the single statement: a
+    concurrent writer waits for this transaction and then re-evaluates its own
+    WHERE clause against the committed values.
+    """
+    if session.get_bind().dialect.update_returning:
+        statement = (
+            update(model)
+            .where(*where)
+            .values(**values)
+            .returning(model)
+            .execution_options(synchronize_session=False, populate_existing=True)
+        )
+        return list((await session.execute(statement)).scalars().all())
+
+    primary_key = inspect(model).primary_key
+    keys = (await session.execute(select(*primary_key).where(*where).with_for_update())).all()
+    if not keys:
+        return []
+    if len(primary_key) == 1:
+        by_key = primary_key[0].in_([key[0] for key in keys])
+    else:
+        by_key = tuple_(*primary_key).in_([tuple(key) for key in keys])
+    await session.execute(update(model).where(by_key).values(**values).execution_options(synchronize_session=False))
+    reread = select(model).where(by_key).execution_options(populate_existing=True)
+    return list((await session.execute(reread)).scalars().all())
+
+
+def _dialect_insert(dialect_name: str) -> Callable[[Table], Insert]:
+    """Return the dialect ``insert()`` construct that supports upserts."""
+    if dialect_name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert
+    elif dialect_name == "mysql":
+        from sqlalchemy.dialects.mysql import insert
+    else:
+        from sqlalchemy.dialects.sqlite import insert
+    return insert
+
+
+def upsert(
+    dialect_name: str,
+    table: Any,
+    values: Mapping[str, Any],
+    *,
+    index_elements: Sequence[str],
+    set_: Callable[[Any], Mapping[str, Any]],
+) -> Insert:
+    """Build an INSERT that updates the existing row when ``index_elements`` conflict.
+
+    ``set_`` receives the proposed row (``excluded`` on PostgreSQL/SQLite,
+    ``inserted`` on MySQL/MariaDB, which use ``ON DUPLICATE KEY UPDATE``) and
+    returns the column assignments.
+    """
+    statement = _dialect_insert(dialect_name)(table).values(**values)
+    if dialect_name == "mysql":
+        return statement.on_duplicate_key_update(dict(set_(statement.inserted)))
+    return statement.on_conflict_do_update(index_elements=list(index_elements), set_=dict(set_(statement.excluded)))
+
+
+def insert_ignoring_conflicts(
+    dialect_name: str,
+    table: Any,
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    index_elements: Sequence[str] | None = None,
+) -> Insert:
+    """Build an INSERT that skips rows that conflict with an existing one.
+
+    MySQL/MariaDB have no ``ON CONFLICT DO NOTHING``. Assigning a key column to
+    itself on duplicate key is the no-op equivalent; ``INSERT IGNORE`` is not
+    used because it would also turn unrelated errors into warnings.
+    """
+    statement = _dialect_insert(dialect_name)(table).values(list(rows))
+    if dialect_name == "mysql":
+        key = next(iter(getattr(table, "__table__", table).primary_key.columns))
+        return statement.on_duplicate_key_update({key.name: key})
+    return statement.on_conflict_do_nothing(index_elements=list(index_elements) if index_elements else None)
 
 
 async def initialize_database(*, fix_migration: bool = False) -> None:

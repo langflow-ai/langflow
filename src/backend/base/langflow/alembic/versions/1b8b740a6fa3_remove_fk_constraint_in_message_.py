@@ -59,8 +59,33 @@ def constraint_exists(constraint_name: str, conn) -> bool:
     return False
 
 
+def _replace_table(conn, table_name: str, temp_table_name: str) -> None:
+    """Drop ``table_name`` and rename ``temp_table_name`` into its place.
+
+    PostgreSQL drops dependent foreign keys with CASCADE. MySQL/MariaDB have no
+    DROP TABLE ... CASCADE and refuse to drop a referenced table, so foreign key
+    checks are suspended instead; InnoDB foreign keys reference the parent by
+    name and re-attach to the rebuilt table once it is renamed back.
+    """
+    if conn.dialect.name == "postgresql":
+        op.execute(f'DROP TABLE "{table_name}" CASCADE')
+        op.rename_table(temp_table_name, table_name)
+    elif conn.dialect.name == "mysql":
+        op.execute("SET FOREIGN_KEY_CHECKS=0")
+        try:
+            op.drop_table(table_name)
+            op.rename_table(temp_table_name, table_name)
+        finally:
+            op.execute("SET FOREIGN_KEY_CHECKS=1")
+    else:
+        op.drop_table(table_name)
+        op.rename_table(temp_table_name, table_name)
+
+
 def upgrade() -> None:
     conn = op.get_bind()
+    # Dialect-aware quoting: ANSI double quotes are string literals on MySQL/MariaDB.
+    q = conn.dialect.identifier_preparer.quote_identifier
 
     # For SQLite, we need to recreate the tables without the constraints
     # This approach preserves all data while removing the constraints
@@ -94,12 +119,12 @@ def upgrade() -> None:
         # Filter out rows where the original 'id' (vertex id) is NULL, as the new table requires it.
         op.execute(
             f"""
-            INSERT INTO "{temp_table_name}" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
+            INSERT INTO {q(temp_table_name)} (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
             SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid
             FROM (
                 SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid,
                        ROW_NUMBER() OVER (PARTITION BY build_id ORDER BY timestamp) as rn
-                FROM "vertex_build"
+                FROM {q("vertex_build")}
                 WHERE id IS NOT NULL -- Ensure vertex id is not NULL
             ) sub
             WHERE rn = 1
@@ -107,11 +132,7 @@ def upgrade() -> None:
         )
 
         # Drop original table and rename temp table
-        if conn.dialect.name == "postgresql":
-            op.execute('DROP TABLE "vertex_build" CASCADE')
-        else:
-            op.drop_table("vertex_build")
-        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "vertex_build"')
+        _replace_table(conn, "vertex_build", temp_table_name)
 
     # 2. Handle transaction table
     if migration.table_exists("transaction", conn):
@@ -142,22 +163,18 @@ def upgrade() -> None:
         # Copy data - explicitly list columns and filter out rows where id is NULL
         op.execute(
             f"""
-            INSERT INTO "{temp_table_name}" (
+            INSERT INTO {q(temp_table_name)} (
                 timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
             )
             SELECT
                 timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
-            FROM "transaction"
+            FROM {q("transaction")}
             WHERE id IS NOT NULL
         """
         )
 
         # Drop original table and rename temp table
-        if conn.dialect.name == "postgresql":
-            op.execute('DROP TABLE "transaction" CASCADE')
-        else:
-            op.drop_table("transaction")
-        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "transaction"')
+        _replace_table(conn, "transaction", temp_table_name)
 
     # 3. Handle message table
     if migration.table_exists("message", conn):
@@ -192,29 +209,27 @@ def upgrade() -> None:
         # Copy data - explicitly list columns and filter out rows where id is NULL
         op.execute(
             f"""
-            INSERT INTO "{temp_table_name}" (
+            INSERT INTO {q(temp_table_name)} (
                 timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit,
                 properties, category, content_blocks
             )
             SELECT
                 timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit,
                 properties, category, content_blocks
-            FROM "message"
+            FROM {q("message")}
             WHERE id IS NOT NULL
         """
         )
 
         # Drop original table and rename temp table
-        if conn.dialect.name == "postgresql":
-            op.execute('DROP TABLE "message" CASCADE')
-        else:
-            op.drop_table("message")
-        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "message"')
+        _replace_table(conn, "message", temp_table_name)
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
     conn = op.get_bind()
+    # Dialect-aware quoting: ANSI double quotes are string literals on MySQL/MariaDB.
+    q = conn.dialect.identifier_preparer.quote_identifier
 
     # Recreate tables with constraints
     # 1. Handle vertex_build table
@@ -255,12 +270,12 @@ def downgrade() -> None:
         # No need to filter by 'id' here as the target column allows NULLs.
         op.execute(
             f"""
-            INSERT INTO "{temp_table_name}" (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
+            INSERT INTO {q(temp_table_name)} (timestamp, id, data, artifacts, params, build_id, flow_id, valid)
             SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid
             FROM (
                 SELECT timestamp, id, data, artifacts, params, build_id, flow_id, valid,
                        ROW_NUMBER() OVER (PARTITION BY build_id ORDER BY timestamp) as rn
-                FROM "vertex_build"
+                FROM {q("vertex_build")}
                 WHERE build_id IS NOT NULL -- Ensure primary key is not NULL
             ) sub
             WHERE rn = 1
@@ -268,11 +283,7 @@ def downgrade() -> None:
         )
 
         # Drop original table and rename temp table
-        if conn.dialect.name == "postgresql":
-            op.execute('DROP TABLE "vertex_build" CASCADE')
-        else:
-            op.drop_table("vertex_build")
-        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "vertex_build"')
+        _replace_table(conn, "vertex_build", temp_table_name)
 
     # 2. Handle transaction table
     if migration.table_exists("transaction", conn):
@@ -311,22 +322,18 @@ def downgrade() -> None:
         # Copy data - explicitly list columns and filter out rows where id is NULL
         op.execute(
             f"""
-            INSERT INTO "{temp_table_name}" (
+            INSERT INTO {q(temp_table_name)} (
                 timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
             )
             SELECT
                 timestamp, vertex_id, target_id, inputs, outputs, status, id, flow_id, error
-            FROM "transaction"
+            FROM {q("transaction")}
             WHERE id IS NOT NULL
         """
         )
 
         # Drop original table and rename temp table
-        if conn.dialect.name == "postgresql":
-            op.execute('DROP TABLE "transaction" CASCADE')
-        else:
-            op.drop_table("transaction")
-        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "transaction"')
+        _replace_table(conn, "transaction", temp_table_name)
 
     # 3. Handle message table
     if migration.table_exists("message", conn):
@@ -369,22 +376,18 @@ def downgrade() -> None:
         # Copy data - explicitly list columns and filter out rows where id is NULL
         op.execute(
             f"""
-            INSERT INTO "{temp_table_name}" (
+            INSERT INTO {q(temp_table_name)} (
                 timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit,
                 properties, category, content_blocks
             )
             SELECT
                 timestamp, sender, sender_name, session_id, text, id, flow_id, files, error, edit,
                 properties, category, content_blocks
-            FROM "message"
+            FROM {q("message")}
             WHERE id IS NOT NULL
         """
         )
 
         # Drop original table and rename temp table
-        if conn.dialect.name == "postgresql":
-            op.execute('DROP TABLE "message" CASCADE')
-        else:
-            op.drop_table("message")
-        op.execute(f'ALTER TABLE "{temp_table_name}" RENAME TO "message"')
+        _replace_table(conn, "message", temp_table_name)
     # ### end Alembic commands ###

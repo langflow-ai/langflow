@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlencode, urlsplit
 from uuid import uuid4
 
-from sqlalchemy import update
 from sqlmodel import col
 
 from langflow.services.auth import utils as auth_utils
@@ -23,6 +22,7 @@ from langflow.services.database.models.connection import Connection, ConnectionS
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
 from langflow.services.database.models.connection.schemas import ConnectionStatusReason
 from langflow.services.database.models.user.model import User
+from langflow.services.database.utils import update_returning
 from langflow.services.deps import session_scope
 
 if TYPE_CHECKING:
@@ -104,17 +104,15 @@ async def bind_desktop_browser(*, provider: str, state: str, handoff: str) -> tu
     async with session_scope() as session:
         # An atomic rotation both reserves the SQLite write transaction and
         # prevents a second worker or replay from obtaining a binding cookie.
-        consumed = await session.execute(
-            update(ConnectionOAuth)
-            .where(
-                col(ConnectionOAuth.state_digest) == digest(state),
-                col(ConnectionOAuth.browser_digest) == _handoff_digest(handoff),
-                col(ConnectionOAuth.expires_at) > datetime.now(timezone.utc),
-            )
-            .values(browser_digest=digest(browser))
-            .returning(ConnectionOAuth)
+        consumed = await update_returning(
+            session,
+            ConnectionOAuth,
+            col(ConnectionOAuth.state_digest) == digest(state),
+            col(ConnectionOAuth.browser_digest) == _handoff_digest(handoff),
+            col(ConnectionOAuth.expires_at) > datetime.now(timezone.utc),
+            values={"browser_digest": digest(browser)},
         )
-        binding = consumed.scalar_one_or_none()
+        binding = consumed[0] if consumed else None
         if binding is None:
             msg = "OAuth browser handoff is invalid, expired, or already used."
             raise OAuthError(msg)
@@ -149,16 +147,14 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
     # Commit consumption separately, including when the provider rejects an expired
     # code or PKCE verifier. No request failure can roll the state back into use.
     async with session_scope() as session:
-        consumed = await session.execute(
-            update(ConnectionOAuth)
-            .where(
-                col(ConnectionOAuth.state_digest) == digest(state),
-                col(ConnectionOAuth.browser_digest) == digest(browser),
-            )
-            .values(state_digest=None, browser_digest=None)
-            .returning(ConnectionOAuth)
+        consumed = await update_returning(
+            session,
+            ConnectionOAuth,
+            col(ConnectionOAuth.state_digest) == digest(state),
+            col(ConnectionOAuth.browser_digest) == digest(browser),
+            values={"state_digest": None, "browser_digest": None},
         )
-        binding = consumed.scalar_one_or_none()
+        binding = consumed[0] if consumed else None
         if binding is None:
             msg = "OAuth callback is invalid, expired, or already used."
             raise OAuthError(msg)

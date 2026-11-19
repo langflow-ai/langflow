@@ -10,6 +10,7 @@ Phase: EXPAND
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
@@ -29,8 +30,8 @@ def upgrade() -> None:
     if not migration.table_exists("a2a_tasks", conn):
         op.create_table(
             "a2a_tasks",
-            sa.Column("id", sa.String(), nullable=False),
-            sa.Column("owner", sa.String(), nullable=False),
+            sa.Column("id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
+            sa.Column("owner", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("task", _JSON, nullable=False),
             sa.PrimaryKeyConstraint("id", "owner"),
         )

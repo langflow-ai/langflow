@@ -244,3 +244,37 @@ async def test_create_db_and_tables_skips_lock_on_sqlite():
 
     locked_mock.assert_not_called()
     async_engine.begin.assert_called_once()
+
+
+_MYSQL_URL = "mysql+aiomysql://user:pwd@host:3306/langflow"
+
+
+def test_mysql_url_takes_a_named_lock_on_a_sync_driver():
+    """MySQL/MariaDB serialise migrations with GET_LOCK, the counterpart of the PG advisory lock."""
+    engine_mock, conn_mock = _engine_with_conn(scalar_returns=True)
+
+    with (
+        patch(_CREATE_ENGINE_PATH, return_value=engine_mock) as create_engine_mock,
+        _postgres_migration_lock(_MYSQL_URL),
+    ):
+        mid_block_calls = _executed_sql(conn_mock).copy()
+
+    create_engine_mock.assert_called_once_with("mysql+pymysql://user:pwd@host:3306/langflow")
+    assert mid_block_calls == ["SELECT GET_LOCK('langflow_migrations', 0)"]
+    assert _executed_sql(conn_mock) == [
+        "SELECT GET_LOCK('langflow_migrations', 0)",
+        "SELECT RELEASE_LOCK('langflow_migrations')",
+    ]
+
+
+def test_mysql_lock_is_released_when_the_migration_fails():
+    engine_mock, conn_mock = _engine_with_conn(scalar_returns=True)
+
+    with (
+        patch(_CREATE_ENGINE_PATH, return_value=engine_mock),
+        pytest.raises(_BoomError),
+        _postgres_migration_lock(_MYSQL_URL),
+    ):
+        raise _BoomError(_BOOM_MESSAGE)
+
+    assert _executed_sql(conn_mock)[-1] == "SELECT RELEASE_LOCK('langflow_migrations')"

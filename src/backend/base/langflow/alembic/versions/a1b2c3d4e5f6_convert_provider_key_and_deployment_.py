@@ -46,6 +46,7 @@ window is needed.
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from langflow.utils import migration
 
@@ -78,6 +79,26 @@ def _backfill_to_string(conn, table: str, src: str, dst: str) -> None:
     op.execute(sa.text(f"UPDATE {table} SET {dst} = {cast} WHERE {src} IS NOT NULL AND {dst} IS NULL"))  # noqa: S608
 
 
+def _drop_mysql_indexes_on(conn, table: str, column: str) -> None:
+    """Drop the indexes that still cover ``column`` before it is dropped on MySQL/MariaDB.
+
+    PostgreSQL silently drops constraints that include a dropped column, but
+    MariaDB refuses the DROP COLUMN (error 1072) while a multi-column index
+    still references it. The unique constraint involved is recreated by the
+    next migration (8255e9fc18d9) when it is missing.
+    """
+    if conn.dialect.name != "mysql":
+        return
+    for index in sa.inspect(conn).get_indexes(table):
+        if column in index.get("column_names", []):
+            op.drop_index(index["name"], table_name=table)
+
+
+def _mysql_only(conn, type_: sa.types.TypeEngine) -> sa.types.TypeEngine | None:
+    """MySQL/MariaDB need the column type to rename it (CHANGE COLUMN); others keep the original call."""
+    return type_ if conn.dialect.name == "mysql" else None
+
+
 def upgrade() -> None:
     conn = op.get_bind()
 
@@ -98,9 +119,15 @@ def upgrade() -> None:
         # CONTRACT — index ops outside batch to avoid SQLite column-lookup
         # race inside _gather_indexes_from_both_tables.
         op.drop_index(_IX_PROVIDER_KEY, table_name=PROVIDER_ACCOUNT_TABLE)
+        _drop_mysql_indexes_on(conn, PROVIDER_ACCOUNT_TABLE, "provider_key")
         with op.batch_alter_table(PROVIDER_ACCOUNT_TABLE, schema=None) as batch_op:
             batch_op.drop_column("provider_key")
-            batch_op.alter_column("provider_key_v2", new_column_name="provider_key", nullable=False)
+            batch_op.alter_column(
+                "provider_key_v2",
+                new_column_name="provider_key",
+                existing_type=_mysql_only(conn, provider_key_enum),
+                nullable=False,
+            )
         op.create_index(_IX_PROVIDER_KEY, PROVIDER_ACCOUNT_TABLE, ["provider_key"])
 
     # --- deployment_type: String -> Enum ---
@@ -113,9 +140,15 @@ def upgrade() -> None:
         _backfill_to_enum(conn, DEPLOYMENT_TABLE, "deployment_type", "deployment_type_v2", DEPLOYMENT_TYPE_ENUM_NAME)
         # CONTRACT
         op.drop_index(_IX_DEPLOYMENT_TYPE, table_name=DEPLOYMENT_TABLE)
+        _drop_mysql_indexes_on(conn, DEPLOYMENT_TABLE, "deployment_type")
         with op.batch_alter_table(DEPLOYMENT_TABLE, schema=None) as batch_op:
             batch_op.drop_column("deployment_type")
-            batch_op.alter_column("deployment_type_v2", new_column_name="deployment_type", nullable=True)
+            batch_op.alter_column(
+                "deployment_type_v2",
+                new_column_name="deployment_type",
+                existing_type=_mysql_only(conn, deployment_type_enum),
+                nullable=True,
+            )
         op.create_index(_IX_DEPLOYMENT_TYPE, DEPLOYMENT_TABLE, ["deployment_type"])
 
 
@@ -126,24 +159,38 @@ def downgrade() -> None:
     if migration.column_exists(DEPLOYMENT_TABLE, "deployment_type", conn) and not migration.column_exists(
         DEPLOYMENT_TABLE, "deployment_type_v2", conn
     ):
-        op.add_column(DEPLOYMENT_TABLE, sa.Column("deployment_type_v2", sa.String(), nullable=True))
+        op.add_column(
+            DEPLOYMENT_TABLE, sa.Column("deployment_type_v2", sqlmodel.sql.sqltypes.AutoString(), nullable=True)
+        )
         _backfill_to_string(conn, DEPLOYMENT_TABLE, "deployment_type", "deployment_type_v2")
         op.drop_index(_IX_DEPLOYMENT_TYPE, table_name=DEPLOYMENT_TABLE)
         with op.batch_alter_table(DEPLOYMENT_TABLE, schema=None) as batch_op:
             batch_op.drop_column("deployment_type")
-            batch_op.alter_column("deployment_type_v2", new_column_name="deployment_type", nullable=True)
+            batch_op.alter_column(
+                "deployment_type_v2",
+                new_column_name="deployment_type",
+                existing_type=sa.String().with_variant(sa.String(255), "mysql"),
+                nullable=True,
+            )
         op.create_index(_IX_DEPLOYMENT_TYPE, DEPLOYMENT_TABLE, ["deployment_type"])
 
     # --- provider_key: Enum -> String ---
     if migration.column_exists(PROVIDER_ACCOUNT_TABLE, "provider_key", conn) and not migration.column_exists(
         PROVIDER_ACCOUNT_TABLE, "provider_key_v2", conn
     ):
-        op.add_column(PROVIDER_ACCOUNT_TABLE, sa.Column("provider_key_v2", sa.String(), nullable=True))
+        op.add_column(
+            PROVIDER_ACCOUNT_TABLE, sa.Column("provider_key_v2", sqlmodel.sql.sqltypes.AutoString(), nullable=True)
+        )
         _backfill_to_string(conn, PROVIDER_ACCOUNT_TABLE, "provider_key", "provider_key_v2")
         op.drop_index(_IX_PROVIDER_KEY, table_name=PROVIDER_ACCOUNT_TABLE)
         with op.batch_alter_table(PROVIDER_ACCOUNT_TABLE, schema=None) as batch_op:
             batch_op.drop_column("provider_key")
-            batch_op.alter_column("provider_key_v2", new_column_name="provider_key", nullable=False)
+            batch_op.alter_column(
+                "provider_key_v2",
+                new_column_name="provider_key",
+                existing_type=sa.String().with_variant(sa.String(255), "mysql"),
+                nullable=False,
+            )
         op.create_index(_IX_PROVIDER_KEY, PROVIDER_ACCOUNT_TABLE, ["provider_key"])
 
     sa.Enum(*DEPLOYMENT_TYPE_VALUES, name=DEPLOYMENT_TYPE_ENUM_NAME).drop(conn, checkfirst=True)

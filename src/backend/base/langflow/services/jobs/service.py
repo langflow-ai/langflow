@@ -34,6 +34,7 @@ from langflow.services.database.models.jobs.model import (
     JobType,
     SignalType,
 )
+from langflow.services.database.utils import upsert
 from langflow.services.deps import session_scope
 from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, DuplicateJobError, PauseRequested
 
@@ -432,14 +433,12 @@ class JobService(Service):
         # one pause boundary) never collide on UNIQUE(job_id, kind) — no read-then-insert race to log.
         now = datetime.now(timezone.utc)
         async with session_scope() as session:
-            if session.get_bind().dialect.name == "postgresql":
-                from sqlalchemy.dialects.postgresql import insert as _dialect_insert
-            else:
-                from sqlalchemy.dialects.sqlite import insert as _dialect_insert
-            stmt = (
-                _dialect_insert(JobCheckpoint)
-                .values(id=uuid4(), job_id=job_id, kind=kind, blob=blob, created_at=now, updated_at=now)
-                .on_conflict_do_update(index_elements=["job_id", "kind"], set_={"blob": blob, "updated_at": now})
+            stmt = upsert(
+                session.get_bind().dialect.name,
+                JobCheckpoint,
+                {"id": uuid4(), "job_id": job_id, "kind": kind, "blob": blob, "created_at": now, "updated_at": now},
+                index_elements=["job_id", "kind"],
+                set_=lambda _new: {"blob": blob, "updated_at": now},
             )
             await session.exec(stmt)
 

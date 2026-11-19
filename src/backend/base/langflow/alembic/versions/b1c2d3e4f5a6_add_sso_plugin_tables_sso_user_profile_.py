@@ -32,7 +32,12 @@ def upgrade() -> None:
             sa.Column("enabled", sa.Boolean(), nullable=False),
             sa.Column("enforce_sso", sa.Boolean(), nullable=False),
             sa.Column("client_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
-            sa.Column("client_secret_encrypted", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
+            # TEXT on MySQL/MariaDB: the envelope grows with the secret (see _SSOClientSecretEnvelope).
+            sa.Column(
+                "client_secret_encrypted",
+                sqlmodel.sql.sqltypes.AutoString().with_variant(sa.Text(), "mysql"),
+                nullable=True,
+            ),
             sa.Column("discovery_url", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("redirect_uri", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
             sa.Column("scopes", sqlmodel.sql.sqltypes.AutoString(), nullable=True),

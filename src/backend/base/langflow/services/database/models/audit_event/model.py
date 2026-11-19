@@ -78,7 +78,15 @@ class AuditEvent(SQLModel, table=True):  # type: ignore[call-arg]
         Index("ix_audit_events_timeline", "timestamp", "id"),
         Index("ix_audit_events_user_timeline", "user_id", "timestamp"),
         Index("ix_audit_events_actor_timeline", "actor_type", "actor_id", "timestamp"),
-        Index("ix_audit_events_acting_timeline", "acting_issuer", "acting_subject", "timestamp"),
+        # acting_issuer is VARCHAR(2048): MySQL/MariaDB cap an index key at 3072 bytes
+        # (768 utf8mb4 chars), so index a prefix there. Ignored by other dialects.
+        Index(
+            "ix_audit_events_acting_timeline",
+            "acting_issuer",
+            "acting_subject",
+            "timestamp",
+            mysql_length={"acting_issuer": 255, "acting_subject": 255},
+        ),
         Index("ix_audit_events_request_id", "request_id"),
     )
 

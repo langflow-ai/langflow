@@ -10,6 +10,7 @@ Phase: EXPAND
 from __future__ import annotations
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from langflow.utils import migration
 
@@ -21,7 +22,7 @@ depends_on = None
 _TABLE = "transaction"
 _COLUMNS = (
     ("user_id", sa.Uuid()),
-    ("session_id", sa.String()),
+    ("session_id", sqlmodel.sql.sqltypes.AutoString()),
 )
 
 

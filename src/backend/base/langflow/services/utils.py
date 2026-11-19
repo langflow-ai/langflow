@@ -22,7 +22,7 @@ from langflow.services.cache.base import ExternalAsyncBaseCacheService
 from langflow.services.cache.factory import CacheServiceFactory
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
-from langflow.services.database.utils import initialize_database
+from langflow.services.database.utils import initialize_database, materialize_subquery
 from langflow.services.schema import ServiceType
 
 from .deps import get_auth_service, get_db_service, get_service, get_settings_service, session_scope
@@ -559,9 +559,11 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         # Delete transactions using bulk delete
         delete_stmt = delete(TransactionTable).where(
             col(TransactionTable.id).in_(
-                select(TransactionTable.id)
-                .order_by(col(TransactionTable.timestamp).desc())
-                .offset(settings_service.settings.max_transactions_to_keep)
+                materialize_subquery(
+                    select(TransactionTable.id)
+                    .order_by(col(TransactionTable.timestamp).desc())
+                    .offset(settings_service.settings.max_transactions_to_keep)
+                )
             )
         )
 
@@ -629,9 +631,11 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         # Delete vertex builds using bulk delete
         delete_stmt = delete(VertexBuildTable).where(
             col(VertexBuildTable.id).in_(
-                select(VertexBuildTable.id)
-                .order_by(col(VertexBuildTable.timestamp).desc())
-                .offset(settings_service.settings.max_vertex_builds_to_keep)
+                materialize_subquery(
+                    select(VertexBuildTable.id)
+                    .order_by(col(VertexBuildTable.timestamp).desc())
+                    .offset(settings_service.settings.max_vertex_builds_to_keep)
+                )
             )
         )
 

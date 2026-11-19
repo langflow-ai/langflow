@@ -10,6 +10,7 @@ Phase: EXPAND
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from langflow.utils import migration
 
@@ -34,7 +35,9 @@ def upgrade() -> None:
         # The application layer enforces NOT NULL via the _DeploymentTypeColumn
         # TypeDecorator on the Deployment model — no row can be persisted
         # without a valid DeploymentType value.
-        op.add_column(DEPLOYMENT_TABLE, sa.Column(DEPLOYMENT_TYPE_COLUMN, sa.String(), nullable=True))
+        op.add_column(
+            DEPLOYMENT_TABLE, sa.Column(DEPLOYMENT_TYPE_COLUMN, sqlmodel.sql.sqltypes.AutoString(), nullable=True)
+        )
         op.create_index(op.f("ix_deployment_deployment_type"), DEPLOYMENT_TABLE, [DEPLOYMENT_TYPE_COLUMN])
 
     if not migration.column_exists(DEPLOYMENT_TABLE, DESCRIPTION_COLUMN, conn):
@@ -49,7 +52,7 @@ def upgrade() -> None:
         sa.Column("user_id", sa.Uuid(), nullable=False),
         sa.Column("flow_version_id", sa.Uuid(), nullable=False),
         sa.Column("deployment_id", sa.Uuid(), nullable=False),
-        sa.Column("provider_snapshot_id", sa.String(), nullable=True),
+        sa.Column("provider_snapshot_id", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
         sa.Column(
             "created_at",
             sa.DateTime(timezone=True),

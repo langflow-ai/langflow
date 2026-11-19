@@ -5,11 +5,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from sqlalchemy import case, union_all
-from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlmodel import col, func, select
 
 from langflow.services.database.models.jobs.model import Job, JobEvent, JobMetricTotals, JobStatus, JobType
+from langflow.services.database.utils import upsert
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -108,11 +108,11 @@ async def archive_retention_metrics(session: AsyncSession, job_ids: Sequence[UUI
     counts = dict(zip(TOTAL_FIELDS, (int(value or 0) for value in result.one()), strict=True))
     if not counts["started"]:
         return
-    insert = pg_insert if session.get_bind().dialect.name == "postgresql" else sqlite_insert
-    stmt = insert(JobMetricTotals).values(id=1, **counts)
-    await session.exec(
-        stmt.on_conflict_do_update(
-            index_elements=["id"],
-            set_={name: getattr(JobMetricTotals, name) + getattr(stmt.excluded, name) for name in TOTAL_FIELDS},
-        )
+    stmt = upsert(
+        session.get_bind().dialect.name,
+        JobMetricTotals,
+        {"id": 1, **counts},
+        index_elements=["id"],
+        set_=lambda new: {name: getattr(JobMetricTotals, name) + getattr(new, name) for name in TOTAL_FIELDS},
     )
+    await session.exec(stmt)

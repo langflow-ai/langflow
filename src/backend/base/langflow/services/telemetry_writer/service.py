@@ -46,6 +46,7 @@ from langflow.api.utils.migration_pause import is_paused, writing
 from langflow.services.base import Service
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.database.utils import materialize_subquery
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -846,7 +847,7 @@ class TelemetryWriterService(Service):
                     await session.execute(
                         delete(TransactionTable).where(
                             TransactionTable.flow_id == flow_id,
-                            col(TransactionTable.id).not_in(keep_subq),
+                            col(TransactionTable.id).not_in(materialize_subquery(keep_subq)),
                         )
                     )
 
@@ -877,7 +878,7 @@ class TelemetryWriterService(Service):
                             delete(VertexBuildTable).where(
                                 VertexBuildTable.flow_id == flow_id,
                                 VertexBuildTable.id == vertex_id,
-                                col(VertexBuildTable.build_id).not_in(keep_vertex_subq),
+                                col(VertexBuildTable.build_id).not_in(materialize_subquery(keep_vertex_subq)),
                             )
                         )
 
@@ -890,7 +891,9 @@ class TelemetryWriterService(Service):
                     .limit(max_vertex_builds)
                 )
                 await session.execute(
-                    delete(VertexBuildTable).where(col(VertexBuildTable.build_id).not_in(keep_global_subq))
+                    delete(VertexBuildTable).where(
+                        col(VertexBuildTable.build_id).not_in(materialize_subquery(keep_global_subq))
+                    )
                 )
                 await session.commit()
         except Exception:

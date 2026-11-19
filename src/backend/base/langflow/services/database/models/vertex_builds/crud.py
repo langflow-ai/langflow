@@ -5,6 +5,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.flow.model import Flow, is_virtual_flow_id
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
+from langflow.services.database.utils import materialize_subquery
 from langflow.services.deps import get_settings_service
 
 
@@ -116,7 +117,7 @@ async def log_vertex_build(
         delete_vertex_older = delete(VertexBuildTable).where(
             VertexBuildTable.flow_id == vertex_build.flow_id,
             VertexBuildTable.id == vertex_build.id,
-            col(VertexBuildTable.build_id).not_in(keep_vertex_subq),
+            col(VertexBuildTable.build_id).not_in(materialize_subquery(keep_vertex_subq)),
         )
         await db.exec(delete_vertex_older)
 
@@ -126,7 +127,9 @@ async def log_vertex_build(
             .order_by(col(VertexBuildTable.timestamp).desc(), col(VertexBuildTable.build_id).desc())
             .limit(max_global)
         )
-        delete_global_older = delete(VertexBuildTable).where(col(VertexBuildTable.build_id).not_in(keep_global_subq))
+        delete_global_older = delete(VertexBuildTable).where(
+            col(VertexBuildTable.build_id).not_in(materialize_subquery(keep_global_subq))
+        )
         await db.exec(delete_global_older)
 
         # 4) Commit transaction

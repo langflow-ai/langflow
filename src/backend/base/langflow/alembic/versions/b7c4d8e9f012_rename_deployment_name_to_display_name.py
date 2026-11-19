@@ -68,7 +68,7 @@ def upgrade() -> None:
             batch_op.alter_column(
                 OLD_NAME_COLUMN,
                 new_column_name=DISPLAY_NAME_COLUMN,
-                existing_type=sa.String(),
+                existing_type=sa.String().with_variant(sa.String(255), "mysql"),
                 nullable=True,
             )
         elif old_column_exists and display_name_exists:
@@ -79,7 +79,7 @@ def upgrade() -> None:
         with op.batch_alter_table(DEPLOYMENT_TABLE, schema=None) as batch_op:
             batch_op.alter_column(
                 DISPLAY_NAME_COLUMN,
-                existing_type=sa.String(),
+                existing_type=sa.String().with_variant(sa.String(255), "mysql"),
                 nullable=True,
             )
 
@@ -129,7 +129,7 @@ def downgrade() -> None:
             batch_op.alter_column(
                 DISPLAY_NAME_COLUMN,
                 new_column_name=OLD_NAME_COLUMN,
-                existing_type=sa.String(),
+                existing_type=sa.String().with_variant(sa.String(255), "mysql"),
                 nullable=False,
             )
         elif display_name_exists and old_column_exists:
