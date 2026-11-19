@@ -589,6 +589,22 @@ class DatabaseVariableService(VariableService, Service):
         variables = await self.get_all(user_id=user_id, session=session, include_empty_names=set(AGENTIC_VARIABLES))
         return [variable.name for variable in variables if variable]
 
+    async def existing_variable_name_counts(
+        self,
+        user_id: UUID | str,
+        names: Sequence[str],
+        session: AsyncSession,
+    ) -> dict[str, int]:
+        """Count owned rows for the requested names, including empty placeholders."""
+        if not names:
+            return {}
+        stmt = (
+            select(Variable.name, func.count())
+            .where(Variable.user_id == user_id, col(Variable.name).in_(list(names)))
+            .group_by(col(Variable.name))
+        )
+        return {name: count for name, count in (await session.exec(stmt)).all() if name}
+
     async def get_available_variable_names(
         self,
         user_id: UUID | str,

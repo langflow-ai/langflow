@@ -1,4 +1,5 @@
 import abc
+from collections.abc import Sequence
 from uuid import UUID
 
 from pydantic import SecretStr
@@ -63,6 +64,27 @@ class VariableService(Service):
         Returns:
             A list of variable names.
         """
+
+    async def existing_variable_name_counts(
+        self,
+        user_id: UUID | str,
+        names: Sequence[str],
+        session: AsyncSession,
+    ) -> dict[str, int]:
+        """Return how many rows exist for each requested name, including empty values.
+
+        The default implementation counts names from ``list_variables``. Database-backed
+        stores override this with a user-and-name query that does not hide empty
+        placeholders. Historical duplicates are reported, not removed.
+        """
+        if not names:
+            return {}
+        wanted = set(names)
+        counts: dict[str, int] = {}
+        for name in await self.list_variables(user_id, session):
+            if name in wanted:
+                counts[name] = counts.get(name, 0) + 1
+        return counts
 
     @abc.abstractmethod
     async def update_variable(self, user_id: UUID | str, name: str, value: str, session: AsyncSession) -> Variable:
