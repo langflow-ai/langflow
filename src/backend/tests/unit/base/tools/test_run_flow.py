@@ -234,6 +234,25 @@ class TestRunFlowBaseComponentFlowRetrieval:
             assert mock_cache_call.call_count == 2  # get and set
 
     @pytest.mark.asyncio
+    async def test_get_graph_gives_the_child_the_parents_extra_file_scopes_and_skips_the_cache(self):
+        """A child of a run with extra file scopes reads with them and never enters the shared cache."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = True
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(authorized_extra_file_scopes=frozenset({"user-d"})))
+        flow_data = Data(data={"data": {"nodes": [], "edges": []}, "description": "Test flow"})
+
+        with (
+            patch.object(component, "_flow_cache_call") as mock_cache_call,
+            patch.object(component, "get_flow", new_callable=AsyncMock, return_value=flow_data),
+            patch("lfx.base.tools.run_flow.Graph.from_payload", return_value=MagicMock(spec=Graph)) as from_payload,
+        ):
+            await component.get_graph(flow_name_selected="child", flow_id_selected=str(uuid4()))
+
+        assert from_payload.call_args.kwargs["authorized_extra_file_scopes"] == frozenset({"user-d"})
+        mock_cache_call.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_get_graph_deletes_stale_cache_and_refetches(self):
         """Test that get_graph deletes stale cached graph and fetches fresh one."""
         component = RunFlowBaseComponent()
