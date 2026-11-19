@@ -782,9 +782,10 @@ class TestMCPComponentConfigPriority:
         cached_tool = SimpleNamespace(name="cached-tool")
         component.mcp_server = {"name": server_name, "config": server_config}
         component._user_id = "test_user_123"
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="test-session"))
         component.use_cache = True
 
-        cache_key = component._mcp_servers_cache_key(server_name)
+        cache_key = component._mcp_servers_cache_key(server_name, server_config)
         servers_cache = {
             cache_key: {
                 "tools": [cached_tool],
