@@ -178,3 +178,14 @@ class UpgradeReportMetadata(BaseModel):
     warning_count: int
     failing_count: int
     content_sha256: str
+
+    @field_validator("created_at", "generated_at")
+    @classmethod
+    def database_time(cls, timestamp: datetime) -> datetime:
+        # SQLite returns naive UTC datetimes for these database columns.
+        return timestamp.replace(tzinfo=timezone.utc) if timestamp.tzinfo is None else timestamp
+
+
+class ReportHistorySummary(UpgradeReportMetadata):
+    source_database: str | None
+    incomplete: bool

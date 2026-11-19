@@ -9,6 +9,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from lfx.template.field_migrations import can_migrate_chat_output_input
+from lfx.upgrade.retired import retirement_lookup
 from lfx.utils.flow_code import normalize_code_for_import
 
 COMPONENTS_TO_IGNORE_UPDATE: frozenset[str] = frozenset({"CustomComponent"})
@@ -390,6 +391,8 @@ def classify_node(
         return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="ok")
 
     registry_entry = registry.get(component_type)
+    if registry_entry is None:
+        registry_entry = retirement_lookup().get(component_type)
     if registry_entry is None:
         return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="blocked")
 
