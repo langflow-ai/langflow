@@ -1144,7 +1144,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             # Only analyzed text holds it: a term would match nothing and a phrase could match others.
             msg = f"OpenSearch index maps '{key}' only as analyzed text, so it cannot be matched exactly"
             raise ValueError(msg)
-        cache[key] = fields  # a mapped field never changes type
+        cache[key] = fields  # a mapped field keeps its type until delete_collection drops the index
         return fields
 
     async def _exact_where(self, client: Any, where: dict[str, Any]) -> dict[str, Any]:
@@ -1297,6 +1297,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
 
     async def delete_collection(self) -> None:
         """Drop the configured index. Used by KB deletion."""
+        # A re-created index maps its fields afresh, so what the old one held is no answer for it.
+        self.__dict__.pop("_exact_field_cache", None)
         await self.ensure_ready()
         client = getattr(self, "_os_client", None)
         if client is None:

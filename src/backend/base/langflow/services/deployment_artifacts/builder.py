@@ -1645,7 +1645,10 @@ def _nodes_a_run_never_builds(data: dict[str, Any]) -> set[str]:
     edges = [edge for edge in data.get("edges") or [] if isinstance(edge, dict)]
     wired = {edge.get("source") for edge in edges} | {edge.get("target") for edge in edges}
     targets = {edge.get("target") for edge in edges}
-    starts_at_chat = any("ChatInput" in node["id"] and node["id"] not in targets for node in nodes)
+    # Mirror the graph exactly: one Chat Input with a predecessor (or a second Chat Input) and
+    # the graph keeps every layer as it was, so every node with no inputs does run.
+    chat_inputs = [node["id"] for node in nodes if "ChatInput" in node["id"]]
+    starts_at_chat = len(chat_inputs) == 1 and chat_inputs[0] not in targets
     if not starts_at_chat or len(nodes) < 2:  # noqa: PLR2004 - a lone node is the whole run
         return set()
     return {node["id"] for node in nodes if node["id"] not in wired}

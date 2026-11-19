@@ -893,6 +893,31 @@ class TestOpenSearchSimilaritySearchFilterHandling:
         # exact same translation so they can never drift.
         assert forwarded == await backend._exact_where(backend._os_client, {"session_id": "s1"})
 
+    @pytest.mark.asyncio
+    async def test_a_dropped_index_forgets_the_fields_it_mapped(self, tmp_path: Path) -> None:
+        # Review: the cache outlived delete_collection, so a re-created index that mapped the key as a
+        # date (no keyword copy) still got the old keyword term, and erasure deleted nothing again.
+        backend = _make_backend(tmp_path)
+        backend._os_index = "idx"
+        client = backend._os_client = MagicMock()
+        client.indices.delete.return_value = {"acknowledged": True}
+        backend.ensure_ready = AsyncMock()
+        client.indices.get_field_mapping.return_value = {
+            "idx": {
+                "mappings": {
+                    "metadata.end_user_id": {"mapping": {"end_user_id": {"type": "text"}}},
+                    "metadata.end_user_id.keyword": {"mapping": {"keyword": {"type": "keyword"}}},
+                }
+            }
+        }
+        assert await backend._exact_fields(client, "end_user_id") == ("metadata.end_user_id.keyword",)
+
+        await backend.delete_collection()
+        client.indices.get_field_mapping.return_value = {
+            "idx": {"mappings": {"metadata.end_user_id": {"mapping": {"end_user_id": {"type": "date"}}}}}
+        }
+        assert await backend._exact_fields(client, "end_user_id") == ("metadata.end_user_id",)
+
     def test_a_filter_matches_numbers_exactly_and_refuses_strings_the_keyword_copy_skips(self) -> None:
         from lfx.base.knowledge_bases.backends.opensearch import KEYWORD_IGNORE_ABOVE, OpenSearchBackend
 

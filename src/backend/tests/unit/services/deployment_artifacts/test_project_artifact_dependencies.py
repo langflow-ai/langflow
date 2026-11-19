@@ -175,6 +175,9 @@ def test_a_knowledge_node_wired_to_nothing_in_a_chat_flow_is_not_a_dependency():
         # A Chat Input fed by another node is not moved to its own first layer, so the stray one runs.
         ([_plain("Prompt-p"), _plain("ChatInput-a"), _plain("ChatOutput-b"), _kb_node("Knowledge-stray", "ghost_gone")],
          [_edge("Prompt-p", "ChatInput-a"), _edge("ChatInput-a", "ChatOutput-b")]),
+        # One Chat Input fed by another node keeps the graph's layers even beside a free one, so it runs.
+        ([_plain("ChatInput-a"), _plain("Prompt-p"), _plain("ChatInput-b"), _kb_node("Knowledge-stray", "ghost_gone")],
+         [_edge("Prompt-p", "ChatInput-b")]),
     ],
 )  # fmt: skip
 def test_a_stray_knowledge_node_that_a_run_does_build_stays_a_dependency(nodes, edges):
