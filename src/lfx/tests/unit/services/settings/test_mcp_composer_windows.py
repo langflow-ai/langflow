@@ -333,6 +333,118 @@ class TestWindowsTempFileHandling:
                         Path(f).unlink()
 
     @pytest.mark.asyncio
+    async def test_windows_temp_files_cleanup_on_cancellation(self, mcp_service):
+        """Test that temp files are cleaned up when startup is cancelled."""
+        project_id = "test-project"
+        port = 2000
+
+        with patch("platform.system", return_value="Windows"):
+            # Create real temp files
+            stdout_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+            stderr_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+            stdout_file.close()
+            stderr_file.close()
+
+            try:
+                with (
+                    patch("subprocess.Popen") as mock_popen,
+                    patch("tempfile.NamedTemporaryFile") as mock_tempfile,
+                    patch("asyncio.sleep", new=AsyncMock(side_effect=asyncio.CancelledError())),
+                ):
+                    mock_tempfile.side_effect = [stdout_file, stderr_file]
+
+                    # Mock process that stays running so startup waits on the port
+                    mock_process = MagicMock()
+                    mock_process.pid = 12345
+                    mock_process.poll.return_value = None
+                    mock_popen.return_value = mock_process
+
+                    auth_config = {
+                        "auth_type": "oauth",
+                        "oauth_host": "localhost",
+                        "oauth_port": str(port),
+                        "oauth_server_url": f"http://localhost:{port}",
+                        "oauth_client_id": "test",
+                        "oauth_client_secret": "test",
+                        "oauth_auth_url": "http://test",
+                        "oauth_token_url": "http://test",
+                    }
+
+                    with pytest.raises(asyncio.CancelledError):
+                        await mcp_service._start_project_composer_process(
+                            project_id=project_id,
+                            host="localhost",
+                            port=port,
+                            streamable_http_url="http://test",
+                            auth_config=auth_config,
+                            max_startup_checks=2,
+                            startup_delay=0.1,
+                        )
+
+                    # Verify temp files were cleaned up despite cancellation
+                    assert not Path(stdout_file.name).exists()
+                    assert not Path(stderr_file.name).exists()
+
+            finally:
+                # Cleanup
+                for f in [stdout_file.name, stderr_file.name]:
+                    with contextlib.suppress(FileNotFoundError):
+                        Path(f).unlink()
+
+    @pytest.mark.asyncio
+    async def test_windows_temp_files_cleanup_on_popen_failure(self, mcp_service):
+        """Test that temp files are cleaned up when Popen itself fails (e.g. uvx missing)."""
+        project_id = "test-project"
+        port = 2000
+
+        with patch("platform.system", return_value="Windows"):
+            # Create real temp files
+            stdout_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+            stderr_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+            stdout_file.close()
+            stderr_file.close()
+
+            try:
+                with (
+                    patch("subprocess.Popen", side_effect=FileNotFoundError("uvx")) as mock_popen,
+                    patch("tempfile.NamedTemporaryFile") as mock_tempfile,
+                ):
+                    mock_tempfile.side_effect = [stdout_file, stderr_file]
+
+                    auth_config = {
+                        "auth_type": "oauth",
+                        "oauth_host": "localhost",
+                        "oauth_port": str(port),
+                        "oauth_server_url": f"http://localhost:{port}",
+                        "oauth_client_id": "test",
+                        "oauth_client_secret": "test",
+                        "oauth_auth_url": "http://test",
+                        "oauth_token_url": "http://test",
+                    }
+
+                    with pytest.raises(FileNotFoundError):
+                        await mcp_service._start_project_composer_process(
+                            project_id=project_id,
+                            host="localhost",
+                            port=port,
+                            streamable_http_url="http://test",
+                            auth_config=auth_config,
+                            max_startup_checks=2,
+                            startup_delay=0.1,
+                        )
+
+                    assert mock_popen.called
+                    # Verify temp files were cleaned up despite Popen failing
+                    assert not Path(stdout_file.name).exists()
+                    assert not Path(stderr_file.name).exists()
+
+            finally:
+                # Cleanup
+                for f in [stdout_file.name, stderr_file.name]:
+                    with contextlib.suppress(FileNotFoundError):
+                        Path(f).unlink()
+
+    @pytest.mark.asyncio
     async def test_non_windows_uses_pipes(self, mcp_service):
         """Test that non-Windows systems still use pipes (not temp files)."""
         project_id = "test-project"

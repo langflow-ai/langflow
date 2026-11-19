@@ -1587,6 +1587,21 @@ class MCPComposerService(Service):
 
             return process
         finally:
+            # Always close and delete the temp logs once they exist: the success
+            # path and _read_process_output_and_extract_error already do this,
+            # but cancellation and a failed Popen leave this try block through
+            # other exits, so clean up here too. Closing an already-closed file
+            # and unlinking a missing path are both no-ops.
+            if stdout_file and stderr_file:
+                try:
+                    stdout_file.close()
+                    stderr_file.close()
+                    if stdout_path:
+                        stdout_path.unlink(missing_ok=True)
+                    if stderr_path:
+                        stderr_path.unlink(missing_ok=True)
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error cleaning up temp files: {e}")
             if backend_auth_config_path:
                 try:
                     backend_auth_config_path.unlink(missing_ok=True)
