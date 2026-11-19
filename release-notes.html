@@ -24,8 +24,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.3382561b.css">
-<script src="/assets/js/runtime~main.a2f655cf.js" defer="defer"></script>
-<script src="/assets/js/main.dd395a16.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.90fa7079.js" defer="defer"></script>
+<script src="/assets/js/main.5c4d4e99.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -52,6 +52,10 @@
 For all changes, see the <a href="https://github.com/langflow-ai/langflow/releases/latest" target="_blank" rel="noopener noreferrer" class="">Changelog</a>.</p>
 <p>Due to strict SemVer requirements, Langflow Desktop can have different patch versions than the core Langflow OSS Python package, but the major and minor versions are aligned.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="prepare-to-upgrade">Prepare to upgrade<a href="#prepare-to-upgrade" class="hash-link" aria-label="Direct link to Prepare to upgrade" title="Direct link to Prepare to upgrade" translate="no">​</a></h2>
+<p>For an existing 1.11.x Python installation, follow <a class="" href="/get-started-installation#upgrade-from-langflow-111">Upgrade from Langflow 1.11.x</a>.
+An in-place package upgrade can retain incompatible optional providers from the old full installation.
+The procedure uses a new environment with the <code>bundles</code> extra and preserves the instance&#x27;s database, encryption key, files, and knowledge storage.
+Keep backups taken before the first new-version startup so you can restore them if needed.</p>
 <div class="theme-admonition theme-admonition-warning admonition_xJq3 alert alert--warning"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"></path></svg></span>warning</div><div class="admonitionContent_BuS1"><p>Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
 This allows you to <a class="" href="/concepts-flows-import#import-a-flow">import flows</a> from your existing installation and test them in the new version without disrupting your existing installation.
 In the event of breaking changes or bugs, your existing installation is preserved in a stable state.</p></div></div>
@@ -90,6 +94,16 @@ Set <code>LANGFLOW_SUPERUSER_PASSWORD</code>, then sign in as <code>langflow</co
 <p>Before upgrading an auto-login installation, <a class="" href="/api-keys-and-authentication#upgrade-from-auto-login">prepare that account for password sign-in</a>.</p>
 <p>If you already upgraded and can&#x27;t sign in, see <a class="" href="/troubleshoot#recover-access-after-upgrading">recover access</a>.</p>
 <p>For more information, see <a class="" href="/api-keys-and-authentication#langflow-auto-login">API keys and authentication</a>.</p>
+</li>
+<li class="">
+<p>Project MCP and A2A endpoints require authentication by default</p>
+<p>In 1.13.2, new projects default to API-key authentication, including auto-login installations.
+Existing projects with unset authentication settings adopt that default at startup.
+When <code>LANGFLOW_AUTO_LOGIN=false</code>, startup also changes projects set to <strong>None</strong> to API-key authentication.</p>
+<p>Update existing MCP clients with the configuration from the project&#x27;s <strong>MCP Server</strong> tab.
+For protected A2A requests, send the flow owner&#x27;s Langflow API key in the <code>x-api-key</code> header.
+Public A2A agent-card discovery remains available without credentials.</p>
+<p>See <a class="" href="/mcp-server#authentication">MCP authentication</a> and <a class="" href="/a2a-server#authentication">A2A authentication</a> for client setup and the supported public-project and superuser exceptions.</p>
 </li>
 <li class="">
 <p>Chroma and Local DB components are removed</p>
@@ -140,7 +154,7 @@ For more information, see <a class="" href="/admin-api-cli">Administer users and
 <p>MrScraper components are removed</p>
 <p>The <a class="" href="/bundles-mrscraper"><strong>MrScraper</strong></a> bundle now provides three components.</p>
 <p>Instead, use the <strong>Scraper API</strong> or <strong>Web Search</strong> components.</p>
-<p>For more information, see <a class="" href="/bundles-mrscraper">Update existing flows</a>.</p>
+<p>For more information, see <a class="" href="/bundles-mrscraper#updating-existing-flows">Update existing flows</a>.</p>
 </li>
 </ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="112x">1.12.x<a href="#112x" class="hash-link" aria-label="Direct link to 1.12.x" title="Direct link to 1.12.x" translate="no">​</a></h2>

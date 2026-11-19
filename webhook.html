@@ -24,8 +24,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.3382561b.css">
-<script src="/assets/js/runtime~main.a2f655cf.js" defer="defer"></script>
-<script src="/assets/js/main.dd395a16.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.90fa7079.js" defer="defer"></script>
+<script src="/assets/js/main.5c4d4e99.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -106,9 +106,14 @@ For the preceding example, the parsed payload would be a string like <code>ID: 1
 <p>Typically, you won&#x27;t manually trigger the <strong>Webhook</strong> component.
 To learn about triggering flows with payloads from external applications, see the video tutorial <a href="https://www.youtube.com/watch?v=IC1CAtzFRE0" target="_blank" rel="noopener noreferrer" class="">How to Use Webhooks in Langflow</a>.</p>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="require-authentication-for-webhooks">Require authentication for webhooks<a href="#require-authentication-for-webhooks" class="hash-link" aria-label="Direct link to Require authentication for webhooks" title="Direct link to Require authentication for webhooks" translate="no">​</a></h2>
-<p>By default, webhooks require API key authentication (<code>LANGFLOW_WEBHOOK_AUTH_ENABLE=True</code>).</p>
-<p>To allow webhooks to run without authentication (not recommended; use only in trusted environments), in your Langflow <code>.env</code> file, set <code>LANGFLOW_WEBHOOK_AUTH_ENABLE=False</code>. When disabled, requests to the webhook endpoint are treated as being sent by the flow owner.</p>
-<p>When webhook authentication is enabled, you must provide a Langflow API key with each webhook request.</p>
+<p>In Langflow 1.13.2 and later, webhooks require a Langflow API key belonging to the flow owner with every request.
+Earlier 1.13.x releases permit unauthenticated execution when <code>LANGFLOW_WEBHOOK_AUTH_ENABLE=False</code>.</p>
+<p>Starting in 1.13.2, <code>LANGFLOW_WEBHOOK_AUTH_ENABLE=False</code> no longer disables authentication.
+The setting remains accepted for configuration compatibility.
+Before upgrading, create an API key as the flow owner and configure each webhook sender to include it.
+Senders that omit the key receive HTTP 403, whether they use the flow UUID or endpoint name.
+If a sender cannot include a key, put a gateway that validates the sender&#x27;s credentials in front of Langflow and have it add the owner&#x27;s key.
+Keep the key on that gateway and forward only requests that pass its validation.</p>
 <p>To include the API key with a request as an HTTP header:</p>
 <div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">curl -X POST &quot;http://LANGFLOW_SERVER_ADDRESS/api/v1/webhook/FLOW_ID&quot; \</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">    -H &quot;Content-Type: application/json&quot; \</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">    -H &quot;x-api-key: LANGFLOW_API_KEY&quot; \</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">    -d &#x27;{&quot;id&quot;: &quot;12345&quot;, &quot;name&quot;: &quot;alex&quot;, &quot;email&quot;: &quot;alex@email.com&quot;}&#x27;</span><br></div></code></pre></div></div>
 <p>To include the API key with a request as a query parameter:</p>

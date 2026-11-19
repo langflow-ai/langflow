@@ -24,8 +24,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.3382561b.css">
-<script src="/assets/js/runtime~main.a2f655cf.js" defer="defer"></script>
-<script src="/assets/js/main.dd395a16.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.90fa7079.js" defer="defer"></script>
+<script src="/assets/js/main.5c4d4e99.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -107,20 +107,23 @@ To enhance this flow and make it truly agentic, add some tools, as explained in 
 <p><img decoding="async" loading="lazy" alt="A basic agent chat flow with Chat Input, Agent, and Chat Output components." src="/assets/images/agent-example-add-chat-96c042592973dd0f86ed13d19ef1fa24.png" width="4000" height="2412" class="img_ev3q"></p>
 </li>
 <li class="">
-<p>Add <strong>Web Search</strong>, <strong>URL</strong>, and <strong>Calculator</strong> components to your flow.</p>
+<p>The <strong>Agent</strong> component includes a <strong>Calculator</strong> tool. It is enabled by default. Open the <strong>Agent</strong> component&#x27;s parameters to turn <strong>Calculator</strong> on or off.</p>
 </li>
 <li class="">
-<p>Enable <strong>Tool Mode</strong> in the <strong>Web Search</strong>, <strong>URL</strong>, and <strong>Calculator</strong> components:</p>
+<p>Add <strong>Web Search</strong> and <strong>URL</strong> components to your flow.</p>
+</li>
+<li class="">
+<p>Enable <strong>Tool Mode</strong> in the <strong>Web Search</strong> and <strong>URL</strong> components:</p>
 <ol>
 <li class="">Click the <strong>Web Search</strong> component to expose the <a class="" href="/concepts-components#component-menus">component&#x27;s header menu</a>, and then enable <strong>Tool Mode</strong>.</li>
-<li class="">Repeat for the <strong>URL</strong> and <strong>Calculator</strong> components.</li>
+<li class="">Repeat for the <strong>URL</strong> component.</li>
 <li class="">Connect the <strong>Toolset</strong> port for each tool component to the <strong>Tools</strong> port on the <strong>Agent</strong> component.</li>
 </ol>
 <p><strong>Tool Mode</strong> makes a component into a tool by modifying the component&#x27;s inputs.
 With <strong>Tool Mode</strong> enabled, a component can accept requests from an <strong>Agent</strong> component to use the component&#x27;s available actions as tools.</p>
 <p>When in <strong>Tool Mode</strong>, a component has a <strong>Toolset</strong> port that you must connect to an <strong>Agent</strong> component&#x27;s <strong>Tools</strong> port if you want to allow the agent to use that component&#x27;s actions as tools.</p>
 <p>For more information, see <a class="" href="/agents-tools">Configure tools for agents</a>.</p>
-<p><img decoding="async" loading="lazy" alt="A more complex agent chat flow where three components are connected to the Agent component as tools" src="/assets/images/agent-example-add-tools-aa545843799b2155b926b723a4f3922e.png" width="4000" height="2742" class="img_ev3q"></p>
+<p><img decoding="async" loading="lazy" alt="Web Search and URL components connected to the Agent component as tools" src="/assets/images/agent-example-add-tools-aa545843799b2155b926b723a4f3922e.png" width="4000" height="2742" class="img_ev3q"></p>
 </li>
 <li class="">
 <p>Open the <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-play lf-inline-icon" aria-hidden="true" focusable="false" role="presentation"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg> <strong>Playground</strong>, and then ask the agent, <code>What tools are you using to answer my questions?</code></p>
@@ -201,6 +204,7 @@ When using the <strong>Structured Response</strong> output, Langflow does not se
 <p>With the <strong>Agent</strong> component, the available parameters can change depending on the selected provider and model, including support for additional modes, arguments, or features like chat memory and temperature.
 For example:</p>
 <ul>
+<li class=""><strong>Calculator</strong> (<code>add_calculator_tool</code>): When enabled (<code>true</code>), this setting adds an arithmetic calculator tool to the agent. It is enabled by default.</li>
 <li class=""><strong>Current Date</strong> (<code>add_current_date_tool</code>): When enabled (<code>true</code>), this setting adds a tool to the agent that can retrieve the current date.</li>
 <li class=""><strong>Handle Parse Errors</strong> (<code>handle_parsing_errors</code>): When enabled (<code>true</code>), this setting allows the agent to fix errors, like typos, when analyzing user input.</li>
 <li class=""><strong>Verbose</strong> (<code>verbose</code>): When enabled (<code>true</code>), this setting records detailed logging output for debugging and analysis.</li>

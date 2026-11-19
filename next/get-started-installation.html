@@ -24,8 +24,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.3382561b.css">
-<script src="/assets/js/runtime~main.a2f655cf.js" defer="defer"></script>
-<script src="/assets/js/main.dd395a16.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.90fa7079.js" defer="defer"></script>
+<script src="/assets/js/main.5c4d4e99.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -58,7 +58,7 @@ However, some features aren&#x27;t available for Langflow Desktop, such as the <
 <li class="">Click <strong>Download Langflow</strong>, enter your contact information, and then click <strong>Download</strong>.</li>
 <li class="">Mount and install the Langflow application.</li>
 <li class="">When the installation completes, open the Langflow application, and then create your first flow with the <a class="" href="/get-started-quickstart">Quickstart</a>.</li>
-</ol></div><div role="tabpanel" aria-label="Windows" class="tabItem_s4ch"><ol>
+</ol></div><div role="tabpanel" aria-label="Windows" class="tabItem_s4ch" hidden=""><ol>
 <li class="">
 <p>Navigate to <a href="https://www.langflow.org/desktop" target="_blank" rel="noopener noreferrer" class="">Langflow Desktop</a>.</p>
 </li>
@@ -88,17 +88,15 @@ For more information, see <a class="" href="/deployment-docker">Deploy Langflow 
 <li class="">
 <p>Pull the latest <a href="https://hub.docker.com/r/langflowai/langflow" target="_blank" rel="noopener noreferrer" class="">Langflow Docker image</a> and start it:</p>
 <div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">docker run -p 7860:7860 \</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">  -e LANGFLOW_AUTO_LOGIN=false \</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">  -e LANGFLOW_SUPERUSER_PASSWORD=SUPERUSER_PASSWORD \</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">  langflowai/langflow:latest</span><br></div></code></pre></div></div>
-<p>Replace <code>SUPERUSER_PASSWORD</code> with a strong password for the Langflow superuser.</p>
-<div class="theme-admonition theme-admonition-note admonition_xJq3 alert alert--secondary"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M6.3 5.69a.942.942 0 0 1-.28-.7c0-.28.09-.52.28-.7.19-.18.42-.28.7-.28.28 0 .52.09.7.28.18.19.28.42.28.7 0 .28-.09.52-.28.7a1 1 0 0 1-.7.3c-.28 0-.52-.11-.7-.3zM8 7.99c-.02-.25-.11-.48-.31-.69-.2-.19-.42-.3-.69-.31H6c-.27.02-.48.13-.69.31-.2.2-.3.44-.31.69h1v3c.02.27.11.5.31.69.2.2.42.31.69.31h1c.27 0 .48-.11.69-.31.2-.19.3-.42.31-.69H8V7.98v.01zM7 2.3c-3.14 0-5.7 2.54-5.7 5.68 0 3.14 2.56 5.7 5.7 5.7s5.7-2.55 5.7-5.7c0-3.15-2.56-5.69-5.7-5.69v.01zM7 .98c3.86 0 7 3.14 7 7s-3.14 7-7 7-7-3.12-7-7 3.14-7 7-7z"></path></svg></span>note</div><div class="admonitionContent_BuS1"><p>Official release packages, tagged source archives, and Docker images disable automatic login by default.</p><p>For a new Python package installation, do the following:</p><ol>
-<li class="">Create a <code>.env</code> file with the following values:</li>
-</ol><div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">LANGFLOW_AUTO_LOGIN=false</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">LANGFLOW_SUPERUSER_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD</span><br></div></code></pre></div></div><ol start="2">
-<li class="">Start Langflow with the <code>.env</code> file:</li>
-</ol><div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">uv run langflow run --env-file .env</span><br></div></code></pre></div></div><ol start="3">
-<li class="">Sign in with the username <code>langflow</code> or your configured <code>LANGFLOW_SUPERUSER</code>.</li>
-</ol><p>For more information, see <a class="" href="/api-keys-and-authentication#langflow-auto-login"><code>LANGFLOW_AUTO_LOGIN</code></a>.</p></div></div>
+<p>Replace <code>SUPERUSER_PASSWORD</code> with a strong password for the Langflow superuser.
+The Docker image disables automatic login.</p>
 </li>
 <li class="">
 <p>To access Langflow, navigate to <code>http://localhost:7860/</code>.</p>
+</li>
+<li class="">
+<p>Sign in with the username <code>langflow</code> or your configured <code>LANGFLOW_SUPERUSER</code>.</p>
+<p>For more information, see <a class="" href="/api-keys-and-authentication#langflow-auto-login"><code>LANGFLOW_AUTO_LOGIN</code></a>.</p>
 </li>
 <li class="">
 <p>Create your first flow with the <a class="" href="/get-started-quickstart">Quickstart</a>.</p>
@@ -146,7 +144,7 @@ To avoid conflicts with other projects, it&#x27;s a good idea to deactivate your
 <p>To delete the virtual environment, type <code>rm -rf VENV_NAME</code>.
 This completely removes the virtual environment directory and its contents.</p>
 </li>
-</ol></div><div role="tabpanel" aria-label="Windows" class="tabItem_s4ch"><ol>
+</ol></div><div role="tabpanel" aria-label="Windows" class="tabItem_s4ch" hidden=""><ol>
 <li class="">
 <p>Navigate to where you want your virtual environment to be created, and create it with <code>uv</code>.</p>
 <div class="language-shell codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-shell codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">uv venv VENV_NAME</span><br></div></code></pre></div></div>
@@ -178,62 +176,83 @@ install <code>langflow-base</code> instead:</p>
 <code>langflow-base</code> does not provide a <code>langflow-base</code> executable.</p>
 </li>
 <li class="">
-<p>Set <code>LANGFLOW_SUPERUSER_PASSWORD</code> to a strong password, then start Langflow.</p>
-<p>If the password is exported in your environment:</p>
-<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">uv run langflow run</span><br></div></code></pre></div></div>
-<p>If the password is in a <code>.env</code> file, pass that file with <code>--env-file</code>. This loads the file and overrides variables already set in the environment:</p>
+<p>Set a superuser password. As of Langflow 1.13, official release packages disable automatic login.</p>
+<p>Create a <code>.env</code> file with the following values:</p>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">LANGFLOW_AUTO_LOGIN=false</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">LANGFLOW_SUPERUSER_PASSWORD=YOUR_SUPERUSER_PASSWORD</span><br></div></code></pre></div></div>
+<p>Replace <code>YOUR_SUPERUSER_PASSWORD</code> with a strong password for the Langflow superuser.</p>
+</li>
+<li class="">
+<p>Start Langflow with the <code>.env</code> file. <code>--env-file</code> loads the file and overrides variables already set in the environment:</p>
 <div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">uv run langflow run --env-file .env</span><br></div></code></pre></div></div>
+<p>If <code>LANGFLOW_SUPERUSER_PASSWORD</code> is already exported in your environment, you can start Langflow with only <code>uv run langflow run</code>.</p>
 <p>It can take a few minutes for Langflow to start.</p>
-<div class="theme-admonition theme-admonition-note admonition_xJq3 alert alert--secondary"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M6.3 5.69a.942.942 0 0 1-.28-.7c0-.28.09-.52.28-.7.19-.18.42-.28.7-.28.28 0 .52.09.7.28.18.19.28.42.28.7 0 .28-.09.52-.28.7a1 1 0 0 1-.7.3c-.28 0-.52-.11-.7-.3zM8 7.99c-.02-.25-.11-.48-.31-.69-.2-.19-.42-.3-.69-.31H6c-.27.02-.48.13-.69.31-.2.2-.3.44-.31.69h1v3c.02.27.11.5.31.69.2.2.42.31.69.31h1c.27 0 .48-.11.69-.31.2-.19.3-.42.31-.69H8V7.98v.01zM7 2.3c-3.14 0-5.7 2.54-5.7 5.68 0 3.14 2.56 5.7 5.7 5.7s5.7-2.55 5.7-5.7c0-3.15-2.56-5.69-5.7-5.69v.01zM7 .98c3.86 0 7 3.14 7 7s-3.14 7-7 7-7-3.12-7-7 3.14-7 7-7z"></path></svg></span>note</div><div class="admonitionContent_BuS1"><p>Official release packages, tagged source archives, and Docker images disable automatic login by default.</p><p>For a new Python package installation, do the following:</p><ol>
-<li class="">Create a <code>.env</code> file with the following values:</li>
-</ol><div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">LANGFLOW_AUTO_LOGIN=false</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">LANGFLOW_SUPERUSER_PASSWORD=REPLACE_WITH_A_STRONG_PASSWORD</span><br></div></code></pre></div></div><ol start="2">
-<li class="">Start Langflow with the <code>.env</code> file:</li>
-</ol><div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">uv run langflow run --env-file .env</span><br></div></code></pre></div></div><ol start="3">
-<li class="">Sign in with the username <code>langflow</code> or your configured <code>LANGFLOW_SUPERUSER</code>.</li>
-</ol><p>For more information, see <a class="" href="/api-keys-and-authentication#langflow-auto-login"><code>LANGFLOW_AUTO_LOGIN</code></a>.</p></div></div>
 </li>
 <li class="">
 <p>To confirm that a local Langflow instance is running, navigate to the default Langflow URL <code>http://127.0.0.1:7860</code>.</p>
+</li>
+<li class="">
+<p>Sign in with the username <code>langflow</code> or your configured <code>LANGFLOW_SUPERUSER</code>.</p>
+<p>For more information, see <a class="" href="/api-keys-and-authentication#langflow-auto-login"><code>LANGFLOW_AUTO_LOGIN</code></a>.</p>
 </li>
 <li class="">
 <p>Create your first flow with the <a class="" href="/get-started-quickstart">Quickstart</a>.</p>
 </li>
 </ol>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="manage-the-langflow-oss-version">Manage the Langflow OSS version<a href="#manage-the-langflow-oss-version" class="hash-link" aria-label="Direct link to Manage the Langflow OSS version" title="Direct link to Manage the Langflow OSS version" translate="no">​</a></h3>
-<p>To upgrade Langflow to the latest version, run <code>uv pip install langflow -U</code>.
+<div class="theme-admonition theme-admonition-warning admonition_xJq3 alert alert--warning"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"></path></svg></span>Upgrading from Langflow 1.11.x</div><div class="admonitionContent_BuS1"><p>Use the <a href="#upgrade-from-langflow-111" class="">1.11.x upgrade procedure</a> when moving an older full installation to 1.13.
+An in-place upgrade can leave incompatible provider packages installed.
+Neither <code>--upgrade</code> nor <code>--force-reinstall</code> removes packages that are no longer dependencies.</p></div></div>
+<p>For other Python installations, upgrade Langflow to the latest version with <code>uv pip install langflow -U</code>.
 However, the Langflow team recommends taking steps to backup your existing installation before you upgrade Langflow.
 For more information, see <a class="" href="/release-notes#prepare-to-upgrade">Prepare to upgrade</a>.</p>
 <p>To install a specific version of the Langflow package, add the required version to the command, such as <code>uv pip install langflow==1.4.22</code>.</p>
 <p>To reinstall Langflow and all of its dependencies, run <code>uv pip install langflow --force-reinstall</code>.</p>
-<h4 class="anchor anchorTargetStickyNavbar_Vzrq" id="roll-back-to-an-earlier-release">Roll back to an earlier release<a href="#roll-back-to-an-earlier-release" class="hash-link" aria-label="Direct link to Roll back to an earlier release" title="Direct link to Roll back to an earlier release" translate="no">​</a></h4>
-<p>Before rolling back, stop Langflow and restore the database and application files from a backup taken with the target version.
-Installing older packages does not undo database migrations.
-Keep a backup of the current installation before restoring the earlier backup.</p>
-<p>For older releases, pin all three core packages together.
-Pinning only <code>langflow</code> can install a newer backend or execution engine.
-Before Langflow 1.12, the core packages could use different version numbers.
-Use the matching versions for your target release, as shown in these examples.</p>
-<table><thead><tr><th>Langflow</th><th>langflow-base</th><th>lfx</th></tr></thead><tbody><tr><td>1.10.2</td><td>0.10.2</td><td>1.10.2</td></tr><tr><td>1.11.6</td><td>0.11.6</td><td>1.11.6</td></tr></tbody></table>
-<p>For example, install Langflow 1.11.6 in a fresh virtual environment with Python 3.12.</p>
-<div class="language-shell codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-shell codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">uv venv --python 3.12 .venv</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">uv pip install --python .venv &quot;langflow==1.11.6&quot; &quot;langflow-base==0.11.6&quot; &quot;lfx==1.11.6&quot;</span><br></div></code></pre></div></div>
-<p>Starting with Langflow 1.12, all three core packages use the same version number.
-Specify all three versions when rolling back an older installation from that release line, too.
-To reproduce the complete environment, restore its lockfile or dependency snapshot as well.
-Core package pins do not freeze independently versioned provider extensions or other dependencies.</p>
 <div class="theme-admonition theme-admonition-warning admonition_xJq3 alert alert--warning"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 16 16"><path fill-rule="evenodd" d="M8.893 1.5c-.183-.31-.52-.5-.887-.5s-.703.19-.886.5L.138 13.499a.98.98 0 0 0 0 1.001c.193.31.53.501.886.501h13.964c.367 0 .704-.19.877-.5a1.03 1.03 0 0 0 .01-1.002L8.893 1.5zm.133 11.497H6.987v-2.003h2.039v2.003zm0-3.004H6.987V5.987h2.039v4.006z"></path></svg></span>Upgrading from an auto-login installation</div><div class="admonitionContent_BuS1"><p>Langflow 1.13 disables auto-login by default.
 Before you upgrade an installation that signs in automatically, <a class="" href="/api-keys-and-authentication#upgrade-from-auto-login">prepare the existing account for password sign-in</a>.
+<code>LANGFLOW_SUPERUSER_PASSWORD</code> does not replace a password that was already generated for that account.
 If you already upgraded and can&#x27;t sign in, see <a class="" href="/api-keys-and-authentication#recover-access-after-upgrading">Recover access after upgrading</a>.
 Don&#x27;t delete or reinstall Langflow to regain access, because that can permanently remove your flows.</p></div></div>
-<div class="theme-admonition theme-admonition-note admonition_xJq3 alert alert--secondary"><div class="admonitionHeading_Gvgb"><span class="admonitionIcon_Rf37"><svg viewBox="0 0 14 16"><path fill-rule="evenodd" d="M6.3 5.69a.942.942 0 0 1-.28-.7c0-.28.09-.52.28-.7.19-.18.42-.28.7-.28.28 0 .52.09.7.28.18.19.28.42.28.7 0 .28-.09.52-.28.7a1 1 0 0 1-.7.3c-.28 0-.52-.11-.7-.3zM8 7.99c-.02-.25-.11-.48-.31-.69-.2-.19-.42-.3-.69-.31H6c-.27.02-.48.13-.69.31-.2.2-.3.44-.31.69h1v3c.02.27.11.5.31.69.2.2.42.31.69.31h1c.27 0 .48-.11.69-.31.2-.19.3-.42.31-.69H8V7.98v.01zM7 2.3c-3.14 0-5.7 2.54-5.7 5.68 0 3.14 2.56 5.7 5.7 5.7s5.7-2.55 5.7-5.7c0-3.15-2.56-5.69-5.7-5.69v.01zM7 .98c3.86 0 7 3.14 7 7s-3.14 7-7 7-7-3.12-7-7 3.14-7 7-7z"></path></svg></span>Langflow 1.12 package migration</div><div class="admonitionContent_BuS1"><p>The new runnable <code>langflow-base</code> package starts at version <code>1.12.0</code> and stays
-version-aligned with <code>langflow</code>. Requirements such as
-<code>langflow-base~=0.12</code> remain on the previous package line and don&#x27;t select the
-1.12 application.</p></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="upgrade-from-langflow-111">Upgrade from Langflow 1.11.x<a href="#upgrade-from-langflow-111" class="hash-link" aria-label="Direct link to Upgrade from Langflow 1.11.x" title="Direct link to Upgrade from Langflow 1.11.x" translate="no">​</a></h3>
+<ol>
+<li class="">
+<p>While the old version is still running, <a class="" href="/api-keys-and-authentication#upgrade-from-auto-login">prepare the existing account for password sign-in</a>.
+Then stop all Langflow workers and back up the database, configuration, uploaded files, and knowledge storage.
+Keep the original Python environment and these backups until you have checked the new version.</p>
+</li>
+<li class="">
+<p>From your existing working directory, create a new environment in an unused directory and install the replacement version.</p>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">uv venv --python 3.12 .venv-langflow-1.13</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">uv pip install --python .venv-langflow-1.13 &#x27;langflow[bundles]==1.13.2&#x27;</span><br></div><div class="token-line" style="color:#64748b"><span class="token plain">uv pip check --python .venv-langflow-1.13</span><br></div></code></pre></div></div>
+<p>The <code>bundles</code> extra includes the optional provider packages omitted from the default installation.
+To test a release candidate, use its full version instead, such as <code>1.13.2rc1</code>.
+Resolve any dependency conflicts before starting Langflow.</p>
+</li>
+<li class="">
+<p>Put your original instance settings in an environment file for the new process.
+If you already use a <code>.env</code> file, copy it and preserve its existing values.
+Keep the original <code>LANGFLOW_CONFIG_DIR</code>, <code>LANGFLOW_KNOWLEDGE_BASES_DIR</code>, and file-storage settings.
+Set <code>LANGFLOW_DATABASE_URL</code> explicitly to your existing external database URL or an absolute URL for your SQLite file.
+The <a class="" href="/memory#storage-options-and-paths">default SQLite file</a> can be inside the old Python environment.
+If so, copy it to a persistent directory outside both environments and point <code>LANGFLOW_DATABASE_URL</code> at that copy.
+Retain the original <code>LANGFLOW_SECRET_KEY</code> if set, or the generated <code>secret_key</code> file in the config directory.
+Use absolute storage paths and the same username and prepared password.
+Set <code>LANGFLOW_AUTO_LOGIN=false</code> in the new environment file.</p>
+</li>
+<li class="">
+<p>Start the replacement environment using that file.</p>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#64748b;--prism-background-color:#f9f9fd"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#64748b;background-color:#f9f9fd"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#64748b"><span class="token plain">uv run --no-project --python .venv-langflow-1.13 python -m langflow run --env-file /absolute/path/to/langflow-upgrade.env</span><br></div></code></pre></div></div>
+<p>Replace the environment file path with your actual path.
+Sign in as the existing user and check saved flows, credentials, files, and knowledge bases.
+Keep the old environment if any active database or storage path still points inside it.
+The first startup can migrate your database and local knowledge storage.
+Returning to 1.11.x afterward requires restoring the database and storage backups before starting the old environment.</p>
+</li>
+</ol>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="next-steps">Next steps<a href="#next-steps" class="hash-link" aria-label="Direct link to Next steps" title="Direct link to Next steps" translate="no">​</a></h2>
 <ul>
 <li class=""><a class="" href="/get-started-quickstart">Quickstart</a>: Build and run your first flow in minutes.</li>
 <li class=""><a class="" href="/concepts-flows">Build flows</a>: Learn about building flows.</li>
 <li class=""><a class="" href="/troubleshoot">Troubleshoot Langflow</a>: Get help with common Langflow install and startup issues.</li>
-</ul></div><div class="root_CJIt"><p class="title_RKYa">Was this page helpful?</p><div class="row_kzXg"><div class="buttons_vjNB"><button type="button" class="button_iR6C"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up" aria-hidden="true"><path d="M7 10v12"></path><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"></path></svg><span>Good</span></button><button type="button" class="button_iR6C"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down" aria-hidden="true"><path d="M17 14V2"></path><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"></path></svg><span>Bad</span></button></div><a class="supportLink_bcMG" data-event="UI Interaction" data-action="clicked" data-channel="docs" data-element-id="page-feedback-support" data-namespace="doc-footer" data-platform-title="Langflow" href="/contributing-github-issues"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-life-buoy" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg><span>Support</span></a></div></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/next"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">About Langflow</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/next/get-started-quickstart"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Quickstart</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#install-and-run-langflow-desktop" class="table-of-contents__link toc-highlight">Install and run Langflow Desktop</a></li><li><a href="#install-and-run-langflow-docker" class="table-of-contents__link toc-highlight">Install and run Langflow with Docker</a></li><li><a href="#install-and-run-the-langflow-oss-python-package" class="table-of-contents__link toc-highlight">Install and run the Langflow OSS Python package</a><ul><li><a href="#manage-the-langflow-oss-version" class="table-of-contents__link toc-highlight">Manage the Langflow OSS version</a></li></ul></li><li><a href="#next-steps" class="table-of-contents__link toc-highlight">Next steps</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
+</ul></div><div class="root_CJIt"><p class="title_RKYa">Was this page helpful?</p><div class="row_kzXg"><div class="buttons_vjNB"><button type="button" class="button_iR6C"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-up" aria-hidden="true"><path d="M7 10v12"></path><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"></path></svg><span>Good</span></button><button type="button" class="button_iR6C"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-thumbs-down" aria-hidden="true"><path d="M17 14V2"></path><path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"></path></svg><span>Bad</span></button></div><a class="supportLink_bcMG" data-event="UI Interaction" data-action="clicked" data-channel="docs" data-element-id="page-feedback-support" data-namespace="doc-footer" data-platform-title="Langflow" href="/contributing-github-issues"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-life-buoy" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m4.93 4.93 4.24 4.24"></path><path d="m14.83 9.17 4.24-4.24"></path><path d="m14.83 14.83 4.24 4.24"></path><path d="m9.17 14.83-4.24 4.24"></path><circle cx="12" cy="12" r="4"></circle></svg><span>Support</span></a></div></div></article><nav class="docusaurus-mt-lg pagination-nav" aria-label="Docs pages"><a class="pagination-nav__link pagination-nav__link--prev" href="/next"><div class="pagination-nav__sublabel">Previous</div><div class="pagination-nav__label">About Langflow</div></a><a class="pagination-nav__link pagination-nav__link--next" href="/next/get-started-quickstart"><div class="pagination-nav__sublabel">Next</div><div class="pagination-nav__label">Quickstart</div></a></nav></div></div><div class="col col--3"><div class="tableOfContents_bqdL thin-scrollbar theme-doc-toc-desktop"><ul class="table-of-contents table-of-contents__left-border"><li><a href="#install-and-run-langflow-desktop" class="table-of-contents__link toc-highlight">Install and run Langflow Desktop</a></li><li><a href="#install-and-run-langflow-docker" class="table-of-contents__link toc-highlight">Install and run Langflow with Docker</a></li><li><a href="#install-and-run-the-langflow-oss-python-package" class="table-of-contents__link toc-highlight">Install and run the Langflow OSS Python package</a><ul><li><a href="#manage-the-langflow-oss-version" class="table-of-contents__link toc-highlight">Manage the Langflow OSS version</a></li><li><a href="#upgrade-from-langflow-111" class="table-of-contents__link toc-highlight">Upgrade from Langflow 1.11.x</a></li></ul></li><li><a href="#next-steps" class="table-of-contents__link toc-highlight">Next steps</a></li></ul></div></div></div></div></main></div></div></div><footer class="theme-layout-footer footer"><div class="container container-fluid"><div class="row footer__links"><div class="theme-layout-footer-column col footer__col"><div class="footer__title"></div><ul class="footer__items clean-list"><li class="footer__item"><div class="footer-links">
                   <span>© 2026 Langflow</span>
                   <span id="preferenceCenterContainer"> ·&nbsp; <a href="#" onclick='return"undefined"!=typeof window&&window.truste&&window.truste.eu&&window.truste.eu.clickListener&&window.truste.eu.clickListener(),!1' style="cursor: pointer;">Manage Privacy Choices</a></span>
                   </div></li></ul></div></div></div></footer><div style="position:fixed;right:21px;bottom:21px;z-index:100;display:flex;align-items:center;gap:10px;cursor:pointer"><div style="background-color:#f6f6f6;border-radius:50%;width:48px;height:48px;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 4px rgba(0,0,0,0.1)"><img src="/img/langflow-icon-black-transparent.svg" style="width:40px" alt="Search"></div></div></div>

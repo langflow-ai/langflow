@@ -24,8 +24,8 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.3382561b.css">
-<script src="/assets/js/runtime~main.a2f655cf.js" defer="defer"></script>
-<script src="/assets/js/main.dd395a16.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.90fa7079.js" defer="defer"></script>
+<script src="/assets/js/main.5c4d4e99.js" defer="defer"></script>
 </head>
 <body>
 <svg style="display: none;"><defs>
@@ -70,7 +70,7 @@ For more information, see <a class="" href="/environment-variables#supported-var
 <p>Custom component creation must be enabled and permitted for your user role:</p>
 <ul>
 <li class=""><code>LANGFLOW_ALLOW_CUSTOM_COMPONENTS</code> must be <code>true</code> (default).</li>
-<li class=""><code>LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY</code> must be <code>false</code> (default) for non-superusers. For superusers, this option is irrelevant.</li>
+<li class=""><code>LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY</code> must be explicitly set to <code>false</code> for non-superusers. The default is <code>true</code>. For superusers, this option is irrelevant.</li>
 </ul>
 <p>For more information, see <a class="" href="/deployment-block-custom-components">Restrict custom component creation to superusers</a>.</p>
 </li>
@@ -226,7 +226,7 @@ Langflow Assistant chooses the components, connects them into a flow, and saves 
 <p>Open Langflow.
 The new flow is available in your project.</p>
 </li>
-</ol></div><div role="tabpanel" aria-label="Call Langflow Assistant with Cursor" class="tabItem_s4ch"><p>Cursor can call the same tools as Claude without a local <code>lfx-mcp</code> process.
+</ol></div><div role="tabpanel" aria-label="Call Langflow Assistant with Cursor" class="tabItem_s4ch" hidden=""><p>Cursor can call the same tools as Claude without a local <code>lfx-mcp</code> process.
 Langflow serves them over <a href="https://modelcontextprotocol.io/docs/concepts/transports" target="_blank" rel="noopener noreferrer" class="">streamable HTTP</a> at <code>/api/v1/agentic/mcp</code>.</p><ol>
 <li class="">
 <p><a class="" href="/api-keys-and-authentication">Create a Langflow API key</a>.</p>
