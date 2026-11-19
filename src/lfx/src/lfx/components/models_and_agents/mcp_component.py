@@ -103,11 +103,11 @@ class MCPToolsComponent(ComponentWithCache):
         # Serialize updates to the component's discovery state.
         self._update_tool_list_lock = asyncio.Lock()
         # Per-component-lineage TTL cache for ``_get_tools``:
-        # {cache_key: (monotonic_ts, tools)}. Freshly instantiated components get their own
+        # {cache_key: (monotonic_ts, tools, server_config)}. Freshly instantiated components get their own
         # dict; ``__deepcopy__`` shares it only with that component's invocation copies.
         # A class-level dict would instead expose entries to every MCPToolsComponent in the
         # process, leaking tool lists across tenants that happen to hash to the same key.
-        self._ttl_tool_cache: dict[str, tuple[float, list]] = {}
+        self._ttl_tool_cache: dict[str, tuple[float, list, dict]] = {}
 
     def _initialize_mcp_clients(self) -> None:
         self.stdio_client = MCPStdioClient(component_cache=self._shared_component_cache)
@@ -1182,9 +1182,17 @@ class MCPToolsComponent(ComponentWithCache):
         if ttl > 0 and ttl_key:
             cached = self._ttl_tool_cache.get(ttl_key)
             if cached is not None:
-                ts, cached_tools = cached
+                ts, cached_tools, cached_config = cached
                 age = time.monotonic() - ts
                 if age < ttl:
+                    # This reuse skips ``update_tool_list``, so apply its stdio policy here.
+                    try:
+                        await self._ensure_cached_mcp_stdio_access(cached_config)
+                    except Exception as e:
+                        self._ttl_tool_cache.pop(ttl_key, None)
+                        msg = f"Error updating tool list: {e!s}"
+                        await logger.aexception(msg)
+                        raise ValueError(msg) from e
                     await logger.adebug(
                         "MCP _get_tools: TTL cache hit count=%d age=%.1fs server=%r",
                         len(cached_tools),
@@ -1196,7 +1204,7 @@ class MCPToolsComponent(ComponentWithCache):
                 self._ttl_tool_cache.pop(ttl_key, None)
 
         await logger.adebug("MCP _get_tools: fetching tool list server=%r", srv)
-        tools, _ = await self.update_tool_list(mcp_server)
+        tools, server_info = await self.update_tool_list(mcp_server)
         await logger.adebug("MCP _get_tools: fetched %d tools server=%r", len(tools), srv)
 
         # TTL cache store with bounded size (FIFO eviction of the oldest entry).
@@ -1205,6 +1213,6 @@ class MCPToolsComponent(ComponentWithCache):
                 # dict preserves insertion order — pop the oldest entry.
                 oldest_key = next(iter(self._ttl_tool_cache))
                 self._ttl_tool_cache.pop(oldest_key, None)
-            self._ttl_tool_cache[ttl_key] = (time.monotonic(), tools)
+            self._ttl_tool_cache[ttl_key] = (time.monotonic(), tools, server_info.get("config") or {})
 
         return tools

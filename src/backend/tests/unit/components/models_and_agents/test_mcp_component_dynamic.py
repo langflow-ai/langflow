@@ -167,7 +167,7 @@ class TestTtlToolCacheIsolation(ComponentTestBaseWithoutClient):
     def test_write_to_one_instance_does_not_leak_to_another(self, component_class, default_kwargs) -> None:
         a = component_class(**default_kwargs)
         b = component_class(**default_kwargs)
-        a._ttl_tool_cache["k"] = (0.0, [_make_tool("leak")])
+        a._ttl_tool_cache["k"] = (0.0, [_make_tool("leak")], {})
 
         assert "k" not in b._ttl_tool_cache
 
@@ -192,7 +192,10 @@ class TestTtlToolCacheIsolation(ComponentTestBaseWithoutClient):
         tools_b = [_make_tool("tools_b")]
 
         update_tool_list = AsyncMock(side_effect=[(tools_a, {}), (tools_b, {})])
-        with patch.object(component_class, "update_tool_list", new=update_tool_list):
+        with (
+            patch.object(component_class, "update_tool_list", new=update_tool_list),
+            patch.object(component_class, "_ensure_cached_mcp_stdio_access", new=AsyncMock()),
+        ):
             assert await first_invocation._get_tools() is tools_a
             assert await other_session_invocation._get_tools() is tools_b
             assert await second_invocation._get_tools() is tools_a
@@ -209,16 +212,42 @@ class TestGetToolsTtlCache:
         component.headers = []
 
         cached_tools = [_make_tool("cached")]
+        cached_config = {"command": "uvx"}
         ttl_key = component._mcp_servers_cache_key("srv")
         import time as _time
 
-        component._ttl_tool_cache[ttl_key] = (_time.monotonic(), cached_tools)
+        component._ttl_tool_cache[ttl_key] = (_time.monotonic(), cached_tools, cached_config)
 
-        with patch.object(component, "update_tool_list", new=AsyncMock()) as mocked_update:
+        with (
+            patch.object(component, "update_tool_list", new=AsyncMock()) as mocked_update,
+            patch.object(component, "_ensure_cached_mcp_stdio_access", new=AsyncMock()) as stdio_policy,
+        ):
             result = await component._get_tools()
 
         assert result is cached_tools
         mocked_update.assert_not_awaited()
+        stdio_policy.assert_awaited_once_with(cached_config)
+
+    @pytest.mark.asyncio
+    async def test_ttl_cache_hit_reapplies_stdio_policy(self) -> None:
+        component = _component_in_session()
+        component.mcp_server = {"name": "srv"}
+        component.headers = []
+        ttl_key = component._mcp_servers_cache_key("srv")
+        import time as _time
+
+        component._ttl_tool_cache[ttl_key] = (_time.monotonic(), [_make_tool("cached")], {"command": "uvx"})
+        denied = AsyncMock(side_effect=PermissionError("MCP stdio servers are restricted"))
+
+        with (
+            patch.object(component, "update_tool_list", new=AsyncMock()) as mocked_update,
+            patch.object(component, "_ensure_cached_mcp_stdio_access", new=denied),
+            pytest.raises(ValueError, match="MCP stdio servers are restricted"),
+        ):
+            await component._get_tools()
+
+        mocked_update.assert_not_awaited()
+        assert ttl_key not in component._ttl_tool_cache
 
     @pytest.mark.asyncio
     async def test_ttl_cache_expired_entry_is_refetched(self) -> None:
@@ -230,7 +259,7 @@ class TestGetToolsTtlCache:
         fresh_tools = [_make_tool("fresh")]
         ttl_key = component._mcp_servers_cache_key("srv")
         # Timestamp older than TOOL_TTL_SECS so the entry is considered expired.
-        component._ttl_tool_cache[ttl_key] = (0.0, stale_tools)
+        component._ttl_tool_cache[ttl_key] = (0.0, stale_tools, {})
 
         with patch.object(
             component,

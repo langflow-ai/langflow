@@ -618,6 +618,57 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert (await new_tools[0].coroutine()).content[0].text == new_caller
         assert (await tools_a[0].coroutine()).content[0].text == callers[0]
 
+    async def test_agents_sharing_a_server_keep_their_own_tool_selection(self, monkeypatch):
+        """Agents on one server share its discovery, and each keeps the tools it enabled."""
+        server_tools = ("search", "read", "create", "update")
+        discoveries = []
+
+        async def connect(client, _url, headers, **_kwargs):
+            discoveries.append(headers.get("x-agent"))
+            client._connected = True
+            return [Tool(name=name, inputSchema={"type": "object", "properties": {}}) for name in server_tools]
+
+        monkeypatch.setattr(MCPStreamableHttpClient, "connect_to_server", connect)
+        monkeypatch.setattr("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", MagicMock())
+        monkeypatch.setattr(
+            "langflow.api.v2.mcp.get_server",
+            AsyncMock(return_value={"url": "https://mcp.example.invalid/mcp"}),
+        )
+        monkeypatch.setattr(
+            "langflow.services.database.models.user.crud.get_user_by_id",
+            AsyncMock(return_value=SimpleNamespace(id="owner")),
+        )
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.session_scope", MagicMock())
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.get_storage_service", MagicMock())
+        monkeypatch.setattr(MCPToolsComponent, "require_integration_policy", MagicMock())
+        graph = SimpleNamespace(user_id="owner", flow_id="flow-id", session_id="chat", context={})
+
+        async def agent_tool_names(enabled, renamed=None, headers=None):
+            component = MCPToolsComponent(mcp_server="srv", use_cache=True, headers=headers or [])
+            component.set_vertex(SimpleNamespace(graph=graph))
+            component.tools_metadata = DataFrame(
+                [
+                    {
+                        "name": (renamed or {}).get(name, name),
+                        "description": "",
+                        "tags": [name],
+                        "status": name in enabled,
+                    }
+                    for name in server_tools
+                ]
+            )
+            return [tool.name for tool in await component.to_toolkit()]
+
+        assert await agent_tool_names({"search", "read"}, renamed={"search": "find"}) == ["find", "read"]
+        assert await agent_tool_names({"create", "update"}) == ["create", "update"]
+        assert await agent_tool_names({"search"}) == ["search"]
+        assert discoveries == [None]
+
+        # A header that identifies the agent to the server gets its own discovery.
+        agent_header = [{"key": "X-Agent", "value": "writer"}]
+        assert await agent_tool_names({"create"}, headers=agent_header) == ["create"]
+        assert discoveries == [None, "writer"]
+
     @pytest.mark.asyncio
     async def test_build_output_with_cached_tools(self, component_class, default_kwargs, mock_tools_list):
         """Test build_output method works correctly with cached tools."""
