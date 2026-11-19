@@ -8,7 +8,7 @@ import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
 
-Get started with Langflow by loading a template flow, running it, and then serving it at the `/run` API endpoint.
+Get started with Langflow by loading a template flow, running it, and then calling it with the Workflow API at `POST /api/v2/workflows`.
 
 ## Prerequisites
 
@@ -27,30 +27,22 @@ Get started with Langflow by loading a template flow, running it, and then servi
     2. Click **Langflow API Keys**, and then click <Icon name="Plus" aria-hidden="true"/> **Add New**.
     3. Name your key, and then click **Create API Key**.
     4. Copy the API key and store it securely.
-    5. To use your Langflow API key in a request, set a `LANGFLOW_API_KEY` environment variable in your terminal, and then include an `x-api-key` header or query parameter with your request.
+    5. Include your Langflow API key in the `x-api-key` header. Set `LANGFLOW_API_KEY` in the terminal where you run the request. A curl command expands `$LANGFLOW_API_KEY`. Replace `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID`.
     For example:
 
         ```bash
-        # Set variable
         export LANGFLOW_API_KEY="sk..."
 
-        # Send request
-        curl --request POST \
-        --url "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID" \
-        --header "Content-Type: application/json" \
-        --header "x-api-key: $LANGFLOW_API_KEY" \
-        --data '{
-          "output_type": "chat",
-          "input_type": "chat",
+        curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v2/workflows" \
+        -H "Content-Type: application/json" \
+        -H "x-api-key: $LANGFLOW_API_KEY" \
+        -d '{
+          "flow_id": "FLOW_ID",
           "input_value": "Hello"
         }'
         ```
 
     </details>
-
-:::tip
-If you encounter the error "An API key must be passed as query or header" when attempting to sign up, see [Troubleshooting](/troubleshoot#an-api-key-must-be-passed-as-query-or-header).
-:::
 
 ## Run the Simple Agent template flow
 
@@ -66,21 +58,10 @@ Many components can be tools for agents, including [Model Context Protocol (MCP)
    <PartialGlobalModelProviders />
 3. In the **Agent** component, select your configured model from the **Language Model** dropdown.
 
-    <details>
-    <summary>Access more models and providers</summary>
-
-    There are two ways to access more models and providers:
-
-    * Edit Langflow's global <Icon name="BrainCog" aria-hidden="true" /> **Models** configuration. These providers and models are part of Langflow's core functionality. Use the **Ollama** provider to connect to any model hosted on a local or remote Ollama instance.
-    * Connect any [additional language model component](/components-models#additional-language-models) to the **Agent** component's **Language Model** port.
-
-    </details>
-
 4. To run the flow, click <Icon name="Play" aria-hidden="true"/> **Playground**.
 
-5. To test the **Calculator** tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
-The **Calculator** is a tool on the **Agent** component. Open the **Agent** component's parameters to turn it on or off.
-To help you test and evaluate your flows, the **Playground** shows the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
+5. To test the agent's **Calculator** tool, ask the agent a simple math question, such as `I want to add 4 and 4.`
+To help you test and evaluate your flows, the **Playground** displays the agent's reasoning process as it analyzes the prompt, selects a tool, and then uses the tool to generate a response.
 In this case, a math question causes the agent to use the **Calculator** tool and an action like `evaluate_expression`.
 
 ![Playground with Agent tool](/img/quickstart-simple-agent-playground.png)
@@ -105,50 +86,43 @@ Langflow is an IDE, but it's also a runtime you can call through the [Langflow A
 When you start Langflow locally, you can send requests to the local Langflow server.
 For production applications, you need to [deploy a stable Langflow instance](/deployment-overview) to handle API calls.
 
-For example, you can use the `/run` endpoint to run a flow and get the result.
+Call the flow with `POST /api/v2/workflows`. Omit `mode`, or set it to `"sync"`, to wait for one JSON response. The text reply is in `output.text`.
 
-Langflow provides code snippets to help you get started with the Langflow API.
+Langflow provides code snippets for this call.
 
 1. When editing a flow, click **Share**, and then click **API access**.
 
-    The default code in the API access pane constructs a request with the Langflow server `url`, `headers`, and a `payload` of request data.
-    The code snippets automatically include the `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID` values for the flow, and a script to include your `LANGFLOW_API_KEY` if you've set it as an environment variable in your terminal session.
-    Replace these values if you're using the code for a different server or flow.
+    The pane opens on **v2**. Copy **Get the full result**. **Stream the result as it runs** is the same call with `"mode": "stream"`. Scroll the snippet list to copy it. This page uses the full-result call. For stream and background runs, see the [Workflow API quickstart](/workflow-api-quickstart).
+
+    The snippet fills in the Langflow server URL and the flow UUID.
+    `flow_id` is that UUID. You can set **Endpoint Name** while the pane is on **v2**, but that alias is used only by the **v1** `/api/v1/run` snippets, and **v2** still sends the flow UUID as `flow_id`.
+    In the examples below, replace `LANGFLOW_SERVER_ADDRESS` and `FLOW_ID`. Python reads `os.environ["LANGFLOW_API_KEY"]`, JavaScript reads `process.env.LANGFLOW_API_KEY`, and curl expands `$LANGFLOW_API_KEY`. Set that variable in the terminal where you run the snippet.
     The default Langflow server address is `http://localhost:7860`.
 
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
     ```python
+    import os
+
     import requests
 
-    url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"  # The complete API endpoint URL for this flow
-
-    # Request payload configuration
+    url = "http://LANGFLOW_SERVER_ADDRESS/api/v2/workflows"
     payload = {
-        "output_type": "chat",
-        "input_type": "chat",
-        "input_value": "hello world!"
+        "flow_id": "FLOW_ID",
+        "input_value": "hello world!",
     }
-
-    # Request headers
     headers = {
         "Content-Type": "application/json",
-        "x-api-key": "$LANGFLOW_API_KEY"
+        "x-api-key": os.environ["LANGFLOW_API_KEY"],
     }
 
-    try:
-        # Send API request
-        response = requests.request("POST", url, json=payload, headers=headers)
-        response.raise_for_status()  # Raise exception for bad status codes
+    response = requests.post(url, json=payload, headers=headers)
+    response.raise_for_status()
+    result = response.json()
 
-        # Print response
-        print(response.text)
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error making API request: {e}")
-    except ValueError as e:
-        print(f"Error parsing response: {e}")
+    # The text reply is in output.text.
+    print(result["output"]["text"])
     ```
 
     </TabItem>
@@ -156,294 +130,136 @@ Langflow provides code snippets to help you get started with the Langflow API.
 
     ```js
     const payload = {
-        "output_type": "chat",
-        "input_type": "chat",
-        "input_value": "hello world!",
-        "session_id": "user_1"
+      flow_id: "FLOW_ID",
+      input_value: "hello world!",
     };
 
-    const options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': 'LANGFLOW_API_KEY'
-        },
-        body: JSON.stringify(payload)
-    };
+    const response = await fetch("http://LANGFLOW_SERVER_ADDRESS/api/v2/workflows", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": process.env.LANGFLOW_API_KEY,
+      },
+      body: JSON.stringify(payload),
+    });
+    const result = await response.json();
 
-    fetch('http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID', options)
-        .then(response => response.json())
-        .then(response => console.log(response))
-        .catch(err => console.error(err));
+    // The text reply is in output.text.
+    console.log(result.output.text);
     ```
 
     </TabItem>
     <TabItem value="curl" label="curl">
 
     ```bash
-    curl --request POST \
-         --url 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID?stream=false' \
-         --header 'Content-Type: application/json' \
-         --header "x-api-key: LANGFLOW_API_KEY" \
-         --data '{
-          "output_type": "chat",
-          "input_type": "chat",
-          "input_value": "hello world!"
-          }'
-
-    # A 200 response confirms the call succeeded.
+    curl -X POST "http://LANGFLOW_SERVER_ADDRESS/api/v2/workflows" \
+      -H "Content-Type: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY" \
+      -d '{
+        "flow_id": "FLOW_ID",
+        "input_value": "hello world!"
+      }'
     ```
 
     </TabItem>
     </Tabs>
 
-2. Copy the snippet, paste it in a script file, and then run the script to send the request.
-If you are using the curl snippet, you can run the command directly in your terminal.
+2. Copy **Get the full result**, paste it in a script file, and then run the script.
+If you are using the curl snippet, run the command in your terminal.
 
-If the request is successful, the response includes many details about the flow run, including the session ID, inputs, outputs, components, durations, and more.
-The following is an example of a response from running the **Simple Agent** template flow:
+A completed run returns one JSON object. Read `output.text` for the reply. Pass `session_id` on the next request to continue the same chat. When `output.text` is `null`, `output.reason` says why, and the per-component results are in `outputs`.
+
+The following is an example of a sync response:
 
 <details>
 <summary>Result</summary>
 
 ```json
 {
+  "flow_id": "67ccd2be-17f0-8190-81ff-3bb2cf6508e6",
   "session_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-  "outputs": [
-    {
-      "inputs": {
-        "input_value": "hello world!"
-      },
-      "outputs": [
-        {
-          "results": {
-            "message": {
-              "text_key": "text",
-              "data": {
-                "timestamp": "2025-06-16 19:58:23 UTC",
-                "sender": "Machine",
-                "sender_name": "AI",
-                "session_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-                "text": "Hello world! 🌍 How can I assist you today?",
-                "files": [],
-                "error": false,
-                "edit": false,
-                "properties": {
-                  "text_color": "",
-                  "background_color": "",
-                  "edited": false,
-                  "source": {
-                    "id": "Agent-ZOknz",
-                    "display_name": "Agent",
-                    "source": "gpt-4o-mini"
-                  },
-                  "icon": "bot",
-                  "allow_markdown": false,
-                  "positive_feedback": null,
-                  "state": "complete",
-                  "targets": []
-                },
-                "category": "message",
-                "content_blocks": [
-                  {
-                    "title": "Agent Steps",
-                    "contents": [
-                      {
-                        "type": "text",
-                        "duration": 2,
-                        "header": {
-                          "title": "Input",
-                          "icon": "MessageSquare"
-                        },
-                        "text": "**Input**: hello world!"
-                      },
-                      {
-                        "type": "text",
-                        "duration": 226,
-                        "header": {
-                          "title": "Output",
-                          "icon": "MessageSquare"
-                        },
-                        "text": "Hello world! 🌍 How can I assist you today?"
-                      }
-                    ],
-                    "allow_markdown": true,
-                    "media_url": null
-                  }
-                ],
-                "id": "f3d85d9a-261c-4325-b004-95a1bf5de7ca",
-                "flow_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-                "duration": null
-              },
-              "default_value": "",
-              "text": "Hello world! 🌍 How can I assist you today?",
-              "sender": "Machine",
-              "sender_name": "AI",
-              "files": [],
-              "session_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-              "timestamp": "2025-06-16T19:58:23+00:00",
-              "flow_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-              "error": false,
-              "edit": false,
-              "properties": {
-                "text_color": "",
-                "background_color": "",
-                "edited": false,
-                "source": {
-                  "id": "Agent-ZOknz",
-                  "display_name": "Agent",
-                  "source": "gpt-4o-mini"
-                },
-                "icon": "bot",
-                "allow_markdown": false,
-                "positive_feedback": null,
-                "state": "complete",
-                "targets": []
-              },
-              "category": "message",
-              "content_blocks": [
-                {
-                  "title": "Agent Steps",
-                  "contents": [
-                    {
-                      "type": "text",
-                      "duration": 2,
-                      "header": {
-                        "title": "Input",
-                        "icon": "MessageSquare"
-                      },
-                      "text": "**Input**: hello world!"
-                    },
-                    {
-                      "type": "text",
-                      "duration": 226,
-                      "header": {
-                        "title": "Output",
-                        "icon": "MessageSquare"
-                      },
-                      "text": "Hello world! 🌍 How can I assist you today?"
-                    }
-                  ],
-                  "allow_markdown": true,
-                  "media_url": null
-                }
-              ],
-              "duration": null
-            }
-          },
-          "artifacts": {
-            "message": "Hello world! 🌍 How can I assist you today?",
-            "sender": "Machine",
-            "sender_name": "AI",
-            "files": [],
-            "type": "object"
-          },
-          "outputs": {
-            "message": {
-              "message": "Hello world! 🌍 How can I assist you today?",
-              "type": "text"
-            }
-          },
-          "logs": {
-            "message": []
-          },
-          "messages": [
-            {
-              "message": "Hello world! 🌍 How can I assist you today?",
-              "sender": "Machine",
-              "sender_name": "AI",
-              "session_id": "29deb764-af3f-4d7d-94a0-47491ed241d6",
-              "stream_url": null,
-              "component_id": "ChatOutput-aF5lw",
-              "files": [],
-              "type": "text"
-            }
-          ],
-          "timedelta": null,
-          "duration": null,
-          "component_display_name": "Chat Output",
-          "component_id": "ChatOutput-aF5lw",
-          "used_frozen_result": false
-        }
-      ]
+  "job_id": "a98d9753-9259-47ca-9783-69a9d8d26889",
+  "object": "response",
+  "created_timestamp": "2026-06-30T16:00:56.917538+00:00",
+  "status": "completed",
+  "output": {
+    "reason": "single",
+    "text": "Hello world! How can I assist you today?",
+    "source": "ChatOutput-aF5lw"
+  },
+  "has_errors": false,
+  "errors": [],
+  "warnings": [],
+  "inputs": {},
+  "globals": {},
+  "outputs": {
+    "ChatOutput-aF5lw": {
+      "type": "message",
+      "status": "completed",
+      "display_name": "Chat Output",
+      "content": "Hello world! How can I assist you today?"
     }
-  ]
+  }
 }
 ```
 
 </details>
 
-In a production application, you probably want to select parts of this response to return to the user, store in logs, and so on. The next steps demonstrate how you can extract data from a Langflow API response to use in your application.
+In a production application, return `output.text` to the user and keep `session_id` for the next turn. The next script does both in a terminal chat.
 
 ### Extract data from the response
 
-The following example builds on the API pane's example code to create a question-and-answer chat in your terminal that stores the agent's previous answer.
+This script uses the **Get the full result** call. Each question continues the previous turn by sending the `session_id` from the last response. The script also keeps the previous reply so you can print it.
 
-1. Incorporate your **Simple Agent** flow's `/run` snippet into the following script.
-This script runs a question-and-answer chat in your terminal and stores the agent's previous answer so you can compare them.
+1. Copy the following script into a file. Replace `FLOW_ID` with the flow UUID from **Get the full result**, and set `LANGFLOW_API_KEY` in the terminal where you run the script.
 
     <Tabs>
     <TabItem value="Python" label="Python" default>
 
     ```python
+    import os
+
     import requests
-    import json
 
-    url = "http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID"
-
-    def ask_agent(question):
-        payload = {
-            "output_type": "chat",
-            "input_type": "chat",
-            "input_value": question,
-        }
-
-        headers = {
+    url = "http://LANGFLOW_SERVER_ADDRESS/api/v2/workflows"
+    headers = {
         "Content-Type": "application/json",
-        "x-api-key": "LANGFLOW_API_KEY"
-        }
-
-        try:
-            response = requests.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-
-            # Get the response message
-            data = response.json()
-            message = data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
-            return message
-
-        except Exception as e:
-            return f"Error: {str(e)}"
-
-    def extract_message(data):
-        try:
-            return data["outputs"][0]["outputs"][0]["outputs"]["message"]["message"]
-        except (KeyError, IndexError):
-            return None
-
-    # Store the previous answer from ask_agent response
+        "x-api-key": os.environ["LANGFLOW_API_KEY"],
+    }
+    session_id = None
     previous_answer = None
 
-    # the terminal chat
+    def ask_agent(question):
+        global session_id
+        payload = {
+            "flow_id": "FLOW_ID",
+            "input_value": question,
+        }
+        if session_id:
+            payload["session_id"] = session_id
+
+        response = requests.post(url, json=payload, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+        session_id = data.get("session_id")
+        return data["output"]["text"]
+
     while True:
-        # Get user input
-        print("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?')")
+        print("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?'")
         print("Type 'quit' to exit or 'compare' to see the previous answer")
         user_question = input("Your question: ")
 
-        if user_question.lower() == 'quit':
+        if user_question.lower() == "quit":
             break
-        elif user_question.lower() == 'compare':
+        if user_question.lower() == "compare":
             if previous_answer:
                 print(f"\nPrevious answer was: {previous_answer}")
             else:
                 print("\nNo previous answer to compare with!")
             continue
 
-        # Get and display the answer
         result = ask_agent(user_question)
         print(f"\nAgent's answer: {result}")
-        # Store the answer for comparison
         previous_answer = result
     ```
 
@@ -451,77 +267,68 @@ This script runs a question-and-answer chat in your terminal and stores the agen
     <TabItem value="JavaScript" label="JavaScript">
 
     ```js
-    const readline = require('readline');
+    const readline = require("readline");
 
     const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
+      input: process.stdin,
+      output: process.stdout,
     });
 
-    const url = 'http://LANGFLOW_SERVER_ADDRESS/api/v1/run/FLOW_ID';
-
-    // Store the previous answer from askAgent response
+    const url = "http://LANGFLOW_SERVER_ADDRESS/api/v2/workflows";
+    let sessionId = null;
     let previousAnswer = null;
 
-    // the agent flow, with question as input_value
     async function askAgent(question) {
-        const payload = {
-            "output_type": "chat",
-            "input_type": "chat",
-            "input_value": question
-        };
+      const payload = {
+        flow_id: "FLOW_ID",
+        input_value: question,
+      };
+      if (sessionId) {
+        payload.session_id = sessionId;
+      }
 
-        const options = {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': 'LANGFLOW_API_KEY'
-            },
-            body: JSON.stringify(payload)
-        };
-
-        try {
-            const response = await fetch(url, options);
-            const data = await response.json();
-
-            // Extract the message from the nested response
-            const message = data.outputs[0].outputs[0].outputs.message.message;
-            return message;
-        } catch (error) {
-            return `Error: ${error.message}`;
-        }
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.LANGFLOW_API_KEY,
+        },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      sessionId = data.session_id ?? null;
+      return data.output.text;
     }
 
-    // the terminal chat
-    async function startChat() {
-        console.log("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?'");
-        console.log("Type 'quit' to exit or 'compare' to see the previous answer");
+    function startChat() {
+      console.log("\nAsk the agent anything, such as 'What is 15 * 7?' or 'What is the capital of France?'");
+      console.log("Type 'quit' to exit or 'compare' to see the previous answer");
 
-        const askQuestion = () => {
-            rl.question('\nYour question: ', async (userQuestion) => {
-                if (userQuestion.toLowerCase() === 'quit') {
-                    rl.close();
-                    return;
-                }
+      const askQuestion = () => {
+        rl.question("\nYour question: ", async (userQuestion) => {
+          if (userQuestion.toLowerCase() === "quit") {
+            rl.close();
+            return;
+          }
 
-                if (userQuestion.toLowerCase() === 'compare') {
-                    if (previousAnswer) {
-                        console.log(`\nPrevious answer was: ${previousAnswer}`);
-                    } else {
-                        console.log("\nNo previous answer to compare with!");
-                    }
-                    askQuestion();
-                    return;
-                }
+          if (userQuestion.toLowerCase() === "compare") {
+            if (previousAnswer) {
+              console.log(`\nPrevious answer was: ${previousAnswer}`);
+            } else {
+              console.log("\nNo previous answer to compare with!");
+            }
+            askQuestion();
+            return;
+          }
 
-                const result = await askAgent(userQuestion);
-                console.log(`\nAgent's answer: ${result}`);
-                previousAnswer = result;
-                askQuestion();
-            });
-        };
+          const result = await askAgent(userQuestion);
+          console.log(`\nAgent's answer: ${result}`);
+          previousAnswer = result;
+          askQuestion();
+        });
+      };
 
-        askQuestion();
+      askQuestion();
     }
 
     startChat();
@@ -530,7 +337,7 @@ This script runs a question-and-answer chat in your terminal and stores the agen
     </TabItem>
     </Tabs>
 
-2. To view the agent's previous answer, type `compare`. To close the terminal chat, type `exit`.
+2. To view the agent's previous answer, type `compare`. To close the terminal chat, type `quit`.
 
 ### Use tweaks to apply temporary overrides to a flow run
 
@@ -539,8 +346,8 @@ Tweaks are added to the API request, and temporarily change component parameters
 Tweaks override the flow's components' settings for a single run only.
 They don't modify the underlying flow configuration or persist between runs.
 
-Tweaks are added to the `/run` endpoint's `payload`.
-To assist with formatting, [expose the fields you want to override](/concepts-publish#input-schema) before copying the code snippet.
+Add tweaks to the `POST /api/v2/workflows` body.
+To format them, [expose the fields you want to override](/concepts-publish#input-schema) before copying the code snippet.
 
 1. On the canvas, select the component whose parameter you want to override.
 2. Click **Parameters**, and then click **API** on the field you want to include in the snippet.
@@ -552,22 +359,22 @@ Langflow updates the `tweaks` object in the code snippets based on your exposed 
 Use the updated code snippets in your script to run your flow with your overrides.
 
 ```json
-payload = {
-    "output_type": "chat",
-    "input_type": "chat",
-    "input_value": "hello world!",
-    "tweaks": {
-        "Agent-ZOknz": {
-            "agent_llm": "Anthropic",
-            "api_key": "ANTHROPIC_API_KEY",
-            "model_name": "claude-opus-4-5-20251101"
-        }
+{
+  "flow_id": "FLOW_ID",
+  "input_value": "hello world!",
+  "tweaks": {
+    "Agent-ZOknz": {
+      "agent_llm": "Anthropic",
+      "api_key": "ANTHROPIC_API_KEY",
+      "model_name": "claude-opus-4-5-20251101"
     }
+  }
 }
 ```
 
 ## Next steps
 
+* [Workflow API quickstart](/workflow-api-quickstart)
 * [Trigger flows with the Langflow API](/concepts-publish)
 * [Use Langflow as a Model Context Protocol (MCP) server](/mcp-server)
 * [Containerize a Langflow application](/develop-application)
