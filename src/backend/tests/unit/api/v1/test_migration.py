@@ -90,6 +90,11 @@ FILES = {"bucket": "acme", "prefix": "files", "access_key_id": "AKIAEXAMPLE", "s
 @pytest.fixture(autouse=True)
 def migration_enabled(monkeypatch: pytest.MonkeyPatch):
     """Turn the feature on. The flag is read when the routes are mounted, so mount them for this test."""
+
+    async def skip_flow_sync() -> None:
+        """Keep the app's periodic flow sync from adding unrelated writes to a pause response."""
+
+    monkeypatch.setattr("langflow.main.sync_flows_from_fs", skip_flow_sync)
     monkeypatch.setattr(api_router_module.FEATURE_FLAGS, "instance_migration", True)
     routes = api_router_module.router_v1.routes
     mounted = len(routes)
