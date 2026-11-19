@@ -28,6 +28,7 @@ from langflow.services.database.models.deployment.guards import check_flow_has_d
 from langflow.services.database.models.flow.model import Flow, is_virtual_flow_id
 from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.session_memory.model import SessionMemoryStateTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.trigger.model import Trigger
@@ -185,6 +186,7 @@ async def cascade_delete_flow(
         # it might cause unexpected behaviors because the session id could still be
         # used elsewhere to search for these messages.
         await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
+        await session.exec(delete(SessionMemoryStateTable).where(SessionMemoryStateTable.flow_id == flow_id))
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
         await detach_flow_from_evaluations(session, flow_id)

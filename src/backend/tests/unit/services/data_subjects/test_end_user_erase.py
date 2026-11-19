@@ -16,6 +16,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import Job, JobStatus
 from langflow.services.database.models.memory_base.model import MemoryBase, MemoryBaseSession
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.session_memory.model import SessionMemoryStateTable
 from langflow.services.database.models.traces.model import SpanStatus, TraceTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.deps import session_scope
@@ -108,6 +109,31 @@ async def test_should_erase_only_that_end_user_when_others_share_the_flow():
         request = await session.get(DataSubjectRequest, request_id)
         assert request.subject_end_user_id is None
         assert request.subject_label == "alice"
+
+
+@pytest.mark.usefixtures("client")
+async def test_should_erase_only_that_end_users_session_summaries():
+    admin = await create_user("dsr-eu-admin-3", superuser=True)
+    _, flow_id, _ = await _seed_end_users()
+    async with session_scope() as session:
+        session.add_all(
+            [
+                SessionMemoryStateTable(
+                    flow_id=flow_id,
+                    user_id=derive_message_owner_uuid(end_user),
+                    session_id=f"{end_user}::s1",
+                    created_at=_now(),
+                    updated_at=_now(),
+                )
+                for end_user in ("alice", "bob")
+            ]
+        )
+
+    _, status = await _erase("alice", admin)
+
+    assert status == DataSubjectRequestStatus.DONE.value
+    async with session_scope() as session:
+        assert (await session.exec(select(SessionMemoryStateTable.session_id))).all() == ["bob::s1"]
 
 
 @pytest.mark.usefixtures("client")

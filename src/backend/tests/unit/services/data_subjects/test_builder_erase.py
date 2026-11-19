@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
@@ -18,6 +19,7 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.jobs.model import Job, JobEvent
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.session_memory.model import SessionMemoryStateTable
 from langflow.services.database.models.traces.model import SpanTable, TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
@@ -155,6 +157,29 @@ async def test_should_preserve_another_users_flow_when_its_id_collides_with_the_
         preserved_flow = await session.get(Flow, seeded.user_id)
         assert preserved_flow is not None
         assert preserved_flow.user_id == seeded.colleague_id
+
+
+@pytest.mark.usefixtures("client")
+async def test_should_delete_summaries_in_other_peoples_flows_when_builder_erase_completes():
+    seeded = await seed_builder()
+    admin_id = await create_user("dsr-admin", superuser=True)
+    now = datetime.now(timezone.utc)
+    async with session_scope() as session:
+        session.add_all(
+            [
+                SessionMemoryStateTable(
+                    flow_id=seeded.colleague_flow_id, user_id=owner, session_id="s1", created_at=now, updated_at=now
+                )
+                for owner in (seeded.user_id, seeded.colleague_id)
+            ]
+        )
+
+    status = await run_request(await _request_and_approve(seeded.user_id, admin_id))
+
+    assert status == DataSubjectRequestStatus.DONE.value
+    async with session_scope() as session:
+        remaining = (await session.exec(select(SessionMemoryStateTable.user_id))).all()
+    assert remaining == [seeded.colleague_id]
 
 
 @pytest.mark.usefixtures("client")

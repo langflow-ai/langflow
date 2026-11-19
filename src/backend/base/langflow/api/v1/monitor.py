@@ -11,6 +11,7 @@ from sqlmodel import col, delete, func, select
 
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
+from langflow.memory import rename_session_memory, reset_folded_memory_for_update
 from langflow.schema.message import MessageResponse
 from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission
@@ -28,6 +29,7 @@ from langflow.services.database.models.message.model import (
     MessageTable,
     MessageUpdate,
 )
+from langflow.services.database.models.session_memory.model import SessionMemoryStateTable
 from langflow.services.database.models.transactions.crud import transform_transaction_table_for_logs
 from langflow.services.database.models.transactions.model import TransactionLogsResponse, TransactionTable
 from langflow.services.database.models.user.model import User
@@ -228,6 +230,17 @@ async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str],
     """Purge vectors before committing message deletion, preserving retry on failure."""
     if session_ids:
         await get_memory_base_service().purge_session_data(user_id=user_id, session_ids=session_ids, db=db)
+
+
+async def _delete_session_summaries(db, user_id: UUID, session_ids: list[str]) -> None:
+    """Drop rolling chat summaries for these sessions in flows owned by the user, in the caller's transaction."""
+    owned_flows = select(Flow.id).where(Flow.user_id == user_id)
+    await db.exec(
+        delete(SessionMemoryStateTable).where(
+            col(SessionMemoryStateTable.flow_id).in_(owned_flows),
+            col(SessionMemoryStateTable.session_id).in_(session_ids),
+        )
+    )
 
 
 @router.get("/builds", dependencies=[Depends(get_current_active_user)])
@@ -452,8 +465,9 @@ async def update_message(
         if "text" in message_dict and message_dict["text"] != db_message.text:
             # Keep edit flag consistent for UI/audit consumers when content changes.
             message_dict["edit"] = True
-        db_message.sqlmodel_update(message_dict)
-        session.add(db_message)
+        async with reset_folded_memory_for_update(session, db_message, message_dict):
+            db_message.sqlmodel_update(message_dict)
+            session.add(db_message)
         await session.flush()
         await session.refresh(db_message)
     except StaleDataError as e:
@@ -522,11 +536,12 @@ async def update_session_id(
         raise HTTPException(status_code=404, detail="No messages found with the given session ID")
 
     try:
-        # Update all messages with the new session ID
-        for message in messages:
-            message.session_id = new_session_id
+        async with rename_session_memory(session, messages, new_session_id):
+            # Update all messages with the new session ID
+            for message in messages:
+                message.session_id = new_session_id
 
-        session.add_all(messages)
+            session.add_all(messages)
 
         await session.flush()
         message_responses = []
@@ -556,6 +571,7 @@ async def delete_messages_session(
         async with session_storage_operation(user_id=current_user.id, session_ids=owned_sessions):
             await _purge_memory_base_session_data(current_user.id, owned_sessions, db=session)
             await delete_messages_for_user_by_session(session, current_user.id, session_id)
+            await _delete_session_summaries(session, current_user.id, owned_sessions)
             await session.commit()
     except StorageUnavailableError as e:
         await session.rollback()
@@ -640,6 +656,7 @@ async def delete_messages_sessions(
                 .where(col(MessageTable.id).in_(message_ids))
                 .execution_options(synchronize_session="fetch")
             )
+            await _delete_session_summaries(session, current_user.id, affected_session_ids)
             await session.commit()
     except StorageUnavailableError as e:
         await session.rollback()
@@ -745,6 +762,11 @@ async def delete_shared_messages_session(
             .where(MessageTable.session_id == session_id)
         )
         await session.exec(stmt)
+        await session.exec(
+            delete(SessionMemoryStateTable).where(
+                SessionMemoryStateTable.flow_id == virtual_flow_id, SessionMemoryStateTable.session_id == session_id
+            )
+        )
     except Exception as e:
         await session.rollback()
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -781,8 +803,9 @@ async def update_shared_message(
         message_dict = message.model_dump(exclude_unset=True, exclude_none=True)
         if "text" in message_dict and message_dict["text"] != db_message.text:
             message_dict["edit"] = True
-        db_message.sqlmodel_update(message_dict)
-        session.add(db_message)
+        async with reset_folded_memory_for_update(session, db_message, message_dict):
+            db_message.sqlmodel_update(message_dict)
+            session.add(db_message)
         await session.flush()
         await session.refresh(db_message)
     except Exception as e:
@@ -813,9 +836,10 @@ async def rename_shared_session(
         raise HTTPException(status_code=404, detail="No messages found with the given session ID")
 
     try:
-        for message in messages:
-            message.session_id = new_session_id
-        session.add_all(messages)
+        async with rename_session_memory(session, messages, new_session_id):
+            for message in messages:
+                message.session_id = new_session_id
+            session.add_all(messages)
         await session.flush()
 
         result = []
