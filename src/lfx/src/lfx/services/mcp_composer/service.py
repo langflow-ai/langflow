@@ -1587,6 +1587,16 @@ class MCPComposerService(Service):
 
             return process
         finally:
+            # Windows temp log files: make sure they are removed when startup is
+            # cancelled or Popen fails, not only on the success/error paths above.
+            for temp_file in (stdout_file, stderr_file):
+                if temp_file is None:
+                    continue
+                try:
+                    temp_file.close()
+                    Path(temp_file.name).unlink(missing_ok=True)
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error cleaning up MCP Composer temp log file: {e}")
             if backend_auth_config_path:
                 try:
                     backend_auth_config_path.unlink(missing_ok=True)

@@ -333,6 +333,82 @@ class TestWindowsTempFileHandling:
                         Path(f).unlink()
 
     @pytest.mark.asyncio
+    async def test_windows_temp_files_cleanup_when_popen_fails(self, mcp_service):
+        """Test that temp files are removed when subprocess.Popen raises."""
+        with patch("platform.system", return_value="Windows"):
+            stdout_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+            stderr_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+
+            try:
+                with (
+                    patch("tempfile.NamedTemporaryFile", side_effect=[stdout_file, stderr_file]),
+                    patch("subprocess.Popen", side_effect=FileNotFoundError("uvx not found")),
+                    pytest.raises(FileNotFoundError),
+                ):
+                    await mcp_service._start_project_composer_process(
+                        project_id="test-project",
+                        host="localhost",
+                        port=2000,
+                        streamable_http_url="http://test",
+                        max_startup_checks=1,
+                        startup_delay=0.1,
+                    )
+
+                assert stdout_file.closed
+                assert stderr_file.closed
+                assert not Path(stdout_file.name).exists()
+                assert not Path(stderr_file.name).exists()
+            finally:
+                for f in [stdout_file, stderr_file]:
+                    f.close()
+                    with contextlib.suppress(FileNotFoundError):
+                        Path(f.name).unlink()
+
+    @pytest.mark.asyncio
+    async def test_windows_temp_files_cleanup_on_cancellation(self, mcp_service):
+        """Test that temp files are removed when startup is cancelled."""
+        with patch("platform.system", return_value="Windows"):
+            stdout_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+            stderr_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+
+            try:
+                with (
+                    patch("tempfile.NamedTemporaryFile", side_effect=[stdout_file, stderr_file]),
+                    patch("subprocess.Popen") as mock_popen,
+                    patch.object(mcp_service, "_is_port_available", return_value=True),
+                ):
+                    mock_process = MagicMock()
+                    mock_process.pid = 12345
+                    mock_process.poll.return_value = None
+                    mock_popen.return_value = mock_process
+
+                    task = asyncio.create_task(
+                        mcp_service._start_project_composer_process(
+                            project_id="test-project",
+                            host="localhost",
+                            port=2000,
+                            streamable_http_url="http://test",
+                            max_startup_checks=100,
+                            startup_delay=0.05,
+                        )
+                    )
+                    await asyncio.sleep(0.2)
+                    task.cancel()
+                    with pytest.raises(asyncio.CancelledError):
+                        await task
+
+                mock_process.terminate.assert_called_once()
+                assert stdout_file.closed
+                assert stderr_file.closed
+                assert not Path(stdout_file.name).exists()
+                assert not Path(stderr_file.name).exists()
+            finally:
+                for f in [stdout_file, stderr_file]:
+                    f.close()
+                    with contextlib.suppress(FileNotFoundError):
+                        Path(f.name).unlink()
+
+    @pytest.mark.asyncio
     async def test_non_windows_uses_pipes(self, mcp_service):
         """Test that non-Windows systems still use pipes (not temp files)."""
         project_id = "test-project"
