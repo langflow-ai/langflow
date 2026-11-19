@@ -528,3 +528,68 @@ class TestGetFlowByIdOrEndpointName:
             mock_session.get.assert_not_awaited()
         finally:
             patcher.stop()
+
+
+class TestSharedChildFlow:
+    """A Run Flow child by id: owner first, then a flow authorization lets the run user execute."""
+
+    @staticmethod
+    def _session(owned, shared):
+        mock_session = MagicMock()
+        result = MagicMock()
+        result.first = MagicMock(return_value=owned)
+        mock_session.exec = AsyncMock(return_value=result)
+        mock_session.get = AsyncMock(return_value=shared)
+        return mock_session
+
+    @staticmethod
+    def _authz(*, enabled=True, cross_user=True, allowed=True):
+        authz = MagicMock()
+        authz.is_enabled = AsyncMock(return_value=enabled)
+        authz.supports_cross_user_fetch = AsyncMock(return_value=cross_user)
+        authz.enforce = AsyncMock(return_value=allowed)
+        return authz
+
+    async def _lookup(self, session, authz):
+        with (
+            patch("langflow.helpers.flow.session_scope") as scope,
+            patch("langflow.services.deps.get_authorization_service", return_value=authz),
+        ):
+            scope.return_value.__aenter__ = AsyncMock(return_value=session)
+            scope.return_value.__aexit__ = AsyncMock()
+            return await get_flow_by_id_or_name(user_id=str(uuid4()), flow_id=str(uuid4()))
+
+    @pytest.fixture
+    def shared_flow(self):
+        flow = MagicMock(spec=Flow)
+        flow.to_data = MagicMock(return_value=Data(data={"name": "child"}))
+        return flow
+
+    @pytest.mark.asyncio
+    async def test_a_flow_authorization_allows_is_returned(self, shared_flow):
+        authz = self._authz()
+        result = await self._lookup(self._session(None, shared_flow), authz)
+        assert result.data["name"] == "child"
+        assert authz.enforce.await_args.kwargs["obj"].startswith("flow:")
+        assert authz.enforce.await_args.kwargs["act"] == "execute"
+        assert authz.enforce.await_args.kwargs["context"]["is_superuser"] is False
+
+    @pytest.mark.asyncio
+    async def test_a_flow_authorization_refuses_is_not_returned(self, shared_flow):
+        assert await self._lookup(self._session(None, shared_flow), self._authz(allowed=False)) is None
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("authz", [{"enabled": False}, {"cross_user": False}])
+    async def test_without_a_plugin_that_shares_flows_only_the_owner_gets_it(self, shared_flow, authz):
+        mocked = self._authz(**authz)
+        assert await self._lookup(self._session(None, shared_flow), mocked) is None
+        mocked.enforce.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_the_owner_needs_no_authorization(self):
+        owned = MagicMock(spec=Flow)
+        owned.to_data = MagicMock(return_value=Data(data={"name": "own"}))
+        authz = self._authz()
+        result = await self._lookup(self._session(owned, None), authz)
+        assert result.data["name"] == "own"
+        authz.enforce.assert_not_awaited()
