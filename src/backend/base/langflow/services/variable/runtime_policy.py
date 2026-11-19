@@ -53,6 +53,10 @@ def register_env_import_predicate(predicate: Callable[[UUID], Awaitable[bool]] |
 
 async def env_import_allowed(user_id: UUID | str) -> bool:
     """Whether this account gets the environment defaults. A failing predicate refuses: nothing is written."""
+    # The predicate is installed by an extension hook; decide only after the extensions have loaded.
+    from langflow.services.deployment_artifacts.activation import load_activation_extensions
+
+    load_activation_extensions()
     if _env_import_predicate is None:
         return True
     from lfx.log.logger import logger

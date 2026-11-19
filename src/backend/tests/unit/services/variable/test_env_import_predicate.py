@@ -86,3 +86,17 @@ async def test_a_failing_predicate_imports_nothing_rather_than_everything(servic
     user_id = uuid4()
     await service.initialize_user_variables(user_id, session)
     assert not await _imported(service, session, user_id)
+
+
+async def test_the_predicate_an_extension_installs_is_in_force_for_the_first_call(service, session) -> None:
+    skipped = uuid4()
+
+    async def predicate(user_id) -> bool:
+        return user_id != skipped
+
+    def load_extensions() -> None:
+        runtime_policy.register_env_import_predicate(predicate)
+
+    with patch("langflow.services.deployment_artifacts.activation.load_activation_extensions", load_extensions):
+        await service.initialize_user_variables(skipped, session)
+    assert not await _imported(service, session, skipped)
