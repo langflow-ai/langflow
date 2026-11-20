@@ -1,0 +1,54 @@
+---
+title: Mnemoverse
+slug: /bundles-mnemoverse
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Mnemoverse** bundle.
+
+[Mnemoverse](https://mnemoverse.com) is a persistent memory API for AI agents.
+A memory written once can be recalled from other tools that use the same account, such as Claude, Cursor, ChatGPT, or any HTTP client.
+
+To use the bundle, create an API key in the [Mnemoverse console](https://console.mnemoverse.com) and enter it in the **Mnemoverse API Key** field, or store it in a [global variable](/configuration-global-variables).
+
+For more information, see the [Mnemoverse Python SDK documentation](https://mnemoverse.com/docs/api/python-sdk).
+
+## Mnemoverse Chat Memory
+
+The **Mnemoverse Chat Memory** component stores and recalls chat messages using Mnemoverse.
+
+Every request can be scoped to a **Domain**, which is a string that isolates one set of memories from another, such as `user:42` or `project:support-bot`.
+If **Domain** is empty, messages are stored in the `general` domain and searches cover the account's own domains.
+
+### Mnemoverse Chat Memory parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| mnemoverse_api_key | Mnemoverse API Key | Input parameter. The API key for Mnemoverse. |
+| domain | Domain | Input parameter. The namespace that isolates memories, such as `user:<id>` or `project:<name>`. |
+| ingest_message | Message to Ingest | Input parameter. The message content to store in Mnemoverse. |
+| existing_memory | Existing Memory Instance | Input parameter. An optional existing Mnemoverse client. |
+| search_query | Search Query | Input parameter. The natural-language query for related memories in Mnemoverse. |
+| metadata | Metadata | Input parameter. The additional metadata to store with the ingested message. |
+| top_k | Search Limit | Input parameter. The maximum number of memories to return. Default: `10`. |
+| min_relevance | Minimum Relevance | Input parameter. The minimum relevance score, from 0 to 1. Default: `0.3`. |
+
+### Mnemoverse Chat Memory output
+
+The **Mnemoverse Chat Memory** component can output **Mnemoverse Memory** ([`Memory`](/data-types#memory)) or **Search Results** ([`JSON`](/data-types#json)).
+You can select the output type near the component's output port.
+
+Use the **Mnemoverse Memory** output to store a message and pass the Mnemoverse client to another **Mnemoverse Chat Memory** component.
+
+Use the **Search Results** output to retrieve memories related to a search query.
+If **Message to Ingest** is set, the component stores that message before it searches, so leave **Message to Ingest** empty for a read-only search.
+Each result has an `id`, the `memory` text, a `relevance` score, the `domain`, and `metadata`.
