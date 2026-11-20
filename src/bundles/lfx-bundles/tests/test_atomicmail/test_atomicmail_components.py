@@ -229,6 +229,36 @@ class TestSendEmail:
 
         assert result.text == "Sent to anna@example.com: Hello"
 
+    async def test_notifications_before_the_answer_are_skipped(self) -> None:
+        notice = {"jsonrpc": "2.0", "method": "notifications/message", "params": {"level": "info", "data": "working"}}
+        message = {"jsonrpc": "2.0", "id": 1, "result": {"content": [{"type": "text", "text": "Sent."}]}}
+        stream = f"event: message\ndata: {json.dumps(notice)}\n\nevent: message\ndata: {json.dumps(message)}\n\n"
+        response = _response(text=stream, headers={"content-type": "text/event-stream"})
+        with patch("httpx.AsyncClient.post", return_value=response):
+            result = await _send().send_email()
+
+        assert result.text == "Sent to anna@example.com: Hello"
+
+    async def test_event_split_over_several_data_lines_is_read(self) -> None:
+        message = {"jsonrpc": "2.0", "id": 1, "result": {"content": [{"type": "text", "text": "Sent."}]}}
+        lines = json.dumps(message, indent=1).splitlines()
+        stream = "".join(f"data: {line}\n" for line in lines)
+        response = _response(text=stream, headers={"content-type": "text/event-stream"})
+        with patch("httpx.AsyncClient.post", return_value=response):
+            result = await _send().send_email()
+
+        assert result.text == "Sent to anna@example.com: Hello"
+
+    async def test_stream_without_an_answer_is_an_error(self) -> None:
+        notice = {"jsonrpc": "2.0", "method": "notifications/message", "params": {"level": "info", "data": "working"}}
+        headers = {"content-type": "text/event-stream"}
+        with patch(
+            "httpx.AsyncClient.post", return_value=_response(text=f"data: {json.dumps(notice)}\n\n", headers=headers)
+        ):
+            assert "without an answer" in (await _send().send_email()).data["error"]
+        with patch("httpx.AsyncClient.post", return_value=_response(text="data: <html>\n\n", headers=headers)):
+            assert "not JSON" in (await _send().send_email()).data["error"]
+
     async def test_timeout_and_connection_errors(self) -> None:
         with patch("httpx.AsyncClient.post", side_effect=httpx.ReadTimeout("slow")):
             result = await _send(timeout=2.5).send_email()

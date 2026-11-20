@@ -18,6 +18,7 @@ API_URL = "https://mcp.atomicmail.ai/mcp"
 DOCUMENTATION_URL = "https://docs.atomicmail.ai"
 DASHBOARD_URL = "https://dashboard.atomicmail.ai"
 DEFAULT_TIMEOUT_SECONDS = 30.0
+REQUEST_ID = 1
 
 API_KEY_INFO = (
     f"The API key of your Atomic Mail inbox. Create an inbox at {DASHBOARD_URL} to get one."  # pragma: allowlist secret
@@ -87,13 +88,43 @@ def _http_error_message(response: httpx.Response, api_key: str) -> str:
     return f"{label}: {detail}" if detail else f"{label}."
 
 
+def _stream_events(text: str) -> list[str]:
+    """Return the data of every event in an event stream, in the order they came."""
+    events: list[str] = []
+    data: list[str] = []
+    for line in [*text.splitlines(), ""]:
+        if line.startswith("data:"):
+            data.append(line[5:].removeprefix(" "))
+        elif not line.strip() and data:
+            events.append("\n".join(data))
+            data = []
+    return events
+
+
 def _parse_body(response: httpx.Response) -> dict[str, Any]:
-    """Return the JSON-RPC message of a response sent as JSON or as a one-event stream."""
-    text = response.text
+    """Return the JSON-RPC answer of a response sent as JSON or as an event stream.
+
+    A stream can carry notifications before the answer, so each event is read on its own and
+    the one that answers this request is returned.
+    """
     if "text/event-stream" in response.headers.get("content-type", ""):
-        text = "\n".join(line[5:].strip() for line in text.splitlines() if line.startswith("data:"))
+        read_any = False
+        for event in _stream_events(response.text):
+            try:
+                message = json.loads(event)
+            except ValueError:
+                continue
+            read_any = True
+            if isinstance(message, dict) and message.get("id") == REQUEST_ID and "method" not in message:
+                return message
+        msg = (
+            "Atomic Mail closed the stream without an answer to the request."
+            if read_any
+            else "Atomic Mail returned a response that is not JSON."
+        )
+        raise AtomicMailAPIError(msg)
     try:
-        body = json.loads(text)
+        body = json.loads(response.text)
     except ValueError as exc:
         msg = "Atomic Mail returned a response that is not JSON."
         raise AtomicMailAPIError(msg) from exc
@@ -124,7 +155,7 @@ async def atomicmail_call(
         raise AtomicMailAPIError(msg)
     payload = {
         "jsonrpc": "2.0",
-        "id": 1,
+        "id": REQUEST_ID,
         "method": "tools/call",
         "params": {
             "name": action,

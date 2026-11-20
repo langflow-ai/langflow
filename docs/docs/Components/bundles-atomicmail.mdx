@@ -18,7 +18,7 @@ An agent gets an inbox of its own with a real address, and it can send, read, an
 Use it when a flow has to email someone, wait for a reply, or read a verification code.
 
 All components need the API key of an Atomic Mail inbox.
-Create an inbox in the [Atomic Mail dashboard](https://dashboard.atomicmail.ai) and copy its key, then enter it in the **Atomic Mail API Key** field, or store it in a [global variable](/configuration-global-variables) named `ATOMIC_MAIL_API_KEY`.
+Create an inbox in the [Atomic Mail dashboard](https://dashboard.atomicmail.ai) and copy its key, then enter it in the **Atomic Mail API Key** field, or store it in a [global variable](/configuration-global-variables) named `ATOMIC_MAIL_API_KEY` and select that variable in the field.
 
 Langflow only sends requests to `mcp.atomicmail.ai`.
 Every component acts on the inbox that the API key belongs to.
