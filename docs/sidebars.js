@@ -640,6 +640,7 @@ module.exports = {
             "Components/bundles-socialscrape",
             "Components/bundles-supabase",
             "Components/bundles-telegram",
+            "Components/bundles-trustedrouter",
             "Components/bundles-upstash",
             "Components/bundles-valkey",
             "Components/bundles-vectara",
