@@ -2,6 +2,7 @@ const mockVllmIcon = jest.fn();
 const mockOpenRAGIcon = jest.fn();
 const mockFigraniumIcon = jest.fn();
 const mockKeenableIcon = jest.fn();
+const mockBhivedIcon = jest.fn();
 const mockOlostepIcon = jest.fn();
 
 jest.mock("@/icons/vLLM", () => ({
@@ -18,6 +19,10 @@ jest.mock("@/icons/Figranium", () => ({
 
 jest.mock("@/icons/Keenable", () => ({
   KeenableIcon: mockKeenableIcon,
+}));
+
+jest.mock("@/icons/Bhived", () => ({
+  BhivedIcon: mockBhivedIcon,
 }));
 
 jest.mock("@/icons/Olostep", () => ({
@@ -55,5 +60,11 @@ describe("lazyIconsMapping", () => {
     const { default: icon } = await lazyIconsMapping.Olostep();
 
     expect(icon).toBe(mockOlostepIcon);
+  });
+
+  it("loads the bhived bundle icon", async () => {
+    const { default: icon } = await lazyIconsMapping.Bhived();
+
+    expect(icon).toBe(mockBhivedIcon);
   });
 });
