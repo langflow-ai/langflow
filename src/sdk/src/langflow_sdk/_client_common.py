@@ -8,6 +8,8 @@ import zipfile
 from pathlib import Path
 from typing import Any, TypeVar
 
+import httpx
+
 from langflow_sdk._http import _HTTP_201_CREATED, _logger
 from langflow_sdk.models import FlowCreate, RunRequest, StreamChunk
 from langflow_sdk.serialization import flow_to_json, normalize_flow
@@ -20,6 +22,14 @@ class _ClientCommon:
 
     _MAX_ZIP_ENTRIES = 500
     _MAX_ENTRY_BYTES = 50 * 1024 * 1024  # 50 MB per file
+
+    @staticmethod
+    def _project_upload(zip_bytes: bytes) -> tuple[dict[str, tuple[str, bytes, str]], dict[str, str]]:
+        """Build a project file part and its matching multipart content type."""
+        files = {"file": ("project.zip", zip_bytes, "application/zip")}
+        # Reuse HTTPX's boundary without changing shared client headers.
+        request = httpx.Request("POST", "http://localhost/", files=files)
+        return files, {"Content-Type": request.headers["Content-Type"]}
 
     @staticmethod
     def _model_payload(model: Any) -> dict[str, Any]:
