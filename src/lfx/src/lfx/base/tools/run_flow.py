@@ -163,7 +163,7 @@ class RunFlowBaseComponent(Component):
             user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
-        ):
+        ) as target_flow:
             # The stored child payload is caller-controlled: a regular user can persist
             # component source through the flow-write API and this trusted component then
             # hands it to Graph.from_payload. Apply the same caller-aware policy the
@@ -194,11 +194,7 @@ class RunFlowBaseComponent(Component):
                 else:
                     self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
 
-            # TODO: use flow id only
-            flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
-            if not flow:
-                msg = "Flow not found"
-                raise ValueError(msg)
+            flow = target_flow.to_data()
 
             payload = flow.data.get("data", {})
             sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)

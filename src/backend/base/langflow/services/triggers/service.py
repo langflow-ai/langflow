@@ -17,6 +17,7 @@ import secrets
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from sqlmodel import col, select
 
@@ -57,7 +58,6 @@ from langflow.services.triggers.schedule_config import (
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
-    from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -180,7 +180,8 @@ class TriggerService(Service):
         the trigger owner.
         """
         if _run_user_resolver is not None:
-            return await _run_user_resolver(session, flow_id=flow_id, trigger_owner_id=trigger_owner_id)
+            runner = await _run_user_resolver(session, flow_id=flow_id, trigger_owner_id=trigger_owner_id)
+            return runner if isinstance(runner, UUID) else None
         return trigger_owner_id
 
     async def authorize_trigger(self, *, context: TriggerPolicyContext) -> None:

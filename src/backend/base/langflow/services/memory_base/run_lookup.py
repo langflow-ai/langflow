@@ -50,17 +50,15 @@ async def find_for_run(
     if not (await authz.is_enabled() and await authz.supports_cross_user_fetch()):
         return None
     candidates = (await db.exec(base.where(MemoryBase.user_id != user_id))).all()
-    allowed = [
-        candidate
-        for candidate in candidates
-        if await authz.enforce(
-            user_id=user_id,
-            domain="*",
-            obj=f"knowledge_base:{candidate.id}",
-            act=action,
-            context={**current_auth_context_for_authz(), "is_superuser": False},
-        )
-    ]
+    if not candidates:
+        return None
+    decisions = await authz.batch_enforce(
+        user_id=user_id,
+        domain="*",
+        requests=[(f"knowledge_base:{candidate.id}", action) for candidate in candidates],
+        context={**current_auth_context_for_authz(), "is_superuser": False},
+    )
+    allowed = [candidate for candidate, permitted in zip(candidates, decisions, strict=True) if permitted]
     if len(allowed) > 1:
         msg = f"Several memory bases named '{name}' are shared with this identity; use an owned one with that name."
         raise ValueError(msg)

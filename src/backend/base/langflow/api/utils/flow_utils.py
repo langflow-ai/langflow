@@ -103,7 +103,9 @@ async def get_authorized_extra_file_scopes(flow_id: uuid.UUID | str, user_id: ob
         return frozenset()
     if not isinstance(answer, (set, frozenset, list, tuple)):
         return frozenset()
-    scopes = frozenset(scope for scope in (str(item).strip() for item in answer) if scope)
+    if not all(isinstance(item, str) for item in answer):
+        return frozenset()
+    scopes = frozenset(scope for scope in (item.strip() for item in answer) if scope)
     # One member that cannot name a storage folder makes the whole answer invalid: passing it on would fail every
     # file read of the run in restricted local-file mode, including the run's own.
     if not all(_is_valid_extra_scope(scope) for scope in scopes):
