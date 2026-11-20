@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 _DECODER = json.JSONDecoder()
 _OPENERS = ("{", "[")
@@ -30,8 +33,9 @@ def extract_json_from_text(text: str) -> dict[str, Any] | list[Any] | None:
     return None
 
 
-def _candidate_indices(text: str) -> list[int]:
-    return [i for i, ch in enumerate(text) if ch in _OPENERS]
+def _candidate_indices(text: str) -> Iterator[int]:
+    # Stop scanning once the caller finds a valid value.
+    return (i for i, ch in enumerate(text) if ch in _OPENERS)
 
 
 def _try_parse(payload: str) -> dict[str, Any] | list[Any] | None:
