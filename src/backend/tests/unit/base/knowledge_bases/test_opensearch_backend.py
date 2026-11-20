@@ -50,7 +50,7 @@ def _make_backend(
     # ``_build_vector_store`` can run without touching variable_service.
     backend._resolved_url = "https://example.local:9200"
     backend._resolved_username = "admin"
-    backend._resolved_password = "secret"  # noqa: S105 — test fixture  # pragma: allowlist secret
+    backend._resolved_password = uuid4().hex
     backend._secrets_resolved = True
     return backend
 
@@ -471,7 +471,7 @@ class TestOpenSearchIndexIsolation:
         )
         backend._resolved_url = "https://example.local:9200"
         backend._resolved_username = "admin"
-        backend._resolved_password = "secret"  # noqa: S105 — test fixture  # pragma: allowlist secret
+        backend._resolved_password = uuid4().hex
         backend._secrets_resolved = True
         return backend
 
@@ -895,8 +895,7 @@ class TestOpenSearchSimilaritySearchFilterHandling:
 
     @pytest.mark.asyncio
     async def test_a_dropped_index_forgets_the_fields_it_mapped(self, tmp_path: Path) -> None:
-        # Review: the cache outlived delete_collection, so a re-created index that mapped the key as a
-        # date (no keyword copy) still got the old keyword term, and erasure deleted nothing again.
+        # A new index can map the same key differently. Do not reuse the old exact field.
         backend = _make_backend(tmp_path)
         backend._os_index = "idx"
         client = backend._os_client = MagicMock()
@@ -916,7 +915,8 @@ class TestOpenSearchSimilaritySearchFilterHandling:
         client.indices.get_field_mapping.return_value = {
             "idx": {"mappings": {"metadata.end_user_id": {"mapping": {"end_user_id": {"type": "date"}}}}}
         }
-        assert await backend._exact_fields(client, "end_user_id") == ("metadata.end_user_id",)
+        with pytest.raises(ValueError, match="unnormalized keyword"):
+            await backend._exact_fields(client, "end_user_id")
 
     def test_a_filter_matches_numbers_exactly_and_refuses_strings_the_keyword_copy_skips(self) -> None:
         from lfx.base.knowledge_bases.backends.opensearch import KEYWORD_IGNORE_ABOVE, OpenSearchBackend
@@ -1210,11 +1210,11 @@ async def test_a_key_mapped_only_as_analyzed_text_is_refused_rather_than_matched
     backend._os_index = "idx"
     client = MagicMock()
     client.indices.get_field_mapping.return_value = {
-        "idx": {"mappings": {"metadata.end_user_id": {"mapping": {"end_user_id": {"type": "text"}}}}}
+        "idx": {"mappings": {"metadata.session_id": {"mapping": {"session_id": {"type": "text"}}}}}
     }
 
     with pytest.raises(ValueError, match="only as analyzed text"):
-        await backend._exact_where(client, {"end_user_id": "alice@acme.com"})
+        await backend._exact_where(client, {"session_id": "session-a"})
 
 
 async def test_a_date_mapped_key_is_matched_on_the_field_itself(tmp_path) -> None:
@@ -1222,9 +1222,50 @@ async def test_a_date_mapped_key_is_matched_on_the_field_itself(tmp_path) -> Non
     backend._os_index = "idx"
     client = MagicMock()
     client.indices.get_field_mapping.return_value = {
-        "idx": {"mappings": {"metadata.end_user_id": {"mapping": {"end_user_id": {"type": "date"}}}}}
+        "idx": {"mappings": {"metadata.published_at": {"mapping": {"published_at": {"type": "date"}}}}}
     }
 
-    where = await backend._exact_where(client, {"end_user_id": "2024-05-01"})
+    where = await backend._exact_where(client, {"published_at": "2024-05-01"})
 
-    assert where["bool"]["must"][0]["bool"]["should"] == [{"term": {"metadata.end_user_id": "2024-05-01"}}]
+    assert where["bool"]["must"][0]["bool"]["should"] == [{"term": {"metadata.published_at": "2024-05-01"}}]
+
+
+@pytest.mark.parametrize("mapping", [{"type": "date"}, {"type": "keyword", "normalizer": "lowercase"}])
+async def test_erasure_rejects_an_identity_mapping_that_can_merge_distinct_ids(tmp_path, mapping) -> None:
+    backend = _make_backend(tmp_path)
+    backend._os_index = "idx"
+    client = backend._os_client = MagicMock()
+    client.indices.get_field_mapping.return_value = {
+        "idx": {
+            "mappings": {
+                "end_user_id": {"mapping": {"end_user_id": {"type": "keyword"}}},
+                "metadata.end_user_id": {"mapping": {"end_user_id": mapping}},
+            }
+        }
+    }
+
+    with pytest.raises(ValueError, match="unnormalized keyword"):
+        await backend.delete_by({"end_user_id": "2024-05-01"})
+
+    client.delete_by_query.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "search_status",
+    [{"timed_out": True, "_shards": {"failed": 0}}, {"timed_out": False, "_shards": {"failed": 1}}],
+)
+async def test_staging_merge_leaves_the_index_intact_after_a_partial_search(search_status) -> None:
+    from lfx.base.knowledge_bases.backends.opensearch import OpenSearchBackend
+
+    client = MagicMock()
+    client.indices.refresh.return_value = {"_shards": {"failed": 0}}
+    client.search.return_value = {
+        **search_status,
+        "hits": {"hits": [], "total": {"value": 0, "relation": "eq"}},
+    }
+
+    with pytest.raises(RuntimeError, match="did not complete the search"):
+        await OpenSearchBackend._merge_slice(client, source="staged", target="live", limit=10)
+
+    client.bulk.assert_not_called()
+    client.indices.delete.assert_not_called()

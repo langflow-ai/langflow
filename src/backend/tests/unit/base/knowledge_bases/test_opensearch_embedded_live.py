@@ -382,8 +382,13 @@ async def test_a_cluster_that_refuses_id_sorting_still_reads_new_chunks(tmp_path
         await backend.teardown()
 
 
-async def test_erasing_an_end_user_whose_id_looks_like_a_date(tmp_path: Path) -> None:
-    """Dynamic mapping types an id like 2024-05-01 as a date with no keyword copy; erasure must still delete it."""
+@pytest.mark.parametrize("precomputed", [True, False])
+async def test_erasing_one_of_two_end_users_whose_ids_parse_as_the_same_date(
+    tmp_path: Path, *, precomputed: bool
+) -> None:
+    from langchain_core.documents import Document
+    from langchain_core.embeddings import FakeEmbeddings
+
     _require_live_opensearch()
     backend = create_backend(
         "opensearch",
@@ -391,26 +396,29 @@ async def test_erasing_an_end_user_whose_id_looks_like_a_date(tmp_path: Path) ->
         kb_path=tmp_path,
         backend_config={"url_variable": "OPENSEARCH_URL"},
         user_id=uuid.uuid4(),
+        embedding_function=None if precomputed else FakeEmbeddings(size=8),
     )
-    users = ["2024-05-01", "2024-06-02"]
+    users = ["2024-05-01", "2024-05-01T00:00:00Z"]
     try:
         await backend.ensure_ready()
-        await backend.add_embedded_documents(
-            [
-                IngestedDocument(
-                    id=f"{user}-{i}", content=f"note {i}", metadata={"end_user_id": user}, embedding=[i / 10 + 0.1] * 8
-                )
-                for user in users
-                for i in range(2)
-            ]
-        )
-        backend._os_client.indices.refresh(index=backend._os_index)
+        docs = [
+            Document(id=str(i), page_content="note", metadata={"end_user_id": user}) for i, user in enumerate(users)
+        ]
+        if precomputed:
+            await backend.add_embedded_documents(
+                [
+                    IngestedDocument(id=doc.id, content=doc.page_content, metadata=doc.metadata, embedding=[0.1] * 8)
+                    for doc in docs
+                ]
+            )
+        else:
+            await backend.add_documents(docs)
 
         await backend.delete_by({"end_user_id": "2024-05-01"})
         backend._os_client.indices.refresh(index=backend._os_index)
 
         left = [doc.id async for batch in backend.iter_documents(batch_size=50) for doc in batch]
-        assert sorted(left) == ["2024-06-02-0", "2024-06-02-1"]
+        assert left == ["1"]
     finally:
         await backend.delete_collection()
         await backend.teardown()

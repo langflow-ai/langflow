@@ -1631,29 +1631,6 @@ async def _build_archive_non_abandoning(
     )
 
 
-def _nodes_a_run_never_builds(data: dict[str, Any]) -> set[str]:
-    """Nodes wired to nothing in a flow that starts at a Chat Input: a run never builds them.
-
-    The graph puts a Chat Input with no predecessors alone in the first layer
-    (``sort_chat_inputs_first``), and a node with no edges is then never reached, so a
-    Knowledge node left on the canvas does not read its knowledge base. Without such a Chat
-    Input every node with no inputs is in the first layer and does run, so it is kept. Nodes
-    with any edge are kept too, even if unreachable: copying a knowledge base nothing reads
-    costs a copy, while skipping one a run reads breaks the run.
-    """
-    nodes = [node for node in data.get("nodes") or [] if isinstance(node, dict) and isinstance(node.get("id"), str)]
-    edges = [edge for edge in data.get("edges") or [] if isinstance(edge, dict)]
-    wired = {edge.get("source") for edge in edges} | {edge.get("target") for edge in edges}
-    targets = {edge.get("target") for edge in edges}
-    # Mirror the graph exactly: one Chat Input with a predecessor (or a second Chat Input) and
-    # the graph keeps every layer as it was, so every node with no inputs does run.
-    chat_inputs = [node["id"] for node in nodes if "ChatInput" in node["id"]]
-    starts_at_chat = len(chat_inputs) == 1 and chat_inputs[0] not in targets
-    if not starts_at_chat or len(nodes) < 2:  # noqa: PLR2004 - a lone node is the whole run
-        return set()
-    return {node["id"] for node in nodes if node["id"] not in wired}
-
-
 def _collect_dependency_refs(payload: dict[str, Any]) -> tuple[set[str], set[str]]:
     """Return (memory_base_names, knowledge_base_names) referenced by a flow's nodes.
 
@@ -1668,9 +1645,9 @@ def _collect_dependency_refs(payload: dict[str, Any]) -> tuple[set[str], set[str
     data = payload.get("data")
     if not isinstance(data, dict):
         return mb_names, kb_names
-    never_run = _nodes_a_run_never_builds(data)
+    # A partial workflow run can select any node, including one without edges.
     for node in data.get("nodes") or []:
-        if not isinstance(node, dict) or node.get("id") in never_run:
+        if not isinstance(node, dict):
             continue
         template = (((node.get("data") or {}).get("node")) or {}).get("template")
         if not isinstance(template, dict):

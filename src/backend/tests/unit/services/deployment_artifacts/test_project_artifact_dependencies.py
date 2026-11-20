@@ -143,12 +143,8 @@ def _edge(source: str, target: str) -> dict:
     return {"source": source, "target": target}
 
 
-def test_a_knowledge_node_wired_to_nothing_in_a_chat_flow_is_not_a_dependency():
-    """A Knowledge node a chat run never builds is no dependency (QA LE-2778 F3b).
-
-    A v2 run of Chat Input -> Chat Output never builds a stray Knowledge node, so a deleted KB it
-    names must not block the deploy. The wired one still counts.
-    """
+def test_packaging_keeps_dependencies_of_nodes_selectable_in_a_partial_run():
+    """A v2 partial run can start at the disconnected Knowledge node."""
     payload = {
         "data": {
             "nodes": [
@@ -161,7 +157,7 @@ def test_a_knowledge_node_wired_to_nothing_in_a_chat_flow_is_not_a_dependency():
         }
     }
     _mb, kb_names = _collect_dependency_refs(payload)
-    assert kb_names == {"policies"}
+    assert kb_names == {"policies", "ghost_gone"}
 
 
 @pytest.mark.parametrize(

@@ -166,6 +166,7 @@ def _without_chunk_id(metadata: dict[str, Any] | None) -> dict[str, Any]:
 
 #: Dynamic mapping keeps a string's keyword copy only up to this many characters.
 KEYWORD_IGNORE_ABOVE = 256
+_END_USER_ID = "end_user_id"
 
 
 #: Field types that already hold a value whole, so a ``term`` on the field itself is exact.
@@ -200,6 +201,34 @@ def _exact(key: str, value: Any, fields: Sequence[str] | None = None) -> dict[st
 def _job_query(job_id: str) -> dict[str, Any]:
     """Match exactly one job."""
     return _exact(METADATA_KEY_JOB_ID, job_id)
+
+
+def _identity_fields(mappings: list[dict[str, Any]], names: tuple[str, ...]) -> tuple[str, ...]:
+    """Require an unnormalized keyword for every mapped end-user identity layout."""
+    fields = []
+    for name in names:
+        candidates = (f"{name}.keyword", name)
+        resolved = set()
+        for index_mapping in mappings:
+            if not any(field in index_mapping for field in candidates):
+                continue
+            field = next(
+                (
+                    field
+                    for field in candidates
+                    if (mapping := index_mapping.get(field))
+                    and mapping.get("type") == "keyword"
+                    and not mapping.get("normalizer")
+                    and mapping.get("index", True)
+                ),
+                None,
+            )
+            resolved.add(field)
+        if None in resolved or len(resolved) > 1:
+            msg = f"OpenSearch must map '{name}' as an unnormalized keyword for exact end-user matching"
+            raise ValueError(msg)
+        fields.extend(field for field in resolved if field is not None)
+    return tuple(fields)
 
 
 def _is_missing_index(exc: Exception) -> bool:
@@ -595,6 +624,18 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         if not docs:
             return
         await self.ensure_ready()
+        if any(_END_USER_ID in doc.metadata for doc in docs):
+            if self.embedding_function is None:
+                msg = "An embedding function is required to add documents to OpenSearch."
+                raise ValueError(msg)
+            vectors = await self.embedding_function.aembed_documents([doc.page_content for doc in docs])
+            await self.add_embedded_documents(
+                [
+                    IngestedDocument(id=doc.id, content=doc.page_content, metadata=doc.metadata, embedding=vector)
+                    for doc, vector in zip(docs, vectors, strict=True)
+                ]
+            )
+            return
         store = self.vector_store
         # Ids chosen here rather than by LangChain, so each chunk's metadata can carry its own.
         ids = [doc.id or str(uuid4()) for doc in docs]
@@ -614,6 +655,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         # ``add_embeddings`` refuses more than the store's ``bulk_size`` (500 by
         # default) per call, so split larger batches rather than fail the write.
         """Write supplied vectors with stable document identities without invoking an embedder."""
+        if any(_END_USER_ID in (doc.metadata or {}) for doc in docs):
+            await self._ensure_identity_mapping(len(docs[0].embedding or ()))
         bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
         for start in range(0, len(docs), bulk_size):
             chunk = docs[start : start + bulk_size]
@@ -628,6 +671,33 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     ids=ids[start : start + bulk_size],
                     space_type=self._os_space_type,
                 )
+
+    async def _ensure_identity_mapping(self, dimension: int) -> None:
+        """Install the identity field before OpenSearch can infer a type from its first value."""
+        store = self.vector_store
+        client = self._os_client
+        fields = await self._exact_fields(client, _END_USER_ID)
+        nested = f"metadata.{_END_USER_ID}"
+        if fields and (nested in fields or f"{nested}.keyword" in fields):
+            return
+        if not await _drained_worker(client.indices.exists, index=self._os_index):
+            try:
+                await _drained_worker(
+                    store.create_index,  # type: ignore[attr-defined]
+                    dimension,
+                    index_name=self._os_index,
+                    space_type=self._os_space_type,
+                )
+            except Exception:
+                # Concurrent first writers can both find the index absent.
+                if not await _drained_worker(client.indices.exists, index=self._os_index):
+                    raise
+        await _drained_worker(
+            client.indices.put_mapping,
+            index=self._os_index,
+            body={"properties": {"metadata": {"properties": {_END_USER_ID: {"type": "keyword"}}}}},
+        )
+        self._exact_field_cache.pop(_END_USER_ID, None)
 
     async def similarity_search(
         self,
@@ -1123,12 +1193,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         return {"bool": {"must": [_exact(key, value) for key, value in where.items()]}}
 
     async def _exact_fields(self, client: Any, key: str) -> tuple[str, ...] | None:
-        """The fields that hold ``key`` whole in this index, from its mapping; None when it maps none yet.
-
-        Dynamic mapping does not always give a string a keyword copy: an end user id like
-        ``2024-05-01`` is mapped as a ``date`` with none, and a term on the copy then matched
-        nothing, so erasing that user deleted nothing and still reported success.
-        """
+        """Look up exact fields for a metadata key, or return None when no field is mapped."""
         cache: dict[str, tuple[str, ...]] = self.__dict__.setdefault("_exact_field_cache", {})
         cached = cache.get(key)
         if cached is not None:
@@ -1144,13 +1209,21 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             if _is_missing_index(exc):
                 return None
             raise
-        types: dict[str, str | None] = {}
-        for body in (response or {}).values():
-            for name, entry in (body.get("mappings") or {}).items():
-                leaf = (entry.get("mapping") or {}).get(name.rsplit(".", 1)[-1]) or {}
-                types[name] = leaf.get("type")
-        if not types:
+        mappings = [
+            {
+                name: next(iter((entry.get("mapping") or {}).values()), {})
+                for name, entry in (body.get("mappings") or {}).items()
+            }
+            for body in (response or {}).values()
+        ]
+        if not any(mappings):
             return None  # no chunk carries this key yet, so nothing can match it
+        if key == _END_USER_ID:
+            # Date and numeric coercions can equate different end-user IDs.
+            fields = _identity_fields(mappings, names)
+            cache[key] = fields
+            return fields
+        types = {name: leaf.get("type") for index_mapping in mappings for name, leaf in index_mapping.items()}
         fields = tuple(
             f"{n}.keyword" if f"{n}.keyword" in types else n
             for n in names
@@ -1281,8 +1354,19 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     @staticmethod
     async def _merge_slice(client: Any, *, source: str, target: str, limit: int) -> int:
         """Copy up to ``limit`` staged chunks into ``target`` under their ids, then remove them from staging."""
-        await _drained_worker(client.indices.refresh, index=source)
-        found = await _drained_worker(client.search, index=source, body={"query": {"match_all": {}}, "size": limit})
+        refreshed = await _drained_worker(client.indices.refresh, index=source)
+        if refreshed.get("_shards", {}).get("failed"):
+            msg = "OpenSearch did not refresh all shards of the staging index"
+            raise RuntimeError(msg)
+        found = await _drained_worker(
+            client.search,
+            index=source,
+            params={"allow_partial_search_results": "false"},
+            body={"query": {"match_all": {}}, "size": limit, "_source": True},
+        )
+        if found.get("timed_out") or found.get("_shards", {}).get("failed"):
+            msg = "OpenSearch did not complete the search for staged chunks"
+            raise RuntimeError(msg)
         hits = found["hits"]["hits"]
         total = found["hits"].get("total")
         # This slice takes the last of staging: callers stop at ``remaining == 0`` and never send the
