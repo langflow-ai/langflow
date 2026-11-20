@@ -3,7 +3,7 @@
 Covers both locale files:
   - frontend: src/frontend/src/locales/ko.json   (must mirror every key in en.json)
   - backend:  src/backend/base/langflow/locales/ko.json
-              (descriptions and help text only; names stay English by design)
+              (descriptions and help text; most labels stay English)
 
 Errors (exit code 1): missing or unknown keys, mismatched {{variables}}, {placeholders}
 or <n> tags, empty values, backend name keys that should have been left out.
@@ -126,8 +126,10 @@ TRANSLATIONESE = [
     (r"\be\.g\.|\bi\.e\.|\betc\.", "use 예: / 즉 / 등"),
 ]
 
-# Backend keys that must stay out of ko.json so the English name shows through.
+# Backend name keys that normally stay out of ko.json so English shows through.
 BACKEND_NAME_KEY = re.compile(r"^components\..*\.display_name\.[0-9a-f]{8}$|^starter_flows\..*\.name$")
+# Keep upstream labels localized for triggers (#16132) and Decision Model / Smart Router (#16272).
+TRANSLATED_NAME_COMPONENTS = {"decisionmodel", "inboundwebhooktrigger", "scheduletrigger", "smartrouter"}
 
 
 def load(path: Path) -> dict[str, str]:
@@ -283,6 +285,7 @@ def check_frontend(ko_path: Path, *, partial: bool, max_lines: int) -> int:
 
 
 def check_backend(ko_path: Path, *, partial: bool, max_lines: int) -> int:
+    """Check a backend ko.json, or a partial file when ``partial``, and return the number of errors."""
     en = load(BACKEND_DIR / "en.json")
     ko = load(ko_path)
     expected = backend_expected_keys(en)
@@ -297,7 +300,7 @@ def check_backend(ko_path: Path, *, partial: bool, max_lines: int) -> int:
         if key not in en:
             report.error(key, "not in en.json (keys carry a hash of the English text, never edit them)")
             continue
-        if BACKEND_NAME_KEY.match(key):
+        if BACKEND_NAME_KEY.match(key) and key.split(".")[1] not in TRANSLATED_NAME_COMPONENTS:
             report.error(key, "name keys must be left out so the English name shows")
             continue
         check_value(report, key, en[key], value, markdown=key.startswith("template_notes."))
