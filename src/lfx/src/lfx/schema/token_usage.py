@@ -56,9 +56,12 @@ def extract_usage_from_message(message: Any) -> Usage | None:
     if not response_metadata:
         return None
 
-    # Strategy 2: response_metadata["token_usage"] (OpenAI format)
-    if "token_usage" in response_metadata:
-        token_usage = response_metadata["token_usage"]
+    # Strategy 2: response_metadata["token_usage"] (OpenAI format).
+    # Some OpenAI-compatible endpoints omit `usage` on the wire, which ChatOpenAI
+    # surfaces as token_usage=None (GH-16512); treat that as "no usage available"
+    # instead of crashing on the membership/get calls below.
+    token_usage = response_metadata.get("token_usage")
+    if isinstance(token_usage, dict):
         return Usage(
             input_tokens=token_usage.get("prompt_tokens"),
             output_tokens=token_usage.get("completion_tokens"),
@@ -66,8 +69,8 @@ def extract_usage_from_message(message: Any) -> Usage | None:
         )
 
     # Strategy 3: response_metadata["usage"] (Anthropic format)
-    if "usage" in response_metadata:
-        usage = response_metadata["usage"]
+    usage = response_metadata.get("usage")
+    if isinstance(usage, dict):
         input_tokens = usage.get("input_tokens")
         output_tokens = usage.get("output_tokens")
         return Usage(
