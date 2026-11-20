@@ -429,7 +429,7 @@ async def execute_graph_with_capture(
     apply_run_defaults(graph, session_id=session_id, user_id=user_id, overwrite_user_id=user_id is not None)
 
     # Create input request
-    inputs = InputValueRequest(input_value=input_value) if input_value else None
+    inputs = InputValueRequest(input_value=input_value) if input_value is not None else None
 
     # Capture output during execution. The process-global streams remain stable
     # proxies; only this request's ContextVars point at these buffers.

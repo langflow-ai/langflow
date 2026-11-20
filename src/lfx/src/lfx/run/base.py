@@ -294,7 +294,7 @@ async def run_flow(
     start_time = time.monotonic() if timing else None
 
     # Use either positional input_value or --input-value option
-    final_input_value = input_value or input_value_option
+    final_input_value = input_value if input_value is not None else input_value_option
 
     # Validate input sources - exactly one must be provided
     input_sources = [script_path is not None, flow_json is not None, bool(stdin)]
@@ -434,7 +434,7 @@ async def run_flow(
         output_error(error_msg, verbose=verbose, exception=e)
         raise RunError(error_msg, e) from e
 
-    inputs = InputValueRequest(input_value=final_input_value) if final_input_value else None
+    inputs = InputValueRequest(input_value=final_input_value) if final_input_value is not None else None
 
     # Mark end of loading phase if timing
     load_end_time = time.monotonic() if timing else None
