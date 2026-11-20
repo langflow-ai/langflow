@@ -105,6 +105,7 @@ class LangflowClient(_ClientCommon):
         json: Any = None,
         params: dict[str, Any] | None = None,
         content: bytes | None = None,
+        files: dict[str, tuple[str, bytes, str]] | None = None,
         headers: dict[str, str] | None = None,
     ) -> httpx.Response:
         try:
@@ -114,6 +115,7 @@ class LangflowClient(_ClientCommon):
                 json=json,
                 params=params,
                 content=content,
+                files=files,
                 headers=headers,
             )
         except httpx.ConnectError as exc:
@@ -321,12 +323,17 @@ class LangflowClient(_ClientCommon):
         return self._extract_project_archive(resp.content)
 
     def upload_project(self, zip_bytes: bytes) -> list[Flow]:
-        """Upload a project ZIP archive and return the created flows."""
+        """Upload a ZIP as project.zip and return the created flows.
+
+        The server uses the filename stem as the imported project name,
+        applying its normal name-uniqueness rules.
+        """
+        files, headers = self._project_upload(zip_bytes)
         resp = self._request(
             "POST",
             "/api/v1/projects/upload/",
-            content=zip_bytes,
-            headers={"Content-Type": "application/octet-stream"},
+            files=files,
+            headers=headers,
         )
         return self._validate_model_list(Flow, resp.json())
 
