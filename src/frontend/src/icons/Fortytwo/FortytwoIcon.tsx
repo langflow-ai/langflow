@@ -1,0 +1,16 @@
+import type { SVGProps } from "react";
+
+const SvgFortytwo = (props: SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" {...props}>
+    <g fill="currentColor">
+      <circle cx="112.9" cy="208.9" r="38.66" />
+      <circle cx="112.9" cy="304.38" r="38.66" />
+      <circle cx="209.05" cy="208.9" r="38.66" />
+      <circle cx="209.05" cy="304.38" r="38.66" />
+      <rect x="268.39" y="172.59" width="72.28" height="168.09" />
+      <rect x="364.2" y="172.6" width="72.28" height="168.09" />
+    </g>
+  </svg>
+);
+
+export default SvgFortytwo;
