@@ -78,6 +78,7 @@ _SECRET_COMPOUND_NAMES = frozenset(
         "database_uri",
         "database_url",
         "dsn",
+        "ocp_apim_subscription_key",
         "private_key",
         "proxy_authorization",
         "set_cookie",
