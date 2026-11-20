@@ -1153,7 +1153,7 @@
   "components.doclingremote.inputs.task_id.display_name.3e0cce3a": "Task ID",
   "components.doclingremote.inputs.task_id.info.3b6e67d4": "Optional task ID from a previous Docling Serve upload. If provided, file input is ignored and the component polls for this task's results.",
   "components.doclingremote.outputs.dataframe.display_name.abc7e989": "Files",
-  "components.dotenv.description.8634f572": "Load .env file into env vars",
+  "components.dotenv.description.a74123e2": "Retired. Use Langflow global variables for flow configuration.",
   "components.dotenv.display_name.2955fde8": "Dotenv",
   "components.dotenv.inputs.dotenv_file_content.display_name.f62b6470": "Dotenv file content",
   "components.dotenv.inputs.dotenv_file_content.info.027c6617": "Paste the content of your .env file directly, since contents are sensitive, using a Global variable set as 'password' is recommended",
