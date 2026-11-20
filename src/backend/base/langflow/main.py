@@ -10,7 +10,6 @@ from contextlib import asynccontextmanager, suppress
 from http import HTTPStatus
 from pathlib import Path
 from typing import TYPE_CHECKING, cast
-from urllib.parse import urlencode
 
 import anyio
 import httpx
@@ -40,7 +39,6 @@ from langflow.api.health_check_router import health_check_router
 from langflow.api.router import router
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware
 from langflow.api.v1 import connections
-from langflow.api.v1.audit_reads import VERBATIM_QUERY_PARAMS
 from langflow.api.v1.mcp_projects import init_mcp_servers
 from langflow.api.validation_errors import request_validation_exception_handler
 from langflow.api.warm_graph import is_warm_registry_enabled
@@ -52,7 +50,12 @@ from langflow.initial_setup.setup import (
     load_flows_from_directory,
     sync_flows_from_fs,
 )
-from langflow.middleware import ContentSizeLimitMiddleware
+from langflow.middleware import (
+    ContentSizeLimitMiddleware,
+    FlattenQueryStringMiddleware,
+    ForwardedPrefixMiddleware,
+    SetLocaleMiddleware,
+)
 from langflow.plugin_routes import load_plugin_routes
 from langflow.services.audit.attribution import AuditRequestContextMiddleware
 from langflow.services.audit.represented import AuditIdentityError, UntrustedAuditIdentityError
@@ -1125,70 +1128,9 @@ def create_app():
 
         return await call_next(request)
 
-    @app.middleware("http")
-    async def forwarded_prefix_middleware(request: Request, call_next):
-        """Honour X-Forwarded-Prefix set by a reverse proxy.
-
-        When a reverse proxy (e.g. Nginx) strips a URL prefix before forwarding
-        the request, it can advertise the original prefix via X-Forwarded-Prefix.
-        We propagate this into the ASGI ``root_path`` so that transports like
-        MCP SSE include the prefix in the POST-back URLs they hand to clients.
-
-        This middleware is only active when ``root_path`` is configured in
-        settings (i.e. the operator has explicitly opted into reverse-proxy
-        mode).  The header value takes precedence over the static setting
-        because the proxy is the runtime source of truth for the prefix.
-        """
-        if not settings.root_path:
-            return await call_next(request)
-
-        prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-        # Restrict transport URLs to path segments that cannot change their origin.
-        if re.fullmatch(r"(?:/[a-zA-Z0-9._~-]+)+", prefix) and not any(
-            part in {".", ".."} for part in prefix.split("/")
-        ):
-            request.scope["root_path"] = prefix
-        return await call_next(request)
-
-    @app.middleware("http")
-    async def flatten_query_string_lists(request: Request, call_next):
-        """Expand comma-separated query values into repeated query parameters."""
-        flattened: list[tuple[str, str]] = []
-        for key, value in request.query_params.multi_items():
-            if key in VERBATIM_QUERY_PARAMS:
-                flattened.append((key, value))
-            else:
-                flattened.extend((key, entry) for entry in value.split(","))
-
-        request.scope["query_string"] = urlencode(flattened, doseq=True).encode("utf-8")
-
-        return await call_next(request)
-
-    _supported_locales: frozenset[str] | None = None
-
-    @app.middleware("http")
-    async def set_locale(request: Request, call_next):
-        """Parse Accept-Language header and store normalised locale in request.state.
-
-        Handles quality values ("fr-FR,fr;q=0.9,en;q=0.8" → "fr") and preserves
-        zh-Hans as a full tag. All other locales are reduced to the language code.
-        Validates against the loaded locale files and falls back to "en" for unknown
-        values — prevents client-supplied headers from polluting the per-locale cache.
-        Result is available as request.state.locale in any endpoint.
-        """
-        nonlocal _supported_locales
-        if _supported_locales is None:
-            from langflow.utils.i18n import get_supported_locales
-
-            _supported_locales = frozenset(get_supported_locales())
-
-        accept_lang = request.headers.get("Accept-Language", "en")
-        primary = accept_lang.split(",")[0].strip()
-        locale = "zh-Hans" if primary.lower().startswith("zh-hans") else primary.split("-")[0]
-        if locale not in _supported_locales:
-            locale = "en"
-        request.state.locale = locale
-        return await call_next(request)
+    app.add_middleware(ForwardedPrefixMiddleware)
+    app.add_middleware(FlattenQueryStringMiddleware)
+    app.add_middleware(SetLocaleMiddleware)
 
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
