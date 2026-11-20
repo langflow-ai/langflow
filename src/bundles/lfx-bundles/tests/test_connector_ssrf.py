@@ -389,7 +389,6 @@ def test_redis_vector_store_preserves_public_connection():
     component.ingest_data = []
     with (
         ssrf_enabled(),
-        patch("lfx_bundles.redis.redis.Path.write_text"),
         patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
     ):
         assert component.build_vector_store() is mock_connect.return_value
@@ -407,7 +406,6 @@ def test_redis_vector_store_preserves_unix_socket_connection():
     component.ingest_data = []
     with (
         ssrf_enabled(),
-        patch("lfx_bundles.redis.redis.Path.write_text"),
         patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
     ):
         assert component.build_vector_store() is mock_connect.return_value
@@ -458,7 +456,6 @@ def test_redis_vector_store_preserves_public_sentinel_connection(scheme):
     component.ingest_data = []
     with (
         ssrf_enabled(),
-        patch("lfx_bundles.redis.redis.Path.write_text"),
         patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
     ):
         assert component.build_vector_store() is mock_connect.return_value
@@ -480,7 +477,6 @@ def test_redis_vector_store_opted_out_sentinel_connection(disabled_gate):
     component.ingest_data = []
     with (
         patch(f"lfx_bundles.redis.redis.{disabled_gate}", return_value=False),
-        patch("lfx_bundles.redis.redis.Path.write_text"),
         patch("lfx_bundles.redis.redis.Redis.from_existing_index") as mock_connect,
     ):
         assert component.build_vector_store() is mock_connect.return_value
