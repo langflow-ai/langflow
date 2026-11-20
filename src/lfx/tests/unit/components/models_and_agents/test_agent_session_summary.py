@@ -46,7 +46,7 @@ async def _memory_data(component, history, loaded=None):
         patch.object(agent_module, "aget_agent_chat_history", new=AsyncMock(return_value=history)),
         patch.object(agent_module, "load_history_with_summary", new=AsyncMock(return_value=loaded)) as load,
     ):
-        return await component.get_memory_data(), load
+        return await component._history_for_turn(), load
 
 
 async def test_toggle_off_returns_window_without_loading_a_summary():
@@ -88,8 +88,8 @@ async def test_history_is_loaded_once_per_input():
         patch.object(agent_module, "aget_agent_chat_history", new=AsyncMock(return_value=history)),
         patch.object(agent_module, "load_history_with_summary", new=AsyncMock(return_value=loaded)) as load,
     ):
-        await component.get_memory_data()
-        await component.get_memory_data()
+        await component._history_for_turn()
+        await component._history_for_turn()
     assert load.call_count == 1
 
 
@@ -107,7 +107,7 @@ async def test_fold_starts_in_the_background_once_and_does_not_block_the_history
     loaded = SummaryHistory(history[:1], fold_batch=batch)
     with patch.object(agent_module, "fold_batch", new=slow_fold):
         result, _ = await _memory_data(component, history, loaded)
-        await component.get_memory_data()  # memo hit: no second fold
+        await component._history_for_turn()  # memo hit: no second fold
         assert (
             getattr(component, "_fold_task", None) is None
         )  # staged, not started: `_start_fold` starts it where the history is used
@@ -165,7 +165,7 @@ async def test_component_without_the_input_keeps_last_n_history():
     del component._attributes["summarize_older_messages"]
     history = _history(component)
     with patch.object(agent_module, "aget_agent_chat_history", new=AsyncMock(return_value=history)):
-        assert await component.get_memory_data() == history[:1]
+        assert await component._history_for_turn() == history[:1]
 
 
 def test_summary_merges_into_current_input_when_window_is_empty():

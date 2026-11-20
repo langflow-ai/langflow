@@ -478,7 +478,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             raise ValueError(msg)
 
         # Get memory data
-        self.chat_history = await self.get_memory_data()
+        self.chat_history = await self._history_for_turn()
         await logger.adebug(f"Retrieved {len(self.chat_history)} chat history messages")
         if isinstance(self.chat_history, Message):
             self.chat_history = [self.chat_history]
@@ -1052,9 +1052,13 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             n_messages=self.n_messages,
             user_id=_safe_graph_user_id(self),
         )
-        window = [
+        return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
+
+    # Chat history for this turn: the window, plus a running summary of older messages when enabled.
+    async def _history_for_turn(self):
+        window = await self.get_memory_data()
         if not (
             getattr(self, "summarize_older_messages", False)
             and self.n_messages
