@@ -383,6 +383,7 @@ DANGEROUS_IMPORTS: set[str] = {
     "codeop",
     "compileall",
     "importlib",
+    "pkgutil",
     # Frozen importlib aliases and ZIP loaders execute code outside this AST.
     "_frozen_importlib",
     "_frozen_importlib_external",

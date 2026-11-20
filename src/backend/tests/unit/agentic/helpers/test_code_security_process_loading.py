@@ -9,6 +9,7 @@ from langflow.agentic.helpers.validation import validate_component_runtime
 
 _CODE_LOADING_MODULES = (
     "runpy",
+    "pkgutil",
     "_frozen_importlib",
     "_frozen_importlib_external",
     "zipimport",
@@ -108,7 +109,7 @@ def test_preserves_safe_async_threads_and_tensor_operations(code: str) -> None:
     assert scan_code_security(code).is_safe
 
 
-@pytest.mark.parametrize("module", ["runpy", "_posixsubprocess", "_frozen_importlib_external", "zipimport"])
+@pytest.mark.parametrize("module", ["runpy", "pkgutil", "_posixsubprocess", "_frozen_importlib_external", "zipimport"])
 async def test_runtime_validation_rejects_loader_before_component_construction(module: str, monkeypatch) -> None:
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",
