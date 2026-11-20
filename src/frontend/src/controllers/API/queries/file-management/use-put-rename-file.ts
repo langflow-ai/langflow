@@ -21,7 +21,7 @@ export const usePostRenameFileV2: useMutationFunctionType<
     payload: IPostRenameFile,
   ): Promise<IPostRenameFile> => {
     const response = await api.put<IPostRenameFile>(
-      `${getURL("FILE_MANAGEMENT", { id: payload.id }, true)}?name=${encodeURI(payload.name)}`,
+      `${getURL("FILE_MANAGEMENT", { id: payload.id }, true)}?name=${encodeURIComponent(payload.name)}`,
     );
 
     return response.data;
