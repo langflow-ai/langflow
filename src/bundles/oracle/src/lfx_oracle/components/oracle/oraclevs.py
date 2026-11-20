@@ -11,10 +11,16 @@ from langchain_oracledb.vectorstores.oraclevs import create_index
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, DictInput, DropdownInput, HandleInput, IntInput, Output, SecretStrInput, StrInput
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from pydantic import BaseModel
 
 from .connection import build_connection_params
+
+SEARCH_TYPES = {
+    "Similarity": "similarity",
+    "MMR (Max Marginal Relevance)": "mmr",
+}
 
 
 def serialize(obj: Any) -> dict | list:
@@ -74,7 +80,7 @@ class OracleVectorStoreComponent(LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=["Similarity", "MMR (Max Marginal Relevance)"],
+            options=list(SEARCH_TYPES),
             value="Similarity",
             advanced=True,
         ),
@@ -216,9 +222,11 @@ class OracleVectorStoreComponent(LCVectorStoreComponent):
         return vs
 
     def _map_search_type(self) -> str:
-        if self.search_type == "MMR (Max Marginal Relevance)":
-            return "mmr"
-        return "similarity"
+        search_type = SEARCH_TYPES.get(self.search_type)
+        if search_type is None:
+            logger.warning("Unknown search type %r; falling back to 'similarity'", self.search_type)
+            return "similarity"
+        return search_type
 
     def _build_search_args(self) -> dict[str, Any]:
         return {"k": self.number_of_results}
