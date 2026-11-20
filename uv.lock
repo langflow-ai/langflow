@@ -10571,7 +10571,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-confluent"
-version = "0.2.3"
+version = "0.2.4"
 source = { editable = "src/bundles/confluent" }
 dependencies = [
     { name = "confluent-kafka", extra = ["avro", "json", "schemaregistry"] },
