@@ -44,7 +44,7 @@ Install the LFX engine and any provider extensions your flows need.
 You can also build an external extension from a reviewed source revision.
 Use a separate environment that matches the extension's dependencies.
 For example, the [community-maintained Loom extension](https://github.com/ClickHouse/loom/tree/8981fe8b52089c75c64f34f8dc8f59c8d73d1d2a/integrations/langflow) supports Python 3.11–3.14 and requires LFX 1.13.3.
-With Python 3.11 available, build both its SDK and extension from the same pinned checkout:
+With Python 3.11 and uv 0.4.5 or later available, build both its SDK and extension from the same pinned checkout:
 
 ```bash
 git clone --filter=blob:none --sparse https://github.com/ClickHouse/loom.git loom-lfx-source
