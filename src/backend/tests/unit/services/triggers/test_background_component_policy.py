@@ -74,7 +74,7 @@ async def component_context(owned_flow, trigger_owner, monkeypatch):
     )
 
 
-async def _source(context, *, pinned=False, custom=True, is_superuser=False, user=None):
+async def _source(context, *, pinned=False, custom=True, is_superuser=False, user=None, override_data=None):
     selected = deepcopy(context.custom if custom else context.trusted)
     async with session_scope() as session:
         owner = await session.get(User, context.owner_id)
@@ -86,7 +86,7 @@ async def _source(context, *, pinned=False, custom=True, is_superuser=False, use
         session.add(flow)
     trigger = Trigger(flow_id=context.flow_id, user_id=context.owner_id, name="Policy trigger", kind="schedule")
     event = TriggerEvent(trigger_id=trigger.id, dedupe_key="tick")
-    request = build_submit_request(trigger=trigger, event=event, binding_data=selected if pinned else None)
+    request = build_submit_request(trigger=trigger, event=event, binding_data=selected if pinned else override_data)
     source = workflow._default_frame_source_factory(
         request=request,
         flow_id=context.flow_id,
@@ -139,10 +139,14 @@ async def test_trigger_worker_keeps_global_custom_component_restriction(componen
     assert context.builds == []
 
 
-@pytest.mark.parametrize("pinned", [False, True], ids=["current", "pinned"])
-async def test_trigger_worker_builds_from_sanitized_builtin_canvas(component_context, pinned):
+@pytest.mark.parametrize(
+    ("pinned", "override_data"),
+    [(False, None), (True, None), (False, {})],
+    ids=["current", "pinned", "empty-override"],
+)
+async def test_trigger_worker_builds_from_sanitized_builtin_canvas(component_context, pinned, override_data):
     context = component_context
-    source, selected = await _source(context, pinned=pinned, custom=False)
+    source, selected = await _source(context, pinned=pinned, custom=False, override_data=override_data)
 
     assert [frame async for frame in source(job_id=uuid4())]
 
@@ -157,9 +161,10 @@ async def test_trigger_worker_builds_from_sanitized_builtin_canvas(component_con
 
 
 @pytest.mark.parametrize("saved_data", [None, {}], ids=["absent", "empty"])
-async def test_trigger_worker_requires_a_saved_canvas(component_context, saved_data):
+@pytest.mark.parametrize("override_data", [None, {}], ids=["no-override", "empty-override"])
+async def test_trigger_worker_requires_a_saved_canvas(component_context, saved_data, override_data):
     context = component_context
-    source, _ = await _source(context, custom=False)
+    source, _ = await _source(context, custom=False, override_data=override_data)
     async with session_scope() as session:
         flow = await session.get(Flow, context.flow_id)
         flow.data = saved_data

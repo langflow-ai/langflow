@@ -632,12 +632,13 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
             current_user = UserRead.model_validate(owner, from_attributes=True)
         flow = await resolve_flow_for_execution(str(flow_id), current_user)
-        if resume is None and parsed.data is None and not flow.data:
-            # No saved canvas was available to validate. Do not let graph construction
-            # reload a different revision if the flow is edited while the job starts.
+        # The build treats an empty override as absent. Validate the saved canvas
+        # in the same case so graph construction cannot pick a different revision.
+        execution_request = replace(parsed, data=None) if resume is None and parsed.data == {} else parsed
+        if resume is None and execution_request.data is None and not flow.data:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Flow has no saved graph data.")
         execution_parsed = _validate_flow_data_for_execution(
-            parsed, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
+            execution_request, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
         )
         if parsed.component_substitution_warning and not execution_parsed.component_substitution_warning:
             execution_parsed = replace(
