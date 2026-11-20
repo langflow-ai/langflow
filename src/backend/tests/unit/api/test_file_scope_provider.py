@@ -45,7 +45,7 @@ async def test_provider_answer_is_stamped_for_this_flow_and_user() -> None:
     assert seen == [(str(flow_id), str(user_id))]
 
 
-@pytest.mark.parametrize("answer", [None, 5, "user-owner", object()])
+@pytest.mark.parametrize("answer", [None, 5, "user-owner", object(), ["user-owner", None], {42}])
 async def test_a_malformed_provider_answer_grants_nothing(answer) -> None:
     async def provider(_flow_id, _user_id):
         return answer
@@ -136,15 +136,19 @@ class _WarmTemplate:
         return copied
 
 
+@pytest.mark.parametrize("has_copy_for_run", [True, False])
 @pytest.mark.parametrize("registered", [True, False])
 async def test_a_warm_copy_gets_this_runs_scopes_and_never_the_templates(
     monkeypatch: pytest.MonkeyPatch,
     registered: bool,  # noqa: FBT001
+    has_copy_for_run: bool,  # noqa: FBT001
 ) -> None:
     from langflow.services import deps
     from langflow.services.warm_registry import service as registry_service
 
     template = _WarmTemplate()
+    if not has_copy_for_run:
+        monkeypatch.setattr(template, "copy_for_run", None)
     monkeypatch.setattr(warm_graph, "is_warm_registry_enabled", lambda _settings: True)
     monkeypatch.setattr(deps, "get_settings_service", lambda: SimpleNamespace(settings=SimpleNamespace()))
     monkeypatch.setattr(
