@@ -1024,6 +1024,10 @@ class BaseFileComponent(Component, ABC):
                     self.log(msg)
                     if not self.silent_errors:
                         raise ValueError(msg)
+                    # Silent mode skips the missing file instead of appending a BaseFile
+                    # whose path does not exist; processing it would only fail later with
+                    # a different error mixed into the results of the files that do exist.
+                    return
                 resolved_files.append(
                     BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
                 )
