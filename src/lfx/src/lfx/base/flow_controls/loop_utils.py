@@ -132,15 +132,19 @@ def get_loop_body_start_edge(vertex: "Vertex", loop_output_name: str = "item"):
     return None
 
 
-def extract_loop_output(results: list, end_vertex_id: str | None) -> Data:
+def extract_loop_output(results: list, end_vertex_id: str | None, output_name: str | None = None) -> Data:
     """Extract the output from subgraph execution results.
 
     Args:
         results: List of VertexBuildResult objects from subgraph execution
         end_vertex_id: The vertex ID that feeds back to the item input (end of loop body)
+        output_name: Source output connected to the feedback edge, if known
 
     Returns:
         Data object containing the loop iteration output
+
+    Raises:
+        ValueError: If the selected feedback output is missing from the end vertex result
     """
     if not results:
         return Data(text="")
@@ -152,15 +156,22 @@ def extract_loop_output(results: list, end_vertex_id: str | None) -> Data:
     for result in results:
         if hasattr(result, "vertex") and result.vertex.id == end_vertex_id and hasattr(result, "result_dict"):
             result_dict = result.result_dict
+            if output_name is not None and output_name not in result_dict.outputs:
+                msg = f"Loop feedback output {output_name!r} not found on {end_vertex_id}"
+                raise ValueError(msg)
             if result_dict.outputs:
-                # Get first output value
-                first_output = next(iter(result_dict.outputs.values()))
+                # The feedback edge can select any output of the end vertex.
+                selected_output = (
+                    result_dict.outputs.get(output_name)
+                    if output_name is not None
+                    else next(iter(result_dict.outputs.values()))
+                )
                 # Handle both dict (from model_dump()) and object formats
                 message = None
-                if isinstance(first_output, dict) and "message" in first_output:
-                    message = first_output["message"]
-                elif hasattr(first_output, "message"):
-                    message = first_output.message
+                if isinstance(selected_output, dict) and "message" in selected_output:
+                    message = selected_output["message"]
+                elif hasattr(selected_output, "message"):
+                    message = selected_output.message
 
                 if message is not None:
                     # If message is a dict, wrap it in a Data object
@@ -259,6 +270,18 @@ async def execute_loop_body(
             if len(sources) > 1:
                 list_sources[(target_id, target_param)] = sources
 
+    output_name = None
+    if start_edge and end_vertex_id:
+        loop_vertex = graph.get_vertex(start_edge.source_id)
+        output_name = next(
+            (
+                edge.source_handle.name
+                for edge in loop_vertex.incoming_edges
+                if edge.source_id == end_vertex_id and edge.target_param == start_edge.source_handle.name
+            ),
+            None,
+        )
+
     aggregated_results = []
 
     for item in data_list:
@@ -277,6 +300,10 @@ async def execute_loop_body(
 
             # Prepare the subgraph - components will be built with the injected data
             iteration_subgraph.prepare()
+
+            # The feedback edge leaves the subgraph, but its output must still be built.
+            if output_name is not None and end_vertex_id:
+                iteration_subgraph.get_vertex(end_vertex_id).required_output_names.add(output_name)
 
             # CRITICAL: Also set the value in the vertex's raw_params
             # Fields with type="other" (like HandleInput) are skipped during field param processing
@@ -311,7 +338,7 @@ async def execute_loop_body(
                         raise RuntimeError(msg)
 
             # Extract output from final result
-            output = extract_loop_output(results, end_vertex_id)
+            output = extract_loop_output(results, end_vertex_id, output_name)
             aggregated_results.append(output)
 
     return aggregated_results
