@@ -5325,6 +5325,21 @@
       "bare_class_name": "SocialScrapeTranscriptComponent",
       "target": "ext:socialscrape:SocialScrapeTranscriptComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "AtomicMailInboxComponent",
+      "target": "ext:atomicmail:AtomicMailInboxComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "AtomicMailMessageComponent",
+      "target": "ext:atomicmail:AtomicMailMessageComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "AtomicMailSendEmailComponent",
+      "target": "ext:atomicmail:AtomicMailSendEmailComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

@@ -1,0 +1,99 @@
+---
+title: Atomic Mail
+slug: /bundles-atomicmail
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Atomic Mail** bundle.
+
+[Atomic Mail](https://atomicmail.ai) is email for AI agents.
+An agent gets an inbox of its own with a real address, and it can send, read, and search mail.
+Use it when a flow has to email someone, wait for a reply, or read a verification code.
+
+All components need the API key of an Atomic Mail inbox.
+Create an inbox in the [Atomic Mail dashboard](https://dashboard.atomicmail.ai) and copy its key, then enter it in the **Atomic Mail API Key** field, or store it in a [global variable](/configuration-global-variables) named `ATOMIC_MAIL_API_KEY` and select that variable in the field.
+
+Langflow only sends requests to `mcp.atomicmail.ai`.
+Every component acts on the inbox that the API key belongs to.
+
+For more information, see the [Atomic Mail documentation](https://docs.atomicmail.ai).
+
+## Use Atomic Mail components in a flow
+
+To let an agent work with email, connect the components to an **Agent** component as tools:
+
+1. Add the **Atomic Mail Inbox**, **Atomic Mail Message**, and **Atomic Mail Send Email** components to your flow.
+2. Enter your API key in each component.
+3. In each component's [header menu](/concepts-components#component-menus), enable **Tool Mode**.
+4. Connect each component's **Toolset** port to the **Tools** port of the **Agent** component.
+5. Open the **Playground**, and then ask the agent to check its inbox or to email someone.
+
+## Atomic Mail Send Email
+
+This component sends a plain-text email from the inbox.
+The message goes to real recipients, so connect it to an agent only in flows where the agent is meant to send mail.
+
+It outputs a [`Data`](/data-types#json) object.
+The `text` is a short confirmation, and the data has the recipients and the subject.
+
+### Atomic Mail Send Email parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Atomic Mail API Key (`api_key`) | SecretString | Input parameter. The API key of your Atomic Mail inbox. |
+| To (`to`) | String | Input parameter. The recipient's email address. Separate several addresses with commas. |
+| Subject (`subject`) | String | Input parameter. The subject line. |
+| Body (`body`) | String | Input parameter. The plain-text body of the message. |
+| CC (`cc`) | String | Input parameter. Addresses to copy. Separate several addresses with commas. |
+| From Name (`from_name`) | String | Input parameter. The display name shown to the recipient. The address is always the inbox's. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Atomic Mail to answer. Default: `30`. |
+
+## Atomic Mail Inbox
+
+This component lists the newest messages in the inbox.
+If you enter a **Search Query**, it searches all mail in the mailbox instead.
+
+It outputs a [`Table`](/data-types#table) with one row per message, newest first.
+The columns are `id`, `from`, `to`, `subject`, `received_at`, and `preview`.
+To read a whole message, pass its `id` to the **Atomic Mail Message** component.
+
+### Atomic Mail Inbox parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Atomic Mail API Key (`api_key`) | SecretString | Input parameter. The API key of your Atomic Mail inbox. |
+| Search Query (`query`) | String | Input parameter. Text to search for in all mail. Leave empty to list the newest inbox messages. |
+| Max Messages (`max_messages`) | Integer | Input parameter. The number of messages to return, from 1 to 50. Default: `10`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Atomic Mail to answer. Default: `30`. |
+
+## Atomic Mail Message
+
+This component reads one message in full.
+
+It outputs a [`Data`](/data-types#json) object.
+The `text` is the body of the message as plain text, and the data has the `id`, `thread_id`, `from`, `to`, `cc`, `subject`, `received_at`, and `attachments`.
+
+The body of an email is written by the sender.
+Atomic Mail returns it between markers that label it as untrusted, so that an agent treats it as information and doesn't follow instructions inside it.
+
+### Atomic Mail Message parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Atomic Mail API Key (`api_key`) | SecretString | Input parameter. The API key of your Atomic Mail inbox. |
+| Message ID (`message_id`) | String | Input parameter. The ID of the message, from the **Atomic Mail Inbox** component. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Atomic Mail to answer. Default: `30`. |
+
+## See also
+
+* [**Agent** component](/components-agents)
+* [Use Langflow as an MCP client](/mcp-client)
