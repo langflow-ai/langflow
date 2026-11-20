@@ -5,6 +5,7 @@ see the rows it created, each restart appends another copy of every agentic vari
 and ``variable`` grows without bound on a serving plane that never cleans it up.
 """
 
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -130,3 +131,134 @@ async def test_global_startup_empty_agentic_variables_can_be_read_and_edited(cli
     async with session_scope() as session:
         names = await _variable_names(session, active_user.id)
     assert all(names.count(name) == 1 for name in seeded_variables)
+
+
+@pytest.mark.asyncio
+async def test_global_startup_preserves_populated_user_values(async_session):
+    """Initialization must not overwrite a user-edited placeholder value."""
+    user = await _seed_user(async_session)
+    edited = Variable(
+        user_id=user.id,
+        name="FLOW_ID",
+        value="user-edited-flow",
+        type=GENERIC_TYPE,
+        default_fields=[],
+    )
+    async_session.add(edited)
+    await async_session.commit()
+    await async_session.refresh(edited)
+
+    await initialize_agentic_global_variables(async_session)
+    await async_session.commit()
+
+    rows = (await async_session.exec(select(Variable).where(Variable.user_id == user.id))).all()
+    flow_rows = [row for row in rows if row.name == "FLOW_ID"]
+    assert len(flow_rows) == 1
+    assert flow_rows[0].id == edited.id
+    assert flow_rows[0].value == "user-edited-flow"
+    assert {row.name for row in rows} == {"COMPONENT_ID", "FIELD_NAME", "FLOW_ID"}
+
+
+@pytest.mark.asyncio
+async def test_global_startup_isolates_placeholders_per_user(async_session):
+    """Each user gets their own placeholders; one user's edits stay private."""
+    user_a = await _seed_user(async_session)
+    user_b = await _seed_user(async_session)
+    async_session.add(
+        Variable(
+            user_id=user_a.id,
+            name="FLOW_ID",
+            value="only-user-a",
+            type=GENERIC_TYPE,
+            default_fields=[],
+        )
+    )
+    await async_session.commit()
+
+    await initialize_agentic_global_variables(async_session)
+    await async_session.commit()
+
+    rows_a = (await async_session.exec(select(Variable).where(Variable.user_id == user_a.id))).all()
+    rows_b = (await async_session.exec(select(Variable).where(Variable.user_id == user_b.id))).all()
+    assert sorted(row.name for row in rows_a) == ["COMPONENT_ID", "FIELD_NAME", "FLOW_ID"]
+    assert sorted(row.name for row in rows_b) == ["COMPONENT_ID", "FIELD_NAME", "FLOW_ID"]
+    assert [row.value for row in rows_a if row.name == "FLOW_ID"] == ["only-user-a"]
+    assert [row.value for row in rows_b if row.name == "FLOW_ID"] == [""]
+
+
+@pytest.mark.asyncio
+async def test_global_startup_does_not_delete_historical_duplicates(async_session):
+    """Existing conflicting rows must be left untouched; no extra copy is added."""
+    user = await _seed_user(async_session)
+    empty = Variable(user_id=user.id, name="FLOW_ID", value="", type=GENERIC_TYPE, default_fields=[])
+    edited = Variable(
+        user_id=user.id,
+        name="FLOW_ID",
+        value="keep-this-value",
+        type=GENERIC_TYPE,
+        default_fields=[],
+    )
+    async_session.add(empty)
+    async_session.add(edited)
+    await async_session.commit()
+    original_ids = {empty.id, edited.id}
+
+    await initialize_agentic_global_variables(async_session)
+    await async_session.commit()
+
+    rows = (await async_session.exec(select(Variable).where(Variable.user_id == user.id))).all()
+    flow_rows = [row for row in rows if row.name == "FLOW_ID"]
+    assert {row.id for row in flow_rows} == original_ids
+    assert {row.value for row in flow_rows} == {"", "keep-this-value"}
+    names = [row.name for row in rows]
+    assert names.count("FLOW_ID") == 2
+    assert names.count("COMPONENT_ID") == 1
+    assert names.count("FIELD_NAME") == 1
+
+
+@pytest.mark.asyncio
+async def test_existence_check_does_not_trust_list_variables(async_session, monkeypatch):
+    """Startup must see empty placeholders even if list_variables hides them."""
+    from langflow.services.deps import get_variable_service
+
+    user = await _seed_user(async_session)
+    await initialize_agentic_global_variables(async_session)
+    await async_session.commit()
+
+    monkeypatch.setattr(get_variable_service(), "list_variables", AsyncMock(return_value=[]))
+
+    await initialize_agentic_global_variables(async_session)
+    await async_session.commit()
+
+    names = await _variable_names(async_session, user.id)
+    assert names.count("FLOW_ID") == 1
+    assert names.count("COMPONENT_ID") == 1
+    assert names.count("FIELD_NAME") == 1
+    assert len(names) == 3
+
+
+@pytest.mark.asyncio
+async def test_caller_rollback_discards_uncommitted_placeholders(async_session):
+    """Initialization flushes through the caller's session and honors rollback."""
+    user = await _seed_user(async_session)
+    user_id = user.id
+
+    await initialize_agentic_global_variables(async_session)
+    await async_session.rollback()
+
+    assert await _variable_names(async_session, user_id) == []
+
+
+@pytest.mark.asyncio
+async def test_existence_counts_accept_string_user_ids(async_session):
+    """The count API accepts the same string UUIDs as other variable service reads."""
+    from langflow.services.deps import get_variable_service
+
+    user = await _seed_user(async_session)
+    async_session.add(Variable(user_id=user.id, name="FLOW_ID", value="", type=GENERIC_TYPE, default_fields=[]))
+    await async_session.commit()
+
+    counts = await get_variable_service().existing_variable_name_counts(
+        str(user.id), ["FLOW_ID", "FIELD_NAME"], session=async_session
+    )
+    assert counts == {"FLOW_ID": 1}
