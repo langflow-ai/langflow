@@ -32,7 +32,9 @@ Export an entire project from staging into ./flows/::
 from __future__ import annotations
 
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -43,6 +45,26 @@ from rich.console import Console
 from lfx.cli.common import load_sdk, safe_filename
 
 console = Console(stderr=True)
+
+
+def _publish(path: Path, content: str) -> None:
+    """Write *content* to *path* without ever leaving it truncated.
+
+    ``export --in-place`` and ``--output`` both overwrite a file the user
+    already has, and with ``--in-place`` that file may be the only copy of the
+    flow.  Writing in place means a crash, a full disk or an interrupt leaves
+    it truncated.  Publish through a sibling created with
+    ``tempfile.mkstemp`` (0600) and swap it in with ``Path.replace``, so the
+    original is untouched unless the swap succeeds.
+    """
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(content)
+        Path(tmp).replace(path)
+    except BaseException:
+        Path(tmp).unlink(missing_ok=True)
+        raise
 
 
 def _write_flow(
@@ -61,11 +83,11 @@ def _write_flow(
     content = sdk.flow_to_json(flow, indent=indent)
 
     if in_place and source_path:
-        source_path.write_text(content, encoding="utf-8")
+        _publish(source_path, content)
         return source_path
 
     if output:
-        output.write_text(content, encoding="utf-8")
+        _publish(output, content)
         return output
 
     sys.stdout.write(content)
