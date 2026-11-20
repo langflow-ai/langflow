@@ -19,7 +19,10 @@ export function formatUsd(
   }
   const smallAmount = precise ? 1 : 0.01;
   const digits = value !== 0 && value < smallAmount ? 4 : 2;
-  return new Intl.NumberFormat(undefined, {
+  // Pin the locale: USD must render as "$" for every user. Following the OS
+  // locale makes the symbol locale-dependent ("US$0.01" under zh-CN, de-DE,
+  // en-001, ...), which contradicts the format contract in format.test.ts.
+  return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
     minimumFractionDigits: digits,
