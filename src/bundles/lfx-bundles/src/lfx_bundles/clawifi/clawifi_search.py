@@ -15,6 +15,7 @@ from lfx_bundles.clawifi.clawifi_common import (
     ClawifiAPIError,
     clawifi_post,
     error_messages,
+    redact,
     split_list,
 )
 
@@ -113,7 +114,7 @@ class ClawifiSearchComponent(Component):
                 json=payload,
             )
             if body.get("success") is False:
-                reason = error_messages(body.get("errors")) or "every search engine failed"
+                reason = redact(error_messages(body.get("errors")), self.api_key) or "every search engine failed"
                 msg = f"Clawifi search failed: {reason}"
                 raise ClawifiAPIError(msg)
             results = body.get("results")

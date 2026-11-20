@@ -180,6 +180,20 @@ class TestClawifiSearchComponent:
 
         assert data[0].data["error"] == "Clawifi search failed: engine timed out; rate_limited"
 
+    def test_key_is_redacted_from_a_failed_search_response(self) -> None:
+        body = _search_body([], success=False, errors=[{"code": "provider_error", "message": f"bad token {API_KEY}"}])
+        component = _search()
+        with (
+            patch("httpx.Client.request", return_value=_response(json_body=body)),
+            patch("lfx_bundles.clawifi.clawifi_search.logger") as log,
+        ):
+            data = component.search()
+
+        assert data[0].data["error"] == "Clawifi search failed: bad token ***"
+        assert API_KEY not in str(data[0].data)
+        assert API_KEY not in str(component.status)
+        assert all(API_KEY not in str(call) for call in log.mock_calls)
+
     def test_response_without_results_is_an_error(self) -> None:
         with patch("httpx.Client.request", return_value=_response(json_body={"success": True})):
             data = _search().search()
@@ -368,6 +382,28 @@ class TestClawifiFetchComponent:
             page = _fetch().fetch_page()
 
         assert page.data["error"] == "Clawifi returned no content for https://example.com/."
+
+    def test_empty_official_api_record_is_an_error(self) -> None:
+        body = _fetch_body({"title": None, "doi": None}, entity_type="Paper")
+        with patch("httpx.Client.request", return_value=_response(json_body=body)):
+            page = _fetch(url="https://arxiv.org/abs/0000.00000").fetch_page()
+
+        assert page.data["error"] == "Clawifi returned no content for https://arxiv.org/abs/0000.00000."
+
+    def test_key_is_redacted_from_a_failed_read_response(self) -> None:
+        body = _fetch_body({}, success=False, errors=[{"code": "fetch_failed", "message": f"echo {API_KEY}"}])
+        body.pop("content_status")
+        component = _fetch()
+        with (
+            patch("httpx.Client.request", return_value=_response(json_body=body)),
+            patch("lfx_bundles.clawifi.clawifi_fetch.logger") as log,
+        ):
+            page = component.fetch_page()
+
+        assert page.data["error"] == "Clawifi could not read https://example.com/. echo ***"
+        assert API_KEY not in page.text
+        assert API_KEY not in str(component.status)
+        assert all(API_KEY not in str(call) for call in log.mock_calls)
 
     def test_failed_read_returns_the_errors(self) -> None:
         body = _fetch_body({}, success=False, errors=[{"code": "fetch_failed", "message": "TLS handshake failed"}])

@@ -84,6 +84,11 @@ def _redact(text: str, api_key: str) -> str:
     return text.replace(api_key, "***") if api_key else text
 
 
+def redact(text: str, api_key: Any) -> str:
+    """Replace the API key, given as a plain string or a ``SecretStr``, in text with ***."""
+    return _redact(text, secret_value(api_key))
+
+
 def _error_detail(body: Any) -> str:
     """Pull the human-readable message out of a Clawifi error body.
 

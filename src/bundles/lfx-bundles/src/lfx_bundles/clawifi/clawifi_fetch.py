@@ -17,6 +17,7 @@ from lfx_bundles.clawifi.clawifi_common import (
     ClawifiAPIError,
     clawifi_post,
     error_messages,
+    redact,
     require_http_url,
 )
 
@@ -152,7 +153,9 @@ class ClawifiFetchComponent(Component):
                 page_data = {}
             status = str(body.get("content_status") or "")
             if body.get("success") is False or status in _UNREADABLE_STATUS_HINTS:
-                reason = _UNREADABLE_STATUS_HINTS.get(status) or error_messages(body.get("errors"))
+                reason = _UNREADABLE_STATUS_HINTS.get(status) or redact(
+                    error_messages(body.get("errors")), self.api_key
+                )
                 msg = f"Clawifi could not read {payload['url']}"
                 if status:
                     msg += f" (content_status: {status})"
@@ -186,6 +189,9 @@ class ClawifiFetchComponent(Component):
             text = markdown
         else:
             result = {key: value for key, value in page_data.items() if value is not None}
+            if not result:
+                msg = f"Clawifi returned no content for {payload['url']}."
+                raise ClawifiAPIError(msg)
             text = markdown or json.dumps(result, ensure_ascii=False, default=str)
         if not text:
             msg = f"Clawifi returned no content for {payload['url']}."
