@@ -405,6 +405,22 @@ class TestClawifiFetchComponent:
         assert API_KEY not in str(component.status)
         assert all(API_KEY not in str(call) for call in log.mock_calls)
 
+    def test_key_is_redacted_from_the_content_status_of_a_failed_read(self) -> None:
+        body = _fetch_body({}, success=False, content_status=f"blocked {API_KEY}")
+        component = _fetch()
+        with (
+            patch("httpx.Client.request", return_value=_response(json_body=body)),
+            patch("lfx_bundles.clawifi.clawifi_fetch.logger") as log,
+        ):
+            page = component.fetch_page()
+
+        assert page.data["error"].startswith(
+            "Clawifi could not read https://example.com/ (content_status: blocked ***)"
+        )
+        assert API_KEY not in page.text
+        assert API_KEY not in str(component.status)
+        assert all(API_KEY not in str(call) for call in log.mock_calls)
+
     def test_failed_read_returns_the_errors(self) -> None:
         body = _fetch_body({}, success=False, errors=[{"code": "fetch_failed", "message": "TLS handshake failed"}])
         body.pop("content_status")

@@ -160,7 +160,7 @@ class ClawifiFetchComponent(Component):
                 if status:
                     msg += f" (content_status: {status})"
                 msg = f"{msg}. {reason}" if reason else f"{msg}."
-                raise ClawifiAPIError(msg)
+                raise ClawifiAPIError(redact(msg, self.api_key))
             page = self._page_from_record(payload, page_data, body, status)
         except ClawifiAPIError as exc:
             logger.error(str(exc))
