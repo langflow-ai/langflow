@@ -43,7 +43,6 @@ test(
     await focusElementsOnBoard({ page });
     await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
-    await page.getByText("Knowledge", { exact: true }).first().isHidden();
     await expect(page.getByTestId("icon-ChevronDown").last()).toBeVisible();
     await page.getByTestId("icon-ChevronDown").last().click();
     await expect(

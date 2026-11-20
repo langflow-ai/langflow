@@ -43,12 +43,6 @@ test(
       "disclosure-utilities",
     ];
 
-    const optionalDisclosureTestIds = [
-      "disclosure-bundles-langchain",
-      "disclosure-bundles-assemblyai",
-      "disclosure-bundles-datastax",
-    ];
-
     const elementTestIds = [
       "input_outputChat Output",
       "data_sourceAPI Request",
@@ -59,69 +53,25 @@ test(
       "langchain_utilitiesCharacter Text Splitter",
     ];
 
-    const optionalElementTestIds = ["mem0Mem0 Chat Memory"];
-
     await Promise.all(
-      disclosureTestIds.map((id) => {
-        if (!expect(page.getByTestId(id)).toBeVisible()) {
-          console.error(`${id} is not visible`);
-        }
-        return expect(page.getByTestId(id)).toBeVisible();
-      }),
+      disclosureTestIds.map((id) => expect(page.getByTestId(id)).toBeVisible()),
     );
 
-    for (const id of optionalDisclosureTestIds) {
-      const disclosure = page.getByTestId(id);
-      if (await disclosure.isVisible().catch(() => false)) {
-        await expect(disclosure).toBeVisible();
-      }
-    }
-
     await Promise.all(
-      elementTestIds.map(async (id) => {
-        if (!expect(page.getByTestId(id).first()).toBeVisible()) {
-          console.error(`${id} is not visible`);
-        }
-        return expect(page.getByTestId(id).first()).toBeVisible();
-      }),
+      elementTestIds.map((id) =>
+        expect(page.getByTestId(id).first()).toBeVisible(),
+      ),
     );
-
-    for (const id of optionalElementTestIds) {
-      const element = page.getByTestId(id).first();
-      if (await element.isVisible().catch(() => false)) {
-        await expect(element).toBeVisible();
-      }
-    }
 
     await page.getByTestId("sidebar-search-input").click();
 
     const visibleModelSpecsTestIds = ["cohereCohere Language Models"];
 
-    const optionalVisibleModelSpecsTestIds = [
-      "lmstudioLM Studio",
-      "groqGroq",
-      "maritalkMariTalk",
-      "perplexityPerplexity",
-      "baiduQianfan",
-      "sambanovaSambaNova",
-      "xaixAI",
-    ];
-
     await Promise.all(
-      visibleModelSpecsTestIds.map((id) => {
-        if (!expect(page.getByTestId(id)).toBeVisible()) {
-          console.error(`${id} is not visible`);
-        }
-        return expect(page.getByTestId(id)).toBeVisible();
-      }),
+      visibleModelSpecsTestIds.map((id) =>
+        expect(page.getByTestId(id)).toBeVisible(),
+      ),
     );
-
-    for (const id of optionalVisibleModelSpecsTestIds) {
-      const modelSpec = page.getByTestId(id);
-      if (await modelSpec.isVisible().catch(() => false)) {
-        await expect(modelSpec).toBeVisible();
-      }
-    }
 
     const modelHandle = page
       .getByTestId("handle-retrievalqa-shownode-language model-left")

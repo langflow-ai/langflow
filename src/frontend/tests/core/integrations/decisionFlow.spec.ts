@@ -1,4 +1,4 @@
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -312,7 +312,7 @@ test(
     await page.getByTestId("title-Pass").nth(1).click();
     await page
       .getByTestId(/^popover-anchor-input-input_message.*/)
-      .nth(0)
+      .nth(1)
       .fill("You're Happy! 🤪");
     await openParametersPanel(page);
     await toggleParameterOnNode(page, "ignored_message");
@@ -377,5 +377,11 @@ test(
     });
 
     await page.getByTestId("button-send").last().click();
+
+    // The conditional router sends the answer to one of the two outputs
+    await expect(page.getByTestId("div-chat-message").last()).toContainText(
+      /You're (Happy|Sad)!/,
+      { timeout: 120000 },
+    );
   },
 );

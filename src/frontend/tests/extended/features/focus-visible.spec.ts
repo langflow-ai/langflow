@@ -2,6 +2,7 @@ import type { Route, TestInfo } from "@playwright/test";
 import { expect, type LangflowPage, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 /**
  * WCAG 2.4.7 Focus Visible regression tests.
@@ -132,39 +133,31 @@ test(
   "canvas controls — add note, zoom, and fit view buttons show focus ring when tabbed to",
   { tag: ["@release", "@workspace"] },
   async ({ page }, testInfo) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
+    await openBlankFlow(page);
 
-    const controlTestIds = [
-      "canvas-add-note-button",
-      "zoom_in",
-      "zoom_out",
-      "fit_view",
-    ];
+    // The add-note button sits on the canvas; the zoom and fit buttons live
+    // inside the canvas controls dropdown.
+    const addNote = page.getByTestId("canvas-add-note-button");
+    await expect(addNote).toBeVisible();
+    // A key press first, so `:focus-visible` matches the programmatic focus
+    // the way it does for a keyboard user (the flow opened by a mouse click).
+    await page.keyboard.press("Tab");
+    await addNote.focus();
+    await expectFocusIndicator(
+      page,
+      "canvas-control-canvas-add-note-button",
+      testInfo,
+    );
 
-    for (const testId of controlTestIds) {
+    await page.getByTestId("canvas_controls_dropdown").click();
+
+    for (const testId of ["zoom_in", "zoom_out", "fit_view"]) {
       const button = page.getByTestId(testId);
-      if (!(await button.isVisible())) continue;
+      await expect(button).toBeVisible();
 
       await button.focus();
       await expectFocusIndicator(page, `canvas-control-${testId}`, testInfo);
     }
-  },
-);
-
-test(
-  "dropdown trigger shows focus ring on keyboard focus",
-  { tag: ["@release", "@workspace"] },
-  async ({ page }, testInfo) => {
-    await page.goto("/");
-    await page.waitForLoadState("networkidle");
-
-    // Find any visible button-role element and tab to it
-    const triggers = page.locator('[role="combobox"]:visible').first();
-    if (!(await triggers.isVisible())) return;
-
-    await triggers.focus();
-    await expectFocusIndicator(page, "dropdown-trigger", testInfo);
   },
 );
 

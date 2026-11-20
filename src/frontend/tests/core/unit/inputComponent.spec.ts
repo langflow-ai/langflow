@@ -128,23 +128,19 @@ test(
       .fill("NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe");
 
     const plusButtonLocator = page.getByTestId("input-collection_name");
-    const elementCount = await plusButtonLocator?.count();
-    if (elementCount === 0) {
-      expect(true).toBeTruthy();
+    await expect(plusButtonLocator).toHaveCount(0);
+    await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("div-generic-node").click();
+    await openParametersPanel(page);
 
-      await openParametersPanel(page);
+    await closeParametersPanel(page);
 
-      await closeParametersPanel(page);
+    const newValue = await page
+      .getByTestId("popover-anchor-input-collection_name")
+      .inputValue();
 
-      const value = await page
-        .getByTestId("popover-anchor-input-collection_name")
-        .inputValue();
-
-      if (value != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
-        expect(false).toBeTruthy();
-      }
+    if (newValue != "NEW_collection_name_test_123123123!@#$&*(&%$@ÇÇÇÀõe") {
+      expect(false).toBeTruthy();
     }
   },
 );

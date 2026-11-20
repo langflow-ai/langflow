@@ -1,4 +1,4 @@
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -22,5 +22,7 @@ test(
     await page.mouse.up();
     await page.mouse.down();
     await adjustScreenView(page);
+
+    await expect(page.locator(".react-flow__node")).toHaveCount(1);
   },
 );

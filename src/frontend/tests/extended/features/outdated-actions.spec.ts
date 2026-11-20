@@ -11,7 +11,6 @@ test(
   async ({ page }) => {
     const dropTarget = await openFlowsList(page);
 
-    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read the asset and rename the flow uniquely so we can wait for THIS
     // upload to appear in the list — avoids racing against the bootstrap-seeded
     // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
@@ -105,7 +104,6 @@ test(
   async ({ page }) => {
     const dropTarget = await openFlowsList(page);
 
-    await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
     // Read the asset and rename the flow uniquely so we can wait for THIS
     // upload to appear in the list — avoids racing against the bootstrap-seeded
     // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.

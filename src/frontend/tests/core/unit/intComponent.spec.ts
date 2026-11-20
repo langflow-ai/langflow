@@ -108,30 +108,26 @@ test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
   await closeParametersPanel(page);
 
   const plusButtonLocator = page.getByTestId("int-input-max_tokens");
-  const elementCount = await plusButtonLocator?.count();
-  if (elementCount === 0) {
-    expect(true).toBeTruthy();
+  await expect(plusButtonLocator).toHaveCount(0);
+  const valueOnNode = await page.getByTestId("int_int_max_tokens").inputValue();
 
-    const valueOnNode = await page
-      .getByTestId("int_int_max_tokens")
-      .inputValue();
+  expect(valueOnNode).toBe("50000");
 
-    expect(valueOnNode).toBe("50000");
+  await page.getByTestId("int_int_max_tokens").click();
+  await page.getByTestId("int_int_max_tokens").fill("3");
 
-    await page.getByTestId("int_int_max_tokens").click();
-    await page.getByTestId("int_int_max_tokens").fill("3");
+  const newValue = await page.getByTestId("int_int_max_tokens").inputValue();
 
-    let value = await page.getByTestId("int_int_max_tokens").inputValue();
+  expect(newValue).toBe("3");
 
-    expect(value).toBe("3");
+  await page.getByTestId("int_int_max_tokens").click();
+  await page.getByTestId("int_int_max_tokens").fill("-3");
+  await page.getByTestId("div-generic-node").click();
 
-    await page.getByTestId("int_int_max_tokens").click();
-    await page.getByTestId("int_int_max_tokens").fill("-3");
-    await page.getByTestId("div-generic-node").click();
+  const clampedValue = await page
+    .getByTestId("int_int_max_tokens")
+    .inputValue();
 
-    value = await page.getByTestId("int_int_max_tokens").inputValue();
-
-    // -3 clamps to 0; max_tokens displays "" when value is 0 = no limit
-    expect(value).toBe("");
-  }
+  // -3 clamps to 0; max_tokens displays "" when value is 0 = no limit
+  expect(clampedValue).toBe("");
 });

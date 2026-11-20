@@ -121,16 +121,28 @@ test("check if exposed parameters are updating when something on the flow change
 
   await page.getByText("Python", { exact: true }).click();
 
-  await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
-  await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
+  await expect(
+    page.getByText("collection_name_test_123123123!@#$&*(&%$@").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("persist_directory_123123123!@#$&*(&%$@").first(),
+  ).toBeVisible();
 
   await page.getByText("JavaScript", { exact: true }).click();
 
-  await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
-  await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
+  await expect(
+    page.getByText("collection_name_test_123123123!@#$&*(&%$@").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("persist_directory_123123123!@#$&*(&%$@").first(),
+  ).toBeVisible();
 
   await page.getByText("cURL", { exact: true }).click();
 
-  await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
-  await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
+  await expect(
+    page.getByText("collection_name_test_123123123!@#$&*(&%$@").first(),
+  ).toBeVisible();
+  await expect(
+    page.getByText("persist_directory_123123123!@#$&*(&%$@").first(),
+  ).toBeVisible();
 });

@@ -18,10 +18,6 @@ test(
     const bundlesGroup = page.locator('[data-sidebar="group-label"]', {
       hasText: "Bundles",
     });
-    test.skip(
-      !(await bundlesGroup.isVisible().catch(() => false)),
-      "Bundle integrations are unavailable because no provider bundles are installed",
-    );
     await expect(bundlesGroup).toBeVisible();
     await expect(page.getByTestId("disclosure-bundles-openai")).toBeVisible();
 

@@ -137,49 +137,45 @@ test(
     await closeParametersPanel(page);
 
     const plusButtonLocator = page.getByTestId("toggle_bool_load_hidden");
-    const elementCount = await plusButtonLocator?.count();
-    if (elementCount === 0) {
-      expect(true).toBeTruthy();
+    await expect(plusButtonLocator).toHaveCount(0);
+    await page.getByTestId("div-generic-node").click();
 
-      await page.getByTestId("div-generic-node").click();
+    await openParametersPanel(page);
 
-      await openParametersPanel(page);
+    await toggleParameterOnNode(page, "load_hidden");
+    await expect(
+      page.getByTestId("inspector-remove-load_hidden"),
+    ).toBeVisible();
 
-      await toggleParameterOnNode(page, "load_hidden");
-      await expect(
-        page.getByTestId("inspector-remove-load_hidden"),
-      ).toBeVisible();
+    expect(
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+    ).toBeTruthy();
 
-      expect(
-        await page.getByTestId("toggle_bool_load_hidden").isChecked(),
-      ).toBeTruthy();
+    await closeParametersPanel(page);
 
-      await closeParametersPanel(page);
+    await page.getByTestId("toggle_bool_load_hidden").click();
+    expect(
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+    ).toBeFalsy();
 
-      await page.getByTestId("toggle_bool_load_hidden").click();
-      expect(
-        await page.getByTestId("toggle_bool_load_hidden").isChecked(),
-      ).toBeFalsy();
+    await page.getByTestId("toggle_bool_load_hidden").click();
+    expect(
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+    ).toBeTruthy();
 
-      await page.getByTestId("toggle_bool_load_hidden").click();
-      expect(
-        await page.getByTestId("toggle_bool_load_hidden").isChecked(),
-      ).toBeTruthy();
+    await page.getByTestId("toggle_bool_load_hidden").click();
+    expect(
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+    ).toBeFalsy();
 
-      await page.getByTestId("toggle_bool_load_hidden").click();
-      expect(
-        await page.getByTestId("toggle_bool_load_hidden").isChecked(),
-      ).toBeFalsy();
+    await page.getByTestId("toggle_bool_load_hidden").click();
+    expect(
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+    ).toBeTruthy();
 
-      await page.getByTestId("toggle_bool_load_hidden").click();
-      expect(
-        await page.getByTestId("toggle_bool_load_hidden").isChecked(),
-      ).toBeTruthy();
-
-      await page.getByTestId("toggle_bool_load_hidden").click();
-      expect(
-        await page.getByTestId("toggle_bool_load_hidden").isChecked(),
-      ).toBeFalsy();
-    }
+    await page.getByTestId("toggle_bool_load_hidden").click();
+    expect(
+      await page.getByTestId("toggle_bool_load_hidden").isChecked(),
+    ).toBeFalsy();
   },
 );

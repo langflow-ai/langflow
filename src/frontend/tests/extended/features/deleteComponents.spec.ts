@@ -31,22 +31,15 @@ test(
       timeout: 100000,
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
-    if (await page.getByText(TEXTS.labelComponents).first().isVisible()) {
-      await page.getByText(TEXTS.labelComponents).first().click();
-      await expect(
-        page.getByText(TEXTS.templateBasicRag).first(),
-      ).toBeVisible();
-      await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
-        timeout: 100000,
-      });
-      await page.getByTestId("home-dropdown-menu").first().click();
-      await page.getByTestId("icon-Trash2").click();
-      await page
-        .getByText("Are you sure you want to delete the selected component?")
-        .isVisible();
-      await page.getByText(TEXTS.delete).nth(1).click();
-      await page.waitForTimeout(1000);
-      await expect(page.getByText("Successfully").first()).toBeVisible();
-    }
+    await page.getByText(TEXTS.labelComponents).first().click();
+    await expect(page.getByText(TEXTS.templateBasicRag).first()).toBeVisible();
+    await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
+      timeout: 100000,
+    });
+    await page.getByTestId("home-dropdown-menu").first().click();
+    await page.getByTestId("icon-Trash2").click();
+    await page.getByText(TEXTS.delete).nth(1).click();
+    await page.waitForTimeout(1000);
+    await expect(page.getByText("Successfully").first()).toBeVisible();
   },
 );
