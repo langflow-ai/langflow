@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import threading
+import unicodedata
 import uuid
 import zipfile
 from io import StringIO
@@ -43,6 +44,7 @@ from lfx.services.variable.request_scope import (
 )
 
 if TYPE_CHECKING:
+    from collections.abc import Iterable
     from types import ModuleType
 
 # Attempt to import tomllib (3.11+) else fall back to tomli
@@ -783,6 +785,23 @@ def safe_filename(name: str) -> str:
     """Convert a flow name to a safe filesystem basename (no extension)."""
     safe = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name)
     return safe.strip().replace(" ", "_")
+
+
+def validate_unique_flow_filenames(flow_names: Iterable[str]) -> None:
+    """Reject filenames that would collide on a case-insensitive filesystem."""
+    names_by_filename: dict[str, str] = {}
+    for name in flow_names:
+        filename = f"{safe_filename(name)}.json"
+        portable_filename = unicodedata.normalize("NFC", filename).casefold()
+        if portable_filename in names_by_filename:
+            previous_name = names_by_filename[portable_filename]
+            previous_filename = f"{safe_filename(previous_name)}.json"
+            msg = (
+                f"Flows {previous_name!r} and {name!r} collide at {previous_filename!r}. "
+                "Rename a flow or use --flow-id with separate output directories."
+            )
+            raise typer.BadParameter(msg)
+        names_by_filename[portable_filename] = name
 
 
 def extract_script_docstring(script_path: Path) -> str | None:

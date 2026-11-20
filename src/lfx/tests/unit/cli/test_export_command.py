@@ -547,6 +547,24 @@ class TestExportCommandRemoteFlowId:
 
 
 class TestExportCommandRemoteProject:
+    @pytest.mark.parametrize("second_name", ["Team_A", "team a"])
+    def test_project_rejects_colliding_filenames_before_writing(self, tmp_path, second_name):
+        flows = [
+            _make_flow_obj(name="Team A", flow_id="aaaaaaaa-0000-0000-0000-000000000001"),
+            _make_flow_obj(name=second_name, flow_id="aaaaaaaa-0000-0000-0000-000000000002"),
+        ]
+        client = _make_client_mock(project_obj=_make_project_obj(flows=flows))
+        sdk = _make_sdk_mock(client_mock=client)
+        sdk.normalize_flow.side_effect = lambda flow, **_kwargs: flow
+        sdk.flow_to_json.side_effect = json.dumps
+        existing = tmp_path / "Team_A.json"
+        existing.write_text("saved export", encoding="utf-8")
+
+        with pytest.raises(typer.BadParameter, match=rf"'Team A' and {second_name!r}.*Team_A\.json"):
+            _run_export([], project_id=_PROJECT_ID, env="staging", output_dir=str(tmp_path), sdk_mock=sdk)
+
+        assert existing.read_text(encoding="utf-8") == "saved export"
+
     def test_project_exports_all_flows(self, tmp_path):
         flows = [_make_flow_obj(name=f"Flow {i}", flow_id=f"aaaaaaaa-0000-0000-0000-{i:012d}") for i in range(3)]
         project_obj = _make_project_obj(name="Test Project", flows=flows)

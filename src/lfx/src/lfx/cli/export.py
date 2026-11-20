@@ -40,7 +40,7 @@ from uuid import UUID
 import typer
 from rich.console import Console
 
-from lfx.cli.common import load_sdk, safe_filename
+from lfx.cli.common import load_sdk, safe_filename, validate_unique_flow_filenames
 
 console = Console(stderr=True)
 
@@ -136,6 +136,7 @@ def export_command(
 
         # Project mode: export all flows
         project = client.get_project(UUID(project_id))
+        validate_unique_flow_filenames(flow.name for flow in project.flows)
         dest_dir = Path(output_dir) if output_dir else Path.cwd() / safe_filename(project.name)
         dest_dir.mkdir(parents=True, exist_ok=True)
 
