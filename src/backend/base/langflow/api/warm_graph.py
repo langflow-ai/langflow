@@ -206,6 +206,7 @@ async def warm_deepcopy(
         )
     else:
         graph = deepcopy(hit[0])
+        graph.authorized_extra_file_scopes = extra_file_scopes
         _apply_implicit_stream_tweak(graph, stream=stream)
     # Thread this run's identity onto the copy (the template is user-agnostic). This is
     # what lets explicit load_from_db fields resolve for the calling user, exactly like a

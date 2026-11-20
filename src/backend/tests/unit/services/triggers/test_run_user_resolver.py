@@ -42,3 +42,11 @@ async def test_a_failing_resolver_raises_so_the_dispatcher_retries() -> None:
     register_trigger_run_user_resolver(resolver)
     with pytest.raises(RuntimeError):
         await TriggerService().resolve_run_user_id(None, flow_id=uuid4(), trigger_owner_id=uuid4())
+
+
+async def test_an_invalid_resolver_result_refuses_the_run() -> None:
+    async def resolver(*_args, **_kwargs):
+        return "invalid"
+
+    register_trigger_run_user_resolver(resolver)
+    assert await TriggerService().resolve_run_user_id(None, flow_id=uuid4(), trigger_owner_id=uuid4()) is None

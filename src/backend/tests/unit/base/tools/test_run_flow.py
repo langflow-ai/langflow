@@ -21,12 +21,6 @@ from lfx.template.field.base import Output
 from lfx.utils.flow_validation import CustomComponentValidationError
 
 
-@asynccontextmanager
-async def _authorized_target_scope(**_kwargs):
-    """Unit-test seam; target-scope behavior has dedicated DB-backed coverage."""
-    yield
-
-
 @pytest.fixture
 def mock_shared_cache():
     """Mock the shared component cache service."""
@@ -84,14 +78,20 @@ class TestRunFlowBaseComponentFlowRetrieval:
     """Test flow retrieval methods."""
 
     @pytest.fixture(autouse=True)
-    def _target_scope(self):
+    def target_flow(self):
+        row = MagicMock()
+
+        @asynccontextmanager
+        async def target_scope(**_kwargs):
+            yield row
+
         # The caller-aware component-policy seam has dedicated coverage in
         # test_run_flow_nested_component_policy.py; neutralize it here so these
         # tests stay on the retrieval/caching behavior.
         with (
             patch(
                 "lfx.base.tools.run_flow.scoped_model_provider_policy_for_target_flow",
-                _authorized_target_scope,
+                target_scope,
             ),
             patch(
                 "lfx.base.tools.run_flow.get_user_is_superuser",
@@ -112,7 +112,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
                 return_value=None,
             ),
         ):
-            yield
+            yield row
 
     @pytest.mark.asyncio
     async def test_get_flow_with_id(self):
@@ -203,7 +203,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
             mock_is_up_to_date.assert_called_once_with(mock_graph, updated_at)
 
     @pytest.mark.asyncio
-    async def test_get_graph_fetches_and_caches_when_not_cached(self):
+    async def test_get_graph_fetches_and_caches_when_not_cached(self, target_flow):
         """Test that get_graph fetches flow and caches it when not in cache."""
         component = RunFlowBaseComponent()
         component._user_id = str(uuid4())
@@ -218,23 +218,21 @@ class TestRunFlowBaseComponentFlowRetrieval:
 
         with (
             patch.object(component, "_flow_cache_call") as mock_cache_call,
-            patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow,
             patch("lfx.base.tools.run_flow.Graph.from_payload") as mock_from_payload,
         ):
             mock_cache_call.return_value = None  # Not in cache
-            mock_get_flow.return_value = flow_data
+            target_flow.to_data.return_value = flow_data
             mock_from_payload.return_value = mock_graph
 
             result = await component.get_graph(flow_name_selected=flow_name, flow_id_selected=flow_id)
 
             assert result == mock_graph
-            mock_get_flow.assert_called_once_with(flow_name_selected=flow_name, flow_id_selected=flow_id)
             mock_from_payload.assert_called_once()
             # Verify cache set was called
             assert mock_cache_call.call_count == 2  # get and set
 
     @pytest.mark.asyncio
-    async def test_get_graph_gives_the_child_the_parents_extra_file_scopes_and_skips_the_cache(self):
+    async def test_get_graph_gives_the_child_the_parents_extra_file_scopes_and_skips_the_cache(self, target_flow):
         """A child of a run with extra file scopes reads with them and never enters the shared cache."""
         component = RunFlowBaseComponent()
         component._user_id = str(uuid4())
@@ -244,16 +242,16 @@ class TestRunFlowBaseComponentFlowRetrieval:
 
         with (
             patch.object(component, "_flow_cache_call") as mock_cache_call,
-            patch.object(component, "get_flow", new_callable=AsyncMock, return_value=flow_data),
             patch("lfx.base.tools.run_flow.Graph.from_payload", return_value=MagicMock(spec=Graph)) as from_payload,
         ):
+            target_flow.to_data.return_value = flow_data
             await component.get_graph(flow_name_selected="child", flow_id_selected=str(uuid4()))
 
         assert from_payload.call_args.kwargs["authorized_extra_file_scopes"] == frozenset({"user-d"})
         mock_cache_call.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_get_graph_deletes_stale_cache_and_refetches(self):
+    async def test_get_graph_deletes_stale_cache_and_refetches(self, target_flow):
         """Test that get_graph deletes stale cached graph and fetches fresh one."""
         component = RunFlowBaseComponent()
         component._user_id = str(uuid4())
@@ -277,13 +275,12 @@ class TestRunFlowBaseComponentFlowRetrieval:
         with (
             patch.object(component, "_flow_cache_call") as mock_cache_call,
             patch.object(component, "_is_cached_flow_up_to_date") as mock_is_up_to_date,
-            patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow,
             patch("lfx.base.tools.run_flow.Graph.from_payload") as mock_from_payload,
         ):
             # First call returns stale graph, second call is delete, third call is set
             mock_cache_call.side_effect = [stale_graph, None, None]
             mock_is_up_to_date.return_value = False  # Cache is stale
-            mock_get_flow.return_value = flow_data
+            target_flow.to_data.return_value = flow_data
             mock_from_payload.return_value = fresh_graph
 
             result = await component.get_graph(flow_id_selected=flow_id, updated_at=new_updated_at)
@@ -293,7 +290,7 @@ class TestRunFlowBaseComponentFlowRetrieval:
             assert mock_cache_call.call_count == 3
 
     @pytest.mark.asyncio
-    async def test_get_graph_blocks_custom_components_when_disabled(self, monkeypatch):
+    async def test_get_graph_blocks_custom_components_when_disabled(self, monkeypatch, target_flow):
         component = RunFlowBaseComponent()
         component._user_id = str(uuid4())
         component.cache_flow = False
@@ -328,10 +325,9 @@ class TestRunFlowBaseComponentFlowRetrieval:
         monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
         monkeypatch.setattr(component_cache, "all_types_dict", None)
 
-        with patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow:
-            mock_get_flow.return_value = blocked_flow
-            with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
-                await component.get_graph(flow_name_selected="blocked-flow", flow_id_selected=str(uuid4()))
+        target_flow.to_data.return_value = blocked_flow
+        with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+            await component.get_graph(flow_name_selected="blocked-flow", flow_id_selected=str(uuid4()))
 
 
 class TestRunFlowBaseComponentFlowCaching:

@@ -27,9 +27,9 @@ class _Authz:
     async def supports_cross_user_fetch(self) -> bool:
         return True
 
-    async def enforce(self, *, user_id, domain, obj, act, context=None) -> bool:  # noqa: ARG002
-        self.asked.append((user_id, obj, act))
-        return act in self.allowed.get(uuid.UUID(obj.split(":")[1]), set())
+    async def batch_enforce(self, *, user_id, domain, requests, context=None) -> list[bool]:  # noqa: ARG002
+        self.asked.append((user_id, requests))
+        return [act in self.allowed.get(uuid.UUID(obj.split(":")[1]), set()) for obj, act in requests]
 
 
 def _db(own=None, others=()):
@@ -83,7 +83,7 @@ async def test_a_share_that_allows_the_action_resolves_to_the_owners_row() -> No
     authz = _Authz({SHARED.id: {"read"}})
     with _plane(authz):
         assert await _find(_db(others=[SHARED])) is SHARED
-    assert authz.asked == [(RUNNER, f"knowledge_base:{SHARED.id}", "read")]
+    assert authz.asked == [(RUNNER, [(f"knowledge_base:{SHARED.id}", "read")])]
 
 
 async def test_a_read_share_does_not_open_a_write_action() -> None:

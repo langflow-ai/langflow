@@ -355,5 +355,31 @@ async def test_append_job_metadata_item_keeps_every_item_and_the_other_keys():
 
 
 @pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("dedicated_pool", [True, False])
+async def test_heartbeat_preserves_concurrent_resume_decisions(dedicated_pool):
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), status=JobStatus.IN_PROGRESS)
+    heartbeat = service._beat(job_id) if dedicated_pool else service.heartbeat(job_id, "worker")
+    decisions = [service.append_job_metadata_item(job_id, "resume_decisions", {"n": n}) for n in range(5)]
+
+    results = await asyncio.gather(heartbeat, *decisions)
+
+    assert results[0] is True
+    metadata = (await service.get_job_by_job_id(job_id)).job_metadata
+    assert sorted(item["n"] for item in metadata["resume_decisions"]) == list(range(5))
+    assert metadata["heartbeat_at"]
+
+
+async def test_disabled_database_has_no_job_metadata_to_update(monkeypatch):
+    from langflow.services.database.session import NoopSession
+
+    monkeypatch.setattr("langflow.services.jobs.service.session_scope", NoopSession)
+    service = JobService()
+    assert await service.append_job_metadata_item(uuid4(), "decisions", {"n": 1}) is None
+    assert await service.heartbeat(uuid4(), "worker") is False
+
+
+@pytest.mark.usefixtures("client")
 async def test_append_job_metadata_item_on_a_missing_job_is_none():
     assert await JobService().append_job_metadata_item(uuid4(), "resume_decisions", {"n": 1}) is None

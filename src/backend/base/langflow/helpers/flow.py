@@ -177,39 +177,6 @@ async def list_flows_by_folder_id(
         raise ValueError(msg) from e
 
 
-async def _flow_shared_for_run(session, user_id: UUID, flow_id: UUID) -> Flow | None:
-    """A flow the running user does not own but authorization lets it execute (a Run Flow child by id).
-
-    Only with an authorization plugin that supports cross-user fetch, so OSS stays owner-scoped. A deployment runs as
-    a service account and its flows belong to the deployer; the deploy shares each of them to the account.
-    """
-    from langflow.services.auth.context import current_auth_context_for_authz
-    from langflow.services.authorization.guards import _resolve_authz_domain
-    from langflow.services.deps import get_authorization_service
-
-    authz = get_authorization_service()
-    if not (await authz.is_enabled() and await authz.supports_cross_user_fetch()):
-        return None
-    flow = await session.get(Flow, flow_id)
-    if flow is None:
-        return None
-    # Ask in the flow's own project or workspace, as every other flow check does, so a grant scoped there counts.
-    allowed = await authz.enforce(
-        user_id=user_id,
-        domain=_resolve_authz_domain(flow.workspace_id, flow.folder_id),
-        obj=f"flow:{flow_id}",
-        act="execute",
-        context={
-            **current_auth_context_for_authz(),
-            "is_superuser": False,
-            "flow_user_id": flow.user_id,
-            "workspace_id": flow.workspace_id,
-            "folder_id": flow.folder_id,
-        },
-    )
-    return flow if allowed else None
-
-
 async def get_flow_by_id_or_name(
     *,
     user_id: str | None = None,
@@ -243,8 +210,6 @@ async def get_flow_by_id_or_name(
                 uuid_flow_id_or_name = UUID(val)  # type: ignore[assignment]
             stmt = select(Flow).where(Flow.user_id == uuid_user_id).where(getattr(Flow, attr) == uuid_flow_id_or_name)
             flow = (await session.exec(stmt)).first()
-            if flow is None and attr == "id":
-                flow = await _flow_shared_for_run(session, uuid_user_id, uuid_flow_id_or_name)
             return flow.to_data() if flow else None
 
     except Exception as e:

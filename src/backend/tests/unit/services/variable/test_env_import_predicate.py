@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
 from unittest.mock import patch
 from uuid import uuid4
 
@@ -100,3 +101,25 @@ async def test_the_predicate_an_extension_installs_is_in_force_for_the_first_cal
     with patch("langflow.services.deployment_artifacts.activation.load_activation_extensions", load_extensions):
         await service.initialize_user_variables(skipped, session)
     assert not await _imported(service, session, skipped)
+
+
+async def test_kubernetes_only_imports_for_allowed_accounts(monkeypatch) -> None:
+    from langflow.services.variable.kubernetes import KubernetesSecretService
+    from langflow.services.variable.kubernetes_secrets import encode_user_id
+
+    allowed = uuid4()
+    settings = SimpleNamespace(store_environment_variables=True, variables_to_get_from_environment=["TEST_IMPORT"])
+    monkeypatch.setenv("TEST_IMPORT", "fixture-value")
+
+    async def predicate(user_id) -> bool:
+        return user_id == allowed
+
+    runtime_policy.register_env_import_predicate(predicate)
+    with patch("langflow.services.variable.kubernetes.KubernetesSecretManager") as manager:
+        kubernetes = KubernetesSecretService(SimpleNamespace(settings=settings))
+        await kubernetes.initialize_user_variables(uuid4(), None)
+        manager.return_value.create_secret.assert_not_called()
+        await kubernetes.initialize_user_variables(allowed, None)
+        manager.return_value.create_secret.assert_called_once_with(
+            name=encode_user_id(allowed), data={"Credential_TEST_IMPORT": "fixture-value"}
+        )

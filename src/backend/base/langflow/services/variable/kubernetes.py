@@ -16,6 +16,7 @@ from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
 from langflow.services.variable.runtime_policy import (
     RuntimeVariable,
+    env_import_allowed,
     resolve_runtime_variable,
     resolve_runtime_variables,
     runtime_variables_policy_enabled,
@@ -54,6 +55,8 @@ class KubernetesSecretService(VariableService, Service):
         should_or_should_not = "Should" if self.settings_service.settings.store_environment_variables else "Should not"
         await logger.ainfo(f"{should_or_should_not} store environment variables in the kubernetes.")
         if self.settings_service.settings.store_environment_variables:
+            if not await env_import_allowed(user_id):
+                return
             variables = {}
             for var in self.settings_service.settings.variables_to_get_from_environment:
                 if var in os.environ:
