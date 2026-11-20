@@ -3867,7 +3867,7 @@ class TestMemoryBaseCreateAtomicity:
             await service.create(payload, user_id=user_id)
 
         # Compensating cleanup ran for the provisioned-but-orphaned KB.
-        row_cleanup.assert_awaited_once_with(created_kb_id)
+        row_cleanup.assert_awaited_once_with(created_kb_id, via="cascade")
         disk_cleanup.assert_awaited_once()
 
 

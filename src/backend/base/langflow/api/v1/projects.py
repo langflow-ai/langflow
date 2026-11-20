@@ -124,6 +124,7 @@ from langflow.services.database.models.folder.model import (
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.database.models.user.model import User
+from langflow.services.deletion_hooks import DeletionContext, run_post_deletion_after_commit
 from langflow.services.deployment_artifacts import (
     EmptyProjectArtifactError,
     ProjectArtifactError,
@@ -2471,6 +2472,13 @@ async def delete_project(
             await session.delete(target)
             # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
             await session.flush()
+            # Dropped with the attempt if the transaction rolls back (a lock retry), run once when it commits.
+            run_post_deletion_after_commit(
+                session,
+                DeletionContext(
+                    resource=RESOURCE_PROJECT, resource_id=project_id, owner_id=project_owner_id, name=target_name
+                ),
+            )
             for flow_id, flow_name in removed_flows.items():
                 await stage_flow_succeeded(
                     session,

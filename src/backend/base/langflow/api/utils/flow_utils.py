@@ -39,6 +39,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.deletion_hooks import RESOURCE_FLOW, VIA_CASCADE, DeletionContext, run_post_deletion_after_commit
 from langflow.services.triggers.cleanup import delete_triggers
 
 if TYPE_CHECKING:
@@ -224,6 +225,18 @@ async def cascade_delete_flow(
 
     try:
         await check_flow_has_deployed_versions(session, flow_id=flow_id)
+        flow_row = await session.get(Flow, flow_id)
+        deleted_flow = None
+        if flow_row is not None:
+            # Plain values: the row is gone (and its attributes expired) by the time they are needed.
+            deleted_flow = DeletionContext(
+                resource=RESOURCE_FLOW,
+                resource_id=flow_id,
+                owner_id=flow_row.user_id,
+                name=flow_row.name,
+                via=VIA_CASCADE,
+                extra={"project_id": flow_row.folder_id},
+            )
         # Reclaim the flow's Memory Bases first: this drops the message_ingestion_record
         # rows that reference this flow's messages, so the MessageTable delete below
         # cannot trip an FK constraint. Returns handles for the post-commit external
@@ -270,6 +283,10 @@ async def cascade_delete_flow(
         raise RuntimeError(msg, e) from e
     if memory_base_cleanups is not None:
         memory_base_cleanups.extend(flow_memory_base_cleanups)
+    if result.rowcount == 1 and deleted_flow is not None:
+        # Every flow deletion funnels through here, so this is where a plugin learns that one is gone (once the
+        # caller's transaction commits). The shares above are removed here; what the plugin built on them is its own.
+        run_post_deletion_after_commit(session, deleted_flow)
     return result.rowcount == 1
 
 

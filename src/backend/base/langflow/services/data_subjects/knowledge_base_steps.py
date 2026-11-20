@@ -13,6 +13,7 @@ from langflow.services.data_subjects.export import LIKE_ESCAPE
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.user.model import User
+from langflow.services.deletion_hooks import VIA_ERASE
 from langflow.services.deps import get_job_service
 from langflow.services.knowledge_base_storage.legacy_directories import LegacyDirectories, is_legacy_directory
 
@@ -42,7 +43,7 @@ async def erase_knowledge_bases(session: AsyncSession, ctx: EraseContext) -> int
     await kb_routes._cancel_inflight_ingestion_for_kb(  # noqa: SLF001
         kb_name=record.name, asset_id=record.id, job_service=get_job_service()
     )
-    await knowledge_base_service.delete_record(record.id)
+    await knowledge_base_service.delete_record(record.id, via=VIA_ERASE)
     return 1
 
 
