@@ -1,0 +1,25 @@
+[build-system]
+requires = ["maturin>=1.15,<2"]
+build-backend = "maturin"
+
+[project]
+name = "lfx-native"
+description = "Langflow's native core: the flow operation engine."
+authors = [{ name = "Hamza Rashid", email = "hamzarashid.mail@gmail.com" }]
+license = "MIT"
+requires-python = ">=3.10"
+dynamic = ["version"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8"]
+
+[tool.maturin]
+module-name = "lfx_native._native"
+python-source = "python"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
