@@ -253,6 +253,12 @@ class LangflowClient(_ClientCommon):
                     print(chunk.text, end="", flush=True)
                 elif chunk.is_end:
                     response = chunk.final_response()
+
+        Execution failures after streaming begins arrive as ``error`` chunks
+        with HTTP 200, not HTTP status exceptions. Inspect ``chunk.is_error``.
+        The default timeout allows 60 seconds between reads; a quiet stream
+        can raise an unwrapped ``httpx.ReadTimeout``. Set ``timeout`` on the
+        client to change that limit.
         """
         return self._iter_stream(
             f"/api/v1/run/{flow_id_or_endpoint}",
@@ -267,7 +273,7 @@ class LangflowClient(_ClientCommon):
     def _iter_stream(self, path: str, payload: dict[str, Any]) -> Iterator[StreamChunk]:
         """Open a streaming POST request and yield parsed event chunks."""
         try:
-            with self._http.stream("POST", path, json=payload) as response:
+            with self._http.stream("POST", path, params={"stream": True}, json=payload) as response:
                 if not response.is_success:
                     body = response.read()
                     _raise_for_status_code(response.status_code, self._extract_error_detail(body))
