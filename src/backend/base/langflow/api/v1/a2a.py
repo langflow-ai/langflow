@@ -23,7 +23,7 @@ table so they survive restart and are visible across workers.
 import asyncio
 import hashlib
 import time
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID, uuid4
 
 import httpx
@@ -88,10 +88,11 @@ from langflow.api.v1.a2a_utils import (
     validate_webhook_url,
     webhook_pin_host,
 )
+from langflow.api.v1.authz_route_dependencies import get_authorized_flow_for_read
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.context import AuthCredentialContext, set_current_auth_context
-from langflow.services.auth.utils import set_authenticated_telemetry_user
+from langflow.services.auth.utils import get_current_user_optional, set_authenticated_telemetry_user
 from langflow.services.authorization import (
     FlowAction,
     ensure_flow_permission,
@@ -1003,19 +1004,19 @@ async def list_a2a_agents(request: Request, session: DbSession, current_user: Cu
 
 
 @router.get("/{flow_id}/.well-known/agent-card.json")
-async def get_agent_card(flow_id: UUID, request: Request, session: DbSession) -> dict:
-    """Serve the spec-valid A2A agent card for an agent-typed, a2a_enabled flow.
-
-    Public by design: the A2A public agent card is unauthenticated by spec, so
-    gating it behind login would break standard discovery. Returns 404 when the
-    flag is off, the flow does not exist, the flow is not flow_type=agent, or
-    a2a_enabled is falsy.
-    """
+async def get_agent_card(
+    flow_id: UUID,
+    request: Request,
+    session: DbSession,
+    current_user: Annotated[User | None, Depends(get_current_user_optional)],
+) -> dict:
+    """Serve an enabled agent's card to callers authorized to read it."""
     _require_a2a_enabled()
 
     flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
     if flow is None or flow.flow_type != FlowType.AGENT or not flow.a2a_enabled:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+    anonymous_allowed = False
     if await folder_auth_type(flow, session) == "none":
         try:
             await authorize_public_flow_access(
@@ -1026,9 +1027,14 @@ async def get_agent_card(flow_id: UUID, request: Request, session: DbSession) ->
                 session=session,
             )
         except HTTPException as exc:
-            if exc.status_code == status.HTTP_404_NOT_FOUND:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found") from exc
-            raise
+            if exc.status_code != status.HTTP_404_NOT_FOUND:
+                raise
+        else:
+            anonymous_allowed = True
+    if not anonymous_allowed:
+        if current_user is None or not current_user.is_active:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Not Found")
+        flow = await get_authorized_flow_for_read(flow_id, current_user, session)
 
     rpc_url = str(request.base_url).rstrip("/") + f"/api/v1/a2a/{flow_id}/jsonrpc"
     return await build_agent_card(flow, rpc_url=rpc_url, session=session)
