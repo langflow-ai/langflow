@@ -1,20 +1,4 @@
-"""Regression tests for the Langfuse orphan-generation fix (issue #13429).
-
-When a model runs as the *root* LangChain run — i.e. invoked directly with no
-wrapping chain, as reproduced with Ollama — the Langfuse ``CallbackHandler``
-emitted the LLM generation as a separate, orphan trace: ``parent = None``,
-``userId = None``, ``sessionId = None``, and the token usage detached from the
-flow trace. The langfuse SDK only applies the constructor ``trace_context`` on
-the chain path, so a bare model's generation started a brand-new trace.
-
-``LangFuseTracer.get_langchain_callback`` now returns a handler that re-parents
-root LLM runs under the flow's component (or root) span, so the generation
-shares the flow ``trace_id`` and stays attributed to the user/session.
-
-The end-to-end test exercises the real langfuse SDK with an in-memory
-OpenTelemetry exporter — a pure mock cannot catch this bug because the orphaning
-happens inside the SDK's generation path.
-"""
+"""Langfuse v4 callback regressions for generation attribution (#13429) and component snapshots (#13965)."""
 
 import os
 import threading
@@ -46,159 +30,6 @@ def reset_langfuse_shared_client():
     _reset_shared_client_for_tests()
     yield
     _reset_shared_client_for_tests()
-
-
-class TestOtelParentSpanBuilder:
-    """``_build_otel_parent_span`` turns the flow ids into an OTel parent span."""
-
-    def test_returns_none_when_ids_missing(self):
-        from langflow.services.tracing.langfuse import _build_otel_parent_span
-
-        assert _build_otel_parent_span(None, "b" * 16) is None
-        assert _build_otel_parent_span("a" * 32, None) is None
-        assert _build_otel_parent_span("", "") is None
-
-    def test_returns_none_for_non_hex_ids(self):
-        """Mock span ids (non-hex) degrade gracefully instead of raising."""
-        from langflow.services.tracing.langfuse import _build_otel_parent_span
-
-        assert _build_otel_parent_span("not-hex", "child-span-id") is None
-
-    def test_builds_span_context_from_hex_ids(self):
-        from langflow.services.tracing.langfuse import _build_otel_parent_span
-
-        trace_id = "a" * 32
-        span_id = "b" * 16
-        parent = _build_otel_parent_span(trace_id, span_id)
-
-        assert parent is not None
-        ctx = parent.get_span_context()
-        assert ctx.trace_id == int(trace_id, 16)
-        assert ctx.span_id == int(span_id, 16)
-        # Sampled so downstream generations are recorded under the flow trace.
-        assert ctx.trace_flags.sampled
-
-
-class _RecordingBase:
-    """Stand-in for langfuse's ``CallbackHandler`` that records OTel context.
-
-    Each LLM-start callback records the span context that is *current* at the
-    moment the SDK would create the generation span. The re-parenting subclass
-    is expected to make the flow's parent span current for root runs only.
-    """
-
-    def __init__(self, *, trace_context=None, **kwargs):  # noqa: ARG002
-        self.trace_context = trace_context
-        self.captured = []
-
-    def _record(self):
-        from opentelemetry import trace as otel_trace_api
-
-        self.captured.append(otel_trace_api.get_current_span().get_span_context())
-
-    def on_chat_model_start(self, *args, **kwargs):  # noqa: ARG002
-        self._record()
-
-    def on_llm_start(self, *args, **kwargs):  # noqa: ARG002
-        self._record()
-
-
-class TestRootRunReparentingHandler:
-    """The subclass activates the parent span for root LLM runs only."""
-
-    def _make_handler(self, trace_id="a" * 32, span_id="b" * 16, *, with_parent=True):
-        from langflow.services.tracing.langfuse import (
-            _build_otel_parent_span,
-            _root_run_reparenting_handler_cls,
-        )
-
-        handler_cls = _root_run_reparenting_handler_cls(_RecordingBase)
-        otel_parent = _build_otel_parent_span(trace_id, span_id) if with_parent else None
-        handler = handler_cls(
-            trace_context={"trace_id": trace_id, "parent_span_id": span_id},
-            otel_parent=otel_parent,
-        )
-        return handler, trace_id, span_id
-
-    def test_activates_parent_for_root_chat_model_run(self):
-        handler, trace_id, span_id = self._make_handler()
-
-        handler.on_chat_model_start({}, [], run_id=uuid.uuid4(), parent_run_id=None)
-
-        ctx = handler.captured[-1]
-        assert ctx.is_valid
-        assert ctx.trace_id == int(trace_id, 16)
-        assert ctx.span_id == int(span_id, 16)
-
-    def test_activates_parent_for_root_llm_run(self):
-        handler, trace_id, span_id = self._make_handler()
-
-        handler.on_llm_start({}, [], run_id=uuid.uuid4(), parent_run_id=None)
-
-        ctx = handler.captured[-1]
-        assert ctx.is_valid
-        assert ctx.trace_id == int(trace_id, 16)
-        assert ctx.span_id == int(span_id, 16)
-
-    def test_does_not_activate_for_non_root_run(self):
-        """A wrapping chain/agent is present (parent_run_id set) → leave untouched.
-
-        The SDK already nests these correctly under the chain span, so the
-        handler must not force the flow parent into the OTel context.
-        """
-        handler, _, _ = self._make_handler()
-
-        handler.on_chat_model_start({}, [], run_id=uuid.uuid4(), parent_run_id=uuid.uuid4())
-
-        ctx = handler.captured[-1]
-        # No span was activated → ambient context is the invalid root span.
-        assert not ctx.is_valid
-
-    def test_missing_parent_is_safe(self):
-        """When the parent span id is not resolvable, root runs simply no-op."""
-        handler, _, _ = self._make_handler(with_parent=False)
-
-        handler.on_chat_model_start({}, [], run_id=uuid.uuid4(), parent_run_id=None)
-
-        ctx = handler.captured[-1]
-        assert not ctx.is_valid
-
-    def test_handler_is_deepcopy_and_copy_safe(self):
-        """Survive ``copy.deepcopy`` / ``copy.copy`` by returning self.
-
-        The handler never recurses into the langfuse client.
-
-        Langflow deep-copies flow/graph state (restore-point snapshots, working-flow
-        copies, component build). The real langfuse ``CallbackHandler`` / ``Langfuse``
-        client is NOT deep-copyable — its singleton ``LangfuseResourceManager.__new__``
-        is keyword-only, so ``copy.deepcopy`` (which calls ``cls.__new__(cls)`` with
-        no args) raises ``TypeError: __new__() missing 3 required keyword-only
-        arguments``. That surfaced to users as a failed Agent build. A base whose
-        deepcopy explodes stands in for that; the subclass must short-circuit it.
-        """
-        import copy
-
-        from langflow.services.tracing.langfuse import _root_run_reparenting_handler_cls
-
-        class _NonCopyableBase:
-            def __init__(self, *, trace_context=None, **kwargs):  # noqa: ARG002
-                self.trace_context = trace_context
-
-            def __deepcopy__(self, memo):
-                msg = "LangfuseResourceManager.__new__() missing 3 required keyword-only arguments"
-                raise TypeError(msg)
-
-            def __copy__(self):
-                msg = "LangfuseResourceManager.__new__() missing 3 required keyword-only arguments"
-                raise TypeError(msg)
-
-        handler_cls = _root_run_reparenting_handler_cls(_NonCopyableBase)
-        handler = handler_cls(trace_context={"trace_id": "a" * 32}, otel_parent=None)
-
-        assert copy.deepcopy(handler) is handler
-        assert copy.copy(handler) is handler
-        # Deep-copying a container that holds the handler must not raise either.
-        assert copy.deepcopy({"callbacks": [handler]})["callbacks"][0] is handler
 
 
 def _build_real_langfuse_client_or_skip(tracer_provider):
@@ -287,13 +118,16 @@ def test_reset_preserves_application_trace_export(monkeypatch, use_global_provid
 class TestRootGenerationNestsUnderFlowTrace:
     """End-to-end: a root LLM generation shares the flow trace (issue #13429)."""
 
-    def test_root_llm_generation_shares_flow_trace_and_nests_under_component(self):
+    @pytest.mark.parametrize("wrapped", [False, True], ids=["bare", "chain"])
+    @pytest.mark.parametrize("fails", [False, True], ids=["success", "error"])
+    def test_root_llm_generation_shares_flow_trace_and_nests_under_component(self, wrapped, fails):
         pytest.importorskip("langfuse")
         pytest.importorskip("langchain_core")
         import langflow.services.tracing.langfuse as langfuse_module
         from langchain_core.messages import AIMessage, HumanMessage
         from langchain_core.outputs import ChatGeneration, LLMResult
         from langflow.services.tracing.langfuse import LangFuseTracer
+        from opentelemetry import context, trace
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
@@ -303,7 +137,10 @@ class TestRootGenerationNestsUnderFlowTrace:
         provider.add_span_processor(SimpleSpanProcessor(exporter))
         client = _build_real_langfuse_client_or_skip(provider)
 
-        with patch.object(langfuse_module, "_get_or_create_shared_client", lambda config: client):  # noqa: ARG005
+        with (
+            patch.object(langfuse_module, "_get_or_create_shared_client", lambda config: client),  # noqa: ARG005
+            provider.get_tracer("app").start_as_current_span("request") as request_span,
+        ):
             try:
                 tracer = LangFuseTracer(
                     trace_name="repro - flow-xyz",
@@ -321,19 +158,33 @@ class TestRootGenerationNestsUnderFlowTrace:
                 handler = tracer.get_langchain_callback()
                 assert handler is not None
 
+                caller_context = context.get_current()
+                chain_id = uuid.uuid4() if wrapped else None
+                if chain_id:
+                    handler.on_chain_start({"name": "chain"}, {"input": "hi"}, run_id=chain_id)
                 run_id = uuid.uuid4()
                 handler.on_chat_model_start(
                     {"id": ["langchain", "chat_models", "ollama", "ChatOllama"]},
                     [[HumanMessage(content="hi")]],
                     run_id=run_id,
-                    parent_run_id=None,
+                    parent_run_id=chain_id,
                     invocation_params={},
                 )
-                handler.on_llm_end(
-                    LLMResult(generations=[[ChatGeneration(message=AIMessage(content="ok"), generation_info={})]]),
-                    run_id=run_id,
-                    parent_run_id=None,
-                )
+                # SDK instrumentation inside the model call must see this generation.
+                model_span = trace.get_current_span()
+                assert model_span.is_recording()
+                assert model_span.name == "ChatOllama"
+                assert model_span.attributes.get("user.id") == "demo-user-13429"
+                if fails:
+                    handler.on_llm_error(RuntimeError("model failed"), run_id=run_id, parent_run_id=chain_id)
+                else:
+                    result = LLMResult(generations=[[ChatGeneration(message=AIMessage(content="ok"))]])
+                    handler.on_llm_end(result, run_id=run_id, parent_run_id=chain_id)
+                if chain_id:
+                    assert trace.get_current_span().attributes.get("user.id") == "demo-user-13429"
+                    handler.on_chain_end({"output": "ok"}, run_id=chain_id)
+                assert context.get_current() is caller_context
+                assert "user.id" not in request_span.attributes
                 tracer.end_trace("comp-ollama", "Ollama", outputs={"output": "ok"})
                 tracer.end(inputs={"in": "hi"}, outputs={"out": "ok"})
             finally:
@@ -364,7 +215,49 @@ class TestRootGenerationNestsUnderFlowTrace:
         assert generation_span.context.trace_id == root_span.context.trace_id
         # And nest under the component span (not be a root of its own trace).
         assert generation_span.parent is not None
-        assert generation_span.parent.span_id == component_span.context.span_id
+        if wrapped:
+            chain_span = spans["chain"]
+            assert generation_span.parent.span_id == chain_span.context.span_id
+            assert chain_span.parent.span_id == component_span.context.span_id
+        else:
+            assert generation_span.parent.span_id == component_span.context.span_id
+
+
+@pytest.mark.asyncio
+async def test_async_callback_manager_exports_attributed_generation_and_restores_caller():
+    from langchain_core.callbacks.manager import AsyncCallbackManager
+    from langchain_core.messages import AIMessage, HumanMessage
+    from langchain_core.outputs import ChatGeneration, LLMResult
+    from langflow.services.tracing.langfuse import LangFuseTracer
+    from opentelemetry import context
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    client = _build_real_langfuse_client_or_skip(provider)
+    try:
+        with patch("langflow.services.tracing.langfuse._get_or_create_shared_client", return_value=client):
+            tracer = LangFuseTracer("flow - id", "chain", "project", uuid.uuid4(), user_id="user", session_id="session")
+        handler = tracer.get_langchain_callback()
+        assert handler is not None
+        manager = AsyncCallbackManager([handler])
+        before = context.get_current()
+        [run] = await manager.on_chat_model_start(
+            {"name": "async model"}, [[HumanMessage(content="hi")]], invocation_params={}
+        )
+        await run.on_llm_end(LLMResult(generations=[[ChatGeneration(message=AIMessage(content="hello"))]]))
+        assert context.get_current() is before
+        tracer.end({}, {})
+        spans = {span.name: span for span in exporter.get_finished_spans()}
+        assert spans["async model"].parent.span_id == spans["flow"].context.span_id
+        assert spans["async model"].attributes["user.id"] == "user"
+        assert spans["async model"].attributes["session.id"] == "session"
+    finally:
+        client.shutdown()
+        provider.shutdown()
 
 
 class TestFlowNameParsing:
@@ -536,7 +429,7 @@ class TestGraphRunNamesTraceAfterFlow:
 def test_handler_deepcopy_returns_self(monkeypatch):
     """Regression test for https://github.com/langflow-ai/langflow/issues/13965.
 
-    _RootRunReparentingCallbackHandler.__deepcopy__ must return self so that
+    The callback handler's __deepcopy__ must return self so that
     deepcopy(component) in component_tool.py never triggers
     LangfuseResourceManager.__new__() with missing credential kwargs.
     """
@@ -566,4 +459,5 @@ def test_handler_deepcopy_returns_self(monkeypatch):
 
     # The key assertion: deepcopy must not raise and must return the same instance.
     copied = copy.deepcopy(handler)
+    assert copy.copy(handler) is handler
     assert copied is handler, "deepcopy of handler should return self (no reconstruction of LangfuseResourceManager)"
