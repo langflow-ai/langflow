@@ -219,9 +219,11 @@ You can use the same input or a new input that prompts the agent to use other to
 
 1. For this tutorial's Python script, gather the following information:
 
-    * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
-    * `FLOW_ID`: Your flow's UUID or custom endpoint name. You can get this value from the code snippets on your flow's [**API access** pane](/concepts-publish#api-access).
+    * `LANGFLOW_SERVER_ADDRESS`: Your Langflow server's domain. The default value is `127.0.0.1:7860`.
+    * `FLOW_ID`: Your flow's UUID or custom endpoint name.
     * `LANGFLOW_API_KEY`: A valid [Langflow API key](/api-keys-and-authentication).
+
+    These samples use the **v1** tab of the [**API access** pane](/concepts-publish#api-access). `FLOW_ID` is the last segment of the `/api/v1/run/` URL.
 
 2. Copy the following script into a Python file, and then replace the placeholders with the information you gathered in the previous step:
 
