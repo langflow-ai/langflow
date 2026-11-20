@@ -6,13 +6,17 @@ from importlib.resources import files
 from types import SimpleNamespace
 from uuid import uuid4
 
+import anyio
 import pytest
 from fastapi import HTTPException
 from langflow.api.v2 import workflow
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.trigger.model import Trigger, TriggerEvent
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_settings_service, session_scope
+from langflow.services.deps import get_background_execution_service, get_settings_service, session_scope
+from langflow.services.triggers import dispatcher, ledger
+from langflow.services.triggers.constants import KIND_INBOUND_WEBHOOK
 from langflow.services.triggers.dispatcher import build_submit_request
 from lfx.interface import components
 
@@ -106,6 +110,33 @@ async def test_trigger_worker_blocks_nonadmin_custom_components(component_contex
 
     assert exc_info.value.status_code == 400
     assert "custom components are not allowed" in str(exc_info.value.detail)
+    assert context.builds == []
+
+
+async def test_inbound_webhook_job_enforces_component_policy(component_context, make_trigger, mocker):
+    context = component_context
+    trigger_id = await make_trigger(kind=KIND_INBOUND_WEBHOOK)
+    async with session_scope() as session:
+        flow = await session.get(Flow, context.flow_id)
+        flow.data = context.custom
+        event, _ = await ledger.append_event(session, trigger_id=trigger_id, dedupe_key="webhook-delivery")
+        event_id = event.id
+
+    validate = mocker.spy(workflow, "_validate_flow_data_for_execution")
+    assert await dispatcher.run_once(owner="test-dispatcher") == 1
+    async with session_scope() as session:
+        event = await session.get(TriggerEvent, event_id)
+        job_id = event.job_id
+    assert job_id is not None
+
+    service = get_background_execution_service()
+    with anyio.fail_after(30):
+        async for _ in service.events(job_id, last_event_id=None, user=context.user):
+            pass
+
+    assert (await service.status(job_id, context.user))["status"] == JobStatus.FAILED
+    assert isinstance(validate.spy_exception, HTTPException)
+    assert "custom components are not allowed" in str(validate.spy_exception.detail)
     assert context.builds == []
 
 
