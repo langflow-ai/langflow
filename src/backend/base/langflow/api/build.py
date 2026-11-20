@@ -916,7 +916,6 @@ async def _generate_flow_events(
             duration = format_elapsed_time(timedelta)
             result_data_response.duration = duration
             result_data_response.timedelta = timedelta
-            vertex.add_build_time(timedelta)
             # Capture both inactivated and conditionally excluded vertices
             inactivated_vertices = list(graph.inactivated_vertices.union(graph.conditionally_excluded_vertices))
             branch_skips = graph.branch_skips()
