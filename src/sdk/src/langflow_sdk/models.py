@@ -122,6 +122,7 @@ class RunRequest(BaseModel):
     output_type: str = "chat"
     tweaks: dict[str, Any] | None = None
     stream: bool = False
+    session_id: str | None = None
 
 
 class RunOutput(BaseModel):
