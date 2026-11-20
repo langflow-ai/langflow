@@ -156,6 +156,22 @@ async def test_trigger_worker_builds_from_sanitized_builtin_canvas(component_con
         assert stored.data == (context.custom if pinned else selected)
 
 
+@pytest.mark.parametrize("saved_data", [None, {}], ids=["absent", "empty"])
+async def test_trigger_worker_requires_a_saved_canvas(component_context, saved_data):
+    context = component_context
+    source, _ = await _source(context, custom=False)
+    async with session_scope() as session:
+        flow = await session.get(Flow, context.flow_id)
+        flow.data = saved_data
+        session.add(flow)
+
+    with pytest.raises(HTTPException, match="Flow has no saved graph data") as exc_info:
+        _ = [frame async for frame in source(job_id=uuid4())]
+
+    assert exc_info.value.status_code == 400
+    assert context.builds == []
+
+
 async def test_trigger_worker_checks_policy_when_queued_job_starts(component_context, monkeypatch):
     context = component_context
     monkeypatch.setattr(context.settings, "custom_component_admin_only", False)
