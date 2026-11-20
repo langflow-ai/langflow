@@ -433,7 +433,7 @@ class MCPComposerService(Service):
                     except json.JSONDecodeError as e:
                         await logger.adebug(f"Failed to parse PowerShell output: {e}")
 
-            except asyncio.TimeoutError:
+            except (subprocess.TimeoutExpired, asyncio.TimeoutError):
                 await logger.adebug("PowerShell command timed out while checking for orphaned processes")
             except Exception as e:  # noqa: BLE001
                 await logger.adebug(f"Error using PowerShell to find orphaned processes: {e}")
