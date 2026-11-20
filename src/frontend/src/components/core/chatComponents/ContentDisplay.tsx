@@ -1,7 +1,9 @@
 import { ChevronDown } from "lucide-react";
 import { Fragment, type ReactNode, useState } from "react";
 import Markdown from "react-markdown";
-import rehypeMathjax from "rehype-mathjax/browser";
+import rehypeKatex from "rehype-katex";
+import remarkMath from "remark-math";
+import "katex/dist/katex.min.css";
 import remarkGfm from "remark-gfm";
 import { formatSeconds } from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/format";
 import type {
@@ -25,6 +27,11 @@ import { ToolOutputDisplay } from "./ToolOutputDisplay";
 import { ToolSection } from "./ToolSection";
 import { safeUrl } from "./url";
 
+/**
+ * Render a chat content block according to its type, including text, media,
+ * tool results, and human input requests. Text supports explicit double-dollar
+ * math while preserving single-dollar currency and literal code snippets.
+ */
 export default function ContentDisplay({
   content,
   chatId,
@@ -61,8 +68,11 @@ export default function ContentDisplay({
       contentData = (
         <div className="ml-1 pr-20">
           <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeMathjax]}
+            remarkPlugins={[
+              remarkGfm,
+              [remarkMath, { singleDollarTextMath: false }],
+            ]}
+            rehypePlugins={[[rehypeKatex, { trust: false, strict: "ignore" }]]}
             className="markdown prose max-w-full text-sm font-normal dark:prose-invert"
             components={{
               a: ({ node, ...props }) => (
