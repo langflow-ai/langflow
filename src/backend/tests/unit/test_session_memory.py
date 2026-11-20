@@ -603,6 +603,22 @@ async def test_should_roll_back_a_save_when_a_message_is_deleted_after_the_first
     assert not await _has_state(flow_id, user_id)
 
 
+async def test_should_keep_state_when_a_bound_graph_run_updates_a_message(client):  # noqa: ARG001
+    import langflow.memory as memory_module
+
+    flow_id, user_id = uuid4(), uuid4()
+    ids = await _three_messages_with_state(flow_id, user_id)
+
+    with (
+        patch.object(memory_module, "_bound_message_scope", return_value=(flow_id, user_id)),
+        patch.object(memory_module, "_message_scope", return_value=(flow_id, user_id)),
+        patch.object(memory_module, "_validate_message_executor", new=AsyncMock()),
+    ):
+        await aupdate_messages(Message(id=ids[0], text="edited"))
+
+    assert await _has_state(flow_id, user_id)
+
+
 async def test_should_reject_a_stale_save_after_the_state_row_was_reset_and_re_created(client):  # noqa: ARG001
     flow_id, user_id = uuid4(), uuid4()
     scope = _scope(flow_id, user_id)

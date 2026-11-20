@@ -318,7 +318,12 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                         raise ValueError(msg)
                     updates.pop("flow_id", None)
                     updates.pop("user_id", None)
-                async with reset_folded_memory_for_update(session, msg, updates):
+                # A bound graph run updates a message it just created, and a fold never covers
+                # a message created after its history read. Skip the reset and its 3 statements.
+                reset = (
+                    nullcontext() if graph_scope is not None else reset_folded_memory_for_update(session, msg, updates)
+                )
+                async with reset:
                     msg = msg.sqlmodel_update(updates)
                     # Convert flow_id to UUID if it's a string preventing error when saving to database
                     if msg.flow_id and isinstance(msg.flow_id, str):
