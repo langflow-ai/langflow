@@ -319,13 +319,15 @@ describe("useFlowsManagerStore", () => {
       const { result } = renderHook(() => useFlowsManagerStore());
 
       act(() => {
-        result.current.setCurrentFlow(mockFlow1);
+        result.current.setCurrentFlow({
+          ...mockFlow1,
+          id: "duplicate-snapshot",
+        });
         result.current.takeSnapshot();
         result.current.takeSnapshot(); // Should be ignored as duplicate
       });
 
-      // Should still be called for the first snapshot
-      expect(mockCloneDeep).toHaveBeenCalled();
+      expect(mockCloneDeep).toHaveBeenCalledTimes(2);
     });
 
     it("should handle undo operation", () => {
