@@ -9912,7 +9912,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.2.10"
+version = "1.2.11"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10201,6 +10201,7 @@ nvidia = [
     { name = "gassist", marker = "sys_platform == 'win32'" },
     { name = "langchain-nvidia-ai-endpoints" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
+    { name = "requests" },
 ]
 ollama = [
     { name = "lfx-ollama" },
@@ -10537,6 +10538,7 @@ requires-dist = [
     { name = "requests", marker = "extra == 'icosacomputing'", specifier = ">=2.32.0" },
     { name = "requests", marker = "extra == 'notion'", specifier = ">=2.32.0" },
     { name = "requests", marker = "extra == 'novita'", specifier = ">=2.32.0" },
+    { name = "requests", marker = "extra == 'nvidia'", specifier = ">=2.33.0" },
     { name = "requests", marker = "extra == 'xai'", specifier = ">=2.32.0" },
     { name = "scrapegraph-py", marker = "extra == 'scrapegraph'", specifier = ">=1.12.0" },
     { name = "smolagents", marker = "extra == 'codeagents'", specifier = ">=1.8.0" },

@@ -1,6 +1,6 @@
 [project]
 name = "lfx-bundles"
-version = "1.2.10"
+version = "1.2.11"
 description = "Langflow's long-tail provider bundles as a single manifest-less metapackage (the langchain-community model)."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -74,7 +74,7 @@ needle = ["needle-python>=0.4.0"]
 notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
-nvidia = ["langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
+nvidia = ["langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0", "requests>=2.33.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
 ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
 openrouter = ["langchain-openai>=1.1.6"]

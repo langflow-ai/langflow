@@ -1,6 +1,7 @@
 """Verify that NVIDIA components apply the credential destination policy."""
 
 import sys
+from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import Mock
 
@@ -34,16 +35,13 @@ def test_nim_checks_credentials_before_sdk_construction(monkeypatch, key, compon
         module = nvidia_rerank
         field = "api_key"
 
-    validate_url = Mock()
-    protect_redirects = Mock()
-    monkeypatch.setattr(module, "validate_provider_base_url", validate_url)
-    monkeypatch.setattr(module, "_install_redirect_policy", protect_redirects)
+    policy = Mock(return_value=nullcontext())
+    monkeypatch.setattr(module, "nvidia_client_policy", policy)
 
     if trusted:
         assert build() is factory.return_value
         assert factory.call_args.kwargs[field] == (key or None)
-        validate_url.assert_called_once()
-        protect_redirects.assert_called_once_with()
+        policy.assert_called_once_with(_NIM_URL)
     else:
         with pytest.raises(ValueError, match="server environment"):
             build()
