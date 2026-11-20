@@ -163,7 +163,12 @@ class DagRunContext:
 
 
 async def _await_owned(future, context: DagRunContext):
-    """Outer cancellation stops admission, never the work this invocation owns."""
+    """Latch outer cancellation without abandoning the awaited work.
+
+    Admitted build tasks are cancelled by ``cancel_admitted`` before this
+    drain runs; this shield only keeps a repeated outer cancellation from
+    leaving their unwinding (or run finalization) unretrieved.
+    """
     while True:
         try:
             return await asyncio.shield(future)
@@ -171,6 +176,19 @@ async def _await_owned(future, context: DagRunContext):
             context.latch(exc)
             if future.done():
                 return future.result()
+
+
+def cancel_admitted(context: DagRunContext) -> None:
+    """Cancel admitted in-flight work after a terminal outcome.
+
+    On outer cancellation this matches the default execution path, whose
+    ``gather`` delivers cancellation to its children the same way. On vertex
+    failure the default path lets same-layer siblings finish naturally; this
+    path cancels the admitted siblings instead and awaits their unwinding.
+    """
+    for admitted in context.owned_tasks:
+        if not admitted.done():
+            admitted.cancel()
 
 
 async def drain_admitted(context: DagRunContext) -> None:
@@ -281,6 +299,7 @@ async def execute_dependency_ready(
     except BaseException as exc:  # noqa: BLE001 - preserve primary outcome while draining
         context.latch(exc)
     finally:
+        cancel_admitted(context)
         await drain_admitted(context)
     if context.primary is not None:
         raise context.primary

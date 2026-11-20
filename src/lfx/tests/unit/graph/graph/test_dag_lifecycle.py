@@ -1,18 +1,38 @@
 # ruff: noqa: ARG001, TRY003, EM101
 import asyncio
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from tests.unit.graph.graph._dag_components import branched
 
 
+async def _await_run(awaitable, timeout: float):
+    """Await a graph run under a hard bound that cancellation suppression cannot extend.
+
+    asyncio.wait_for cancels the awaiting frame; a run whose drain keeps
+    suppressing cancellation (the regression class these tests guard) would
+    hold CI forever. asyncio.wait never cancels the task, so the bound holds.
+    """
+    task = asyncio.ensure_future(awaitable)
+    done, _pending = await asyncio.wait({task}, timeout=timeout)
+    if not done:
+        task.cancel()
+        # Best-effort bounded drain so the suite does not leak the stuck task.
+        # asyncio.wait never raises the task's own exception; a cancellation of
+        # the test itself must propagate, so nothing is suppressed here.
+        await asyncio.wait({task}, timeout=5)
+        pytest.fail(f"graph run did not finish within {timeout}s")
+    return await task
+
+
 @pytest.mark.asyncio
-async def test_outer_cancel_naturally_drains_admitted_tasks(monkeypatch):
+async def test_outer_cancel_cancels_admitted_tasks(monkeypatch):
     graph = branched()
     build = graph.build_vertex
     entered = asyncio.Event()
     release = asyncio.Event()
-    finished = asyncio.Event()
+    cancelled = asyncio.Event()
     calls = []
 
     async def controlled(vertex_id, **kwargs):
@@ -21,24 +41,25 @@ async def test_outer_cancel_naturally_drains_admitted_tasks(monkeypatch):
             entered.set()
             try:
                 await release.wait()
-            finally:
-                finished.set()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
         return await build(vertex_id=vertex_id, **kwargs)
 
     monkeypatch.setattr(graph, "build_vertex", controlled)
     task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
-    await asyncio.wait_for(entered.wait(), 3)
-    task.cancel()
-    await asyncio.sleep(0)
-    task.cancel()
-    await asyncio.sleep(0)
-    assert not finished.is_set()
-    assert not task.done()
-    release.set()
-    with pytest.raises(asyncio.CancelledError):
-        await task
-    assert finished.is_set()
-    assert "merge" not in calls
+    try:
+        await asyncio.wait_for(entered.wait(), 3)
+        task.cancel()
+        # Cancellation reaches the admitted in-flight build, matching the
+        # default path, instead of waiting for it to finish naturally.
+        await asyncio.wait_for(cancelled.wait(), 3)
+        with pytest.raises(asyncio.CancelledError):
+            await _await_run(task, 10)
+        assert not release.is_set()
+        assert "merge" not in calls
+    finally:
+        release.set()
 
 
 @pytest.mark.asyncio
@@ -101,7 +122,7 @@ async def test_arun_finalization_cannot_be_abandoned_by_repeated_cancel(monkeypa
     assert not task.done()
     release.set()
     with pytest.raises(asyncio.CancelledError):
-        await task
+        await _await_run(task, 10)
     assert finished.is_set()
     assert calls == [None]
 
@@ -151,13 +172,14 @@ async def test_initialization_partial_failure_ends_once(monkeypatch):
     monkeypatch.setattr(graph, "initialize_run", initialize)
     monkeypatch.setattr(graph, "end_all_traces", end)
     with pytest.raises(RuntimeError, match="partially initialized"):
-        await graph.process(fallback_to_env_vars=False, dag_max_concurrency=2)
+        await _await_run(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2), 15)
     assert len(calls) == 1
     assert isinstance(calls[0], RuntimeError)
 
 
 @pytest.mark.asyncio
-async def test_real_sync_component_output_thread_drains_before_cancel_returns():
+async def test_outer_cancel_does_not_wait_for_sync_thread_work():
+    import gc
     import threading
 
     from lfx.graph import Graph
@@ -168,21 +190,34 @@ async def test_real_sync_component_output_thread_drains_before_cancel_returns():
     source._entered, source._release, source._finished = (threading.Event() for _ in range(3))
     target.set(messages=[source.message_response])
     graph = Graph(source, target)
+    loop = asyncio.get_running_loop()
+    loop_errors = []
+    previous_handler = loop.get_exception_handler()
+    loop.set_exception_handler(lambda _loop, context: loop_errors.append(context))
     task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
     try:
         assert await asyncio.to_thread(source._entered.wait, 3)
         task.cancel()
-        await asyncio.sleep(0)
-        task.cancel()
-        await asyncio.sleep(0)
-        assert not task.done()
+        # The run ends promptly: the admitted build task is cancelled, and the
+        # invocation does not wait for the framework's worker thread, matching
+        # the default path. The thread itself keeps running until released.
+        with pytest.raises(asyncio.CancelledError):
+            await _await_run(task, 3)
         assert not source._finished.is_set()
+        assert not graph.vertex_map["target"].built
     finally:
         source._release.set()
-    with pytest.raises(asyncio.CancelledError):
-        await task
-    assert source._finished.is_set()
-    assert not graph.vertex_map["target"].built
+    # The uninterrupted thread still completes cleanly afterwards.
+    assert await asyncio.to_thread(source._finished.wait, 3)
+    # No abandoned to_thread future surfaces an unretrieved exception or any
+    # other unhandled loop error once references are collected (custom loop
+    # exception handler + gc.collect() + a loop turn).
+    try:
+        gc.collect()
+        await asyncio.sleep(0)
+        assert loop_errors == []
+    finally:
+        loop.set_exception_handler(previous_handler)
 
 
 @pytest.mark.asyncio
@@ -192,7 +227,8 @@ async def test_first_observed_outcome_wins_while_draining(first, monkeypatch):
     build = graph.build_vertex
     both = asyncio.Event()
     fail = asyncio.Event()
-    release = asyncio.Event()
+    unwinding = asyncio.Event()
+    unwind_release = asyncio.Event()
     calls = []
     final = []
 
@@ -200,7 +236,13 @@ async def test_first_observed_outcome_wins_while_draining(first, monkeypatch):
         calls.append(vertex_id)
         if vertex_id == "slow":
             both.set()
-            await release.wait()
+            try:
+                await asyncio.Event().wait()  # parked until cancelled
+            except asyncio.CancelledError:
+                # Hold the unwind open so the second outcome lands mid-drain.
+                unwinding.set()
+                await unwind_release.wait()
+                raise
         if vertex_id == "fast":
             await both.wait()
             await fail.wait()
@@ -213,42 +255,51 @@ async def test_first_observed_outcome_wins_while_draining(first, monkeypatch):
     monkeypatch.setattr(graph, "build_vertex", controlled)
     monkeypatch.setattr(graph, "end_all_traces", end)
     task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
-    await asyncio.wait_for(both.wait(), 3)
-    if first == "cancel":
-        task.cancel()
-        await asyncio.sleep(0)
-        fail.set()
-    else:
-        fail.set()
-        # Observe drainage through the latched native finalization later. Give the
-        # scheduler a turn to observe the completed failure before cancelling.
-        for _ in range(8):
-            await asyncio.sleep(0)
-        task.cancel()
-    await asyncio.sleep(0)
-    assert not task.done()
-    release.set()
-    expected = asyncio.CancelledError if first == "cancel" else LookupError
-    with pytest.raises(expected):
-        await task
-    assert len(final) == 1
-    assert isinstance(final[0], expected)
-    assert "merge" not in calls
+    try:
+        await asyncio.wait_for(both.wait(), 3)
+        if first == "cancel":
+            # One synchronous stretch, no await between: the failure completes
+            # while the scheduler is parked in asyncio.wait with _must_cancel
+            # set, so the outer cancel is observed first and the failure is
+            # only ever consumed by the drain's gather(return_exceptions=True).
+            fail.set()
+            task.cancel()
+        else:
+            fail.set()
+            # The scheduler latches the failure, cancels the admitted sibling,
+            # and parks in the held drain unwind.
+            await asyncio.wait_for(unwinding.wait(), 3)
+            # A repeated outer cancel mid-unwind is absorbed by _await_owned
+            # (the drain future is not done), so it cannot replace the primary.
+            task.cancel()
+        await asyncio.wait_for(unwinding.wait(), 3)
+        unwind_release.set()
+        expected = asyncio.CancelledError if first == "cancel" else LookupError
+        with pytest.raises(expected):
+            await _await_run(task, 10)
+        assert len(final) == 1
+        assert isinstance(final[0], expected)
+        assert "merge" not in calls
+    finally:
+        unwind_release.set()
 
 
 @pytest.mark.asyncio
-async def test_selected_self_cancel_drains_sibling_and_finalizes_run(monkeypatch):
+async def test_selected_self_cancel_cancels_sibling_and_finalizes_run(monkeypatch):
     graph = branched()
     build = graph.build_vertex
     release = asyncio.Event()
     cancelled = asyncio.Event()
-    drained = []
+    sibling_cancelled = asyncio.Event()
     final = []
 
     async def controlled(vertex_id, **kwargs):
         if vertex_id == "slow":
-            await release.wait()
-            drained.append(vertex_id)
+            try:
+                await release.wait()
+            except asyncio.CancelledError:
+                sibling_cancelled.set()
+                raise
         if vertex_id == "fast":
             cancelled.set()
             raise asyncio.CancelledError
@@ -260,23 +311,27 @@ async def test_selected_self_cancel_drains_sibling_and_finalizes_run(monkeypatch
     monkeypatch.setattr(graph, "build_vertex", controlled)
     monkeypatch.setattr(graph, "end_all_traces", end)
     task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
-    await asyncio.wait_for(cancelled.wait(), 3)
-    await asyncio.sleep(0)
-    assert not task.done()
-    release.set()
-    with pytest.raises(asyncio.CancelledError):
-        await task
-    assert drained == ["slow"]
-    assert len(final) == 1
-    assert isinstance(final[0], asyncio.CancelledError)
+    try:
+        await asyncio.wait_for(cancelled.wait(), 3)
+        # The self-cancelled vertex cancels its admitted sibling instead of
+        # draining it to natural completion.
+        await asyncio.wait_for(sibling_cancelled.wait(), 3)
+        with pytest.raises(asyncio.CancelledError):
+            await _await_run(task, 10)
+        assert not release.is_set()
+        assert len(final) == 1
+        assert isinstance(final[0], asyncio.CancelledError)
+    finally:
+        release.set()
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("phase", ["persist", "emit"])
-async def test_cancel_during_completion_handling_drains_without_admitting_child(phase, monkeypatch):
+async def test_cancel_during_completion_handling_cancels_without_admitting_child(phase, monkeypatch):
     graph = branched()
     release = asyncio.Event()
     entered = asyncio.Event()
+    cancelled = asyncio.Event()
     build = graph.build_vertex
     calls = []
     final = []
@@ -284,7 +339,11 @@ async def test_cancel_during_completion_handling_drains_without_admitting_child(
     async def controlled(vertex_id, **kwargs):
         calls.append(vertex_id)
         if vertex_id == "slow":
-            await release.wait()
+            try:
+                await release.wait()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
         return await build(vertex_id=vertex_id, **kwargs)
 
     async def handling(result, *args):
@@ -301,16 +360,19 @@ async def test_cancel_during_completion_handling_drains_without_admitting_child(
     )
     monkeypatch.setattr(graph, "end_all_traces", end)
     task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
-    await asyncio.wait_for(entered.wait(), 3)
-    task.cancel()
-    await asyncio.sleep(0)
-    assert not task.done()
-    release.set()
-    with pytest.raises(asyncio.CancelledError):
-        await task
-    assert "child" not in calls
-    assert "merge" not in calls
-    assert len(final) == 1
+    try:
+        await asyncio.wait_for(entered.wait(), 3)
+        task.cancel()
+        # Cancellation unwinds the handler and cancels the admitted "slow"
+        # build instead of waiting for it; no descendant is admitted.
+        with pytest.raises(asyncio.CancelledError):
+            await _await_run(task, 10)
+        assert cancelled.is_set()
+        assert "child" not in calls
+        assert "merge" not in calls
+        assert len(final) == 1
+    finally:
+        release.set()
 
 
 @pytest.mark.asyncio
@@ -332,7 +394,7 @@ async def test_cleanup_error_propagates_on_success_but_not_over_primary(monkeypa
     monkeypatch.setattr(graph, "build_vertex", controlled)
     monkeypatch.setattr(graph, "end_all_traces", end)
     with pytest.raises(LookupError if fail else RuntimeError, match="primary" if fail else "cleanup"):
-        await graph.process(fallback_to_env_vars=False, dag_max_concurrency=2)
+        await _await_run(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2), 15)
     assert len(calls) == 1
 
 
@@ -345,7 +407,7 @@ async def test_subgraph_keeps_parent_trace_ownership(monkeypatch):
         pytest.fail("subgraph finalized parent traces")
 
     monkeypatch.setattr(graph, "end_all_traces", forbidden)
-    await graph.process(fallback_to_env_vars=False, dag_max_concurrency=2)
+    await _await_run(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2), 15)
 
 
 @pytest.mark.asyncio
@@ -368,7 +430,7 @@ async def test_unexpected_iterator_output_stops_without_legacy_rerun(monkeypatch
     monkeypatch.setattr(graph, "_execute_tasks", forbidden)
     monkeypatch.setattr(graph, "end_all_traces", end)
     with pytest.raises(TypeError, match="materialized"):
-        await graph.process(fallback_to_env_vars=False, dag_max_concurrency=2)
+        await _await_run(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2), 15)
     assert not graph.vertex_map["target"].built
     assert len(calls) == 1
 
@@ -432,7 +494,7 @@ async def test_completed_sibling_failure_during_handler_stops_admission(phase, o
     finally:
         release.set()
     with pytest.raises(asyncio.CancelledError if outcome == "self_cancel" else LookupError):
-        await task
+        await _await_run(task, 10)
     assert "child" not in calls
     assert "merge" not in calls
 
@@ -472,7 +534,7 @@ async def test_outer_cancel_observed_inside_handler_precedes_unharvested_error(p
     finally:
         release.set()
     with pytest.raises(asyncio.CancelledError):
-        await task
+        await _await_run(task, 10)
     assert "child" not in calls
 
 
@@ -518,7 +580,7 @@ async def test_reharvest_repeats_when_each_handler_completes_another_sibling(mon
     monkeypatch.setattr(graph, "build_vertex", build)
     monkeypatch.setattr(graph, "_record_vertex_build_result", record)
     with pytest.raises(LookupError) as caught:
-        await graph.process(fallback_to_env_vars=False, dag_max_concurrency=4)
+        await _await_run(graph.process(fallback_to_env_vars=False, dag_max_concurrency=4), 15)
     assert caught.value is error
     assert handled == ["source", "a", "b", "c"]
     assert "child" not in calls
@@ -567,5 +629,185 @@ async def test_completed_failure_group_uses_graph_order_not_finish_order(monkeyp
     finally:
         release_handler.set()
     with pytest.raises(LookupError) as caught:
-        await task
+        await _await_run(task, 10)
     assert caught.value is errors[expected]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("trigger", ["outer_cancel", "sibling_failure"])
+async def test_run_returns_only_after_admitted_unwind_completes(trigger, monkeypatch):
+    graph = branched()
+    build = graph.build_vertex
+    entered = asyncio.Event()
+    unwind_started = asyncio.Event()
+    unwind_release = asyncio.Event()
+    unwind_finished = asyncio.Event()
+    error = LookupError("fast failed")
+
+    async def controlled(vertex_id, **kwargs):
+        if vertex_id == "slow":
+            entered.set()
+            try:
+                await asyncio.Event().wait()  # parked until cancelled
+            except asyncio.CancelledError:
+                # Hold the unwind open: the run must not return before it ends.
+                unwind_started.set()
+                await unwind_release.wait()
+                unwind_finished.set()
+                raise
+        if vertex_id == "fast":
+            await entered.wait()
+            if trigger == "sibling_failure":
+                raise error
+        return await build(vertex_id=vertex_id, **kwargs)
+
+    monkeypatch.setattr(graph, "build_vertex", controlled)
+    task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
+    try:
+        await asyncio.wait_for(entered.wait(), 3)
+        if trigger == "outer_cancel":
+            task.cancel()
+        await asyncio.wait_for(unwind_started.wait(), 3)
+        # The held sibling unwind deterministically blocks the run's return:
+        # cancel_admitted has fired but the drain is still awaiting the gather.
+        done, _pending = await asyncio.wait({task}, timeout=0.5)
+        assert not done
+        unwind_release.set()
+        expected = asyncio.CancelledError if trigger == "outer_cancel" else LookupError
+        with pytest.raises(expected):
+            await _await_run(task, 10)
+        # The admitted sibling finished unwinding before the run returned.
+        assert unwind_finished.is_set()
+    finally:
+        unwind_release.set()
+
+
+@pytest.mark.asyncio
+async def test_cancelled_first_in_graph_order_beats_completed_group_failure(monkeypatch):
+    graph = branched()
+    original = graph.build_vertex
+    in_handler, release_handler = asyncio.Event(), asyncio.Event()
+    calls = []
+    error = LookupError("sibling failed in the same completed group")
+    cancelled_id, failed_id = [vertex.id for vertex in graph.vertices if vertex.id in ("slow", "fast")]
+    released = {key: asyncio.Event() for key in (cancelled_id, failed_id)}
+    finished = {key: asyncio.Event() for key in (cancelled_id, failed_id)}
+
+    async def build(vertex_id, **kwargs):
+        calls.append(vertex_id)
+        if vertex_id == cancelled_id:
+            await released[vertex_id].wait()
+            finished[vertex_id].set()
+            raise asyncio.CancelledError
+        if vertex_id == failed_id:
+            await released[vertex_id].wait()
+            finished[vertex_id].set()
+            raise error
+        return await original(vertex_id=vertex_id, **kwargs)
+
+    # Hold asyncio.wait's observation until both siblings are completed, so the
+    # cancelled and the failed task land in the same harvest group.
+    import lfx.graph.graph.dag_scheduler as scheduler
+
+    original_wait = asyncio.wait
+
+    async def wait(pending, **kwargs):
+        if len(pending) == 2:
+            in_handler.set()
+            await release_handler.wait()
+        return await original_wait(pending, **kwargs)
+
+    monkeypatch.setattr(graph, "build_vertex", build)
+    monkeypatch.setattr(scheduler.asyncio, "wait", wait)
+    task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
+    try:
+        await asyncio.wait_for(in_handler.wait(), 3)
+        # Complete them in reverse graph order; the graph-order-first cancelled
+        # sibling must still win over the later failure.
+        for key in (failed_id, cancelled_id):
+            released[key].set()
+            await asyncio.wait_for(finished[key].wait(), 3)
+            await asyncio.sleep(0)
+    finally:
+        release_handler.set()
+    with pytest.raises(asyncio.CancelledError):
+        await _await_run(task, 10)
+    assert "child" not in calls
+    assert "merge" not in calls
+
+
+@pytest.mark.asyncio
+async def test_failure_cancels_in_flight_sibling(monkeypatch):
+    graph = branched()
+    build = graph.build_vertex
+    entered = asyncio.Event()
+    release = asyncio.Event()
+    sibling_cancelled = asyncio.Event()
+    calls = []
+    error = LookupError("fast failed")
+
+    async def controlled(vertex_id, **kwargs):
+        calls.append(vertex_id)
+        if vertex_id == "slow":
+            entered.set()
+            try:
+                await release.wait()
+            except asyncio.CancelledError:
+                sibling_cancelled.set()
+                raise
+        if vertex_id == "fast":
+            await entered.wait()
+            raise error
+        return await build(vertex_id=vertex_id, **kwargs)
+
+    monkeypatch.setattr(graph, "build_vertex", controlled)
+    try:
+        # The first failure cancels the admitted sibling instead of letting it
+        # run to completion. The default path lets same-layer siblings finish
+        # naturally on failure; this path cancels the admitted siblings.
+        with pytest.raises(LookupError, match="fast failed"):
+            await _await_run(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2), 10)
+        assert sibling_cancelled.is_set()
+        assert "child" not in calls
+        assert "merge" not in calls
+    finally:
+        release.set()
+
+
+@pytest.mark.asyncio
+async def test_ineligible_graph_logs_debug_and_uses_default_path(monkeypatch):
+    from lfx.custom.custom_component.component import Component
+    from lfx.graph import Graph
+    from lfx.io import HandleInput, Output
+    from lfx.schema.message import Message
+
+    class NoPromiseNode(Component):
+        inputs = [HandleInput(name="messages", input_types=["Message"], is_list=True)]
+        outputs = [Output(name="message", method="message_response")]
+
+        async def message_response(self) -> Message:
+            return Message(text="plain")
+
+    source, target = NoPromiseNode(_id="source"), NoPromiseNode(_id="target")
+    target.set(messages=[source.message_response])
+    graph = Graph(source, target)
+
+    logger_mock = MagicMock()
+    for method in ("adebug", "ainfo", "awarning", "aerror", "aexception", "acritical"):
+        setattr(logger_mock, method, AsyncMock())
+    monkeypatch.setattr("lfx.graph.graph.base.logger", logger_mock)
+
+    # The expected reason comes from the actual eligibility check, computed
+    # before the run changes graph state (afterwards it would read
+    # "previously built vertex").
+    from lfx.graph.graph.dag_scheduler import inspect_dag_candidate
+
+    reason = inspect_dag_candidate(graph)
+    assert isinstance(reason, str)
+    await _await_run(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2), 15)
+    debug_messages = [str(call.args[0]) for call in logger_mock.adebug.await_args_list]
+    fallback_logs = [m for m in debug_messages if "Dependency-ready scheduling ineligible" in m]
+    assert fallback_logs == [f"Dependency-ready scheduling ineligible ({reason}); using the default path."]
+    # The default path still ran the graph.
+    assert graph.vertex_map["source"].built
+    assert graph.vertex_map["target"].built
