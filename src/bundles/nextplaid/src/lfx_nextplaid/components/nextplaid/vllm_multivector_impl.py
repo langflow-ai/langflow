@@ -7,7 +7,11 @@ from typing import TYPE_CHECKING
 
 import httpx
 from langchain_core.embeddings import Embeddings as LCEmbeddings
-from lfx.base.models.provider_ssrf import provider_safe_httpx_post, validate_provider_base_url
+from lfx.base.models.provider_ssrf import (
+    ensure_credential_endpoint_allowed,
+    provider_safe_httpx_post,
+    validate_provider_base_url,
+)
 
 if TYPE_CHECKING:
     from PIL.Image import Image as PILImage
@@ -46,6 +50,7 @@ class VllmMultivectorEmbeddings(LCEmbeddings):
         timeout: float = 60.0,
         max_retries: int = 1,
     ) -> None:
+        ensure_credential_endpoint_allowed(api_key, url)
         # Reject an unsafe URL at construction, then revalidate and pin every request below so
         # a hostname cannot rebind after this preflight check.
         validate_provider_base_url(url)

@@ -1,13 +1,13 @@
 from typing import Any
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, validate_provider_base_url
 from lfx.field_typing import Embeddings
 from lfx.inputs.inputs import DropdownInput, SecretStrInput
 from lfx.io import FloatInput, MessageTextInput
 from lfx.schema.dotdict import dotdict
 
-DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+from lfx_bundles.nvidia.nvidia import DEFAULT_NVIDIA_BASE_URL, _install_redirect_policy
 
 
 class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
@@ -62,6 +62,13 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
         return build_config
 
     def build_embeddings(self) -> Embeddings:
+        api_key = self.nvidia_api_key or None
+        ensure_credential_endpoint_allowed(
+            api_key,
+            self.base_url,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
+            sdk_env_fallback="NVIDIA_API_KEY",
+        )
         try:
             from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
         except ImportError as e:
@@ -70,12 +77,13 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
         # base_url is tenant-editable and the SDK sends the operator's API key to whatever
         # host it names. Block internal/cloud-metadata destinations before connecting.
         validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
+        _install_redirect_policy()
         try:
             output = NVIDIAEmbeddings(
                 model=self.model,
                 base_url=self.base_url,
                 temperature=self.temperature,
-                nvidia_api_key=self.nvidia_api_key,
+                nvidia_api_key=api_key,
             )
         except Exception as e:
             msg = f"Could not connect to NVIDIA API. Error: {e}"
