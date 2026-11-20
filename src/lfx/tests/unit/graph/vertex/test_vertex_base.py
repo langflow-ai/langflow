@@ -1530,7 +1530,6 @@ class TestFileInputStorageNamespaceOwnership:
         [
             pytest.param("C:/data/report.csv", id="drive-letter-forward-slashes"),
             pytest.param("C:\\data\\report.csv", id="drive-letter-backslashes"),
-            pytest.param("//fileserver/share/report.csv", id="unc-share"),
         ],
     )
     def test_windows_absolute_paths_are_not_treated_as_storage_keys(self, unrestricted_storage, windows_path):
@@ -1546,6 +1545,23 @@ class TestFileInputStorageNamespaceOwnership:
         params = handler.process_file_field("path", {"type": "file", "file_path": windows_path}, {})
 
         assert params["path"] == unrestricted_storage.resolve_component_path(windows_path)
+
+    @pytest.mark.parametrize(
+        "denied_path",
+        [
+            pytest.param("//fileserver/share/report.csv", id="unc-share"),
+            pytest.param(r"\\server\\share\\video.mp4", id="unc-backslashes"),
+            pytest.param("NUL", id="device-nul"),
+            pytest.param("COM¹", id="device-com-superscript"),
+            pytest.param("NUL ", id="device-trailing-space"),
+        ],
+    )
+    def test_unrestricted_file_input_still_denies_unc_and_device_paths(self, unrestricted_storage, denied_path):
+        """FileInput must apply UNC/device denial even when local-file restriction is off."""
+        handler = self._handler(unrestricted_storage, user_id=self.ATTACKER_ID, flow_id=self.FLOW_ID)
+
+        with pytest.raises(LocalFileAccessError, match="UNC and device"):
+            handler.process_file_field("path", {"type": "file", "file_path": denied_path}, {})
 
     def test_unscoped_graph_keeps_legacy_behavior(self, unrestricted_storage, tmp_path):
         """Standalone graphs carry no user or flow id and have no tenant boundary."""
@@ -1567,8 +1583,6 @@ class TestFileInputStorageNamespaceOwnership:
             pytest.param("/srv/langflow/report.csv", id="posix-absolute-path"),
             pytest.param("C:/data/report.csv", id="windows-drive-forward-slashes"),
             pytest.param(r"C:\data\report.csv", id="windows-drive-backslashes"),
-            pytest.param(r"\\fileserver\share\report.csv", id="windows-unc-backslashes"),
-            pytest.param("//fileserver/share/report.csv", id="windows-unc-forward-slashes"),
             pytest.param("report.csv", id="separatorless-local-path"),
             pytest.param([f"{ATTACKER_ID}/own.txt", f"flow-{FLOW_ID}/flow.txt"], id="list"),
             pytest.param({"file_path": f"{ATTACKER_ID}/own.txt"}, id="file-path-wrapper"),
@@ -1617,6 +1631,10 @@ class TestFileInputStorageNamespaceOwnership:
                 id="forward-slash-traversal",
             ),
             pytest.param(r"attacker\..\outside.txt", id="relative-backslash-traversal"),
+            pytest.param(r"\\fileserver\share\report.csv", id="windows-unc-backslashes"),
+            pytest.param("//fileserver/share/report.csv", id="windows-unc-forward-slashes"),
+            pytest.param("NUL", id="device-nul"),
+            pytest.param("COM¹", id="device-com-superscript"),
         ],
     )
     def test_unrestricted_runtime_file_values_reject_traversal_and_foreign_namespaces(

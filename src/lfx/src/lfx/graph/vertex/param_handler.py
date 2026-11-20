@@ -376,6 +376,8 @@ class ParameterHandler:
 
     def _validate_unrestricted_file_path(self, file_path: str) -> str:
         """Validate a path's storage-key shape without resolving or rewriting it."""
+        # Same UNC/device floor as enforce_local_file_access; restriction-off is not a bypass.
+        enforce_local_file_access(file_path)
         if PurePosixPath(file_path).is_absolute() or PureWindowsPath(file_path).is_absolute():
             return file_path
         if "\\" in file_path:
@@ -463,6 +465,11 @@ class ParameterHandler:
         storage_settings = getattr(getattr(self.storage_service, "settings_service", None), "settings", None)
         storage_type = str(getattr(storage_settings, "storage_type", "local")).lower()
         if not is_local_file_access_restricted():
+            # UNC/device denial still applies when local-file restriction is off.
+            # S3 values are storage keys, not local paths, so skip them here.
+            if storage_type != "s3":
+                for path in file_paths if isinstance(file_paths, list) else [file_paths]:
+                    enforce_local_file_access(path)
             return file_paths
 
         scopes = self._file_access_scopes()
