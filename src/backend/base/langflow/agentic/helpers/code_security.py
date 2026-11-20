@@ -930,6 +930,7 @@ _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
     "pathlib": {"os": "os", "sys": "sys"},
     "platform": {"os": "os", "sys": "sys"},
     "tempfile": {"_os": "os", "_sys": "sys"},
+    "unittest.mock": {"pkgutil": "pkgutil"},
 }
 
 # Stdlib reexports retain the original module's restrictions. For example,

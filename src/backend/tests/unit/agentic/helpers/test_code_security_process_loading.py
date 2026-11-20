@@ -38,6 +38,19 @@ def test_rejects_process_and_code_loader_imports(module: str, statement: str) ->
 @pytest.mark.parametrize(
     "code",
     [
+        "from unittest.mock import pkgutil as loader",
+        "import unittest.mock as mocking\nloader = mocking.pkgutil",
+    ],
+)
+def test_rejects_reexported_module_loader_reference(code: str) -> None:
+    result = scan_code_security(code)
+    assert not result.is_safe
+    assert any("pkgutil" in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
         "import concurrent.futures as cf\ncf.ProcessPoolExecutor()",
         "from concurrent.futures import ProcessPoolExecutor as Pool\nPool()",
         "import concurrent.futures.process as p\np.ProcessPoolExecutor()",
