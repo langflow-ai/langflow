@@ -579,6 +579,7 @@ module.exports = {
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
+            "Components/bundles-deapi",
             "Components/bundles-deepseek",
             "Components/bundles-discord",
             "Components/bundles-docling",

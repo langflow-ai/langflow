@@ -1,0 +1,114 @@
+---
+title: deAPI
+slug: /bundles-deapi
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **deAPI** bundle.
+
+[deAPI](https://deapi.ai) runs open-source image, video and audio models, such as FLUX, LTX, Kokoro and Whisper, behind one pay-per-use API.
+
+All components need a deAPI API key.
+Create one in the [deAPI dashboard](https://app.deapi.ai) and enter it in the **deAPI API Key** field, or store it in a [global variable](/configuration-global-variables) named `DEAPI_API_KEY`.
+Each run is billed to your deAPI balance.
+
+Every component submits a job and waits for it to finish, up to **Max Wait (seconds)**.
+If the job is still running after that, the output contains its `request_id` instead of the result.
+
+The **Model** list shows the models available to your account for that task. It loads once an API key is set; click <Icon name="RefreshCw" aria-hidden="true"/> **Refresh** to reload it.
+Size, step and frame inputs left at `0` use the selected model's defaults, and values outside the model's limits are clamped to them.
+
+For more information, see the [deAPI documentation](https://docs.deapi.ai).
+
+## deAPI Image Generation
+
+This component generates an image from a text prompt.
+
+It outputs a [`Data`](/data-types#json) object whose text is the image URL, which is also stored under `image_url`.
+Result URLs expire after a few hours, so download the image if you need to keep it.
+
+### deAPI Image Generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| deAPI API Key (`api_key`) | SecretString | Input parameter. Your deAPI API key. |
+| Prompt (`prompt`) | String | Input parameter. A text description of the image to generate. |
+| Model (`model_name`) | String | Input parameter. The text-to-image model to use. Default: `Flux1schnell`. |
+| Negative Prompt (`negative_prompt`) | String | Input parameter. What to avoid in the image. Ignored by models that do not support it. |
+| Width (`width`) | Integer | Input parameter. Image width in pixels. Default: `0`, the model's default. |
+| Height (`height`) | Integer | Input parameter. Image height in pixels. Default: `0`, the model's default. |
+| Steps (`steps`) | Integer | Input parameter. Inference steps. Default: `0`, the model's default. |
+| Seed (`seed`) | Integer | Input parameter. Seed for reproducible results. Default: `-1`, a random seed. |
+| Max Wait (seconds) (`max_wait`) | Integer | Input parameter. How long to wait for the image. Default: `180`. |
+
+## deAPI Video Generation
+
+This component generates a short video from a text prompt.
+
+It outputs a [`Data`](/data-types#json) object whose text is the video URL, which is also stored under `video_url`.
+The frame rate is set by the model; the length is **Frames** divided by that frame rate.
+
+### deAPI Video Generation parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| deAPI API Key (`api_key`) | SecretString | Input parameter. Your deAPI API key. |
+| Prompt (`prompt`) | String | Input parameter. A text description of the video to generate. |
+| Model (`model_name`) | String | Input parameter. The text-to-video model to use. Default: `Ltx2_5_22B_Dist_INT8`. |
+| Negative Prompt (`negative_prompt`) | String | Input parameter. What to avoid in the video. Ignored by models that do not support it. |
+| Width (`width`) | Integer | Input parameter. Video width in pixels. Default: `0`, the model's default. |
+| Height (`height`) | Integer | Input parameter. Video height in pixels. Default: `0`, the model's default. |
+| Frames (`frames`) | Integer | Input parameter. Number of frames. Default: `0`, the model's default. |
+| Seed (`seed`) | Integer | Input parameter. Seed for reproducible results. Default: `-1`, a random seed. |
+| Max Wait (seconds) (`max_wait`) | Integer | Input parameter. How long to wait for the video. Default: `600`. |
+
+## deAPI Text to Speech
+
+This component reads text aloud with a voice model.
+
+It outputs a [`Data`](/data-types#json) object whose text is the audio URL, which is also stored under `audio_url`.
+
+### deAPI Text to Speech parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| deAPI API Key (`api_key`) | SecretString | Input parameter. Your deAPI API key. |
+| Text (`text`) | String | Input parameter. The text to read aloud. |
+| Model (`model_name`) | String | Input parameter. The text-to-speech model to use. Default: `Kokoro`. |
+| Voice (`voice`) | String | Input parameter. The voice name, such as `af_alloy` for Kokoro. Default: the model's default voice. |
+| Language (`language`) | String | Input parameter. The language code the model expects, such as `en-us` for Kokoro. Default: the model's default. |
+| Speed (`speed`) | Float | Input parameter. Speaking speed, where `1` is normal. Default: `0`, the model's default. |
+| Max Wait (seconds) (`max_wait`) | Integer | Input parameter. How long to wait for the audio. Default: `180`. |
+
+## deAPI Transcription
+
+This component transcribes the speech in a public YouTube, X, TikTok, Twitch or Kick link.
+
+It outputs the transcript as a [`Message`](/data-types#message).
+deAPI downloads the media on its own servers, so Langflow only sends the link to `api.deapi.ai` and never connects to the media itself.
+Direct links to media files are not supported.
+
+When the component is used as a [tool](/agents-tools), the agent can set the link.
+
+### deAPI Transcription parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| deAPI API Key (`api_key`) | SecretString | Input parameter. Your deAPI API key. |
+| Media Link (`media_url`) | String | Input parameter. A public YouTube, X, TikTok, Twitch or Kick link. |
+| Model (`model_name`) | String | Input parameter. The transcription model to use. Default: `WhisperLargeV3`. |
+| Include Timestamps (`include_timestamps`) | Boolean | Input parameter. Add segment timestamps to the transcript. Default: `false`. |
+| Max Wait (seconds) (`max_wait`) | Integer | Input parameter. How long to wait for the transcript. Default: `300`. |
+
+## See also
+
+* [**AssemblyAI** bundle](/bundles-assemblyai)
