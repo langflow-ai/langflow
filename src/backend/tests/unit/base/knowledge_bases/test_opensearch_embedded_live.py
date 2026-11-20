@@ -217,7 +217,11 @@ async def test_rolling_back_one_job_leaves_a_job_sharing_uuid_pieces(tmp_path: P
 
 
 async def test_erasing_one_end_user_leaves_another_at_the_same_domain(tmp_path: Path) -> None:
-    """Erasing alice@acme.com deleted bob@acme.com's chunks too: both carry the word acme.com."""
+    """Erasing alice@acme.com must leave every other end user's chunks.
+
+    ``match`` also took bob@acme.com (the same domain word), and ``match_phrase`` still took
+    tag+alice@acme.com (the same words in order).
+    """
     _require_live_opensearch()
     backend = create_backend(
         "opensearch",
@@ -226,7 +230,7 @@ async def test_erasing_one_end_user_leaves_another_at_the_same_domain(tmp_path: 
         backend_config={"url_variable": "OPENSEARCH_URL"},
         user_id=uuid.uuid4(),
     )
-    users = ["alice@acme.com", "bob@acme.com"]
+    users = ["alice@acme.com", "bob@acme.com", "tag+alice@acme.com", "x alice@acme.com", "Alice@acme.com"]
     try:
         await backend.ensure_ready()
         await backend.add_embedded_documents(
@@ -244,7 +248,7 @@ async def test_erasing_one_end_user_leaves_another_at_the_same_domain(tmp_path: 
         backend._os_client.indices.refresh(index=backend._os_index)
 
         left = [doc.id async for batch in backend.iter_documents(batch_size=50) for doc in batch]
-        assert sorted(left) == ["bob@acme.com-0", "bob@acme.com-1"]
+        assert sorted(left) == sorted(f"{user}-{i}" for user in users[1:] for i in range(2))
     finally:
         await backend.delete_collection()
         await backend.teardown()
@@ -299,12 +303,14 @@ async def test_a_never_created_index_has_no_job_chunks(tmp_path: Path) -> None:
 
 
 def _sorts_used(backend) -> list:
-    """Record the sort of every search the backend sends."""
+    """Record the sort of every page read the backend sends (not the tie check, which sorts nothing)."""
     client, seen = backend._os_client, []
     search = client.search
 
     def spy(*args, **kwargs):
-        seen.append((kwargs.get("body") or {}).get("sort"))
+        body = kwargs.get("body") or {}
+        if "aggs" not in body:
+            seen.append(body.get("sort"))
         return search(*args, **kwargs)
 
     client.search = spy
@@ -372,5 +378,68 @@ async def test_a_cluster_that_refuses_id_sorting_still_reads_new_chunks(tmp_path
         assert [doc.id for doc in await _read_job(backend, _JOB_A, batch_size=2)] == [f"a-{i}" for i in range(5)]
     finally:
         client.cluster.put_settings(body={"transient": {"indices.id_field_data.enabled": None}})
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+@pytest.mark.parametrize("precomputed", [True, False])
+async def test_erasing_one_of_two_end_users_whose_ids_parse_as_the_same_date(
+    tmp_path: Path, *, precomputed: bool
+) -> None:
+    from langchain_core.documents import Document
+    from langchain_core.embeddings import FakeEmbeddings
+
+    _require_live_opensearch()
+    backend = create_backend(
+        "opensearch",
+        kb_name=f"kb_date_{uuid.uuid4().hex[:8]}",
+        kb_path=tmp_path,
+        backend_config={"url_variable": "OPENSEARCH_URL"},
+        user_id=uuid.uuid4(),
+        embedding_function=None if precomputed else FakeEmbeddings(size=8),
+    )
+    users = ["2024-05-01", "2024-05-01T00:00:00Z"]
+    try:
+        await backend.ensure_ready()
+        docs = [
+            Document(id=str(i), page_content="note", metadata={"end_user_id": user}) for i, user in enumerate(users)
+        ]
+        if precomputed:
+            await backend.add_embedded_documents(
+                [
+                    IngestedDocument(id=doc.id, content=doc.page_content, metadata=doc.metadata, embedding=[0.1] * 8)
+                    for doc in docs
+                ]
+            )
+        else:
+            await backend.add_documents(docs)
+
+        await backend.delete_by({"end_user_id": "2024-05-01"})
+        backend._os_client.indices.refresh(index=backend._os_index)
+
+        left = [doc.id async for batch in backend.iter_documents(batch_size=50) for doc in batch]
+        assert left == ["1"]
+    finally:
+        await backend.delete_collection()
+        await backend.teardown()
+
+
+async def test_chunks_that_share_one_chunk_id_are_all_read(tmp_path: Path) -> None:
+    """Chunks that share one kb_chunk_id are all read (QA L9).
+
+    Set to one value by hand, they read 500 of 1,500, because ``search_after`` skips the rest of
+    a tie on the sort field.
+    """
+    _require_live_opensearch()
+    backend = await _seed_two_jobs(tmp_path)
+    try:
+        backend._os_client.update_by_query(
+            index=backend._os_index,
+            body={"script": {"source": "ctx._source.metadata.kb_chunk_id = 'same'"}, "query": {"match_all": {}}},
+            refresh=True,
+        )
+        assert sorted(doc.id for doc in await _read_job(backend, _JOB_A, batch_size=2)) == [f"a-{i}" for i in range(5)]
+        assert len(await _read_job(backend, None, batch_size=2)) == 9
+    finally:
         await backend.delete_collection()
         await backend.teardown()

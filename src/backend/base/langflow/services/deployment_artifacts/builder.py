@@ -1645,6 +1645,7 @@ def _collect_dependency_refs(payload: dict[str, Any]) -> tuple[set[str], set[str
     data = payload.get("data")
     if not isinstance(data, dict):
         return mb_names, kb_names
+    # A partial workflow run can select any node, including one without edges.
     for node in data.get("nodes") or []:
         if not isinstance(node, dict):
             continue

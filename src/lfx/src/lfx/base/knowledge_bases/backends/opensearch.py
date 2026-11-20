@@ -92,7 +92,7 @@ from lfx.log.logger import logger
 from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_url_for_ssrf
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Iterator
+    from collections.abc import AsyncIterator, Iterator, Sequence
     from uuid import UUID
 
     from langchain_core.documents import Document
@@ -115,6 +115,15 @@ async def _drained_worker(function, *args, **kwargs):
         task.exception()
         raise asyncio.CancelledError
     return task.result()
+
+
+async def _bulk_or_raise(client: Any, actions: list[dict[str, Any]], *, refresh: bool) -> None:
+    """Send one bulk request; a per-item failure raises rather than passing as success."""
+    answer = await _drained_worker(client.bulk, body=actions, refresh=refresh)
+    if answer.get("errors"):
+        failed = next(next(iter(item.values())) for item in answer["items"] if next(iter(item.values())).get("error"))
+        msg = f"OpenSearch bulk request failed: {failed.get('error')}"
+        raise RuntimeError(msg)
 
 
 def _document_from_hit(
@@ -155,25 +164,71 @@ def _without_chunk_id(metadata: dict[str, Any] | None) -> dict[str, Any]:
     return {key: value for key, value in (metadata or {}).items() if key != CHUNK_ID_KEY}
 
 
-def _exact(key: str, value: Any) -> dict[str, Any]:
-    """Match one metadata value as a whole, whichever layout the index stores metadata in."""
-    # Not ``match``: an analyzed value splits into words and ``match`` accepts any
-    # one of them, so job ids sharing a UUID piece, or end users sharing an email
-    # domain, would match each other, and delete_by would remove both.
-    return {
-        "bool": {
-            "should": [
-                {"match_phrase": {key: value}},
-                {"match_phrase": {f"metadata.{key}": value}},
-            ],
-            "minimum_should_match": 1,
-        }
+#: Dynamic mapping keeps a string's keyword copy only up to this many characters.
+KEYWORD_IGNORE_ABOVE = 256
+_END_USER_ID = "end_user_id"
+
+
+#: Field types that already hold a value whole, so a ``term`` on the field itself is exact.
+_EXACT_TYPES = frozenset(
+    {
+        "keyword", "constant_keyword", "wildcard", "date", "date_nanos", "boolean", "ip",
+        "long", "integer", "short", "byte", "double", "float", "half_float", "scaled_float", "unsigned_long",
     }
+)  # fmt: skip
+
+
+def _exact(key: str, value: Any, fields: Sequence[str] | None = None) -> dict[str, Any]:
+    """Match one metadata value as a whole, whichever layout the index stores metadata in.
+
+    ``fields`` are the ones ``OpenSearchBackend._exact_fields`` found in the index's mapping.
+    Without them, a string is matched on dynamic mapping's keyword copy and anything else on
+    the field itself, which is what an index the backend created holds.
+    """
+    # Not ``match`` or ``match_phrase``: both read the analyzed text, so erasing end user
+    # ``alice@acme.com`` also hit ``bob@acme.com`` (match) or ``tag+alice@acme.com``
+    # (match_phrase). A ``term`` on an exact field compares the whole stored value.
+    if fields is None:
+        fields = (f"{key}.keyword", f"metadata.{key}.keyword") if isinstance(value, str) else (key, f"metadata.{key}")
+    if isinstance(value, str) and len(value) > KEYWORD_IGNORE_ABOVE and any(f.endswith(".keyword") for f in fields):
+        # shortcut: the keyword copy skips longer strings, so a term would match nothing
+        # and delete_by would silently keep them; refuse until such a value is real.
+        msg = f"OpenSearch cannot match a '{key}' value longer than {KEYWORD_IGNORE_ABOVE} characters exactly"
+        raise ValueError(msg)
+    return {"bool": {"should": [{"term": {field: value}} for field in fields], "minimum_should_match": 1}}
 
 
 def _job_query(job_id: str) -> dict[str, Any]:
     """Match exactly one job."""
     return _exact(METADATA_KEY_JOB_ID, job_id)
+
+
+def _identity_fields(mappings: list[dict[str, Any]], names: tuple[str, ...]) -> tuple[str, ...]:
+    """Require an unnormalized keyword for every mapped end-user identity layout."""
+    fields = []
+    for name in names:
+        candidates = (f"{name}.keyword", name)
+        resolved = set()
+        for index_mapping in mappings:
+            if not any(field in index_mapping for field in candidates):
+                continue
+            field = next(
+                (
+                    field
+                    for field in candidates
+                    if (mapping := index_mapping.get(field))
+                    and mapping.get("type") == "keyword"
+                    and not mapping.get("normalizer")
+                    and mapping.get("index", True)
+                ),
+                None,
+            )
+            resolved.add(field)
+        if None in resolved or len(resolved) > 1:
+            msg = f"OpenSearch must map '{name}' as an unnormalized keyword for exact end-user matching"
+            raise ValueError(msg)
+        fields.extend(field for field in resolved if field is not None)
+    return tuple(fields)
 
 
 def _is_missing_index(exc: Exception) -> bool:
@@ -269,6 +324,9 @@ DEFAULT_TEXT_FIELD = "text"
 CHUNK_ID_KEY = "kb_chunk_id"
 #: Dynamic mapping gives the string a keyword copy; this is what the per-job read sorts on.
 CHUNK_ID_SORT_FIELD = f"metadata.{CHUNK_ID_KEY}.keyword"
+# Most staged chunks one sliced merge moves, whatever the caller asks. Each travels out and back as
+# JSON with its vector, and a 5,000-chunk bulk of 768-wide vectors outran the client's 10 s timeout.
+MERGE_SLICE_MAX = 1_000
 # ``faiss`` is part of the core OpenSearch k-NN plugin on every
 # released version (1.x → 3.x) and works without extra cluster setup.
 # ``jvector`` was tempting (it's faster on OpenSearch 3.2+) but it
@@ -357,6 +415,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
     """OpenSearch k-NN as a Langflow KB backend."""
 
     backend_type = BackendType.OPENSEARCH
+    supports_staging = True
 
     def normalize_score(self, score: float) -> float:
         """Keep OpenSearch relevance scores, which are already higher-is-better."""
@@ -423,7 +482,10 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         operator override (an externally-managed index, or the pre-scoping
         index a migration pinned). Otherwise the index is owner-scoped, and a
         missing owner fails closed instead of falling back to a shared name.
+        A ``staging`` copy uses its own index, whatever the override says.
         """
+        if self.staging_token:
+            return self._staging_name()
         return resolve_storage_name(
             kb_name=self.kb_name,
             owner_id=self._coerce_user_uuid(),
@@ -485,7 +547,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             msg = "OpenSearchBackend.ensure_ready() must be awaited before _build_vector_store."
             raise RuntimeError(msg)
         shared_legacy_index = self.backend_config.get(LEGACY_SHARED_INDEX_KEY)
-        if shared_legacy_index and index_name != shared_legacy_index:
+        if shared_legacy_index and index_name != shared_legacy_index and not self.staging_token:
             logger.warning(
                 "Knowledge base %s no longer uses OpenSearch index %s: another user's knowledge base used the "
                 "same index, or the name is reserved for owner-scoped indexes. Its earlier chunks were left in "
@@ -562,6 +624,18 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         if not docs:
             return
         await self.ensure_ready()
+        if any(_END_USER_ID in doc.metadata for doc in docs):
+            if self.embedding_function is None:
+                msg = "An embedding function is required to add documents to OpenSearch."
+                raise ValueError(msg)
+            vectors = await self.embedding_function.aembed_documents([doc.page_content for doc in docs])
+            await self.add_embedded_documents(
+                [
+                    IngestedDocument(id=doc.id, content=doc.page_content, metadata=doc.metadata, embedding=vector)
+                    for doc, vector in zip(docs, vectors, strict=True)
+                ]
+            )
+            return
         store = self.vector_store
         # Ids chosen here rather than by LangChain, so each chunk's metadata can carry its own.
         ids = [doc.id or str(uuid4()) for doc in docs]
@@ -581,6 +655,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         # ``add_embeddings`` refuses more than the store's ``bulk_size`` (500 by
         # default) per call, so split larger batches rather than fail the write.
         """Write supplied vectors with stable document identities without invoking an embedder."""
+        if any(_END_USER_ID in (doc.metadata or {}) for doc in docs):
+            await self._ensure_identity_mapping(len(docs[0].embedding or ()))
         bulk_size = self.vector_store.bulk_size  # type: ignore[attr-defined]
         for start in range(0, len(docs), bulk_size):
             chunk = docs[start : start + bulk_size]
@@ -595,6 +671,33 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     ids=ids[start : start + bulk_size],
                     space_type=self._os_space_type,
                 )
+
+    async def _ensure_identity_mapping(self, dimension: int) -> None:
+        """Install the identity field before OpenSearch can infer a type from its first value."""
+        store = self.vector_store
+        client = self._os_client
+        fields = await self._exact_fields(client, _END_USER_ID)
+        nested = f"metadata.{_END_USER_ID}"
+        if fields and (nested in fields or f"{nested}.keyword" in fields):
+            return
+        if not await _drained_worker(client.indices.exists, index=self._os_index):
+            try:
+                await _drained_worker(
+                    store.create_index,  # type: ignore[attr-defined]
+                    dimension,
+                    index_name=self._os_index,
+                    space_type=self._os_space_type,
+                )
+            except Exception:
+                # Concurrent first writers can both find the index absent.
+                if not await _drained_worker(client.indices.exists, index=self._os_index):
+                    raise
+        await _drained_worker(
+            client.indices.put_mapping,
+            index=self._os_index,
+            body={"properties": {"metadata": {"properties": {_END_USER_ID: {"type": "keyword"}}}}},
+        )
+        self._exact_field_cache.pop(_END_USER_ID, None)
 
     async def similarity_search(
         self,
@@ -628,7 +731,8 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         await self.ensure_ready()
         kwargs: dict[str, Any] = {"query": query, "k": k}
         if filter:
-            kwargs["filter"] = self._translate_where(filter)
+            _ = self.vector_store
+            kwargs["filter"] = await self._exact_where(self._os_client, filter)
         if with_scores:
             scored = await self.vector_store.asimilarity_search_with_score(**kwargs)
             return [(doc.model_copy(update={"metadata": _without_chunk_id(doc.metadata)}), s) for doc, s in scored]
@@ -981,7 +1085,23 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         if missing.get("_shards", {}).get("failed"):
             msg = "OpenSearch count did not complete on all shards."
             raise RuntimeError(msg)
-        return CHUNK_ID_SORT_FIELD if missing.get("count") == 0 else "_id"
+        if missing.get("count") != 0:
+            return "_id"
+        # Chunks sharing one id (an index edited by hand, QA L9) tie on it, and ``search_after``
+        # skips the rest of a tie, so the read came up short. ``_id`` is unique. A tie split across
+        # shards can go unseen here; the copy's count check still refuses that read.
+        ties = await _drained_worker(
+            client.search,
+            index=self._os_index,
+            body={
+                "query": query,
+                "size": 0,
+                "aggs": {"tie": {"terms": {"field": CHUNK_ID_SORT_FIELD, "min_doc_count": 2, "size": 1}}},
+            },
+        )
+        if ((ties.get("aggregations") or {}).get("tie") or {}).get("buckets"):
+            return "_id"
+        return CHUNK_ID_SORT_FIELD
 
     async def iter_job_documents(
         self,
@@ -1072,6 +1192,55 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         """
         return {"bool": {"must": [_exact(key, value) for key, value in where.items()]}}
 
+    async def _exact_fields(self, client: Any, key: str) -> tuple[str, ...] | None:
+        """Look up exact fields for a metadata key, or return None when no field is mapped."""
+        cache: dict[str, tuple[str, ...]] = self.__dict__.setdefault("_exact_field_cache", {})
+        cached = cache.get(key)
+        if cached is not None:
+            return cached
+        names = (key, f"metadata.{key}")
+        try:
+            response = await _drained_worker(
+                client.indices.get_field_mapping,
+                index=self._os_index,
+                fields=[*names, *(f"{n}.keyword" for n in names)],
+            )
+        except Exception as exc:
+            if _is_missing_index(exc):
+                return None
+            raise
+        mappings = [
+            {
+                name: next(iter((entry.get("mapping") or {}).values()), {})
+                for name, entry in (body.get("mappings") or {}).items()
+            }
+            for body in (response or {}).values()
+        ]
+        if not any(mappings):
+            return None  # no chunk carries this key yet, so nothing can match it
+        if key == _END_USER_ID:
+            # Date and numeric coercions can equate different end-user IDs.
+            fields = _identity_fields(mappings, names)
+            cache[key] = fields
+            return fields
+        types = {name: leaf.get("type") for index_mapping in mappings for name, leaf in index_mapping.items()}
+        fields = tuple(
+            f"{n}.keyword" if f"{n}.keyword" in types else n
+            for n in names
+            if f"{n}.keyword" in types or types.get(n) in _EXACT_TYPES
+        )
+        if not fields:
+            # Only analyzed text holds it: a term would match nothing and a phrase could match others.
+            msg = f"OpenSearch index maps '{key}' only as analyzed text, so it cannot be matched exactly"
+            raise ValueError(msg)
+        cache[key] = fields  # a mapped field keeps its type until delete_collection drops the index
+        return fields
+
+    async def _exact_where(self, client: Any, where: dict[str, Any]) -> dict[str, Any]:
+        """``_translate_where``, on the fields this index really holds each key whole in."""
+        clauses = [_exact(key, value, await self._exact_fields(client, key)) for key, value in where.items()]
+        return {"bool": {"must": clauses}}
+
     async def delete_by(self, where: dict[str, Any]) -> None:
         """Delete documents via ``delete_by_query``.
 
@@ -1086,7 +1255,7 @@ class OpenSearchBackend(BaseVectorStoreBackend):
             client = self._os_client
         if not where:
             return
-        body = {"query": self._translate_where(where)}
+        body = {"query": await self._exact_where(client, where)}
         try:
             result = await _drained_worker(
                 client.delete_by_query,
@@ -1157,8 +1326,83 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         self._os_client = None
         self._vector_store = None
 
+    async def merge_staging(self, token: str, *, limit: int | None = None) -> int:
+        """Move up to one slice of a deploy's staged chunks into the live index, deleting staging once empty.
+
+        Not one step like Postgres: while it runs, flows can see part of the staged chunks. A rerun
+        only upserts again, so a deploy that was cut here finishes on its retry. Always a slice of
+        at most ``MERGE_SLICE_MAX`` (fewer with ``limit``), copied and then removed from staging:
+        this runs under the knowledge base's exclusive lease, and one unbounded reindex held it
+        past the 30 s that serving's reads wait for it. The caller repeats until staging is empty.
+        """
+        if limit is not None and limit < 1:
+            # A slice of nothing would never empty staging, and a caller looping until 0 would stop early.
+            msg = f"limit must be at least 1, got {limit}"
+            raise ValueError(msg)
+        await self.ensure_ready()
+        _ = self.vector_store
+        client = self._os_client
+        source = self.staging(token)._resolve_index_name()  # noqa: SLF001 — same class
+        target = self._os_index
+        if not await _drained_worker(client.indices.exists, index=source):
+            return 0  # nothing staged, or an earlier run already merged it
+        if not await _drained_worker(client.indices.exists, index=target):
+            await self._create_like(client, source=source, target=target)
+        cap = MERGE_SLICE_MAX if limit is None else min(limit, MERGE_SLICE_MAX)
+        return await self._merge_slice(client, source=source, target=target, limit=cap)
+
+    @staticmethod
+    async def _merge_slice(client: Any, *, source: str, target: str, limit: int) -> int:
+        """Copy up to ``limit`` staged chunks into ``target`` under their ids, then remove them from staging."""
+        refreshed = await _drained_worker(client.indices.refresh, index=source)
+        if refreshed.get("_shards", {}).get("failed"):
+            msg = "OpenSearch did not refresh all shards of the staging index"
+            raise RuntimeError(msg)
+        found = await _drained_worker(
+            client.search,
+            index=source,
+            params={"allow_partial_search_results": "false"},
+            body={"query": {"match_all": {}}, "size": limit, "_source": True},
+        )
+        if found.get("timed_out") or found.get("_shards", {}).get("failed"):
+            msg = "OpenSearch did not complete the search for staged chunks"
+            raise RuntimeError(msg)
+        hits = found["hits"]["hits"]
+        total = found["hits"].get("total")
+        # This slice takes the last of staging: callers stop at ``remaining == 0`` and never send the
+        # empty call, so a staged multiple of the slice size left an empty index behind (QA OSIDX).
+        last = isinstance(total, dict) and total.get("relation") == "eq" and total.get("value", 0) <= len(hits)
+        if hits:
+            # Index before delete: a cut between the two leaves the chunks in both, and the rerun re-upserts them.
+            actions: list[dict[str, Any]] = []
+            for hit in hits:
+                actions += [{"index": {"_index": target, "_id": hit["_id"]}}, hit["_source"]]
+            await _bulk_or_raise(client, actions, refresh=True)
+            deletes = [{"delete": {"_index": source, "_id": hit["_id"]}} for hit in hits]
+            await _bulk_or_raise(client, deletes, refresh=True)
+        if len(hits) < limit or last:
+            await _drained_worker(client.indices.delete, index=source, ignore_unavailable=True)
+        return len(hits)
+
+    @staticmethod
+    async def _create_like(client: Any, *, source: str, target: str) -> None:
+        """Create ``target`` with ``source``'s mapping, so a reindex keeps its vectors kNN vectors."""
+        mappings = (await _drained_worker(client.indices.get_mapping, index=source))[source]["mappings"]
+        knn = (await _drained_worker(client.indices.get_settings, index=source))[source]["settings"]["index"].get("knn")
+        body: dict[str, Any] = {"mappings": mappings}
+        if knn is not None:
+            body["settings"] = {"index": {"knn": knn}}
+        try:
+            await _drained_worker(client.indices.create, index=target, body=body)
+        except Exception:
+            # Another pod merging the same deploy created it first.
+            if not await _drained_worker(client.indices.exists, index=target):
+                raise
+
     async def delete_collection(self) -> None:
         """Drop the configured index. Used by KB deletion."""
+        # A re-created index maps its fields afresh, so what the old one held is no answer for it.
+        self.__dict__.pop("_exact_field_cache", None)
         await self.ensure_ready()
         client = getattr(self, "_os_client", None)
         if client is None:
