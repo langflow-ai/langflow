@@ -1446,23 +1446,29 @@ class MCPComposerService(Service):
         stdout_path: Path | None = None
         stderr_path: Path | None = None
 
-        if platform.system() == "Windows":
-            # Create temp files for stdout/stderr on Windows to avoid pipe deadlocks
-            # Note: We intentionally don't use context manager as we need files to persist
-            # for the subprocess and be cleaned up manually later
-            stdout_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
-                mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stdout_", suffix=".log"
-            )
-            stderr_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
-                mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stderr_", suffix=".log"
-            )
-            stdout_handle = stdout_file
-            stderr_handle = stderr_file
-            stdout_path = Path(stdout_file.name)
-            stderr_path = Path(stderr_file.name)
-            await logger.adebug(f"Using temp files for MCP Composer logs: stdout={stdout_path}, stderr={stderr_path}")
-
         try:
+            if platform.system() == "Windows":
+                # Create temp files for stdout/stderr on Windows to avoid pipe deadlocks
+                # Note: We intentionally don't use context manager as we need files to persist
+                # for the subprocess and be cleaned up manually later. This lives inside
+                # the try so a failure creating the second file still cleans up the
+                # first one in the finally block below. Each file's handle and path
+                # are recorded right after it is created, so a failure on the
+                # second file still leaves the first one fully tracked.
+                stdout_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+                    mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stdout_", suffix=".log"
+                )
+                stdout_handle = stdout_file
+                stdout_path = Path(stdout_file.name)
+                stderr_file = tempfile.NamedTemporaryFile(  # noqa: SIM115
+                    mode="w+b", delete=False, prefix=f"mcp_composer_{project_id}_stderr_", suffix=".log"
+                )
+                stderr_handle = stderr_file
+                stderr_path = Path(stderr_file.name)
+                await logger.adebug(
+                    f"Using temp files for MCP Composer logs: stdout={stdout_path}, stderr={stderr_path}"
+                )
+
             process = subprocess.Popen(cmd, env=env, stdout=stdout_handle, stderr=stderr_handle)  # noqa: ASYNC220, S603
 
             # Monitor the process startup with multiple checks
@@ -1590,18 +1596,22 @@ class MCPComposerService(Service):
             # Always close and delete the temp logs once they exist: the success
             # path and _read_process_output_and_extract_error already do this,
             # but cancellation and a failed Popen leave this try block through
-            # other exits, so clean up here too. Closing an already-closed file
-            # and unlinking a missing path are both no-ops.
-            if stdout_file and stderr_file:
+            # other exits, so clean up here too. Each log gets its own attempt:
+            # a failure closing or removing stdout must not skip stderr, and a
+            # half-created pair (stderr creation raised) still cleans up stdout.
+            # Closing an already-closed file and unlinking a missing path are
+            # both no-ops.
+            for temp_file, temp_path in ((stdout_file, stdout_path), (stderr_file, stderr_path)):
                 try:
-                    stdout_file.close()
-                    stderr_file.close()
-                    if stdout_path:
-                        stdout_path.unlink(missing_ok=True)
-                    if stderr_path:
-                        stderr_path.unlink(missing_ok=True)
+                    if temp_file is not None:
+                        temp_file.close()
                 except Exception as e:  # noqa: BLE001
-                    await logger.adebug(f"Error cleaning up temp files: {e}")
+                    await logger.adebug(f"Error closing temp file: {e}")
+                try:
+                    if temp_path is not None:
+                        temp_path.unlink(missing_ok=True)
+                except Exception as e:  # noqa: BLE001
+                    await logger.adebug(f"Error removing temp file: {e}")
             if backend_auth_config_path:
                 try:
                     backend_auth_config_path.unlink(missing_ok=True)

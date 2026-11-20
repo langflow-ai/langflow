@@ -339,11 +339,11 @@ class TestWindowsTempFileHandling:
         port = 2000
 
         with patch("platform.system", return_value="Windows"):
-            # Create real temp files
+            # Create real temp files and leave them open: the service owns
+            # closing them, so the test can detect a regression that drops
+            # the service-side close calls.
             stdout_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
             stderr_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
-            stdout_file.close()
-            stderr_file.close()
 
             try:
                 with (
@@ -382,11 +382,17 @@ class TestWindowsTempFileHandling:
                         )
 
                     # Verify temp files were cleaned up despite cancellation
+                    assert stdout_file.closed
+                    assert stderr_file.closed
                     assert not Path(stdout_file.name).exists()
                     assert not Path(stderr_file.name).exists()
 
             finally:
-                # Cleanup
+                # Cleanup: close any handle the service left open before
+                # removing the paths.
+                for handle in (stdout_file, stderr_file):
+                    with contextlib.suppress(Exception):
+                        handle.close()
                 for f in [stdout_file.name, stderr_file.name]:
                     with contextlib.suppress(FileNotFoundError):
                         Path(f).unlink()
@@ -398,11 +404,11 @@ class TestWindowsTempFileHandling:
         port = 2000
 
         with patch("platform.system", return_value="Windows"):
-            # Create real temp files
+            # Create real temp files and leave them open: the service owns
+            # closing them, so the test can detect a regression that drops
+            # the service-side close calls.
             stdout_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
             stderr_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
-            stdout_file.close()
-            stderr_file.close()
 
             try:
                 with (
@@ -435,14 +441,70 @@ class TestWindowsTempFileHandling:
 
                     assert mock_popen.called
                     # Verify temp files were cleaned up despite Popen failing
+                    assert stdout_file.closed
+                    assert stderr_file.closed
                     assert not Path(stdout_file.name).exists()
                     assert not Path(stderr_file.name).exists()
 
             finally:
-                # Cleanup
+                # Cleanup: close any handle the service left open before
+                # removing the paths.
+                for handle in (stdout_file, stderr_file):
+                    with contextlib.suppress(Exception):
+                        handle.close()
                 for f in [stdout_file.name, stderr_file.name]:
                     with contextlib.suppress(FileNotFoundError):
                         Path(f).unlink()
+
+    @pytest.mark.asyncio
+    async def test_windows_temp_files_cleanup_when_stderr_creation_fails(self, mcp_service):
+        """Test that stdout is cleaned up when creating the stderr temp file raises."""
+        project_id = "test-project"
+        port = 2000
+
+        with patch("platform.system", return_value="Windows"):
+            # Create the stdout file the service would get on its first call
+            # and leave it open: the service owns closing it.
+            stdout_file = tempfile.NamedTemporaryFile(mode="w+b", delete=False)
+
+            try:
+                with patch("tempfile.NamedTemporaryFile") as mock_tempfile:
+                    mock_tempfile.side_effect = [stdout_file, OSError("cannot create stderr log")]
+
+                    auth_config = {
+                        "auth_type": "oauth",
+                        "oauth_host": "localhost",
+                        "oauth_port": str(port),
+                        "oauth_server_url": f"http://localhost:{port}",
+                        "oauth_client_id": "test",
+                        "oauth_client_secret": "test",
+                        "oauth_auth_url": "http://test",
+                        "oauth_token_url": "http://test",
+                    }
+
+                    with pytest.raises(OSError, match="cannot create stderr log"):
+                        await mcp_service._start_project_composer_process(
+                            project_id=project_id,
+                            host="localhost",
+                            port=port,
+                            streamable_http_url="http://test",
+                            auth_config=auth_config,
+                            max_startup_checks=2,
+                            startup_delay=0.1,
+                        )
+
+                    # The stdout file was created before stderr creation failed,
+                    # so the service must still close and remove it.
+                    assert stdout_file.closed
+                    assert not Path(stdout_file.name).exists()
+
+            finally:
+                # Cleanup: close the handle if the service left it open before
+                # removing the path.
+                with contextlib.suppress(Exception):
+                    stdout_file.close()
+                with contextlib.suppress(FileNotFoundError):
+                    Path(stdout_file.name).unlink()
 
     @pytest.mark.asyncio
     async def test_non_windows_uses_pipes(self, mcp_service):
