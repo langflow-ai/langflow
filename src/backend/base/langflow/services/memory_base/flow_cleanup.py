@@ -25,6 +25,12 @@ from langflow.services.database.models.memory_base.model import (
     MessageIngestionRecord,
 )
 from langflow.services.database.models.user.model import User
+from langflow.services.deletion_hooks import (
+    RESOURCE_MEMORY_BASE,
+    VIA_CASCADE,
+    DeletionContext,
+    run_post_deletion_after_commit,
+)
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 from langflow.services.memory_base.ingestion import cancel_active_jobs
 from langflow.services.memory_base.kb_path_helpers import delete_kb
@@ -160,6 +166,18 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
     )
     await session.exec(delete(MemoryBaseSession).where(col(MemoryBaseSession.memory_base_id).in_(memory_base_ids)))
     await session.exec(delete(MemoryBase).where(col(MemoryBase.id).in_(memory_base_ids)))
+    for mb in memory_bases:
+        run_post_deletion_after_commit(
+            session,
+            DeletionContext(
+                resource=RESOURCE_MEMORY_BASE,
+                resource_id=mb.id,
+                owner_id=mb.user_id,
+                name=mb.name,
+                via=VIA_CASCADE,
+                extra={"flow_id": flow_id},
+            ),
+        )
 
     return handles
 
@@ -208,4 +226,4 @@ async def _drop_remote_collection(handle: FlowMemoryBaseCleanup) -> None:
                 handle.kb_name,
             )
         return
-    await knowledge_base_service.delete_record(record.id)
+    await knowledge_base_service.delete_record(record.id, via=VIA_CASCADE)

@@ -42,6 +42,13 @@ from langflow.services.database.models.memory_base.model import (
     MessageIngestionRecord,
 )
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.deletion_hooks import (
+    RESOURCE_MEMORY_BASE,
+    VIA_CASCADE,
+    DeletionContext,
+    run_post_deletion_hooks,
+    run_pre_deletion_hooks,
+)
 from langflow.services.deps import session_scope
 from langflow.services.memory_base.embedding_helpers import infer_embedding_provider, infer_llm_provider
 from langflow.services.memory_base.ingestion import (
@@ -401,7 +408,7 @@ class MemoryBaseService(Service):
         from langflow.api.utils import knowledge_base_service
 
         try:
-            await knowledge_base_service.delete_record(kb_record_id)
+            await knowledge_base_service.delete_record(kb_record_id, via=VIA_CASCADE)
         except Exception as exc:  # noqa: BLE001 — rollback is best-effort
             await logger.awarning("Create rollback: knowledge_base row cleanup failed for kb_name=%s: %s", kb_name, exc)
             return
@@ -531,6 +538,11 @@ class MemoryBaseService(Service):
             mb, kb_record = identity
             kb_name = mb.kb_name
             kb_record_id = kb_record.id if kb_record is not None else None
+            context = DeletionContext(
+                resource=RESOURCE_MEMORY_BASE, resource_id=memory_base_id, owner_id=user_id, name=mb.name, session=db
+            )
+            # Before anything is cancelled or removed: a refusal leaves the Memory Base whole.
+            await run_pre_deletion_hooks(context)
             kb_username = await resolve_kb_username(db, user_id)
             await cancel_active_jobs(memory_base_id=memory_base_id, db=db)
             # Commit job cancellation without removing the retryable identity.
@@ -551,6 +563,7 @@ class MemoryBaseService(Service):
             if kb is not None:
                 await db.delete(kb)
             await db.commit()
+        await run_post_deletion_hooks(context)
         await delete_kb(kb_name=kb_name, kb_username=kb_username)
         return True
 

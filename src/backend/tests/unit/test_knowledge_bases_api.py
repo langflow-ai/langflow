@@ -1611,6 +1611,79 @@ class TestKnowledgeBaseAPI:
         assert await knowledge_base_service.get_by_id(record.id) is None
         legacy_delete.assert_not_called()
 
+    async def test_delete_knowledge_base_runs_the_deletion_hooks(
+        self, deletion_registry, client, logged_in_headers, seed_kb, active_user
+    ):
+        record = await seed_kb("Hooked_Delete", backend_type="opensearch")
+        seen = []
+
+        async def pre(context):
+            # Nothing has been touched yet: the record is still there.
+            seen.append(("pre", context, await knowledge_base_service.get_by_id(record.id) is not None))
+
+        async def post(context):
+            seen.append(("post", context, await knowledge_base_service.get_by_id(record.id) is not None))
+
+        deletion_registry.register_pre_deletion_hook("knowledge_base", pre)
+        deletion_registry.register_post_deletion_hook("knowledge_base", post)
+        with patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=AsyncMock()):
+            response = await client.delete("api/v1/knowledge_bases/Hooked_Delete", headers=logged_in_headers)
+        assert response.status_code == 200, response.text
+        assert [(phase, record_visible) for phase, _, record_visible in seen] == [("pre", True), ("post", False)]
+        for _, context, _ in seen:
+            assert context.resource == "knowledge_base"
+            assert context.resource_id == record.id
+            assert context.owner_id == active_user.id
+            assert context.name == "Hooked_Delete"
+            assert context.via == "request"
+
+    async def test_a_pre_deletion_refusal_keeps_the_knowledge_base_whole(
+        self, deletion_registry, client, logged_in_headers, seed_kb
+    ):
+        from fastapi import HTTPException
+
+        record = await seed_kb("Refused_Delete", backend_type="opensearch")
+        post_ran = []
+
+        async def refuse(_context):
+            raise HTTPException(status_code=409, detail="in use")
+
+        async def post(context):
+            post_ran.append(context)
+
+        deletion_registry.register_pre_deletion_hook("knowledge_base", refuse)
+        deletion_registry.register_post_deletion_hook("knowledge_base", post)
+        backend = AsyncMock()
+        with patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=backend):
+            response = await client.delete("api/v1/knowledge_bases/Refused_Delete", headers=logged_in_headers)
+        assert response.status_code == 409, response.text
+        backend.delete_collection.assert_not_awaited()  # storage untouched
+        retained = await knowledge_base_service.get_by_id(record.id)
+        assert retained is not None
+        assert retained.storage_state == "ready"
+        assert post_ran == []
+
+    async def test_bulk_delete_knowledge_bases_runs_the_hooks_for_each(
+        self, deletion_registry, client, logged_in_headers, seed_kb
+    ):
+        first = await seed_kb("Bulk_One", backend_type="opensearch")
+        second = await seed_kb("Bulk_Two", backend_type="opensearch")
+        seen = []
+
+        async def post(context):
+            seen.append(context.resource_id)
+
+        deletion_registry.register_post_deletion_hook("knowledge_base", post)
+        with patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=AsyncMock()):
+            response = await client.request(
+                "DELETE",
+                "api/v1/knowledge_bases",
+                headers=logged_in_headers,
+                json={"kb_names": ["Bulk_One", "Bulk_Two"]},
+            )
+        assert response.status_code == 200, response.text
+        assert sorted(seen) == sorted([first.id, second.id])
+
     async def test_delete_knowledge_base_preserves_remote_identity_for_retry(self, client, logged_in_headers, seed_kb):
         record = await seed_kb("Retry_Remote", backend_type="opensearch")
         backend = AsyncMock()
