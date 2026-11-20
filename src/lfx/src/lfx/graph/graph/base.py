@@ -8,6 +8,7 @@ import json
 import queue
 import sys
 import threading
+import time
 import traceback
 import uuid
 from collections import defaultdict, deque
@@ -2575,13 +2576,27 @@ class Graph:
                         should_build = True
 
             if should_build:
-                await vertex.build(
-                    user_id=user_id,
-                    inputs=inputs_dict,
-                    fallback_to_env_vars=fallback_to_env_vars,
-                    files=files,
-                    event_manager=event_manager,
-                )
+                # Time every vertex.build call (wall time, including lazy-load, lock wait,
+                # and no-op early returns) so library callers get per-vertex build_times.
+                build_start = time.perf_counter()
+                try:
+                    await vertex.build(
+                        user_id=user_id,
+                        inputs=inputs_dict,
+                        fallback_to_env_vars=fallback_to_env_vars,
+                        files=files,
+                        event_manager=event_manager,
+                    )
+                except GraphPausedException:
+                    # A pause is control flow, not a timed build. A component-raised
+                    # GraphPausedException arrives wrapped by _build_results, so this
+                    # branch only covers an unwrapped pause escaping vertex.build
+                    # (none today); kept as a safeguard so a pause never records a build time.
+                    raise
+                except Exception:
+                    vertex.add_build_time(time.perf_counter() - build_start)
+                    raise
+                vertex.add_build_time(time.perf_counter() - build_start)
                 if set_cache is not None:
                     vertex_dict = {
                         "built": vertex.built,
