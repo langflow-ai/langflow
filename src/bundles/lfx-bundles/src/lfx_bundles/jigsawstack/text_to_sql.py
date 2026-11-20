@@ -39,7 +39,7 @@ class JigsawStackTextToSQLComponent(Component):
             name="file_store_key",
             display_name="File Store Key",
             info=(
-                "The key used to store the database schema on Jigsawstack file Storage. "
+                "The key used to store the database schema on JigsawStack File Storage. "
                 "Not required if sql_schema is specified."
             ),
             required=False,
