@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from http import HTTPStatus
+from typing import Any
 
 import httpx
 
@@ -21,7 +22,7 @@ _DEFAULT_TIMEOUT = 60.0
 _HTTP_201_CREATED = HTTPStatus.CREATED.value
 
 
-def _raise_for_status_code(status: int, detail: str) -> None:
+def _raise_for_status_code(status: int, detail: Any) -> None:
     """Raise a typed SDK exception for the given HTTP status code and detail."""
     if status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
         raise LangflowAuthError(status, detail)

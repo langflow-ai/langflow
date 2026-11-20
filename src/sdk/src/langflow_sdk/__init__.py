@@ -35,6 +35,16 @@ from langflow_sdk.models import (
     StreamChunk,
 )
 from langflow_sdk.serialization import flow_to_json, normalize_flow, normalize_flow_file
+from langflow_sdk.workflow_models import (
+    WorkflowComponentOutput,
+    WorkflowErrorDetail,
+    WorkflowExecutionResponse,
+    WorkflowExecutionResult,
+    WorkflowJobResponse,
+    WorkflowOutput,
+    WorkflowRunRequest,
+    WorkflowStopResponse,
+)
 
 __all__ = [
     "AsyncClient",  # short alias for AsyncLangflowClient (preferred)
@@ -63,6 +73,14 @@ __all__ = [
     "RunRequest",
     "RunResponse",
     "StreamChunk",
+    "WorkflowComponentOutput",
+    "WorkflowErrorDetail",
+    "WorkflowExecutionResponse",
+    "WorkflowExecutionResult",
+    "WorkflowJobResponse",
+    "WorkflowOutput",
+    "WorkflowRunRequest",
+    "WorkflowStopResponse",
     "flow_to_json",
     "get_async_client",
     "get_client",

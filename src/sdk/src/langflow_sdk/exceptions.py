@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 
 class LangflowError(Exception):
     """Base class for all Langflow SDK errors."""
@@ -10,7 +12,7 @@ class LangflowError(Exception):
 class LangflowHTTPError(LangflowError):
     """An HTTP error was returned by the Langflow API."""
 
-    def __init__(self, status_code: int, detail: str) -> None:
+    def __init__(self, status_code: int, detail: Any) -> None:
         self.status_code = status_code
         self.detail = detail
         super().__init__(f"HTTP {status_code}: {detail}")
