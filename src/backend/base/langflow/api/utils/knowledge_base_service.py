@@ -32,6 +32,13 @@ from lfx.services.authorization.base import ResourceVisibilityScope
 from sqlmodel import select
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
+from langflow.services.deletion_hooks import (
+    RESOURCE_KNOWLEDGE_BASE,
+    VIA_REQUEST,
+    DeletionContext,
+    run_post_deletion_hooks,
+    run_pre_deletion_hooks,
+)
 from langflow.services.deps import session_scope
 from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
 
@@ -523,19 +530,32 @@ async def update_column_config(
         await session.commit()
 
 
-async def delete_record(record_id: UUID) -> None:
-    """Drain writers and tombstone storage before removing authoritative routing."""
+async def delete_record(record_id: UUID, *, via: str = VIA_REQUEST) -> None:
+    """Drain writers and tombstone storage before removing authoritative routing.
+
+    Deletion hooks (:mod:`langflow.services.deletion_hooks`) run here, the one place every KB deletion ends: a
+    pre-deletion hook may refuse before anything is touched, a post-deletion hook runs once the routing row is gone.
+    ``via`` says why the KB is deleted (see :class:`~langflow.services.deletion_hooks.DeletionContext`).
+    """
     from langflow.services.knowledge_base_storage.runtime import delete_storage_for_record, operation
 
     record = await get_by_id(record_id)
     if record is None:
         return
+    context = DeletionContext(
+        resource=RESOURCE_KNOWLEDGE_BASE, resource_id=record.id, owner_id=record.user_id, name=record.name, via=via
+    )
+    await run_pre_deletion_hooks(context)
     await delete_storage_for_record(record)
+    removed = False
     async with operation(record_id, allowed_states=("deleted",)), session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, record_id)
         if row is not None:
             await session.delete(row)
             await session.commit()
+            removed = True
+    if removed:
+        await run_post_deletion_hooks(context)
 
 
 async def delete_by_user_and_name(user_id: UUID, name: str) -> None:

@@ -997,11 +997,11 @@ async def test_update_share_answers_404_and_keeps_the_level_when_the_plugin_refu
 
 
 @pytest.mark.asyncio
-async def test_delete_share_does_not_ask_the_plugin(veto_authz, silence_audit):  # noqa: ARG001
-    """Deleting only narrows access, so the hook is not part of delete."""
+async def test_delete_share_asks_the_plugin_with_the_stored_share(veto_authz, silence_audit):  # noqa: ARG001
+    """A revoke is offered to the plugin too: it may need to refuse one (what a deployer owns is not revoked by hand)."""
     from langflow.services.database.models.flow.model import Flow
 
-    stub = veto_authz(refuse=True)
+    stub = veto_authz()
     owner = _make_user()
     flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
     share = _stored_share(owner.id, flow.id)
@@ -1009,8 +1009,38 @@ async def test_delete_share_does_not_ask_the_plugin(veto_authz, silence_audit): 
 
     await shares_module.delete_share(share_id=share.id, current_user=owner, session=session)
 
-    assert stub.calls == []
+    assert stub.calls == [
+        {
+            "actor": owner,
+            "resource_type": "flow",
+            "resource_id": flow.id,
+            "owner_id": owner.id,
+            "scope": share.scope,
+            "target_id": share.target_id,
+            "permission_level": share.permission_level,
+            "operation": "delete",
+        }
+    ]
     assert session.deleted == [share]
+
+
+@pytest.mark.asyncio
+async def test_delete_share_answers_404_and_keeps_the_share_when_the_plugin_refuses(veto_authz, silence_audit):  # noqa: ARG001
+    from langflow.services.database.models.flow.model import Flow
+
+    veto_authz(refuse=True)
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = _stored_share(owner.id, flow.id)
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.delete_share(share_id=share.id, current_user=owner, session=session)
+
+    assert excinfo.value.status_code == 404
+    assert excinfo.value.detail == "Share not found"
+    assert session.deleted == []
+    assert session.committed == 0
 
 
 @pytest.mark.asyncio
