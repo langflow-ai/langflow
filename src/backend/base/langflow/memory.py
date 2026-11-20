@@ -1,15 +1,18 @@
 import asyncio
 import json
 from collections.abc import Sequence
-from contextlib import suppress
+from contextlib import asynccontextmanager, nullcontext, suppress
+from datetime import datetime, timezone
 from uuid import UUID
 
 from langchain_core.chat_history import BaseChatMessageHistory
 from langchain_core.messages import BaseMessage
 from lfx.log.logger import logger
 from lfx.memory.flow_context import is_evals_memory_isolated
+from lfx.memory.session_state import SUMMARY_FIELDS, SessionMemoryState
 from lfx.utils.async_helpers import run_until_complete
-from sqlalchemy import delete
+from sqlalchemy import and_, delete, func, or_, update
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -19,6 +22,7 @@ from langflow.services.database.models.message.model import (
     MessageRead,
     MessageTable,
 )
+from langflow.services.database.models.session_memory.model import SessionMemoryStateTable
 from langflow.services.deps import session_scope
 
 
@@ -143,6 +147,10 @@ def _get_variable_query(
             raise ValueError(msg)
         col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
         stmt = stmt.order_by(col)
+        if order_by == "timestamp":
+            # Only makes the order of exact-timestamp ties deterministic (it was undefined before).
+            id_col = MessageTable.id.desc() if order == "DESC" else MessageTable.id.asc()
+            stmt = stmt.order_by(id_col)
     if limit:
         stmt = stmt.limit(limit)
     return stmt
@@ -310,13 +318,19 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                         raise ValueError(msg)
                     updates.pop("flow_id", None)
                     updates.pop("user_id", None)
-                msg = msg.sqlmodel_update(updates)
-                # Convert flow_id to UUID if it's a string preventing error when saving to database
-                if msg.flow_id and isinstance(msg.flow_id, str):
-                    msg.flow_id = UUID(msg.flow_id)
-                result = session.add(msg)
-                if asyncio.iscoroutine(result):
-                    await result
+                # A bound graph run updates a message it just created, and a fold never covers
+                # a message created after its history read. Skip the reset and its 3 statements.
+                reset = (
+                    nullcontext() if graph_scope is not None else reset_folded_memory_for_update(session, msg, updates)
+                )
+                async with reset:
+                    msg = msg.sqlmodel_update(updates)
+                    # Convert flow_id to UUID if it's a string preventing error when saving to database
+                    if msg.flow_id and isinstance(msg.flow_id, str):
+                        msg.flow_id = UUID(msg.flow_id)
+                    result = session.add(msg)
+                    if asyncio.iscoroutine(result):
+                        await result
                 updated_messages.append(msg)
             else:
                 error_message = f"Message with id {message.id} not found"
@@ -428,15 +442,10 @@ async def adelete_messages(
         # Determine which field to filter by
         filter_column = MessageTable.context_id if context_id else MessageTable.session_id
         filter_value = context_id if context_id else session_id
+        scope = (col(filter_column) == filter_value, MessageTable.flow_id == flow_id, MessageTable.user_id == user_id)
 
-        stmt = (
-            delete(MessageTable)
-            .where(col(filter_column) == filter_value)
-            .where(MessageTable.flow_id == flow_id)
-            .where(MessageTable.user_id == user_id)
-            .execution_options(synchronize_session="fetch")
-        )
-        await session.exec(stmt)
+        async with reset_folded_session_memory(session, *scope):
+            await session.exec(delete(MessageTable).where(*scope).execution_options(synchronize_session="fetch"))
 
 
 async def delete_message(id_: str) -> None:
@@ -463,7 +472,8 @@ async def delete_message(id_: str) -> None:
             )
             message = (await session.exec(stmt)).first()
         if message:
-            await session.delete(message)
+            async with reset_folded_session_memory(session, MessageTable.id == message.id):
+                await session.delete(message)
 
 
 def store_message(
@@ -639,3 +649,339 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
     async def aclear(self) -> None:
         flow_id, user_id = self._require_scope()
         await adelete_messages(self.session_id, self.context_id, flow_id=flow_id, user_id=user_id)
+
+
+def _session_memory_scope_filters(flow_id: UUID, user_id: UUID, session_id: str, context_id: str | None):
+    """Predicates identifying one session-memory row; ``None`` context is stored as ``""``."""
+    return (
+        SessionMemoryStateTable.flow_id == flow_id,
+        SessionMemoryStateTable.user_id == user_id,
+        SessionMemoryStateTable.session_id == session_id,
+        SessionMemoryStateTable.context_id == (context_id or ""),
+    )
+
+
+def _to_session_memory_state(row: SessionMemoryStateTable) -> SessionMemoryState:
+    return SessionMemoryState(
+        id=row.id,
+        summary=row.summary,
+        cursor_message_id=row.cursor_message_id,
+        cursor_timestamp=row.cursor_timestamp,
+        folded_count=row.folded_count,
+        version=row.version,
+    )
+
+
+async def aget_session_memory_state(
+    *,
+    flow_id: UUID | str | None,
+    user_id: UUID | str | None,
+    session_id: str,
+    context_id: str | None,
+) -> SessionMemoryState | None:
+    """Return the stored summary state for a session, or an empty (version 0) state when none exists.
+
+    Returns None (summaries unsupported) while Evals memory isolation is on.
+    """
+    if is_evals_memory_isolated():
+        return None
+    flow_id, user_id = _message_scope(flow_id, user_id)
+    if flow_id is None or user_id is None:
+        return SessionMemoryState()
+    async with session_scope() as session:
+        row = (
+            await session.exec(
+                select(SessionMemoryStateTable).where(
+                    *_session_memory_scope_filters(flow_id, user_id, session_id, context_id)
+                )
+            )
+        ).first()
+        return _to_session_memory_state(row) if row else SessionMemoryState()
+
+
+def _normalized(value):
+    return "" if value is None else value
+
+
+async def _batch_timestamps(
+    session: AsyncSession,
+    expected: dict[UUID, dict],
+    flow_id: UUID,
+    user_id: UUID,
+    session_id: str,
+    *,
+    lock: bool,
+) -> dict[UUID, datetime] | None:
+    """Timestamps of the batch rows when all still exist in scope with the snapshotted `SUMMARY_FIELDS`, else None."""
+    stmt = select(MessageTable.id, MessageTable.timestamp, *(getattr(MessageTable, f) for f in SUMMARY_FIELDS)).where(
+        col(MessageTable.id).in_(list(expected)),
+        MessageTable.flow_id == flow_id,
+        MessageTable.user_id == user_id,
+        MessageTable.session_id == session_id,
+    )
+    rows = (await session.exec(stmt.with_for_update() if lock else stmt)).all()
+    current = {row[0]: row for row in rows}
+    for key, snapshot in expected.items():
+        row = current.get(key)
+        if row is None or any(
+            _normalized(row[2 + i]) != _normalized(snapshot.get(field)) for i, field in enumerate(SUMMARY_FIELDS)
+        ):
+            return None
+    return {key: row[1] for key, row in current.items()}
+
+
+async def asave_session_memory_state(
+    *,
+    flow_id: UUID | str | None,
+    user_id: UUID | str | None,
+    session_id: str,
+    context_id: str | None,
+    summary: str,
+    cursor_message_id: UUID | str,
+    folded_delta: int,
+    summary_model: str | None,
+    expected_version: int,
+    batch_snapshot: dict[UUID | str, dict],
+    expected_state_id: UUID | None = None,
+) -> SessionMemoryState | None:
+    """Compare-and-swap save of the summary state; returns None when the save lost a race or the batch changed.
+
+    ``batch_snapshot`` maps each folded message id to its `SUMMARY_FIELDS` as they were summarized. The rows
+    are read with ``FOR UPDATE`` first (message locks before the state write, like edits and deletes), and
+    must all still exist in this session with the same values. SQLite ignores ``FOR UPDATE`` and a plain read
+    opens no transaction, so the same check runs again after the write, while this transaction holds the
+    write lock; if it fails, the save is rolled back. ``expected_version == 0`` inserts the first row;
+    otherwise a single conditional UPDATE only succeeds while the stored ``id`` and ``version`` both match
+    (a reset row that was re-created has a new id). The cursor timestamp is read from the cursor message row so
+    it keeps the database's full precision. Like message writes, it needs a valid executor, and it never writes
+    while Evals memory isolation is on.
+    """
+    if is_evals_memory_isolated():
+        return None
+    flow_id, user_id = _message_scope(flow_id, user_id)
+    if flow_id is None or user_id is None:
+        return None
+    cursor_id = UUID(str(cursor_message_id))
+    scope = _session_memory_scope_filters(flow_id, user_id, session_id, context_id)
+    expected = {UUID(str(key)): snapshot for key, snapshot in batch_snapshot.items()}
+    now = datetime.now(timezone.utc)
+    async with session_scope() as session:
+        await _validate_message_executor(session)
+        timestamps = await _batch_timestamps(session, expected, flow_id, user_id, session_id, lock=True)
+        if timestamps is None or cursor_id not in timestamps:
+            return None  # a folded message was deleted or edited while the summary was written
+        cursor_timestamp = timestamps[cursor_id]
+        if expected_version == 0:
+            row = SessionMemoryStateTable(
+                flow_id=flow_id,
+                user_id=user_id,
+                session_id=session_id,
+                context_id=context_id or "",
+                summary=summary,
+                cursor_message_id=cursor_id,
+                cursor_timestamp=cursor_timestamp,
+                folded_count=folded_delta,
+                summary_model=summary_model,
+                version=1,
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(row)
+            try:
+                await session.flush()
+            except IntegrityError:
+                # Another run created the row first; leave the session usable and report the lost race.
+                await session.rollback()
+                return None
+        else:
+            result = await session.exec(
+                update(SessionMemoryStateTable)
+                .where(
+                    *scope,
+                    SessionMemoryStateTable.id == expected_state_id,
+                    SessionMemoryStateTable.version == expected_version,
+                )
+                .values(
+                    version=expected_version + 1,
+                    summary=summary,
+                    cursor_message_id=cursor_id,
+                    cursor_timestamp=cursor_timestamp,
+                    folded_count=SessionMemoryStateTable.folded_count + folded_delta,
+                    summary_model=summary_model,
+                    updated_at=now,
+                )
+                .execution_options(synchronize_session=False)
+            )
+            if result.rowcount == 0:
+                return None
+            row = (await session.exec(select(SessionMemoryStateTable).where(*scope))).one()
+        if await _batch_timestamps(session, expected, flow_id, user_id, session_id, lock=False) is None:
+            await session.rollback()
+            return None
+        return _to_session_memory_state(row)
+
+
+async def aget_messages_between(
+    *,
+    flow_id: UUID | str | None,
+    user_id: UUID | str | None,
+    session_id: str,
+    context_id: str | None,
+    after_message_id: UUID | str | None,
+    after_timestamp: datetime | None,
+    before_message_id: UUID | str,
+    limit: int,
+) -> list[Message]:
+    """Return non-error messages strictly between two cursors, oldest first.
+
+    Bounds are compared as ``(timestamp, id)`` tuples using the database's own values (a message's
+    string timestamp may have lost sub-second precision). The lower bound is the stored cursor pair
+    (``after_timestamp``, ``after_message_id``), so it still works after the cursor message is deleted;
+    without both, the range is open below.
+    Returns nothing while Evals memory isolation is on.
+    """
+    if is_evals_memory_isolated():
+        return []
+    flow_id, user_id = _message_scope(flow_id, user_id)
+    if flow_id is None or user_id is None:
+        return []
+    async with session_scope() as session:
+        boundary = (
+            await session.exec(
+                select(MessageTable.timestamp, MessageTable.id).where(MessageTable.id == UUID(str(before_message_id)))
+            )
+        ).first()
+        if boundary is None:
+            return []
+        before_ts, before_id = boundary
+        stmt = (
+            select(MessageTable)
+            .where(
+                MessageTable.flow_id == flow_id,
+                MessageTable.user_id == user_id,
+                MessageTable.session_id == session_id,
+                MessageTable.error == False,  # noqa: E712
+                # category is nullable: NULL rows are normal messages.
+                or_(col(MessageTable.category).is_(None), MessageTable.category != "error"),
+                or_(
+                    col(MessageTable.timestamp) < before_ts,
+                    and_(col(MessageTable.timestamp) == before_ts, col(MessageTable.id) < before_id),
+                ),
+            )
+            .order_by(col(MessageTable.timestamp).asc(), col(MessageTable.id).asc())
+            .limit(limit)
+        )
+        if context_id:
+            stmt = stmt.where(MessageTable.context_id == context_id)
+        if after_message_id is not None and after_timestamp is not None:
+            after_id = UUID(str(after_message_id))
+            stmt = stmt.where(
+                or_(
+                    col(MessageTable.timestamp) > after_timestamp,
+                    and_(col(MessageTable.timestamp) == after_timestamp, col(MessageTable.id) > after_id),
+                )
+            )
+        messages = await session.exec(stmt)
+        return [await Message.create(**d.model_dump()) for d in messages]
+
+
+def message_update_changes_summary(message: MessageTable, updates: dict) -> bool:
+    """Whether applying ``updates`` to the stored ``message`` changes content or scope a fold depends on."""
+    # str(): an update may hold a flow or owner id as a string, the row as a UUID.
+    return any(
+        key in updates and str(updates[key]) != str(getattr(message, key, None))
+        for key in (*SUMMARY_FIELDS, "flow_id", "user_id")
+    )
+
+
+async def _message_groups(db: AsyncSession, *message_filters) -> list[tuple]:
+    """(flow, owner, session, oldest timestamp) for each session that has matching messages."""
+    rows = await db.exec(
+        select(
+            MessageTable.flow_id,
+            MessageTable.user_id,
+            MessageTable.session_id,
+            func.min(MessageTable.timestamp),
+        )
+        .where(*message_filters, col(MessageTable.user_id).isnot(None), col(MessageTable.flow_id).isnot(None))
+        .group_by(MessageTable.flow_id, MessageTable.user_id, MessageTable.session_id)
+    )
+    return list(rows.all())
+
+
+@asynccontextmanager
+async def reset_folded_session_memory(db: AsyncSession, *message_filters):
+    """Wrap an edit, move or delete of the messages matched by ``message_filters``, in the caller's transaction.
+
+    Summary state that already folded any of them is deleted, so the next turn re-folds from the start. A row
+    goes when its cursor is at or after the oldest matched message of its session (equal timestamps count
+    as folded: over-reset is safe). The session scopes before and after the change are both reset, so a move
+    resets the old and the new session. The reset runs after the change: on PostgreSQL the change waits for
+    the row lock of a fold that is saving, and the reset then sees that fold's committed state.
+    """
+    before = await _message_groups(db, *message_filters)
+    yield
+    await db.flush()
+    after = await _message_groups(db, *message_filters)
+    for flow_id, user_id, session_id, oldest in dict.fromkeys(before + after):
+        await db.exec(
+            delete(SessionMemoryStateTable)
+            .where(
+                SessionMemoryStateTable.flow_id == flow_id,
+                SessionMemoryStateTable.user_id == user_id,
+                SessionMemoryStateTable.session_id == session_id,
+                col(SessionMemoryStateTable.cursor_timestamp) >= oldest,
+            )
+            .execution_options(synchronize_session=False)
+        )
+
+
+def reset_folded_memory_for_update(db: AsyncSession, message: MessageTable, updates: dict):
+    """Context manager to wrap applying ``updates`` to a stored ``message``: resets summary state only if needed."""
+    if not message_update_changes_summary(message, updates):
+        return nullcontext()
+    return reset_folded_session_memory(db, MessageTable.id == message.id)
+
+
+@asynccontextmanager
+async def rename_session_memory(db: AsyncSession, messages: Sequence[MessageTable], new_session_id: str):
+    """Wrap renaming ``messages`` to ``new_session_id``: the summary state follows, in the same transaction.
+
+    The state is updated after the messages (same lock order as a fold). When the new session already has
+    messages, the merged order is unknown, so the state is dropped and re-folded instead of moved.
+    """
+    if not messages:
+        yield
+        return
+    old_session_id = messages[0].session_id
+    scopes = {(m.flow_id, m.user_id) for m in messages if m.flow_id and m.user_id}
+    merging = {}
+    for flow_id, user_id in scopes:
+        existing = await db.exec(
+            select(MessageTable.id)
+            .where(
+                MessageTable.flow_id == flow_id,
+                MessageTable.user_id == user_id,
+                MessageTable.session_id == new_session_id,
+            )
+            .limit(1)
+        )
+        merging[flow_id, user_id] = existing.first() is not None
+    yield
+    await db.flush()
+    for flow_id, user_id in scopes:
+        scope = (SessionMemoryStateTable.flow_id == flow_id, SessionMemoryStateTable.user_id == user_id)
+        # A stale row at the destination would break the unique scope.
+        await db.exec(
+            delete(SessionMemoryStateTable).where(*scope, SessionMemoryStateTable.session_id == new_session_id)
+        )
+        old_rows = SessionMemoryStateTable.session_id == old_session_id
+        if merging[flow_id, user_id]:
+            await db.exec(delete(SessionMemoryStateTable).where(*scope, old_rows))
+        else:
+            await db.exec(
+                update(SessionMemoryStateTable)
+                .where(*scope, old_rows)
+                .values(session_id=new_session_id)
+                .execution_options(synchronize_session=False)
+            )
