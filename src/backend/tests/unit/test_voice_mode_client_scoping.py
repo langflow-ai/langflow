@@ -5,9 +5,11 @@ singleton), and the voice/TTS config caches must be keyed by the authenticated
 user, not just the client-supplied session_id.
 """
 
+import asyncio
 import builtins
 import importlib
 import sys
+import threading
 import types
 from contextlib import asynccontextmanager
 from types import SimpleNamespace
@@ -15,6 +17,8 @@ from unittest.mock import AsyncMock
 
 import langflow.api.v1.voice_mode as vm
 import pytest
+import requests
+from elevenlabs.core.api_error import ApiError
 from fastapi import HTTPException
 
 
@@ -121,6 +125,98 @@ async def test_voice_catalog_releases_auth_transaction_before_provider_work(monk
     )
     assert result == [{"voice_id": "voice-1", "name": "First"}]
     assert calls == ["authorization", "release", "credential", "provider"]
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_allows_concurrent_requests(monkeypatch):
+    """Another user's catalog can complete while a synchronous provider call waits."""
+    loop = asyncio.get_running_loop()
+    loop_thread = threading.get_ident()
+    provider_started = asyncio.Event()
+    release_provider = threading.Event()
+
+    def get_all():
+        loop.call_soon_threadsafe(provider_started.set)
+        # Fail immediately on the old implementation instead of deadlocking the test.
+        assert threading.get_ident() != loop_thread, "Provider call blocked the event loop"
+        # This timeout is a deadlock guard, not a provider latency expectation.
+        assert release_provider.wait(timeout=10), "Concurrent request did not release the provider"
+        return SimpleNamespace(voices=[SimpleNamespace(voice_id="voice-a", name="First")])
+
+    clients = {
+        "user-a": SimpleNamespace(voices=SimpleNamespace(get_all=get_all)),
+        "user-b": SimpleNamespace(
+            voices=SimpleNamespace(
+                get_all=lambda: SimpleNamespace(voices=[SimpleNamespace(voice_id="voice-b", name="Second")])
+            )
+        ),
+    }
+    lookup = AsyncMock(side_effect=lambda user_id: clients[user_id])
+    monkeypatch.setattr(vm, "ensure_voice_permission", AsyncMock())
+    monkeypatch.setattr(vm, "get_or_create_elevenlabs_client", lookup)
+    first = asyncio.create_task(
+        vm.get_elevenlabs_voice_ids(
+            current_user=SimpleNamespace(id="user-a"), session=SimpleNamespace(commit=AsyncMock())
+        )
+    )
+    try:
+        await asyncio.wait_for(provider_started.wait(), timeout=10)
+        if first.done():
+            await first
+        second = await asyncio.wait_for(
+            vm.get_elevenlabs_voice_ids(
+                current_user=SimpleNamespace(id="user-b"), session=SimpleNamespace(commit=AsyncMock())
+            ),
+            timeout=10,
+        )
+        assert second == [{"voice_id": "voice-b", "name": "Second"}]
+        assert not first.done()
+    finally:
+        release_provider.set()
+        first_result = await asyncio.wait_for(first, timeout=10)
+
+    assert first_result == [{"voice_id": "voice-a", "name": "First"}]
+    assert [call.args for call in lookup.await_args_list] == [("user-a",), ("user-b",)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("error_type", [ValueError, requests.RequestException, KeyError, AttributeError, TypeError])
+async def test_voice_catalog_preserves_error_response(monkeypatch, error_type):
+    error = error_type("Provider failure")
+
+    def get_all():
+        raise error
+
+    monkeypatch.setattr(vm, "ensure_voice_permission", AsyncMock())
+    monkeypatch.setattr(
+        vm,
+        "get_or_create_elevenlabs_client",
+        AsyncMock(return_value=SimpleNamespace(voices=SimpleNamespace(get_all=get_all))),
+    )
+    result = await vm.get_elevenlabs_voice_ids(
+        current_user=SimpleNamespace(id="user-a"), session=SimpleNamespace(commit=AsyncMock())
+    )
+    assert result == {"error": str(error)}
+
+
+@pytest.mark.asyncio
+async def test_voice_catalog_preserves_sdk_error(monkeypatch):
+    error = ApiError(status_code=401, body={"detail": "Unauthorized"})
+
+    def get_all():
+        raise error
+
+    monkeypatch.setattr(vm, "ensure_voice_permission", AsyncMock())
+    monkeypatch.setattr(
+        vm,
+        "get_or_create_elevenlabs_client",
+        AsyncMock(return_value=SimpleNamespace(voices=SimpleNamespace(get_all=get_all))),
+    )
+    with pytest.raises(ApiError) as exc_info:
+        await vm.get_elevenlabs_voice_ids(
+            current_user=SimpleNamespace(id="user-a"), session=SimpleNamespace(commit=AsyncMock())
+        )
+    assert exc_info.value is error
 
 
 def test_get_voice_config_scoped_by_user():
