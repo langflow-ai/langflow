@@ -14,6 +14,7 @@ from langflow.services.database.models.trigger.schemas import TriggerSubscriptio
 from langflow.services.deps import session_scope
 from langflow.services.triggers import source_subscription, subscriptions
 from langflow.services.triggers.source_clients import SourceHTTP
+from lfx.integrations.models import ConnectionRef
 
 
 async def test_graph_drive_subscription_uses_updated_only(monkeypatch) -> None:
@@ -63,6 +64,8 @@ async def test_graph_renewal_patches_the_existing_subscription(monkeypatch) -> N
     provider_expiry = datetime.now(timezone.utc) + timedelta(hours=24)
 
     class Lease:
+        ref = ConnectionRef(provider="microsoft", name="source")
+
         async def get_token(self):
             return "test-token"
 
@@ -108,6 +111,8 @@ async def test_google_watch_creates_a_verified_channel(kind, expected_path, monk
     expiry_ms = int((datetime.now(timezone.utc) + timedelta(hours=1)).timestamp() * 1000)
 
     class Lease:
+        ref = ConnectionRef(provider="google", name="source")
+
         async def get_token(self):
             return "test-token"
 

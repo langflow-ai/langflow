@@ -596,8 +596,21 @@ async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
     assert set(ids) == {"ChatInput"}
 
 
+@pytest.fixture
+async def outdated_chat_input_flow_id(client, json_webhook_test, logged_in_headers):
+    """Save the legacy Chat Input without the webhook fixture's user-authored nodes."""
+    nodes = orjson.loads(json_webhook_test)["data"]["nodes"]
+    chat_input = next(node for node in nodes if node["data"]["type"] == "ChatInput")
+    flow = FlowCreate(name="Outdated Chat Input", data={"nodes": [chat_input], "edges": []})
+    response = await client.post("/api/v1/flows/", json=flow.model_dump(), headers=logged_in_headers)
+    assert response.status_code == 201, response.text
+    flow_id = response.json()["id"]
+    yield flow_id
+    await client.delete(f"/api/v1/flows/{flow_id}", headers=logged_in_headers)
+
+
 async def test_get_vertices_rebuilds_outdated_components_when_custom_components_disabled(
-    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+    client, outdated_chat_input_flow_id, logged_in_headers, monkeypatch
 ):
     """A saved flow whose built-in code drifted across versions still builds (issue #14455).
 
@@ -625,26 +638,24 @@ async def test_get_vertices_rebuilds_outdated_components_when_custom_components_
 
     monkeypatch.setattr(flow_validation, "substitute_outdated_component_code_in_place", _spy)
 
-    flow_id = added_flow_webhook_test["id"]
-    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    response = await client.post(f"/api/v1/build/{outdated_chat_input_flow_id}/vertices", headers=logged_in_headers)
 
-    assert response.status_code == 200
+    assert response.status_code == 200, response.text
     assert any("ChatInput" in label for label in swapped), f"expected a ChatInput swap, got {swapped}"
 
 
 async def test_get_vertices_blocks_outdated_components_when_substitution_disabled(
-    client, added_flow_webhook_test, logged_in_headers, monkeypatch
+    client, outdated_chat_input_flow_id, logged_in_headers, monkeypatch
 ):
     """LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE=false keeps the strict hash gate."""
     settings = get_settings_service().settings
     monkeypatch.setattr(settings, "allow_custom_components", False)
     monkeypatch.setattr(settings, "substitute_outdated_component_code", False)
 
-    flow_id = added_flow_webhook_test["id"]
-    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=logged_in_headers)
+    response = await client.post(f"/api/v1/build/{outdated_chat_input_flow_id}/vertices", headers=logged_in_headers)
 
-    assert response.status_code == 400
-    assert "outdated components must be updated before running" in response.json()["detail"]
+    assert response.status_code == 400, response.text
+    assert "outdated components must be updated before running: Chat Input" in response.json()["detail"]
 
 
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
@@ -1351,6 +1362,43 @@ async def test_user_can_run_own_flow_advanced_endpoint(client: AsyncClient, simp
     json_response = response.json()
     assert "session_id" in json_response
     assert "outputs" in json_response
+
+
+async def test_advanced_endpoint_accepts_a_new_caller_session_id_like_run(
+    client: AsyncClient, simple_api_test, created_api_key
+):
+    """A session_id the caller picks works on the advanced endpoint as on /run."""
+    from langflow.services.database.models.message.model import MessageTable
+    from lfx.services.deps import session_scope
+    from sqlmodel import select
+
+    headers = {"x-api-key": created_api_key.api_key}
+    flow_id = simple_api_test["id"]
+
+    simple = await client.post(
+        f"/api/v1/run/{flow_id}",
+        headers=headers,
+        json={"input_value": "hello", "session_id": "my-session-1"},
+    )
+    advanced = await client.post(
+        f"/api/v1/run/advanced/{flow_id}",
+        headers=headers,
+        json={"inputs": [{"input_value": "from advanced"}], "session_id": "my-session-1"},
+    )
+
+    assert simple.status_code == status.HTTP_200_OK, simple.text
+    assert advanced.status_code == status.HTTP_200_OK, advanced.text
+    assert advanced.json()["session_id"] == "my-session-1"
+    assert advanced.json()["outputs"]
+    async with session_scope() as db:
+        stored = (
+            await db.exec(
+                select(MessageTable.text).where(
+                    MessageTable.flow_id == UUID(flow_id), MessageTable.session_id == "my-session-1"
+                )
+            )
+        ).all()
+    assert "from advanced" in stored
 
 
 @pytest.mark.benchmark

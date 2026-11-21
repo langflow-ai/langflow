@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from packaging.markers import Marker
 
 if sys.version_info >= (3, 11):
     import tomllib
@@ -187,13 +188,35 @@ def test_published_images_verify_lxml_after_copying_the_environment(dockerfile: 
     assert removal > verification
 
 
-def test_backend_image_lxml_pin_matches_the_release_lock() -> None:
+@pytest.mark.parametrize("architecture", ["x86_64", "aarch64"])
+def test_backend_image_lxml_pin_matches_the_release_lock(architecture: str) -> None:
     """Keep the unlocked backend resolver on the same lxml version as other images."""
+    instructions = _logical_instructions(REPO_ROOT / "docker" / "build_and_push_backend.Dockerfile")
+    python_image = next(instruction for instruction in instructions if instruction.startswith("ARG PYTHON_IMAGE="))
+    python_match = re.search(r"/python-(\d)(\d+)-minimal\b", python_image)
+    assert python_match is not None, f"Cannot determine the backend image's Python version: {python_image}"
+    python_version = ".".join(python_match.groups())
+    environment = {
+        "python_version": python_version,
+        "python_full_version": f"{python_version}.0",
+        "sys_platform": "linux",
+        "platform_system": "Linux",
+        "platform_machine": architecture,
+        "implementation_name": "cpython",
+        "platform_python_implementation": "CPython",
+    }
     lock = tomllib.loads((REPO_ROOT / "uv.lock").read_text(encoding="utf-8"))
-    versions = {package["version"] for package in lock["package"] if package["name"] == "lxml"}
+    versions = {
+        package["version"]
+        for package in lock["package"]
+        if package["name"] == "lxml"
+        and (
+            not package.get("resolution-markers")
+            or any(Marker(marker).evaluate(environment) for marker in package["resolution-markers"])
+        )
+    }
     assert len(versions) == 1
     pinned_requirement = f"lxml=={versions.pop()}"
-    instructions = _logical_instructions(REPO_ROOT / "docker" / "build_and_push_backend.Dockerfile")
     assert any(
         "uv pip install" in instruction and pinned_requirement in shlex.split(instruction)
         for instruction in instructions

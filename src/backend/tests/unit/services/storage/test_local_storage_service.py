@@ -1,5 +1,6 @@
 """Tests for LocalStorageService."""
 
+import asyncio
 from unittest.mock import Mock
 
 import anyio
@@ -140,6 +141,45 @@ class TestLocalStorageServiceFileOperations:
         retrieved = await local_storage_service.get_file(flow_id, file_name)
 
         assert retrieved == data
+
+
+async def _upload(byte: bytes, parts: int, *, fail_after: int | None = None):
+    for number in range(parts):
+        if number == fail_after:
+            msg = "client went away"
+            raise OSError(msg)
+        yield byte * 1024
+        await asyncio.sleep(0)  # what reading the next piece of a real upload does
+
+
+@pytest.mark.asyncio
+class TestLocalStorageServiceUploadStream:
+    """Before: each chunk was appended to the live file, so a retry during an upload mixed them."""
+
+    async def test_two_uploads_of_one_name_leave_one_whole_file(self, local_storage_service):
+        await asyncio.gather(
+            local_storage_service.save_upload_stream("user-1", "a.bin", _upload(b"A", 8)),
+            local_storage_service.save_upload_stream("user-1", "a.bin", _upload(b"B", 8)),
+        )
+
+        data = await local_storage_service.get_file("user-1", "a.bin")
+
+        assert (len(data), data.count(b"A") in {0, len(data)}) == (8 * 1024, True), (len(data), data.count(b"A"))
+
+    async def test_a_failed_upload_keeps_the_file_it_would_have_replaced(self, local_storage_service):
+        await local_storage_service.save_file("user-1", "a.bin", b"good")
+
+        with pytest.raises(OSError, match="client went away"):
+            await local_storage_service.save_upload_stream("user-1", "a.bin", _upload(b"N", 8, fail_after=3))
+
+        assert await local_storage_service.get_file("user-1", "a.bin") == b"good"
+        assert await local_storage_service.list_files("user-1") == ["a.bin"]
+        assert [p async for p in (local_storage_service.data_dir / ".uploads").iterdir()] == []
+
+    async def test_it_returns_the_size_and_stores_an_empty_upload(self, local_storage_service):
+        assert await local_storage_service.save_upload_stream("user-1", "a.bin", _upload(b"x", 3)) == 3 * 1024
+        assert await local_storage_service.save_upload_stream("user-1", "empty.bin", _upload(b"x", 0)) == 0
+        assert await local_storage_service.get_file("user-1", "empty.bin") == b""
 
 
 @pytest.mark.asyncio
@@ -471,3 +511,9 @@ class TestLocalStorageServiceEdgeCases:
 
         listed = await local_storage_service.list_files(flow_id)
         assert len(listed) == num_files
+
+
+async def test_a_stream_can_start_part_way_through(local_storage_service):
+    await local_storage_service.save_file("ns", "a.bin", b"0123456789")
+    chunks = [chunk async for chunk in local_storage_service.get_file_stream("ns", "a.bin", 4, offset=6)]
+    assert b"".join(chunks) == b"6789"

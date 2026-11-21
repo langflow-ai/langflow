@@ -19,6 +19,11 @@ class FakeStorageService:  # Minimal stub for storage interactions
         # key -> bytes
         self._store: dict[str, bytes] = {}
 
+    async def save_upload_stream(self, flow_id: str, file_name: str, chunks):
+        data = b"".join([chunk async for chunk in chunks])
+        await self.save_file(flow_id, file_name, data)
+        return len(data)
+
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False):
         key = f"{flow_id}/{file_name}"
         if append and key in self._store:

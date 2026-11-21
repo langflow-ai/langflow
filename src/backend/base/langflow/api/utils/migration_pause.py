@@ -34,15 +34,21 @@ import itertools
 import json
 import os
 import time
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
-from fastapi import HTTPException, Request
+from fastapi import HTTPException, Request, WebSocket, WebSocketException
+from lfx.log.logger import logger
+from lfx.services.deps import session_scope_readonly
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.responses import JSONResponse
 
 from langflow.services.deps import get_settings_service
+from langflow.services.maintenance.state import MAINTENANCE_REFUSAL, maintenance_enabled
 
 try:
     import fcntl
@@ -58,8 +64,12 @@ _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # What the admin still needs: a session, and the migration steps, which include ending the pause.
 _ALLOWED_PATHS = frozenset({"/api/v1/login", "/api/v1/refresh", "/api/v1/logout", "/api/v1/auto_login"})
 _ALLOWED_PREFIX = "/api/v1/migration/"
+# These routes check administrator access before taking their write slot through
+# changes_the_instance. Middleware refusal would hide their authentication errors.
+_REPAIR_PATHS = frozenset({"/api/v1/upgrade-repairs/preview", "/api/v1/upgrade-repairs/apply"})
 # What a change is told while the pause is on.
 REFUSAL = "This instance is being migrated."
+REPAIR_REFUSAL = "The instance migration pause does not permit repairs"
 
 # Which record file was last read, and what it said.
 _seen: tuple[str, int, int, int] | None = None
@@ -69,6 +79,8 @@ _held: dict[int, dict[str, Any]] = {}
 _places = itertools.count()
 # Seconds between two looks at whether every change has ended.
 _DRAIN_POLL = 0.05
+# Set only after the middleware verifies the actual caller's credential.
+_maintenance_caller: ContextVar[UUID | None] = ContextVar("maintenance_caller", default=None)
 
 
 def is_paused() -> bool:
@@ -100,6 +112,114 @@ def is_paused() -> bool:
         _seen = None
         return True
     return _paused
+
+
+async def is_database_paused() -> bool:
+    """Read the shared flag without caching another pod's maintenance decision."""
+    return await _database_pause_status() is not False
+
+
+async def _database_pause_status() -> bool | None:
+    """Keep an unavailable flag distinct from a verified maintenance decision."""
+    try:
+        async with session_scope_readonly() as session:
+            return await maintenance_enabled(session)
+    except SQLAlchemyError:
+        # A failed read cannot authorize a write while the shared flag is unknown.
+        await logger.awarning("Maintenance status is unavailable. New changes are paused.")
+        return None
+
+
+async def writes_paused() -> bool:
+    """Whether either pause source refuses new background work."""
+    return await write_refusal() is not None
+
+
+def admitted_maintenance_caller() -> UUID | None:
+    """Carry a verified request caller into work admitted by that request."""
+    return _maintenance_caller.get()
+
+
+async def write_refusal(caller_id: UUID | None = None, *, check_file: bool = True) -> str | None:
+    """Apply both sources without deriving repair access from a resource owner."""
+    if check_file and is_paused():
+        return REFUSAL
+    paused = await _database_pause_status()
+    if paused is False:
+        return None
+    if paused is None:
+        return MAINTENANCE_REFUSAL
+    if caller_id is not None:
+        from langflow.services.auth.utils import get_current_active_superuser
+        from langflow.services.database.models.user.model import User
+
+        try:
+            async with session_scope_readonly() as session:
+                user = await session.get(User, caller_id)
+                if user is not None and await get_current_active_superuser(user) is not None:
+                    return None
+        except (HTTPException, SQLAlchemyError):
+            pass
+    return MAINTENANCE_REFUSAL
+
+
+@contextlib.asynccontextmanager
+async def write_admission(
+    kind: str = "loop",
+    *,
+    method: str | None = None,
+    path: str | None = None,
+    name: str | None = None,
+    caller_id: UUID | None = None,
+) -> AsyncIterator[str | None]:
+    """Keep the file pause's drain slot and name the source that denied admission."""
+    with writing(kind, method=method, path=path, name=name) as let_in:
+        refusal = await write_refusal(caller_id, check_file=False) if let_in else REFUSAL
+        token = _maintenance_caller.set(caller_id if refusal is None else None)
+        try:
+            yield refusal
+        finally:
+            _maintenance_caller.reset(token)
+
+
+@contextlib.asynccontextmanager
+async def async_writing(
+    kind: str = "loop", *, method: str | None = None, path: str | None = None, name: str | None = None
+) -> AsyncIterator[bool]:
+    """Keep the file pause's drain slot and also honor database maintenance."""
+    async with write_admission(kind, method=method, path=path, name=name) as refusal:
+        yield refusal is None
+
+
+async def _superuser(scope, receive=None, send=None) -> UUID | None:
+    """Resolve the caller through the configured authentication service before allowing repairs."""
+    from langflow.services.auth.exceptions import AuthenticationError
+    from langflow.services.auth.utils import (
+        get_current_active_superuser,
+        get_current_user,
+        get_current_user_for_websocket,
+        oauth2_login,
+    )
+
+    try:
+        async with session_scope_readonly() as session:
+            if scope["type"] == "websocket":
+                if receive is None or send is None:
+                    return None
+                user = await get_current_user_for_websocket(WebSocket(scope, receive, send), session)
+            else:
+                request = Request(scope)
+                user = await get_current_user(
+                    request,
+                    await oauth2_login(request),
+                    request.query_params.get("x-api-key"),
+                    request.headers.get("x-api-key"),
+                    session,
+                )
+            admin = await get_current_active_superuser(user)
+            return admin.id if admin is not None else None
+    except (AuthenticationError, HTTPException, WebSocketException, SQLAlchemyError):
+        return None
 
 
 # A request holds a place, and so does each pass of a loop that writes with no request around it: the
@@ -256,7 +376,17 @@ class MigrationPauseMiddleware:
         kind = "request" if scope["type"] == "http" else "websocket"
         with writing(kind, method=scope.get("method"), path=_path(scope)) as let_in:
             if let_in:
-                await self.app(scope, receive, send)
+                paused = await _database_pause_status()
+                caller_id = await _superuser(scope, receive, send) if paused is True else None
+                if paused is False or caller_id is not None:
+                    token = _maintenance_caller.set(caller_id)
+                    try:
+                        await self.app(scope, receive, send)
+                    finally:
+                        _maintenance_caller.reset(token)
+                    return
+                response = JSONResponse({"detail": MAINTENANCE_REFUSAL}, status_code=503)
+                await response(scope, receive, send)
                 return
         # On a websocket scope the same response refuses the handshake.
         response = JSONResponse({"detail": REFUSAL}, status_code=503)
@@ -264,16 +394,28 @@ class MigrationPauseMiddleware:
 
 
 async def changes_the_instance(request: Request) -> AsyncIterator[None]:
-    """The dependency of a route that changes the instance although it answers a GET.
+    """Guard writes on GET routes and routes that must authenticate before checking the pause.
 
     The middleware lets every GET through as a read. A route that writes on one, such as the
     callback an OAuth provider sends the browser back to, says so with this dependency. Its
     request then holds a place like any other change and is refused while the pause is on.
+    Repair routes place this dependency after administrator authentication for the same guard.
     """
     with writing("request", method=request.method, path=_path(request.scope)) as let_in:
         if not let_in:
-            raise HTTPException(status_code=503, detail=REFUSAL)
-        yield
+            detail = REPAIR_REFUSAL if _path(request.scope) in _REPAIR_PATHS else REFUSAL
+            raise HTTPException(status_code=503, detail=detail)
+        caller_id = None
+        paused = await _database_pause_status()
+        if paused is not False:
+            caller_id = await _superuser(request.scope) if paused is True else None
+            if caller_id is None:
+                raise HTTPException(status_code=503, detail=MAINTENANCE_REFUSAL)
+        token = _maintenance_caller.set(caller_id)
+        try:
+            yield
+        finally:
+            _maintenance_caller.reset(token)
 
 
 def _passes_while_paused(scope) -> bool:
@@ -281,6 +423,8 @@ def _passes_while_paused(scope) -> bool:
     if scope.get("method") in _READ_METHODS:
         return True
     path = _path(scope)
+    if scope.get("method") == "POST" and (path in _REPAIR_PATHS or path == "/api/v1/upgrade-reports"):
+        return True
     return path in _ALLOWED_PATHS or f"{path}/".startswith(_ALLOWED_PREFIX)
 
 

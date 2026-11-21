@@ -8,7 +8,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from fastapi import BackgroundTasks, HTTPException, Request
+from fastapi import HTTPException, Request
 from langflow.api.v1.schemas import SimplifiedAPIRequest
 from langflow.events.event_manager import create_stream_tokens_event_manager
 
@@ -33,6 +33,7 @@ async def test_v1_run_non_owner_tweaks_are_hidden_as_not_found(
     monkeypatch: pytest.MonkeyPatch,
     stream: bool,  # noqa: FBT001
 ) -> None:
+    """Reject delegated tweaks before either execution path can reveal the flow."""
     from langflow.api.v1 import endpoints
 
     owner_id = uuid4()
@@ -55,7 +56,6 @@ async def test_v1_run_non_owner_tweaks_are_hidden_as_not_found(
 
     with pytest.raises(HTTPException) as exc_info:
         await endpoints._run_flow_internal(
-            background_tasks=BackgroundTasks(),
             flow=_flow(owner_id=owner_id),
             input_request=SimplifiedAPIRequest(
                 input_value="hello",
@@ -118,6 +118,7 @@ async def test_v1_run_stream_route_derives_error_policy_from_flow_ownership(
     monkeypatch: pytest.MonkeyPatch,
     caller_kind: str,
 ) -> None:
+    """Pass ownership-derived error visibility to streaming execution."""
     from langflow.api.v1 import endpoints
 
     owner_id = uuid4()
@@ -136,7 +137,6 @@ async def test_v1_run_stream_route_derives_error_policy_from_flow_ownership(
     )
 
     response = await endpoints._run_flow_internal(
-        background_tasks=BackgroundTasks(),
         flow=_flow(owner_id=owner_id),
         input_request=SimplifiedAPIRequest(input_value="hello"),
         stream=True,
@@ -156,6 +156,7 @@ async def test_v1_run_sync_error_depends_on_flow_ownership(
     monkeypatch: pytest.MonkeyPatch,
     caller_kind: str,
 ) -> None:
+    """Expose execution details only to the flow owner in non-streaming errors."""
     from langflow.api.v1 import endpoints
 
     sensitive_detail = "owner-sync-provider-secret"
@@ -187,7 +188,6 @@ async def test_v1_run_sync_error_depends_on_flow_ownership(
 
     with pytest.raises(HTTPException) as exc_info:
         await endpoints._run_flow_internal(
-            background_tasks=BackgroundTasks(),
             flow=flow,
             input_request=SimplifiedAPIRequest(input_value="hello"),
             stream=False,

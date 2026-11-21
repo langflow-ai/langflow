@@ -130,9 +130,16 @@ be written only to `authz_audit_log`.
 | `PUT /projects/{id}` new id | project / `project:create` / `create` | as create |
 | `DELETE /projects/{id}` | project / `project:delete` / `delete` | `flows` (removed); plus one `flow:delete` per Flow removed |
 | `POST /projects/upload/` | project / `project:create` / `create` | `description`, `flows` (added); plus one `flow:create` per Flow |
+| `PUT /projects/{id}/replacement-operations/{operation_id}` | project / `project:create` or `project:write` / `create` or `replace` | `description`, `flows`; plus each Flow create, update, or delete |
 
-`replace` for Projects (atomic complete-content replacement) arrives with the
-atomic Project APIs; no existing route replaces a Project's contents.
+Project replacement writes its audit events as one batch in the same transaction
+as the content and retry receipt. Replaying a saved receipt writes no new events.
+An expired receipt returns 410 and records a failed event after authorization.
+The event uses the current project name. If the project was deleted, the route
+logs the fallback and reads the latest successful audit event for that project
+and owner. It never uses the retry's caller-supplied name for this fallback.
+If audit retention removed that history, the route logs a warning and records
+the failure without a name. An ID filter can still find the unnamed event.
 
 **Outcome rules**
 
@@ -288,6 +295,7 @@ store is left out of the read rather than the filter being ignored:
 | `result` | `allow`, `deny`, `succeeded`, `failed` | `allow`, `deny`, `owner_override`, `skip` |
 | `actor_type=unknown` | `actor_type = unknown` | also rows written before actor attribution (`NULL`) |
 | `request_id` | `request_id` | `details.request_id`, written from the same server-generated id |
+| `represented_subject`, `represented_issuer` | Exact match on the represented identity. An issuer requires a subject. | No match |
 
 **Paging.** Each store is read by `(timestamp DESC, id DESC)` from the cursor for
 `limit + 1` rows, and the server keeps the newest `limit` of the candidates. A
@@ -321,7 +329,8 @@ walk with a timestamp inside the window is included, and one the retention sweep
 deletes during the walk is not. CSV starts with the columns the Admin
 Console export already used (`timestamp`, `user_id`, `actor_type`, `actor_id`,
 `action`, `resource_type`, `resource_id`, `result`, `details`), followed by
-`source`, `kind`, `resource_name`, `operation`, `error_code` and `request_id`;
+`source`, `kind`, `resource_name`, `operation`, `error_code`, `request_id`,
+`id`, `represented_issuer` and `represented_subject`;
 its `timestamp` is UTC to the second (`2026-01-01T12:00:00Z`), while NDJSON keeps
 the microseconds the feed returns; `details` is JSON with sorted keys, and a cell starting with `=`, `+`, `-` or
 `@` is prefixed with `'`.

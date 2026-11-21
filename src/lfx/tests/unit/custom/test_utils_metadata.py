@@ -85,9 +85,11 @@ class TestMetadataInTemplateBuilders:
         mock_frontend.display_name = "Test Component"
         mock_frontend_class.from_inputs.return_value = mock_frontend
 
-        # Create test component
-        test_component = Mock(spec=Component)
-        test_component.__class__.__name__ = "TestComponent"
+        class TestComponent(Component):
+            pass
+
+        # A spec reports its class through __class__; keep the production base unchanged.
+        test_component = Mock(spec=TestComponent)
         test_component._code = "class TestComponent: pass"
         test_component.code = "class TestComponent: pass"  # Ensure code is a string, not Mock
         test_component.template_config = {"inputs": []}
@@ -125,9 +127,10 @@ class TestMetadataInTemplateBuilders:
         mock_frontend.to_dict = Mock(return_value={"test": "data"})
         mock_frontend_class.return_value = mock_frontend
 
-        # Create test component
-        test_component = Mock(spec=CustomComponent)
-        test_component.__class__.__name__ = "CustomTestComponent"
+        class CustomTestComponent(CustomComponent):
+            pass
+
+        test_component = Mock(spec=CustomTestComponent)
         test_component._code = "class CustomTestComponent: pass"
         test_component.code = "class CustomTestComponent: pass"  # Ensure code is a string, not Mock
         test_component.template_config = {"display_name": "Test"}
@@ -651,9 +654,10 @@ class LMStudioModelComponent(LCModelComponent):
         mock_frontend.set_base_classes_from_outputs = Mock()
         mock_frontend.display_name = "My Test Component"
 
-        # Create test component
-        test_component = Mock(spec=Component)
-        test_component.__class__.__name__ = "TestComponent"
+        class TestComponent(Component):
+            pass
+
+        test_component = Mock(spec=TestComponent)
         test_component._code = "class TestComponent: pass"
         test_component.template_config = {"inputs": []}
 

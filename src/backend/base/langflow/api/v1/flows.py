@@ -23,12 +23,14 @@ from lfx.utils.flow_validation import (
     validate_catalog_policy_for_flow,
 )
 from pydantic import ValidationError
-from sqlalchemy import case
+from sqlalchemy import case, null
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import with_expression
 from sqlmodel import and_, col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     cascade_delete_flow,
@@ -53,6 +55,7 @@ from langflow.api.v1.flow_conflict import (
     ensure_version_precondition,
     parse_if_match,
 )
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
     _canonicalize_flow_destination,
@@ -523,6 +526,13 @@ async def read_flows(
             stmt = stmt.where(Flow.flow_type == flow_type)
 
         if get_all:
+            if header_flows:
+                # These instances are header-only: the projected data stays masked in
+                # this session, including on refresh. Do not reuse them for full reads.
+                # Components and legacy NULL flags still need JSON for header/inference.
+                stmt = stmt.options(
+                    with_expression(Flow.data, case((Flow.is_component.is_(False), null()), else_=Flow.data))
+                )
             flows = (await session.exec(stmt)).all()
             flows = validate_is_component(flows)
             if components_only:
@@ -768,7 +778,8 @@ async def update_flow(
                 raise HTTPException(status_code=404, detail="Flow not found")
             # Compared against the row we just re-read under lock, so a writer that
             # committed between the client's read and this attempt is still caught.
-            await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
+            if flow.data is not None and flow.data != db_flow_for_attempt.data:
+                await ensure_version_precondition(session, db_flow_for_attempt, expected_version_token)
             # TOCTOU: a concurrent PATCH could have moved this flow to a
             # different workspace/folder between the destination check above
             # and this retry attempt. Re-authorize against the freshly
@@ -1033,10 +1044,11 @@ async def upsert_flow(
                         raise deny_to_404(exc, detail="Flow not found") from exc
                 effective_flow_data = flow.data if flow.data is not None else existing_flow_for_attempt.data
                 _validate_catalog_policy_for_write(effective_flow_data, snapshot=catalog_policy_snapshot)
+                if flow.data is not None and flow.data != existing_flow_for_attempt.data:
+                    await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 await stage_mcp_secrets(
                     carried_secrets, secret_variables, writer_id, session, masked_targets=masked_targets
                 )
-                await ensure_version_precondition(session, existing_flow_for_attempt, expected_version_token)
                 return await _update_existing_flow(
                     session=session,
                     existing_flow=existing_flow_for_attempt,
@@ -1302,7 +1314,7 @@ async def upload_file(
     contents = await file.read()
 
     if not contents:
-        raise HTTPException(status_code=400, detail="The uploaded file is empty")
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     if zipfile.is_zipfile(io.BytesIO(contents)):
         try:
@@ -1342,7 +1354,7 @@ async def upload_file(
     except HTTPException:
         raise
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
+        raise flow_validation_error(e) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"

@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING, Literal
 from urllib.parse import urlencode, urlsplit
 from uuid import uuid4
 
+from lfx.integrations.capabilities import ScopeSet
 from sqlalchemy import update
 from sqlmodel import col
 
@@ -17,11 +18,12 @@ from langflow.services.auth import utils as auth_utils
 from langflow.services.authorization import ConnectionAction, ensure_connection_permission
 from langflow.services.authorization.guards import audit_guard_in_transaction
 from langflow.services.connection.oauth import providers
+from langflow.services.connection.oauth.adapter import provider_adapter
 from langflow.services.connection.oauth.config import OAuthError, get_oauth_settings
 from langflow.services.connection.oauth.locking import lock_connection
 from langflow.services.database.models.connection import Connection, ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
-from langflow.services.database.models.connection.schemas import ConnectionStatusReason
+from langflow.services.database.models.connection.schemas import ConnectionOwnershipMode, ConnectionStatusReason
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
@@ -44,9 +46,24 @@ def _aware(value: datetime) -> datetime:
     return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
 
 
+def _consented_scopes(provider: str, returned: list[str], consented: list[str]) -> list[str]:
+    """Keep approved provider scope aliases without adding new authority."""
+    return sorted(set(returned) - ScopeSet.missing(provider=provider, required=set(returned), granted=set(consented)))
+
+
+def _ensure_consent_owner(row: Connection, user_id: UUID) -> None:
+    if row.provider_key in {"servicenow", "salesforce"} and (
+        row.ownership_mode != ConnectionOwnershipMode.USER.value or row.owner_id != user_id
+    ):
+        provider = "ServiceNow" if row.provider_key == "servicenow" else "Salesforce"
+        msg = f"Only the owner may authorize a personal {provider} connection."
+        raise OAuthError(msg)
+
+
 async def start(
     session: AsyncSession, *, row: Connection, user_id: UUID, registration_id: str, scopes: list[str]
 ) -> tuple[str, str, str]:
+    _ensure_consent_owner(row, user_id)
     registration = get_oauth_settings().registration(registration_id)
     if registration.provider != row.provider_key:
         msg = "OAuth registration does not match this connection's provider."
@@ -57,6 +74,10 @@ async def start(
         raise OAuthError(msg)
     if not scopes or not set(scopes) <= set(registration.scopes):
         msg = "Requested scopes are outside the configured registration."
+        raise OAuthError(msg)
+    adapter = provider_adapter(registration.provider)
+    if adapter and (missing := set(adapter.required_scopes) - set(scopes)):
+        msg = f"Requested scopes must include {', '.join(sorted(missing))} for this connection."
         raise OAuthError(msg)
     if registration.provider == "google" and registration.allowed_tenants and not {"openid", "email"} <= set(scopes):
         msg = "Google tenant restrictions require openid and email scopes."
@@ -133,6 +154,7 @@ async def bind_desktop_browser(*, provider: str, state: str, handoff: str) -> tu
         if row is None or user is None or not user.is_active:
             msg = "OAuth initiating connection or user is no longer available."
             raise OAuthError(msg)
+        _ensure_consent_owner(row, user.id)
         async with audit_guard_in_transaction(session):
             await ensure_connection_permission(
                 user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
@@ -189,6 +211,7 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
             if user is None or not user.is_active:
                 msg = "OAuth initiating user is no longer active."
                 raise OAuthError(msg)
+            _ensure_consent_owner(row, user.id)
             await ensure_connection_permission(
                 user, ConnectionAction.WRITE, connection_id=row.id, connection_owner_id=row.owner_id
             )
@@ -199,6 +222,10 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
             payload, scopes, account = await providers.exchange(
                 registration, code=code, verifier=verifier, previous_scopes=values["scopes"]
             )
+            # Some providers return every scope configured on the OAuth app,
+            # including permissions the owner declined in this consent flow.
+            # Provider credentials cannot widen the connection's local authority.
+            scopes = _consented_scopes(registration.provider, scopes, values["scopes"])
             payload["oauth"] = {
                 "registration_id": binding.registration_id,
                 "config_digest": binding.config_digest,
@@ -211,7 +238,9 @@ async def complete(*, provider: str, state: str, browser: str, code: str | None,
             binding.completed_registration_id = binding.registration_id
             session.add(binding)
             session.add(row)
-    except OAuthError:
+    except OAuthError as exc:
+        if exc.code == "oauth-refresh-token-missing":
+            reason = ConnectionStatusReason.OAUTH_REFRESH_TOKEN_MISSING
         await _record_failed_authorization(values["connection_id"], values["generation"], reason)
         raise
 
@@ -247,6 +276,7 @@ async def store_tokens(session: AsyncSession, row: Connection, payload: dict, sc
     row.health = "healthy"
     row.health_checked_at = datetime.now(timezone.utc)
     row.updated_at = row.health_checked_at
+    secret.updated_at = row.health_checked_at
     session.add(secret)
     session.add(row)
     await session.flush()
@@ -272,6 +302,15 @@ async def refresh_if_needed(
     if registration.provider != row.provider_key or registration.fingerprint() != oauth["config_digest"]:
         msg = "OAuth registration changed. Reconnect the connection."
         raise OAuthError(msg)
+    if str(binding.generation) == oauth.get("generation"):
+        # Repair older grants that recorded the provider's app-wide scopes.
+        # A matching generation proves these are the saved grant's consent
+        # bounds; a pending reconnect has different bounds and must not alter it.
+        consented = _consented_scopes(row.provider_key, row.granted_scopes, binding.scopes)
+        if set(consented) != set(row.granted_scopes):
+            row.granted_scopes = consented
+            row.updated_at = datetime.now(timezone.utc)
+            session.add(row)
     expiry = _parse_expiry(payload.get("expires_at"))
     rejected = rejected_token_digest is not None and secrets.compare_digest(
         rejected_token_digest, digest(payload["access_token"])
@@ -284,6 +323,9 @@ async def refresh_if_needed(
     refreshed, scopes, _ = await providers.exchange(
         registration, refresh_token=payload["refresh_token"], previous_scopes=row.granted_scopes
     )
+    # Refresh is not new consent. Preserve scope reductions and require a new
+    # authorization flow before this connection can acquire more permissions.
+    scopes = _consented_scopes(registration.provider, scopes, row.granted_scopes)
     refreshed["oauth"] = oauth
     await store_tokens(session, row, refreshed, scopes)
     return refreshed

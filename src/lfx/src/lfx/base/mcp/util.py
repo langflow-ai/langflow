@@ -45,6 +45,7 @@ from lfx.observability import outbound_call_span
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.services.deps import get_settings_service
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.ssrf_httpx import validate_strict_url_for_ssrf_or_raise
 from lfx.utils.ssrf_protection import is_connector_ssrf_validation_enabled, validate_and_resolve_url
@@ -886,19 +887,24 @@ def _is_valid_key_value_item(item: Any) -> bool:
     return isinstance(item, dict) and "key" in item and "value" in item
 
 
-def _process_headers(headers: Any, request_variables: dict[str, str] | None = None) -> dict:
+def _process_headers(
+    headers: Any, request_variables: dict[str, str] | None = None, *, strict_variables: bool = False
+) -> dict:
     """Process the headers input into a valid dictionary and resolve global variables.
 
     Args:
         headers: The headers to process, can be dict, str, or list
         request_variables: Optional dict of global variables to resolve header values
+        strict_variables: Refuse placeholders missing from the authoritative account map
     Returns:
         Processed and validated dictionary with resolved global variable values
     """
     if headers is None:
         return {}
     if isinstance(headers, dict):
-        resolved_headers = _resolve_global_variables_in_headers(headers, request_variables)
+        resolved_headers = _resolve_global_variables_in_headers(
+            headers, request_variables, strict_variables=strict_variables
+        )
         return validate_headers(resolved_headers)
     if isinstance(headers, list):
         processed_headers = {}
@@ -911,7 +917,9 @@ def _process_headers(headers: Any, request_variables: dict[str, str] | None = No
                 processed_headers[key] = value
         except (KeyError, TypeError, ValueError):
             return {}  # Return empty dictionary instead of None
-        resolved_headers = _resolve_global_variables_in_headers(processed_headers, request_variables)
+        resolved_headers = _resolve_global_variables_in_headers(
+            processed_headers, request_variables, strict_variables=strict_variables
+        )
         return validate_headers(resolved_headers)
     return {}
 
@@ -973,27 +981,40 @@ def _exception_group_types() -> tuple[type[BaseException], ...]:
 _EXCEPTION_GROUP_TYPES = _exception_group_types()
 
 
-def _substitute_global_variables(value: str, request_variables: dict[str, str] | None) -> str:
+def _substitute_global_variables(
+    value: str, request_variables: dict[str, str] | None, *, strict_variables: bool = False
+) -> str:
     """Resolve a whole-value variable name, or ``{{NAME}}`` placeholders inside a value.
 
-    Whole-value matching alone cannot compose a value, so a base URL could not be varied
-    per environment while keeping a project id. An unknown placeholder is left verbatim:
-    blanking it would build a URL that looks valid and points somewhere else.
+    Explicit placeholders must exist before a connection can be opened. Strict account
+    resolution also rejects absent generated MCP names. Resolved values remain opaque.
     """
-    if not request_variables or not value:
+    if not value:
         return value
+    request_variables = request_variables or {}
     if value in request_variables:
         return request_variables[value]
+    missing = {
+        match.group(1) for match in GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.finditer(value)
+    } - request_variables.keys()
+    if strict_variables and value.startswith("MCP_"):
+        msg = "A deployment MCP variable is unavailable"
+        raise RuntimeVariableError(msg, reason="absent")
+    if missing:
+        msg = f"MCP variables are unavailable ({', '.join(sorted(missing))})"
+        raise RuntimeVariableError(msg, reason="absent")
     return GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.sub(
         lambda match: request_variables.get(match.group(1), match.group(0)), value
     )
 
 
-def resolve_global_variables_in_url(url: str, request_variables: dict[str, str] | None) -> str:
+def resolve_global_variables_in_url(
+    url: str, request_variables: dict[str, str] | None, *, strict_variables: bool = False
+) -> str:
     """Resolve global variables in a server URL, matching how headers are resolved."""
     if not isinstance(url, str):
         return url
-    return _substitute_global_variables(url, request_variables)
+    return _substitute_global_variables(url, request_variables, strict_variables=strict_variables)
 
 
 def config_uses_global_variables(server_config: dict | None) -> bool:
@@ -1086,21 +1107,23 @@ def describe_mcp_connection_failure(server_name: str, url: str, error: BaseExcep
     return f"MCP server '{server_name}' at {target} failed: {cause}"
 
 
-def _resolve_global_variables_in_headers(headers: dict, request_variables: dict[str, str] | None) -> dict:
+def _resolve_global_variables_in_headers(
+    headers: dict, request_variables: dict[str, str] | None, *, strict_variables: bool = False
+) -> dict:
     """Resolve global variable names in header values to their actual values.
 
     Args:
         headers: Dictionary of headers where values might be global variable names
         request_variables: Dictionary of global variables from request context
+        strict_variables: Refuse placeholders missing from the authoritative account map
 
     Returns:
         Dictionary with resolved header values
     """
-    if not request_variables:
-        return headers
-
     return {
-        key: _substitute_global_variables(value, request_variables) if isinstance(value, str) else value
+        key: _substitute_global_variables(value, request_variables, strict_variables=strict_variables)
+        if isinstance(value, str)
+        else value
         for key, value in headers.items()
     }
 
@@ -2224,7 +2247,8 @@ class MCPStdioClient(_PooledSessionClient):
         validate_mcp_stdio_config(command, args, env)
         # Preserve opaque HTTP values for direct executables, but apply the shell
         # policy to the assembled argv when a wrapper will interpret those values.
-        final_args = _inject_mcp_stdio_headers(args, _process_headers(headers))
+        # Variables were resolved before transport selection. Treat their values as opaque.
+        final_args = _inject_mcp_stdio_headers(args, validate_headers(headers))
         is_windows_batch = False
         if sys.platform == "win32":
             from mcp.os.win32.utilities import get_windows_executable_command
@@ -2538,8 +2562,8 @@ class MCPStreamableHttpClient(_PooledSessionClient):
 
         ``preferred_transport="sse"`` connects over legacy SSE directly, without a Streamable HTTP probe.
         """
-        # Validate and sanitize headers early
-        validated_headers = _process_headers(headers)
+        # Sanitize resolved headers without expanding placeholder text inside credentials.
+        validated_headers = validate_headers(headers)
 
         if url is None:
             msg = "URL is required for StreamableHTTP or SSE mode"
@@ -2882,6 +2906,8 @@ async def update_tools(
     url_variables: dict[str, str] | None = None,
     pinned_spec: PinnedServerSpec | None = None,
     pinned_provider: str | None = None,
+    *,
+    strict_variables: bool = False,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2908,6 +2934,7 @@ async def update_tools(
             receive it. None / feature-off means no header is appended (BC).
         pinned_spec: Optional contract checked against raw discovery before schema conversion.
         pinned_provider: Provider identifier attached to pinned-contract errors.
+        strict_variables: Refuse unresolved placeholders for an authoritative deployment account.
     """
     if server_config is None:
         server_config = {}
@@ -2944,9 +2971,11 @@ async def update_tools(
         mode = "Stdio" if "command" in server_config else "Streamable_HTTP" if "url" in server_config else ""
 
     command = server_config.get("command", "")
-    url = resolve_global_variables_in_url(server_config.get("url", ""), url_variables)
+    url = resolve_global_variables_in_url(
+        server_config.get("url", ""), url_variables, strict_variables=strict_variables
+    )
     tools = []
-    headers = _process_headers(server_config.get("headers", {}), request_variables)
+    headers = _process_headers(server_config.get("headers", {}), request_variables, strict_variables=strict_variables)
 
     try:
         await _validate_connection_params(mode, command, url)
@@ -2961,7 +2990,9 @@ async def update_tools(
         # Resolved from the database set only, never from request_variables: env is handed
         # to a spawned process, so a caller-populated value is a worse hand-off than a URL.
         # Left literal, the reference the scrub writes would reach the subprocess as its key.
-        env = _resolve_global_variables_in_headers(server_config.get("env", {}) or {}, url_variables)
+        env = _resolve_global_variables_in_headers(
+            server_config.get("env", {}) or {}, url_variables, strict_variables=strict_variables
+        )
         # SECURITY: A tenant-built flow can embed this stdio config directly in the
         # MCPTools component value, bypassing REST-layer model validation. Enforce the
         # shared policy here, then enforce it again at the final process-spawn boundary.

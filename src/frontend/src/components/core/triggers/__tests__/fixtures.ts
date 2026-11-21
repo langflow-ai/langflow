@@ -1,0 +1,56 @@
+import type {
+  TriggerEventRead,
+  TriggerRead,
+} from "@/controllers/API/queries/triggers";
+
+export const makeTrigger = (
+  overrides: Partial<TriggerRead> = {},
+): TriggerRead => ({
+  id: "trg-1",
+  flow_id: "flow-1",
+  user_id: "user-1",
+  name: "Slack: On Message",
+  kind: "slack.message",
+  provider: "slack",
+  node_id: "SlackOnMessage-abc",
+  connection_id: "conn-1",
+  config: { mechanism_id: "slack.events_api" },
+  state: "active",
+  binding_target: "flow",
+  deployment_id: null,
+  flow_version_id: null,
+  session_policy: "per_event",
+  concurrency_limit: 1,
+  max_attempts: 3,
+  next_fire_at: null,
+  last_fired_at: "2026-10-15T10:00:00",
+  last_error: null,
+  admin_paused_at: null,
+  created_at: "2026-10-01T10:00:00",
+  updated_at: "2026-10-15T10:00:00",
+  reason: null,
+  allowed_actions: ["pause", "test", "replay", "delete"],
+  blocked_actions: { reconnect: "reconnect_not_needed" },
+  flow_name: "Support triage",
+  owner_username: null,
+  ...overrides,
+});
+
+export const makeEvent = (
+  overrides: Partial<TriggerEventRead> = {},
+): TriggerEventRead => ({
+  id: "evt-1",
+  trigger_id: "trg-1",
+  dedupe_key: "slack:T1:Ev1",
+  state: "completed",
+  attempt: 1,
+  available_at: null,
+  payload: { text: "Checkout page returns 500", user: "@dana" },
+  session_id: "slack:C1:1.0",
+  job_id: "job-1",
+  replay_of_event_id: null,
+  error: null,
+  created_at: "2026-10-15T10:31:55",
+  updated_at: "2026-10-15T10:32:00",
+  ...overrides,
+});

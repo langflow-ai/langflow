@@ -123,7 +123,7 @@ def _get_or_create_shared_client(config: dict) -> Langfuse:
 
 
 def _reset_shared_client_for_tests() -> None:
-    """Test-only hook: clear the cached client so each test gets a fresh mock.
+    """Test-only hook: stop background workers before clearing the cached client.
 
     Also clears the langfuse SDK's own process-global resource-manager registry
     (keyed by public_key); without it a prior test's client leaks into the next —
@@ -134,7 +134,22 @@ def _reset_shared_client_for_tests() -> None:
         _SharedClient.key = None
     with contextlib.suppress(Exception):
         from langfuse._client.resource_manager import LangfuseResourceManager
+        from langfuse._client.span_processor import LangfuseSpanProcessor
 
+        for resources in tuple(LangfuseResourceManager._instances.values()):
+            resources.shutdown()
+            resources.prompt_cache._task_manager.shutdown()
+            if resources.tracer_provider is not None:
+                # The SDK can adopt an application provider, so detach only its own processors.
+                multiprocessor = resources.tracer_provider._active_span_processor
+                with multiprocessor._lock:
+                    processors = multiprocessor._span_processors
+                    owned = tuple(processor for processor in processors if isinstance(processor, LangfuseSpanProcessor))
+                    multiprocessor._span_processors = tuple(
+                        processor for processor in processors if processor not in owned
+                    )
+                for processor in owned:
+                    processor.shutdown()
         LangfuseResourceManager._instances.clear()
 
 

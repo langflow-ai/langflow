@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 from lfx.log.logger import logger
 from sqlmodel import col, select
 
-from langflow.api.utils.migration_pause import is_paused, writing
+from langflow.api.utils.migration_pause import async_writing, writes_paused
 from langflow.services.data_subjects.engine import RUNNABLE, is_retry_due, run_request
 from langflow.services.data_subjects.expiry import approve_expired_requests
 from langflow.services.database.models.data_subject_request import DataSubjectRequest
@@ -66,7 +66,7 @@ class DataSubjectEraseWorker:
         while not self._stop.is_set():
             try:
                 # A pass holds a place, so a pause waits for the erase that is under way.
-                with writing(name="data_subject_eraser") as let_in:
+                async with async_writing(name="data_subject_eraser") as let_in:
                     if let_in:
                         await self.run_once()
             except Exception as exc:  # noqa: BLE001 - the loop must survive a transient database outage
@@ -113,7 +113,7 @@ class DataSubjectEraseWorker:
         """
         # A paused instance erases nothing. An approved request keeps its status, and the first pass
         # after the pause runs it.
-        if is_paused():
+        if await writes_paused():
             return 0
         async with session_scope() as session:
             if not await leases.acquire(session, name=LEASE_NAME, owner=self._owner, ttl_s=LEASE_TTL_SECONDS):
@@ -122,7 +122,7 @@ class DataSubjectEraseWorker:
         attempted = 0
         for request_id in await self._due_requests():
             # A pause that began during this pass lets the erase under way end, and no other starts.
-            if self._stop.is_set() or is_paused():
+            if self._stop.is_set() or await writes_paused():
                 break
             await run_request(request_id, heartbeat=self._renew)
             attempted += 1

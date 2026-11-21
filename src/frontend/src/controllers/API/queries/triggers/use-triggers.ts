@@ -1,0 +1,239 @@
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueries,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { useMemo } from "react";
+import { useUtilityStore } from "@/stores/utilityStore";
+import {
+  bulkTriggers,
+  deleteTrigger,
+  disableTrigger,
+  enableTrigger,
+  getTrigger,
+  getTriggerIngress,
+  listAllTriggers,
+  listTriggerEvents,
+  listTriggerSessions,
+  listTriggers,
+  replayTriggerEvent,
+  rotateTriggerSigningSecret,
+  testTrigger,
+} from "./api";
+import { triggersKeys } from "./keys";
+import type {
+  TriggerBulkAction,
+  TriggerBulkRequest,
+  TriggerBulkResult,
+  TriggerEventFilterParam,
+  TriggerEventRead,
+  TriggerIngressRead,
+  TriggerListParams,
+  TriggerRead,
+  TriggerSigningSecretRead,
+} from "./types";
+
+/** Events are fetched one window at a time; the API has no total count. */
+export const TRIGGER_EVENTS_PAGE_SIZE = 50;
+
+/**
+ * Triggers converge by polling, not a stream: the badge must match the API
+ * within one `trigger_polling_interval`. Polling pauses while the tab is
+ * hidden and resumes on focus.
+ */
+export const useTriggerPollingInterval = (): number =>
+  useUtilityStore((state) => state.triggerPollingInterval);
+
+export const useInvalidateTriggers = () => {
+  const client = useQueryClient();
+  return () => client.invalidateQueries({ queryKey: triggersKeys.all });
+};
+
+export const useTriggersQuery = (
+  params: TriggerListParams = {},
+  options?: { enabled?: boolean; poll?: boolean; allPages?: boolean },
+) => {
+  const interval = useTriggerPollingInterval();
+  const poll = options?.poll ?? true;
+  return useQuery<TriggerRead[]>({
+    queryKey: [...triggersKeys.list(params), options?.allPages ?? false],
+    queryFn: () =>
+      options?.allPages ? listAllTriggers(params) : listTriggers(params),
+    enabled: options?.enabled ?? true,
+    refetchInterval: poll && interval > 0 ? interval : false,
+    refetchIntervalInBackground: false,
+    retry: 1,
+  });
+};
+
+export const useTriggerEventsQuery = (
+  triggerId: string | undefined,
+  options?: {
+    limit?: number;
+    enabled?: boolean;
+    /** Filtered by the server, so older matches page in like any others. */
+    filter?: TriggerEventFilterParam;
+  },
+) => {
+  const interval = useTriggerPollingInterval();
+  const limit = Math.min(
+    199,
+    Math.max(1, options?.limit ?? TRIGGER_EVENTS_PAGE_SIZE),
+  );
+  const query = useInfiniteQuery({
+    queryKey: [
+      ...triggersKeys.events(triggerId ?? "none"),
+      limit,
+      options?.filter ?? "all",
+    ],
+    queryFn: ({ pageParam }) =>
+      listTriggerEvents(triggerId as string, {
+        limit: limit + 1,
+        offset: pageParam,
+        filter: options?.filter,
+      }),
+    initialPageParam: 0,
+    getNextPageParam: (page, _pages, offset) =>
+      page.length > limit ? offset + limit : undefined,
+    enabled: Boolean(triggerId) && (options?.enabled ?? true),
+    refetchInterval: interval > 0 ? interval : false,
+    refetchIntervalInBackground: false,
+    retry: 1,
+  });
+  const data = useMemo(
+    () =>
+      query.data
+        ? Array.from(
+            new Map(
+              query.data.pages
+                .flatMap((page) => page.slice(0, limit))
+                .map((event) => [event.id, event]),
+            ).values(),
+          )
+        : undefined,
+    [query.data, limit],
+  );
+  return { ...query, data };
+};
+
+/** Session ids a trigger run uses: `trigger:<trigger id>` or `trigger:<trigger id>:<event id>`. */
+export const isTriggerSessionId = (sessionId: string) =>
+  sessionId.startsWith("trigger:");
+
+/** Ids per request: each goes in the query string, so a long list is split. */
+export const TRIGGER_SESSIONS_BATCH_SIZE = 50;
+
+/**
+ * What started each trigger-run session among `sessionIds`, for the
+ * Playground's labels. Sessions are immutable once started, so each batch is
+ * fetched once and kept; loading more sessions only fetches the new batch.
+ */
+export const useTriggerSessionsQuery = (
+  flowId: string | undefined,
+  sessionIds: readonly string[],
+  enabled = true,
+) => {
+  const batches = useMemo(() => {
+    const ids = sessionIds.filter(isTriggerSessionId);
+    return Array.from(
+      { length: Math.ceil(ids.length / TRIGGER_SESSIONS_BATCH_SIZE) },
+      (_, index) =>
+        ids.slice(
+          index * TRIGGER_SESSIONS_BATCH_SIZE,
+          (index + 1) * TRIGGER_SESSIONS_BATCH_SIZE,
+        ),
+    );
+  }, [sessionIds]);
+  return useQueries({
+    queries: batches.map((batch) => ({
+      queryKey: triggersKeys.sessions(flowId ?? "none", batch),
+      queryFn: () => listTriggerSessions(flowId as string, batch),
+      enabled: enabled && Boolean(flowId),
+      staleTime: Number.POSITIVE_INFINITY,
+      retry: 1,
+    })),
+    combine: (results) => ({
+      data: results.flatMap((result) => result.data ?? []),
+      isLoading: results.some((result) => result.isLoading),
+    }),
+  });
+};
+
+export const useTriggerIngressQuery = (
+  triggerId: string | undefined,
+  enabled = true,
+) =>
+  useQuery<TriggerIngressRead>({
+    queryKey: triggersKeys.ingress(triggerId ?? "none"),
+    queryFn: () => getTriggerIngress(triggerId as string),
+    enabled: Boolean(triggerId) && enabled,
+    retry: 1,
+  });
+
+const useTriggerMutation = <TData, TVariables>(
+  mutationFn: (variables: TVariables) => Promise<TData>,
+) => {
+  const invalidate = useInvalidateTriggers();
+  return useMutation<TData, unknown, TVariables>({
+    mutationFn,
+    onSettled: invalidate,
+  });
+};
+
+export const useEnableTriggerMutation = () =>
+  useTriggerMutation<TriggerRead, string>(enableTrigger);
+
+export const useDisableTriggerMutation = () =>
+  useTriggerMutation<TriggerRead, string>(disableTrigger);
+
+export const useDeleteTriggerMutation = () =>
+  useTriggerMutation<void, string>(deleteTrigger);
+
+export const useTestTriggerMutation = () =>
+  useTriggerMutation<TriggerEventRead, string>(testTrigger);
+
+export const useReplayTriggerEventMutation = () =>
+  useTriggerMutation<TriggerEventRead, { triggerId: string; eventId: string }>(
+    ({ triggerId, eventId }) => replayTriggerEvent(triggerId, eventId),
+  );
+
+/**
+ * The secret lives only in the mutation's result: it is never written to the
+ * query cache, so it disappears with the dialog that shows it.
+ */
+export const useRotateSigningSecretMutation = () =>
+  useTriggerMutation<TriggerSigningSecretRead, string>(
+    rotateTriggerSigningSecret,
+  );
+
+export const useBulkTriggersMutation = () =>
+  useTriggerMutation<
+    TriggerBulkResult,
+    { action: TriggerBulkAction; body: TriggerBulkRequest }
+  >(({ action, body }) => bulkTriggers(action, body));
+
+/** Dry runs change nothing, so they skip invalidation. */
+export const useBulkTriggersDryRunMutation = () =>
+  useMutation<
+    TriggerBulkResult,
+    unknown,
+    { action: TriggerBulkAction; body: Omit<TriggerBulkRequest, "dry_run"> }
+  >({
+    mutationFn: ({ action, body }) =>
+      bulkTriggers(action, { ...body, dry_run: true }),
+  });
+
+/** One trigger, polled, so an open drawer or dialog never shows a stale state. */
+export const useTriggerQuery = (triggerId: string | undefined) => {
+  const interval = useTriggerPollingInterval();
+  return useQuery<TriggerRead>({
+    queryKey: triggersKeys.one(triggerId ?? "none"),
+    queryFn: () => getTrigger(triggerId as string),
+    enabled: Boolean(triggerId),
+    refetchInterval: interval > 0 ? interval : false,
+    refetchIntervalInBackground: false,
+    retry: 1,
+  });
+};

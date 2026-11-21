@@ -199,3 +199,35 @@ def test_pinned_version_cannot_be_deleted_but_flow_can(db_url):  # noqa: F811
                 assert connection.execute(text("SELECT COUNT(*) FROM flow_version")).scalar() == 0
     finally:
         engine.dispose()
+
+
+_ADMIN_PAUSE_REVISION = "1d8d193028c8"  # pragma: allowlist secret
+_ADMIN_PAUSE_PRIOR = "e5a7c9b1d3f2"  # pragma: allowlist secret
+
+
+def test_admin_pause_marker_round_trip(db_url):  # noqa: F811
+    """The operator-pause marker is one nullable column, added and removed without touching rows."""
+    config = _make_alembic_cfg(db_url)
+    command.upgrade(config, _ADMIN_PAUSE_PRIOR)
+    engine = create_engine(_engine_url(db_url))
+    trigger_id = uuid4()
+    try:
+        with engine.begin() as connection:
+            _seed_flow_owner_and_trigger(connection, trigger_id)
+
+        command.upgrade(config, _ADMIN_PAUSE_REVISION)
+        with engine.connect() as connection:
+            columns = {column["name"]: column for column in inspect(connection).get_columns("trigger")}
+            assert "admin_paused_at" in columns
+            assert columns["admin_paused_at"]["nullable"] is True
+            stored = connection.execute(
+                text("SELECT admin_paused_at FROM trigger WHERE id = :id"), {"id": str(trigger_id)}
+            ).scalar_one()
+            assert stored is None
+
+        command.downgrade(config, _ADMIN_PAUSE_PRIOR)
+        with engine.connect() as connection:
+            assert "admin_paused_at" not in {column["name"] for column in inspect(connection).get_columns("trigger")}
+            assert connection.execute(text("SELECT COUNT(*) FROM trigger")).scalar() == 1
+    finally:
+        engine.dispose()

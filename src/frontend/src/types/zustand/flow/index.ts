@@ -7,7 +7,9 @@ import type {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
+import type { SaveFlowOptions } from "@/hooks/flows/use-save-flow";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import type { Message } from "@/types/messages";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../../api";
 import type { ChatInputType, ChatOutputType } from "../../chat";
@@ -70,6 +72,10 @@ export type ComponentsToUpdateType = {
   blocked: boolean;
   breakingChange: boolean;
   userEdited: boolean;
+  /** Retired components are reported on the component, never updated. */
+  retired?: boolean;
+  retiredIn?: string;
+  replacement?: string[];
 };
 
 export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
@@ -77,7 +83,7 @@ export type AutoSaveFlowType = ((flow?: FlowType) => void) & {
   flush: () => Promise<void> | void;
   // Saves `flow` after every pending and in-flight save; later autosaves wait
   // for it. Rejects when that save fails.
-  enqueue: (flow: FlowType) => Promise<void>;
+  enqueue: (flow: FlowType, options?: SaveFlowOptions) => Promise<void>;
 };
 
 export type FlowStoreType = {
@@ -105,7 +111,7 @@ export type FlowStoreType = {
       | ComponentsToUpdateType[]
       | ((oldState: ComponentsToUpdateType[]) => ComponentsToUpdateType[]),
   ) => void;
-  updateComponentsToUpdate: (nodes: AllNodeType[]) => void;
+  updateComponentsToUpdate: (nodes: AllNodeType[], edges?: EdgeType[]) => void;
   onFlowPage: boolean;
   setOnFlowPage: (onFlowPage: boolean) => void;
   flowPool: FlowPoolType;
@@ -235,6 +241,7 @@ export type FlowStoreType = {
     session,
     stream,
     eventDelivery,
+    onUserMessage,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -244,6 +251,7 @@ export type FlowStoreType = {
     session?: string;
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
+    onUserMessage?: (message: Message) => void;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (
@@ -262,12 +270,20 @@ export type FlowStoreType = {
     runId?: string;
     verticesToRun: string[];
   } | null;
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => void;
+  updateBuildStatus: (
+    nodeIdList: string[],
+    status: BuildStatus,
+    branchSkip?: { skippedBy: string; takenOutputs: string[] },
+  ) => void;
   revertBuiltStatusFromBuilding: () => void;
   flowBuildStatus: {
     [key: string]: {
       status: BuildStatus;
       timestamp?: string;
+      /** The branch component (If-Else, Smart Router) whose route skipped this node. */
+      skippedBy?: string;
+      /** The outputs of `skippedBy` that the router took instead. */
+      takenOutputs?: string[];
     };
   };
   updateFlowPool: (

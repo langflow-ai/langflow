@@ -1,3 +1,5 @@
+import sys
+
 import structlog
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -76,6 +78,14 @@ class ValkeyVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self):
         import json
+
+        if sys.version_info >= (3, 15):
+            msg = (
+                "The Valkey Vector Store is unavailable on Python 3.15. "
+                "Use Python 3.10 through 3.14 on Linux or macOS. "
+                "Valkey Chat Memory remains available on Python 3.15."
+            )
+            raise ValueError(msg)
 
         # Imported lazily because it pulls valkey-glide, which ships no Windows
         # wheels -- the ``valkey`` extra of langchain-aws is gated off Windows

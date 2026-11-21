@@ -1,0 +1,239 @@
+{
+  "schema_version": 1,
+  "provider_id": "github",
+  "display_name": "GitHub",
+  "icon": "Github",
+  "docs_url": "https://github.com/langflow-ai/langflow/blob/c28dd06c973d94852222f0dffa488bc99e7612a3/src/bundles/github/README.md#setup",
+  "auth_profiles": [
+    {
+      "id": "github-installation",
+      "kind": "api_key",
+      "identity": "service",
+      "supports_pkce": false,
+      "supports_refresh": false,
+      "default_scopes": [],
+      "client_type_by_context": {
+        "hosted": "external",
+        "self_managed": "external",
+        "desktop": "external",
+        "headless": "external"
+      },
+      "owner_by_context": {
+        "hosted": "customer",
+        "self_managed": "customer",
+        "desktop": "customer",
+        "headless": "customer"
+      }
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "github.repository_read",
+      "display_name": "GitHub: Get Repository",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.repository_read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitHubGetRepositoryComponent"
+    },
+    {
+      "id": "github.issue_read",
+      "display_name": "GitHub: Get Issue",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.issue_read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitHubGetIssueComponent"
+    },
+    {
+      "id": "github.issue_create",
+      "display_name": "GitHub: Create Issue",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.issue_create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitHubCreateIssueComponent"
+    },
+    {
+      "id": "github.issue_update",
+      "display_name": "GitHub: Update Issue",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.issue_update"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitHubUpdateIssueComponent"
+    },
+    {
+      "id": "github.pull_request_read",
+      "display_name": "GitHub: Get Pull Request",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.pull_request_read"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitHubGetPullRequestComponent"
+    },
+    {
+      "id": "github.pull_request_create",
+      "display_name": "GitHub: Create Pull Request",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.pull_request_create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitHubCreatePullRequestComponent"
+    },
+    {
+      "id": "github.pull_request_update",
+      "display_name": "GitHub: Update Pull Request",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.pull_request_update"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitHubUpdatePullRequestComponent"
+    },
+    {
+      "id": "github.comment_create",
+      "display_name": "GitHub: Create Issue Comment",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.comment_create"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "desktop",
+        "headless"
+      ],
+      "risk": "write",
+      "component_ref": "GitHubCreateCommentComponent"
+    },
+    {
+      "id": "github.trigger.issue",
+      "display_name": "GitHub: On Issue",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.trigger.issue"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitHubOnIssueTriggerComponent"
+    },
+    {
+      "id": "github.trigger.pull_request",
+      "display_name": "GitHub: On Pull Request",
+      "auth_profile_id": "github-installation",
+      "identity": "service",
+      "required_scopes": [],
+      "conditional_scopes": [],
+      "policy_keys": [
+        "integrations.github.trigger.pull_request"
+      ],
+      "substrate": "rest",
+      "maturity": "preview",
+      "deployment_contexts": [
+        "hosted",
+        "self_managed",
+        "headless"
+      ],
+      "risk": "read",
+      "component_ref": "GitHubOnPullRequestTriggerComponent"
+    }
+  ]
+}

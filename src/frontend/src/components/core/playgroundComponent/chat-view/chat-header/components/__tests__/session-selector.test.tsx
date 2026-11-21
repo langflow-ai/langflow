@@ -110,3 +110,25 @@ describe("SessionSelector — visual focus cue", () => {
     expect(root.className).not.toMatch(ROW_BG_ACCENT);
   });
 });
+
+describe("SessionSelector — trigger run label", () => {
+  it("shows the label instead of the raw id", () => {
+    const session = "trigger:706f62f5-3c4b-415f-a734-49296d1d8710:362d99c5";
+    render(
+      <SessionSelector
+        {...baseProps}
+        session={session}
+        label="Oct 29, 3:45:12 PM · Schedule"
+        isVisible={false}
+      />,
+    );
+
+    expect(getRoot()).toHaveTextContent("Oct 29, 3:45:12 PM · Schedule");
+    expect(getRoot()).not.toHaveTextContent(session);
+  });
+
+  it("shows the raw id when there is no label", () => {
+    render(<SessionSelector {...baseProps} isVisible={false} />);
+    expect(getRoot()).toHaveTextContent("New Session 0");
+  });
+});

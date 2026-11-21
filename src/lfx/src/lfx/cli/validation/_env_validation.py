@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
-    from lfx.integrations.errors import ConnectionUnresolvedError
+    from lfx.integrations.errors import IntegrationError
 
 
 def is_valid_env_var_name(name: str) -> bool:
@@ -75,12 +75,13 @@ def validate_global_variables_for_env(graph: Graph) -> list[str]:
     return errors
 
 
-def validate_connection_refs_for_env(graph: Graph) -> list[ConnectionUnresolvedError]:
+def validate_connection_refs_for_env(graph: Graph) -> list[IntegrationError]:
     """Return typed failures for connection refs absent from headless injection channels."""
-    from lfx.integrations.errors import ConnectionUnresolvedError
+    from lfx.integrations.errors import ConnectionUnresolvedError, IntegrationContextUnsupportedError
     from lfx.integrations.models import ConnectionRef
     from lfx.services.connection.env_resolver import EnvConnectionResolver
     from lfx.services.deps import get_connection_resolver
+    from lfx.services.integration_policy.utils import require_headless_integration_support
     from lfx.services.variable.request_scope import (
         get_active_request_variables,
         is_env_fallback_disabled,
@@ -88,7 +89,7 @@ def validate_connection_refs_for_env(graph: Graph) -> list[ConnectionUnresolvedE
     )
     from lfx.utils.env_var_security import safe_getenv
 
-    errors: list[ConnectionUnresolvedError] = []
+    errors: list[IntegrationError] = []
     request_variables = normalize_parsed_variables(
         graph.context.get("request_variables") or get_active_request_variables() or {}
     )
@@ -100,6 +101,13 @@ def validate_connection_refs_for_env(graph: Graph) -> list[ConnectionUnresolvedE
         for field_name, field in template.items():
             if not isinstance(field, dict) or field.get("type") != "connection_ref":
                 continue
+            principal = getattr(graph, "execution_principal", None)
+            if principal is not None and principal.kind == "headless_operator":
+                try:
+                    require_headless_integration_support(field.get("provider", ""), field.get("capabilities", ()))
+                except IntegrationContextUnsupportedError as exc:
+                    errors.append(exc)
+                    continue
             value = vertex.params.get(field_name, field.get("value"))
             if not value:
                 continue

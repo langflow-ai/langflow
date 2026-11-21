@@ -1,6 +1,7 @@
 import { useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import useAlertStore from "../../../stores/alertStore";
 
 const useFileDrop = (type?: string) => {
@@ -41,7 +42,7 @@ const useFileDrop = (type?: string) => {
             .catch((error) => {
               setErrorData({
                 title: t("errors.uploadFile"),
-                list: [error instanceof Error ? error.message : String(error)],
+                list: extractApiErrorMessages(error),
               });
             });
         }

@@ -87,16 +87,18 @@ const applyToggleToEnabledModels = (
     };
   }
 
-  const otherType: ModelType = modelType === "llm" ? "embeddings" : "llm";
-  const nextTypedProvider = {
-    ...typedProvider,
-    [modelType]: {
-      ...(typedProvider[modelType] ?? {}),
-      [modelName]: enabled,
-    },
-  };
-  const flatEnabled =
-    enabled || (nextTypedProvider[otherType]?.[modelName] ?? false);
+  const nextTypedProvider: Partial<Record<ModelType, Record<string, boolean>>> =
+    {
+      ...typedProvider,
+      [modelType]: {
+        ...(typedProvider[modelType] ?? {}),
+        [modelName]: enabled,
+      },
+    };
+  // The flat map is per name: it stays on while any kind of this name is on.
+  const flatEnabled = Object.values(nextTypedProvider).some(
+    (kindMap) => kindMap?.[modelName] === true,
+  );
 
   return {
     ...data,

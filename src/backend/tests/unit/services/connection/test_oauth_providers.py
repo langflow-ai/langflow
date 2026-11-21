@@ -239,6 +239,7 @@ async def test_http_error_and_redirect_never_echo_provider_credentials(monkeypat
         (429, {"error": "ratelimited"}, "provider-unavailable"),
         (400, {"error": "temporarily_unavailable"}, "provider-unavailable"),
         (400, {"error": "invalid_client"}, "provider-unavailable"),
+        (403, {"error": "unauthorized_client"}, "provider-unavailable"),
         (200, {"ok": False, "error": "internal_error"}, "provider-unavailable"),
         (200, {"ok": False, "error": "ratelimited"}, "provider-unavailable"),
         (200, {"error": ["invalid_grant"]}, "provider-unavailable"),

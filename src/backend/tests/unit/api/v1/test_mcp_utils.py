@@ -498,7 +498,7 @@ async def test_handle_read_resource_authorizes_legacy_flow_inside_open_session(m
     user_id = uuid4()
     flow_id = uuid4()
     file_name = "legacy.txt"
-    flow = SimpleNamespace(id=flow_id, user_id=user_id, folder_id=None, name="Legacy flow")
+    flow = SimpleNamespace(id=flow_id, user_id=user_id, folder_id=None, workspace_id=None, name="Legacy flow")
     fake_session = ClosingSession(flows=[flow], user_files=[])
     storage_service = FakeStorageService({}, {f"flow-{flow_id}/{file_name}": b"legacy contents"})
     monkeypatch.setattr(mcp_utils, "session_scope", lambda: ClosingContext(fake_session))

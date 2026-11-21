@@ -189,3 +189,29 @@ describe("ModelProvidersContent scrolling", () => {
     expect(screen.getByTestId("provider-content-scroll").scrollTop).toBe(420);
   });
 });
+
+it("shows discovery failure alongside editable credentials and clears it after recovery", async () => {
+  const user = userEvent.setup();
+  const provider: Provider = {
+    provider: "TypeSafe",
+    is_enabled: true,
+    is_configured: true,
+    live_discovery: true,
+    models: [],
+    discovery_error: "Discovery unavailable",
+  };
+  mockProviders = [provider];
+  const { rerender } = render(content("decision"));
+  await user.click(screen.getByTestId("provider-item-TypeSafe"));
+
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Decision models could not be loaded",
+  );
+  await user.type(screen.getByLabelText(/Project ID/), "unsaved-project");
+
+  mockProviders = [{ ...provider, discovery_error: "" }];
+  rerender(content("decision"));
+
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByLabelText(/Project ID/)).toHaveValue("unsaved-project");
+});

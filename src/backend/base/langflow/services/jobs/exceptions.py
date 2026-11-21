@@ -42,3 +42,11 @@ class PauseRequested(JobError):  # noqa: N818
         # on suspend so the resumed pass — which starts a fresh capture list and
         # skips re-emitting already-built vertices — does not drop them.
         self.output_events = output_events or []
+
+
+class JobNotClaimable(JobError):  # noqa: N818
+    """The job is terminal or belongs to another runner.
+
+    Raised when a start is rejected or a running lease cannot be renewed. The
+    caller must stop without writing a status or finalizing another owner's run.
+    """

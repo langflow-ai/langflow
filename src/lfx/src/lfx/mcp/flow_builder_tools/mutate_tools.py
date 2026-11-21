@@ -16,6 +16,7 @@ from lfx.graph.flow_builder.component import (
     CUSTOM_COMPONENT_CANVAS_TYPE,
     FLOW_BUILDER_REGISTRY_TYPE_KEY,
     FLOW_BUILDER_UNTRUSTED_CUSTOM_KEY,
+    validate_router_mode_update,
 )
 from lfx.graph.flow_builder.component import (
     _coerce_model_value as fb_coerce_model_value,
@@ -503,8 +504,11 @@ class ConfigureComponent(Component):
 
         try:
             _require_allowed_model_providers(_model_providers_in_params(flow, self.component_id, params))
-        except ModelProviderPolicyError as e:
-            logger.warning("configure_component blocked by model-provider policy: %s", e)
+            node = _find_node(flow, self.component_id)
+            if node and node["data"].get("type") == "SmartRouter":
+                validate_router_mode_update(node["data"]["node"].get("template", {}), params)
+        except (ModelProviderPolicyError, ValueError) as e:
+            logger.warning("configure_component rejected: %s", e)
             return Data(data={"error": str(e)})
 
         # Deterministic review gate (Bug B): editing a TEXT field on a pre-existing
@@ -525,7 +529,17 @@ class ConfigureComponent(Component):
                         fb_configure(flow, self.component_id, remaining)
                         _fill_missing_model_names(flow, self.component_id, remaining)
                         _mirror_model_value_into_options(flow, self.component_id, remaining)
-                        _emit("configure", component_id=self.component_id, params=remaining)
+                        node = _find_node(flow, self.component_id)
+                        _emit(
+                            "configure",
+                            component_id=self.component_id,
+                            params=remaining,
+                            **(
+                                {"outputs": node["data"]["node"]["outputs"]}
+                                if node["data"].get("type") == "SmartRouter" and "outputs" in node["data"]["node"]
+                                else {}
+                            ),
+                        )
                     except (ValueError, KeyError) as e:
                         logger.warning("configure_component (non-text remainder) failed: %s", e)
                         return Data(data={"error": str(e)})
@@ -546,7 +560,17 @@ class ConfigureComponent(Component):
             # into `options` so the dropdown matches instead of its own fallback.
             _fill_missing_model_names(flow, self.component_id, params)
             _mirror_model_value_into_options(flow, self.component_id, params)
-            _emit("configure", component_id=self.component_id, params=params)
+            node = _find_node(flow, self.component_id)
+            _emit(
+                "configure",
+                component_id=self.component_id,
+                params=params,
+                **(
+                    {"outputs": node["data"]["node"]["outputs"]}
+                    if node["data"].get("type") == "SmartRouter" and "outputs" in node["data"]["node"]
+                    else {}
+                ),
+            )
             summary = ", ".join(f"{k}={v!r}" for k, v in params.items())
             return Data(data={"text": f"Set {summary} on {self.component_id}", "configured": list(params.keys())})
         except (ValueError, KeyError) as e:
@@ -588,17 +612,20 @@ def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict
         field["options"] = options
 
 
-def _resolve_default_model_name(provider: str) -> str | None:
-    """Return the provider's catalog default model name, or None if unknown."""
+def _resolve_default_model_name(provider: str, model_type: str | None = None) -> str | None:
+    """Return the provider's catalog default model name of the field's kind, or None if unknown."""
     _require_allowed_model_providers({provider})
 
     from lfx.base.models.unified_models import get_unified_models_detailed
 
+    # ModelInput kinds map onto catalog model types; a decision model never fills a chat field.
+    catalog_type = {"embedding": "embeddings", "decision": "decision"}.get(model_type or "", "llm")
     detailed = get_unified_models_detailed(
         providers=[provider],
         only_defaults=True,
         include_unsupported=False,
         include_deprecated=False,
+        model_type=catalog_type,
     )
     for entry in detailed:
         for model in entry.get("models", []):
@@ -630,6 +657,6 @@ def _fill_missing_model_names(flow: dict, component_id: str, params: dict) -> No
         entry = value[0]
         if entry.get("name") or not entry.get("provider"):
             continue
-        default_name = _resolve_default_model_name(entry["provider"])
+        default_name = _resolve_default_model_name(entry["provider"], field.get("model_type"))
         if default_name:
             entry["name"] = default_name

@@ -17,6 +17,7 @@ from langflow.services.database.utils import normalize_string_or_none, parse_uui
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from lfx.services.authorization import ResourceVisibilityScope
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 _UNSET = object()
@@ -99,14 +100,24 @@ async def list_provider_accounts(
     user_id: UUID | str,
     offset: int = 0,
     limit: int | None = None,
+    visibility: ResourceVisibilityScope | None = None,
 ) -> list[DeploymentProviderAccount]:
     user_uuid = parse_uuid(user_id, field_name="user_id")
     stmt = (
         select(DeploymentProviderAccount)
         .where(DeploymentProviderAccount.user_id == user_uuid)
         .order_by(col(DeploymentProviderAccount.created_at).desc())
-        .offset(offset)
     )
+    if visibility is not None:
+        from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+
+        stmt = restrict_to_owned_or_visible_scope(
+            stmt,
+            id_column=DeploymentProviderAccount.id,
+            owner_clause=DeploymentProviderAccount.user_id == user_uuid,
+            visibility=visibility,
+        )
+    stmt = stmt.offset(offset)
     if limit is not None:
         stmt = stmt.limit(limit)
     return list((await db.exec(stmt)).all())
@@ -116,6 +127,7 @@ async def count_provider_accounts(
     db: AsyncSession,
     *,
     user_id: UUID | str,
+    visibility: ResourceVisibilityScope | None = None,
 ) -> int:
     from sqlmodel import func
 
@@ -123,6 +135,15 @@ async def count_provider_accounts(
     stmt = select(func.count(DeploymentProviderAccount.id)).where(
         DeploymentProviderAccount.user_id == user_uuid,
     )
+    if visibility is not None:
+        from langflow.services.authorization.listing import restrict_to_owned_or_visible_scope
+
+        stmt = restrict_to_owned_or_visible_scope(
+            stmt,
+            id_column=DeploymentProviderAccount.id,
+            owner_clause=DeploymentProviderAccount.user_id == user_uuid,
+            visibility=visibility,
+        )
     return int((await db.exec(stmt)).one() or 0)
 
 

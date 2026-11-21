@@ -86,11 +86,15 @@ def test_contract_required_files_exist_in_sources() -> None:
         "lfx-azure": REPO_ROOT / "src" / "bundles" / "azure" / "src",
         "lfx-datastax": REPO_ROOT / "src" / "bundles" / "datastax" / "src",
         "lfx-google": REPO_ROOT / "src" / "bundles" / "google" / "src",
+        "lfx-discord": REPO_ROOT / "src" / "bundles" / "discord" / "src",
+        "lfx-github": REPO_ROOT / "src" / "bundles" / "github" / "src",
         "lfx-microsoft": REPO_ROOT / "src" / "bundles" / "microsoft" / "src",
         "lfx-ollama": REPO_ROOT / "src" / "bundles" / "ollama" / "src",
         "lfx-openai": REPO_ROOT / "src" / "bundles" / "openai" / "src",
         "lfx-slack": REPO_ROOT / "src" / "bundles" / "slack" / "src",
+        "lfx-telegram": REPO_ROOT / "src" / "bundles" / "telegram" / "src",
         "lfx-toolguard": REPO_ROOT / "src" / "bundles" / "toolguard" / "src",
+        "lfx-whatsapp": REPO_ROOT / "src" / "bundles" / "whatsapp" / "src",
         "lfx-bundles": REPO_ROOT / "src" / "bundles" / "lfx-bundles" / "src",
     }
 
@@ -182,6 +186,10 @@ def test_release_gate_covers_supported_python_and_image_architectures() -> None:
     assert "main-dist" not in base_job
     assert "bundles-dist" not in base_job
     assert "profile: [python-default, python-full]" in python_job
+    assert 'python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]' in python_job
+    preview_lane = "continue-on-error: ${{ matrix.python-version == '3.15' }}"
+    assert preview_lane in base_job
+    assert preview_lane in python_job
     assert image_job.count("- arch: amd64") == 1
     assert image_job.count("- arch: arm64") == 1
     assert "--target base" in image_job

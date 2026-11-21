@@ -16,7 +16,11 @@ from lfx.log.logger import configure
 from lfx.processing.process import process_tweaks, run_graph
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.flow_code import normalize_code_for_import
-from lfx.utils.flow_validation import CustomComponentValidationError, ensure_component_hash_lookups_loaded
+from lfx.utils.flow_validation import (
+    CustomComponentValidationError,
+    ensure_component_hash_lookups_loaded,
+    flow_has_connection_refs,
+)
 from lfx.utils.util import update_settings
 
 
@@ -82,7 +86,7 @@ async def aload_flow_from_json(
         graph_data = process_tweaks(graph_data, tweaks)
 
     try:
-        await ensure_component_hash_lookups_loaded()
+        await ensure_component_hash_lookups_loaded(force=flow_has_connection_refs(graph_data))
     except CustomComponentValidationError:
         raise
     except Exception as exc:

@@ -131,6 +131,12 @@ describe("computeDisplayHandle", () => {
   });
 
   describe("model input handling", () => {
+    it("shows no handle for a decision model, which takes no connections", () => {
+      expect(
+        computeDisplayHandle({ type: "model", model_type: "decision" }, false),
+      ).toBe(false);
+    });
+
     it("should always show handle for model type", () => {
       expect(computeDisplayHandle({ type: "model" }, false)).toBe(true);
       expect(

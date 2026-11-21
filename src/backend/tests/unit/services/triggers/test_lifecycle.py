@@ -1,5 +1,7 @@
 """Trigger cleanup and pin retention with SQLite foreign keys both on and off."""
 
+import importlib
+from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
@@ -9,7 +11,12 @@ from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry, delete_flow_version_entry
 from langflow.services.database.models.flow_version.exceptions import FlowVersionError
 from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.trigger.model import Trigger, TriggerEvent, TriggerSubscription
+from langflow.services.database.models.trigger.model import (
+    Trigger,
+    TriggerEvent,
+    TriggerRenewalObservation,
+    TriggerSubscription,
+)
 from langflow.services.database.models.user.model import User
 from langflow.services.triggers.service import TriggerService
 from sqlalchemy import event
@@ -68,7 +75,15 @@ async def _seed_trigger(session):
         provider="test",
         provider_subscription_id=uuid4().hex,
     )
-    session.add_all([replay, subscription])
+    observation = TriggerRenewalObservation(
+        trigger_id=trigger.id,
+        subscription_id=subscription.id,
+        observed_at=datetime.now(timezone.utc),
+        previous_expires_at=datetime.now(timezone.utc),
+        outcome="renewed",
+        gap_seconds=0,
+    )
+    session.add_all([replay, subscription, observation])
     await session.commit()
     return flow, version, trigger
 
@@ -90,6 +105,9 @@ async def test_deletion_removes_trigger_children(trigger_db, target):
         await session.exec(select(TriggerSubscription).where(TriggerSubscription.trigger_id == trigger.id))
     ).all()
     assert await session.get(Trigger, other.id) is not None
+    observations = select(TriggerRenewalObservation)
+    assert not (await session.exec(observations.where(TriggerRenewalObservation.trigger_id == trigger.id))).all()
+    assert len((await session.exec(observations.where(TriggerRenewalObservation.trigger_id == other.id))).all()) == 1
     assert len((await session.exec(select(TriggerEvent).where(TriggerEvent.trigger_id == other.id))).all()) == 2
 
 
@@ -97,7 +115,8 @@ async def test_pruning_keeps_pinned_version_until_unpinned(trigger_db, monkeypat
     session = trigger_db
     flow, version, trigger = await _seed_trigger(session)
     monkeypatch.setattr(
-        "langflow.services.database.models.flow_version.crud.get_settings_service",
+        importlib.import_module("langflow.services.database.models.flow_version.crud"),
+        "get_settings_service",
         lambda: SimpleNamespace(settings=SimpleNamespace(max_flow_version_entries_per_flow=1)),
     )
     for _ in range(2):

@@ -29,7 +29,7 @@ def _pixel_png() -> bytes:
 
 
 FLOW_ID = UUID("d3a93ec1-c6a7-4c68-84d5-52b3453c280e")
-FOREIGN_FLOW_ID = UUID("f23a147e-5f12-4a4e-a9db-cf9f6283718c")
+OTHER_FLOW_ID = UUID("5f0c2b7e-8a1d-4c3e-9b6f-2d4e8a7c1f30")
 
 
 @pytest.mark.parametrize(
@@ -46,12 +46,15 @@ def test_a_path_in_the_flows_own_namespace_is_accepted(path) -> None:
 @pytest.mark.parametrize(
     "path",
     [
-        f"flow-{FOREIGN_FLOW_ID}/notes.txt",
+        # A fixed id: xdist workers must collect the same test names.
+        f"flow-{OTHER_FLOW_ID}/notes.txt",
         f"flow-{FLOW_ID}/../notes.txt",
         f"flow-{FLOW_ID}/nested/notes.txt",
         f"flow-flow-{FLOW_ID}/notes.txt",
         f"user-{FLOW_ID}/notes.txt",
         f"/flow-{FLOW_ID}/notes.txt",
+        # Uploads use the lower-case id; another casing would pass the gate and then fail the build silently.
+        f"flow-{str(FLOW_ID).upper()}/notes.txt",
     ],
 )
 def test_a_path_outside_the_flows_namespace_is_still_refused(path) -> None:

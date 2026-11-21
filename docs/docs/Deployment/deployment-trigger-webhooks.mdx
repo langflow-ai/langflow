@@ -3,18 +3,22 @@ title: Receive provider events with trigger webhooks
 slug: /deployment-trigger-webhooks
 ---
 
-A trigger runs a flow when something happens outside Langflow. This page is for providers that post that event to a Langflow URL: Slack, Microsoft, Google, or your own system.
+A trigger runs a flow when something happens outside Langflow. This page is for providers that post that event to a Langflow URL: Slack, Microsoft, Google, GitHub, or your own system.
 
 Langflow must be reachable over public HTTPS. If it is not, use [trigger listeners](./deployment-trigger-listeners.mdx). Listeners call out and hold the connection, and they need no public URL.
 
 The request records the event and returns. It does not run the flow. The flow runs afterward, as the trigger's owner.
+
+Each saved flow canvas supports one trigger node. API saves and imports reject canvases with multiple trigger nodes.
+Remove the extra nodes before saving. An existing canvas with multiple trigger nodes can still be opened and repaired,
+but its triggers cannot be activated until the extra nodes are removed.
 
 ## Prerequisites
 
 1. Langflow is reachable at a public HTTPS URL.
 2. The flow is saved, and the trigger is enabled.
 3. The connection on the trigger belongs to the flow owner, and **Allow background runs** is on.
-4. For Slack, Microsoft, or Google, the provider app is already registered. Slack setup is on [Slack triggers](../Components/bundles-slack.mdx#slack-triggers). Google setup is on [Google Workspace source triggers](../Components/bundles-google.mdx#google-workspace-source-triggers).
+4. For Slack, Microsoft, or Google, the provider app is already registered. For more information, see [Slack triggers](./bundles-slack#slack-triggers) and [Google Workspace source triggers](./bundles-google#google-workspace-source-triggers). For GitHub, Langflow creates the repository webhook when you enable the trigger. For more information, see [GitHub components](./bundles-github#enable-triggers).
 
 ## Send events from your own system
 
@@ -75,6 +79,8 @@ POST /api/v1/triggers/ingress/slack/apps/{registration_id}
 
 `registration_id` is the app's name in `LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS`. Put that app's signing secret on the registration as `signing_secret`.
 
+GitHub does not use a Request URL that you paste into the provider. When you enable **GitHub: On Issue** or **GitHub: On Pull Request**, Langflow creates the repository webhook. The instance still needs public HTTPS ingress.
+
 Each provider proves the delivery in its own way:
 
 - **Slack:** `X-Slack-Signature` over the raw body, and a timestamp no more than five minutes old.
@@ -83,6 +89,10 @@ Each provider proves the delivery in its own way:
 - **Your system:** `X-Langflow-Signature` over the raw body, with the trigger's secret.
 
 A failed check returns `404` with the same body every time. The reason is in the authorization audit log. Turn that on with `LANGFLOW_AUTHZ_AUDIT_ENABLED=true`.
+
+Rejected requests do not appear in the trigger's event history. That history contains accepted events only.
+A superuser can inspect recorded rejection reasons through `GET /api/v1/authz/audit` when auditing is enabled.
+Some provider requests are rejected before Langflow can identify a trusted trigger or owner.
 
 Microsoft's subscription handshake is the exception. It returns `200` and echoes `validationToken` before Langflow looks up the trigger.
 
@@ -95,7 +105,11 @@ Check, in order: the trigger is enabled, the URL's provider matches the trigger,
 Slack retries when it does not get a success response in three seconds. Langflow answers after the event is saved, so a slow database or a proxy in front of Langflow makes Slack retry. The flow still runs once.
 
 **Events stopped, and the trigger looks fine.**
-If the state is **Needs reconnect**, reconnect the connection. If the trigger is still active, the subscription may have expired while the API was down. Enable the trigger again to subscribe.
+If the state is **Needs reconnect**, read the reason shown on the trigger. If **Allow background runs** is off, choose **Reconnect** on the trigger, then **Allow and resume** in the consent dialog. Only the connection owner can grant this permission. Langflow then tries to activate the trigger and reports any remaining error.
+
+If the provider revoked or expired the credential, open **Settings → Connections** and reauthorize the connection. Return to the trigger and choose **Resume** when it shows **Ready to resume**. Reauthorization does not start the trigger automatically.
+
+If the trigger is still active, the subscription may have expired while the API was down. Enable the trigger again to subscribe.
 
 **One event ran the flow twice.**
 Two triggers are armed on the same source. One trigger does not run twice for one provider event.

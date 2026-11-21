@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 import orjson
 from lfx.custom.eval import eval_custom_component_code
 from lfx.log.logger import logger
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.env_var_security import safe_getenv
 from pydantic import PydanticDeprecatedSince20
 
@@ -128,6 +129,8 @@ async def update_params_with_load_from_db_fields(
 
             try:
                 key = await custom_component.get_variable(name=params[field], field=field, session=session)
+            except RuntimeVariableError:
+                raise
             except ValueError as e:
                 if "User id is not set" in str(e):
                     raise

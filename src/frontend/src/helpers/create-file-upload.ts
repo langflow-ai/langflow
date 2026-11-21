@@ -1,4 +1,22 @@
-import { DEFAULT_FILE_PICKER_TIMEOUT } from "@/constants/constants";
+import { UAParser } from "ua-parser-js";
+
+const supportsFilePickerCancel = (userAgent: string): boolean => {
+  const { browser, engine, os } = UAParser(userAgent);
+  const engineVersion = Number.parseInt(engine.version ?? "", 10);
+
+  if (engine.name === "Blink") return engineVersion >= 113;
+  if (engine.name === "Gecko") return engineVersion >= 91;
+
+  if (engine.name === "WebKit") {
+    const version = os.name === "iOS" ? os.version : browser.version;
+    const [major = 0, minor = 0] = (version ?? "")
+      .split(".")
+      .map((part) => Number.parseInt(part, 10));
+    return major > 16 || (major === 16 && minor >= 4);
+  }
+
+  return false;
+};
 
 export function createFileUpload(props?: {
   accept?: string;
@@ -37,7 +55,8 @@ export function createFileUpload(props?: {
         }
       }
       input.removeEventListener("change", handleChange);
-      document.removeEventListener("focus", handleFocus);
+      input.removeEventListener("cancel", handleCancel);
+      document.removeEventListener("focus", handleLegacyFocus);
     };
 
     const handleChange = (event: Event) => {
@@ -106,33 +125,26 @@ export function createFileUpload(props?: {
       resolve(files);
     };
 
-    const handleFocus = () => {
-      setTimeout(() => {
-        if (!isHandled) {
-          isHandled = true;
-          cleanup();
-          resolve([]);
-        }
-      }, 100);
+    // Firefox can return focus before `change`, so focus is only a fallback on
+    // engines without the file input's native `cancel` event.
+    const handleCancel = () => {
+      if (isHandled) return;
+      isHandled = true;
+      cleanup();
+      resolve([]);
+    };
+
+    const handleLegacyFocus = () => {
+      setTimeout(handleCancel, 100);
     };
 
     input.addEventListener("change", handleChange);
-    document.addEventListener("focus", handleFocus);
+    input.addEventListener("cancel", handleCancel);
+    if (!supportsFilePickerCancel(navigator.userAgent)) {
+      document.addEventListener("focus", handleLegacyFocus);
+    }
 
     document.body.appendChild(input);
-
-    requestAnimationFrame(() => {
-      if (!isHandled) {
-        input.click();
-      }
-    });
-
-    setTimeout(() => {
-      if (!isHandled) {
-        isHandled = true;
-        cleanup();
-        resolve([]);
-      }
-    }, DEFAULT_FILE_PICKER_TIMEOUT);
+    input.click();
   });
 }

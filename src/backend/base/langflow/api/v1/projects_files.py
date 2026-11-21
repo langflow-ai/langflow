@@ -17,6 +17,7 @@ from pydantic import ValidationError
 from sqlmodel import select
 
 from langflow.api.utils import (
+    EMPTY_FILE_DETAIL,
     CurrentActiveUser,
     DbSession,
     build_content_disposition,
@@ -25,6 +26,7 @@ from langflow.api.utils import (
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.auth_helpers import get_default_project_auth_settings
+from langflow.api.v1.flow_validation import flow_validation_error
 from langflow.api.v1.flows import create_flows
 from langflow.api.v1.flows_helpers import _export_variable_names, _sanitize_flow_filename
 from langflow.api.v1.schemas import FlowListCreate
@@ -137,7 +139,7 @@ async def upload_project_flows(
     contents = await file.read()
 
     if not contents:
-        raise HTTPException(status_code=400, detail="The uploaded file is empty")
+        raise HTTPException(status_code=400, detail=EMPTY_FILE_DETAIL)
 
     # Detect ZIP files and extract flow data
     if zipfile.is_zipfile(io.BytesIO(contents)):
@@ -181,7 +183,7 @@ async def upload_project_flows(
     try:
         flow_list = FlowListCreate.model_validate({"flows": data["flows"]})
     except ValidationError as e:
-        raise HTTPException(status_code=422, detail=str(e)) from e
+        raise flow_validation_error(e) from e
 
     project_name = await generate_unique_folder_name(data["folder_name"], current_user.id, session)
 

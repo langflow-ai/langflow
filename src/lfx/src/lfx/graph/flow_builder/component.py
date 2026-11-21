@@ -358,6 +358,61 @@ def _validate_configured_value(field_name: str, field: dict[str, Any], value: An
         raise ValueError(msg)
 
 
+# The hidden column that ties a Smart Router route (or Score level) to its output and its edges, and
+# the columns a row is recognised by.
+_ROW_ID_KEY = "route_id"
+_ROW_MATCH_KEYS = ("route_category", "route_description")
+
+
+def _row_text(row: Any, key: str) -> str:
+    # The router compares route names with lower(), so "Straße" and "Strasse" stay two routes.
+    return str(row.get(key) or "").strip().lower() if isinstance(row, dict) else ""
+
+
+def _keep_row_ids(current: Any, incoming: Any) -> Any:
+    """Table rows sent without IDs keep the IDs of the saved rows they stand for.
+
+    A caller that sends plain rows would otherwise get new outputs and orphan every edge. A row keeps
+    the ID of the saved row with the same name or, for a renamed route, the same description, when
+    exactly one saved row and one sent row share it. Every other row gets a new output: guessing, by
+    position or between rows that share a description, would hand one route another's edge, which
+    routes messages to the wrong place without any error. Callers keep those edges by sending IDs.
+    """
+    if not (isinstance(current, list) and isinstance(incoming, list)):
+        return incoming
+    if any(isinstance(row, dict) and row.get(_ROW_ID_KEY) for row in incoming):
+        return incoming
+    saved = [row for row in current if isinstance(row, dict) and row.get(_ROW_ID_KEY)]
+    ids: list[str | None] = [None] * len(incoming)
+    used: set[str] = set()
+    for key in _ROW_MATCH_KEYS:
+        saved_ids: dict[str, list[str]] = {}
+        for row in saved:
+            if (text := _row_text(row, key)) and row[_ROW_ID_KEY] not in used:
+                saved_ids.setdefault(text, []).append(row[_ROW_ID_KEY])
+        positions: dict[str, list[int]] = {}
+        for i, row in enumerate(incoming):
+            if ids[i] is None and (text := _row_text(row, key)):
+                positions.setdefault(text, []).append(i)
+        for text, sent in positions.items():
+            if len(sent) == 1 and len(matches := saved_ids.get(text, [])) == 1:
+                ids[sent[0]] = matches[0]
+                used.add(matches[0])
+    return [{**row, _ROW_ID_KEY: row_id} if row_id else row for row, row_id in zip(incoming, ids, strict=True)]
+
+
+def validate_router_mode_update(template: dict, params: dict[str, Any]) -> None:
+    """Reject changes that need a component refresh, including changes proposed for later approval."""
+    mode = params.get("routing_mode", (template.get("routing_mode") or {}).get("value"))
+    for field in ("routing_mode", "decision_kind") if mode == "Decision Model" else ("routing_mode",):
+        if field in params and params[field] != (template.get(field) or {}).get("value"):
+            msg = (
+                f"Changing Smart Router {field} requires refreshing its fields and outputs. "
+                "Change it in the editor first."
+            )
+            raise ValueError(msg)
+
+
 def configure_component(
     flow: dict,
     component_id: str,
@@ -409,6 +464,8 @@ def configure_component(
         value = raw_value
         if template[key].get("type") == "model":
             value = _coerce_model_value(value)
+        if node["data"].get("type") == "SmartRouter" and key in {"routes", "score_levels"}:
+            value = _keep_row_ids(template[key].get("value"), value)
         normalized_params[key] = value
 
     candidate_values = {key: field.get("value") for key, field in template.items() if isinstance(field, dict)}
@@ -431,6 +488,38 @@ def configure_component(
             allow_zero=key == "max_tokens" and node["data"].get("type") in {"Agent", "LanguageModelComponent"},
         )
 
+    router_outputs = None
+    if node["data"].get("type") == "SmartRouter":
+        validate_router_mode_update(template, normalized_params)
+        decision = candidate_values.get("routing_mode") == "Decision Model"
+        kind = candidate_values.get("decision_kind", "Choice")
+        table = "score_levels" if decision and kind == "Score" else "routes"
+        if table in normalized_params and not (decision and kind == "Boolean"):
+            rows = normalized_params[table]
+            prefix = "level_" if table == "score_levels" else "category_"
+            outputs = node["data"]["node"].get("outputs", [])
+            saved_ids = {output["name"] for output in outputs if output.get("name", "").startswith(prefix)}
+            ids = (
+                [row.get("route_id") if isinstance(row, dict) else None for row in rows]
+                if isinstance(rows, list)
+                else []
+            )
+            if (
+                not saved_ids
+                or any(not isinstance(route_id, str) for route_id in ids)
+                or len(ids) != len(saved_ids)
+                or set(ids) != saved_ids
+            ):
+                msg = (
+                    f"Changing Smart Router {table} would require updating its outputs. "
+                    "Add or remove routes in the editor first; to rename a route, keep its route_id."
+                )
+                raise ValueError(msg)
+            outputs_by_id = {output["name"]: output for output in outputs}
+            router_outputs = [
+                {**outputs_by_id[row["route_id"]], "display_name": row.get("route_category") or ""} for row in rows
+            ] + [output for output in outputs if output["name"] not in saved_ids]
+
     # Validate every parameter before changing either the flow or caller's params.
     params.update(normalized_params)
     for key, options in resolved_options.items():
@@ -443,6 +532,8 @@ def configure_component(
         # load_from_db=True (notably SecretStrInput credentials).
         if "load_from_db" in template[key]:
             template[key]["load_from_db"] = False
+    if router_outputs is not None:
+        node["data"]["node"]["outputs"] = router_outputs
 
 
 def get_component(flow: dict, component_id: str) -> dict:

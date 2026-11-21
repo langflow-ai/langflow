@@ -30,11 +30,13 @@ from langflow.services.auth.context import (
     AUTH_METHOD_JWT,
     AuthCredentialContext,
     clear_current_auth_context,
+    current_auth_is_restricted_api_key,
     set_current_auth_context,
 )
 from langflow.services.auth.exceptions import (
     AuthBackendUnavailableError,
     AuthenticationError,
+    ExternalAuthMaintenanceError,
     InactiveUserError,
     InvalidCredentialsError,
     MissingCredentialsError,
@@ -53,6 +55,13 @@ from langflow.services.auth.external import (
     set_current_external_access_context,
 )
 from langflow.services.auth.refresh_tokens import create_refresh_session, refresh_session_id, register_refresh_session
+from langflow.services.auth.user_admission import admit_user_creation
+from langflow.services.creation_hooks import (
+    ERROR_CODE_TIER_LIMIT_REACHED,
+    PreCreationDenied,
+    is_tier_limit_http_denial,
+    pre_creation_denied_to_http,
+)
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -448,6 +457,9 @@ class AuthService(BaseAuthService):
                     except InvalidCredentialsError:
                         raise
                     except Exception as api_key_err:
+                        # A busy or lost database never judged the key: retryable, not a rejection.
+                        if _is_retryable_backend_failure(api_key_err):
+                            raise AuthBackendUnavailableError from api_key_err
                         logger.error(f"Unexpected error during API key authentication: {api_key_err}")
                         msg = "API key authentication failed"
                         raise InvalidCredentialsError(msg) from api_key_err
@@ -479,6 +491,8 @@ class AuthService(BaseAuthService):
             except InvalidCredentialsError:
                 raise
             except Exception as e:
+                if _is_retryable_backend_failure(e):
+                    raise AuthBackendUnavailableError from e
                 logger.error(f"Unexpected error during API key authentication: {e}")
                 msg = "API key authentication failed"
                 raise InvalidCredentialsError(msg) from e
@@ -963,31 +977,39 @@ class AuthService(BaseAuthService):
         from sqlmodel import select
 
         from langflow.services.database.models.auth import SSOUserProfile
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if await maintenance_enabled(db):
+            raise ExternalAuthMaintenanceError
 
         profile_stmt = select(SSOUserProfile).where(
             SSOUserProfile.sso_provider == identity.provider,
             SSOUserProfile.sso_user_id == identity.subject,
         )
-        profile = (await db.exec(profile_stmt)).first()
 
-        if profile is not None:
-            user = await get_user_by_id(db, profile.user_id)
-            if user is None:
+        async def refresh_existing_profile(existing_profile: SSOUserProfile) -> User:
+            existing_user = await get_user_by_id(db, existing_profile.user_id)
+            if existing_user is None:
                 msg = "Mapped external user was not found"
-                raise AuthInvalidTokenError(msg)
-            if not user.is_active:
+                raise AuthInvalidTokenError(msg) from None
+            if not existing_user.is_active:
                 msg = "User account is inactive"
-                raise InactiveUserError(msg)
+                raise InactiveUserError(msg) from None
             now = datetime.now(timezone.utc)
             # Only overwrite the stored email when the token carries one; a later
             # token that omits the email claim must not erase a previously stored
             # address.
             if identity.email is not None:
-                profile.email = identity.email
-            profile.sso_last_login_at = now
-            profile.updated_at = now
-            await update_user_last_login_at(user.id, db)
-            return user
+                existing_profile.email = identity.email
+            existing_profile.sso_last_login_at = now
+            existing_profile.updated_at = now
+            await update_user_last_login_at(existing_user.id, db)
+            return existing_user
+
+        profile = (await db.exec(profile_stmt)).first()
+
+        if profile is not None:
+            return await refresh_existing_profile(profile)
 
         username = await self._unique_external_username(db, identity)
         random_password = secrets.token_urlsafe(48)
@@ -999,8 +1021,15 @@ class AuthService(BaseAuthService):
             is_superuser=False,
             last_login_at=now,
         )
-        db.add(user)
         try:
+            from langflow.services.deps import get_authorization_service
+
+            await admit_user_creation(
+                db,
+                authorization_service=get_authorization_service(),
+                candidate=user,
+            )
+            db.add(user)
             # Flush `user` on its own before constructing `new_profile`.
             # SSOUserProfile.user_id is a bare FK column - no SQLModel
             # Relationship() ties User and SSOUserProfile together - so
@@ -1022,6 +1051,25 @@ class AuthService(BaseAuthService):
             await db.flush()
             await db.refresh(user)
             await self._initialize_jit_user_defaults(user, db)
+        except HTTPException as denied:
+            # Enterprise tier hooks deliberately raise the canonical structured
+            # denial here rather than at a FastAPI route boundary. Roll back the
+            # request transaction before letting the response reach auth.
+            await db.rollback()
+            if not is_tier_limit_http_denial(denied):
+                raise
+            profile = (await db.exec(profile_stmt)).first()
+            if profile is not None:
+                return await refresh_existing_profile(profile)
+            raise
+        except PreCreationDenied as denied:
+            await db.rollback()
+            if denied.error_code != ERROR_CODE_TIER_LIMIT_REACHED:
+                raise pre_creation_denied_to_http(denied) from denied
+            profile = (await db.exec(profile_stmt)).first()
+            if profile is not None:
+                return await refresh_existing_profile(profile)
+            raise pre_creation_denied_to_http(denied) from denied
         except IntegrityError:
             await db.rollback()
             profile = (await db.exec(profile_stmt)).first()
@@ -1325,7 +1373,7 @@ class AuthService(BaseAuthService):
         return current_user
 
     async def get_current_active_superuser(self, current_user: User | UserRead) -> User | UserRead | None:
-        if not current_user.is_active or not current_user.is_superuser:
+        if current_auth_is_restricted_api_key() or not current_user.is_active or not current_user.is_superuser:
             return None
         set_current_model_provider_policy_context(user_id=current_user.id, attributes={"is_superuser": True})
         return current_user
@@ -1466,7 +1514,9 @@ class AuthService(BaseAuthService):
 
     def create_token(self, data: dict, expires_delta: timedelta):
         from langflow.services.auth.utils import get_jwt_signing_key
+        from langflow.services.database.models.api_key.policy import ensure_api_key_management_allowed
 
+        ensure_api_key_management_allowed()
         settings_service = self.settings
         to_encode = data.copy()
         expire = datetime.now(timezone.utc) + expires_delta
@@ -1497,17 +1547,41 @@ class AuthService(BaseAuthService):
                 last_login_at=None,
             )
 
-            db.add(super_user)
+            async def recover_committed_superuser() -> User | None:
+                committed_user = await get_user_by_username_case_insensitive(db, username)
+                return committed_user if committed_user is not None and committed_user.is_superuser else None
+
+            from langflow.services.deps import get_authorization_service
+
             try:
+                # Keep caller-owned writes and locks when a concurrent creation wins.
+                async with db.begin_nested():
+                    await admit_user_creation(
+                        db,
+                        authorization_service=get_authorization_service(),
+                        candidate=super_user,
+                    )
+                    db.add(super_user)
+                    await db.flush()
+            except PreCreationDenied as denied:
+                if denied.error_code != ERROR_CODE_TIER_LIMIT_REACHED:
+                    raise pre_creation_denied_to_http(denied) from denied
+                if committed_user := await recover_committed_superuser():
+                    return committed_user
+                raise pre_creation_denied_to_http(denied) from denied
+            except HTTPException as denied:
+                if not is_tier_limit_http_denial(denied):
+                    raise
+                if committed_user := await recover_committed_superuser():
+                    return committed_user
+                raise
+            except IntegrityError:
+                if committed_user := await recover_committed_superuser():
+                    return committed_user
+                raise
+            else:
                 await db.commit()
                 await db.refresh(super_user)
-            except IntegrityError:
-                await db.rollback()
-                super_user = await get_user_by_username(db, username)
-                if not super_user:
-                    raise
-            except Exception:  # noqa: BLE001
-                logger.debug("Error creating superuser.", exc_info=True)
 
         return super_user
 
@@ -1588,7 +1662,9 @@ class AuthService(BaseAuthService):
         )
         if not await create_refresh_session(session_id, str(user_id), expires_at, db, session_version):
             raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
-        if update_last_login:
+        from langflow.services.maintenance.state import maintenance_enabled
+
+        if update_last_login and not await maintenance_enabled(db):
             await update_user_last_login_at(user_id, db)
         return tokens
 

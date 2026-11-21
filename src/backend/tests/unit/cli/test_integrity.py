@@ -903,3 +903,28 @@ class TestOutput:
             ("report", None),
         ]
         assert "Logger set up" in result.stderr
+
+
+@pytest.mark.parametrize("command", [["check-integrity"], ["migration-preflight", "--target-version", "1.14.0"]])
+def test_readonly_cli_preserves_a_future_revision_sqlite_database(tmp_path, command):
+    import os
+    import subprocess
+    import sys
+
+    database = tmp_path / "future.db"
+    with sqlite3.connect(database) as connection:
+        connection.execute("CREATE TABLE alembic_version (version_num TEXT PRIMARY KEY)")
+        connection.execute("INSERT INTO alembic_version VALUES ('zz_future_revision')")
+    before = database.read_bytes()
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "langflow", *command, "--json"],
+        env={**os.environ, "LANGFLOW_DATABASE_URL": f"sqlite:///{database}", "LANGFLOW_CONFIG_DIR": str(tmp_path)},
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=300,
+    )
+    assert result.returncode == 1, result.stderr
+    assert "zz_future_revision" in result.stdout
+    assert database.read_bytes() == before
+    assert not list(tmp_path.glob("future.db-*"))

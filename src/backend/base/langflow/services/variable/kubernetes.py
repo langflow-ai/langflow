@@ -14,11 +14,18 @@ from langflow.services.database.models.variable.model import Variable, VariableC
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.kubernetes_secrets import KubernetesSecretManager, encode_user_id
+from langflow.services.variable.runtime_policy import (
+    RuntimeVariable,
+    resolve_runtime_variable,
+    resolve_runtime_variables,
+    runtime_variables_policy_enabled,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.settings.service import SettingsService
+    from pydantic import SecretStr
     from sqlmodel import Session
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -28,6 +35,18 @@ class KubernetesSecretService(VariableService, Service):
         self.settings_service = settings_service
         # TODO: settings_service to set kubernetes namespace
         self.kubernetes_secrets = KubernetesSecretManager()
+
+    async def get_account_bound_variable(self, user_id, name, field, session) -> RuntimeVariable | None:
+        return await resolve_runtime_variable(
+            user_id=user_id, name=name, field=field, session=session, settings=self.settings_service
+        )
+
+    @staticmethod
+    def account_bound_variables_enabled() -> bool:
+        return runtime_variables_policy_enabled()
+
+    async def get_account_bound_variables(self, user_id, session) -> dict[str, str] | None:
+        return await resolve_runtime_variables(user_id=user_id, session=session, settings=self.settings_service)
 
     @override
     async def initialize_user_variables(self, user_id: UUID | str, session: AsyncSession) -> None:
@@ -79,7 +98,10 @@ class KubernetesSecretService(VariableService, Service):
         raise VariableNotFoundError(msg)
 
     @override
-    async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str:
+    async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str | SecretStr:
+        bound = await self.get_account_bound_variable(user_id, name, field, session)
+        if bound is not None:
+            return bound.value
         secret_name = encode_user_id(user_id)
         key, value = await asyncio.to_thread(self.resolve_variable, secret_name, user_id, name)
         if key.startswith(CREDENTIAL_TYPE + "_") and field == "session_id":

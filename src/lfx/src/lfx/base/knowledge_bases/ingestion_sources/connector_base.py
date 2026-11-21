@@ -44,7 +44,9 @@ from lfx.integrations.errors import ConnectionNotAuthorizedError
 from lfx.integrations.models import ConnectionRef, ConnectionResolutionRequest
 from lfx.log.logger import logger
 from lfx.services.authorization.base import ExecutionPrincipal
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.env_var_security import safe_getenv
+from lfx.utils.secrets import secret_value_to_str
 
 if TYPE_CHECKING:
     from lfx.integrations.models import CredentialLease
@@ -174,8 +176,8 @@ class KBConnectorSource(KBIngestionSource):
            single-user deployments can skip the UI step).
 
         Returns ``None`` when neither source has the value; callers
-        decide whether that's fatal. Never raises — config validation
-        is the place for hard credential-required errors.
+        decide whether that's fatal. An account-bound policy refusal raises
+        rather than falling back to process-wide credentials.
         """
         if not variable_name:
             return None
@@ -224,8 +226,8 @@ class KBConnectorSource(KBIngestionSource):
         Isolated so tests can patch a single seam. Wrapped in a broad
         try/except because the variable service can raise a handful of
         domain errors (missing variable, decryption failure, DB
-        unavailable) and the caller treats all of them the same way —
-        fall through to the env-var lookup.
+        unavailable). Ordinary failures retain the legacy environment
+        fallback; account-bound policy failures always propagate.
         """
         try:
             from lfx.services.deps import get_variable_service, session_scope
@@ -240,8 +242,10 @@ class KBConnectorSource(KBIngestionSource):
                     field="",
                     session=session,
                 )
-                return str(value) if value else None
-        except Exception as exc:  # noqa: BLE001 — any failure → fall back to env
+                return secret_value_to_str(value) if value else None
+        except RuntimeVariableError:
+            raise
+        except Exception as exc:  # noqa: BLE001 — ordinary lookup failures may fall back to env
             logger.debug("variable_service lookup for %s failed: %s", variable_name, exc)
             return None
 

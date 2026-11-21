@@ -11,7 +11,7 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
 import { persistConflictDraft } from "./conflict-actions";
-import useSaveFlow from "./use-save-flow";
+import useSaveFlow, { type SaveFlowOptions } from "./use-save-flow";
 
 /**
  * How much longer than the debounce a continuous burst may defer its save.
@@ -107,9 +107,9 @@ const useAutoSaveFlow = () => {
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const enqueueSave = useCallback(
-    (flow?: FlowType): Promise<void> => {
+    (flow?: FlowType, options?: SaveFlowOptions): Promise<void> => {
       const flowId = flow?.id ?? currentFlowId;
-      const queuedSave = queueTail(flowId).then(() => saveFlow(flow));
+      const queuedSave = queueTail(flowId).then(() => saveFlow(flow, options));
       // Keep the tail fulfilled after a failed save so later edits still get a
       // chance to persist. The queuedSave returned to the immediate caller
       // retains the original rejection while the shared barrier tracks settle.
@@ -189,9 +189,12 @@ const useAutoSaveFlow = () => {
       debouncedAutoSave.flush?.();
       await queueTail(currentFlowId);
     };
-    queuedAutoSave.enqueue = (flow: FlowType): Promise<void> => {
+    queuedAutoSave.enqueue = (
+      flow: FlowType,
+      options?: SaveFlowOptions,
+    ): Promise<void> => {
       debouncedAutoSave.flush?.();
-      return enqueueSave(flow);
+      return enqueueSave(flow, options);
     };
     return queuedAutoSave;
   }, [currentFlowId, debouncedAutoSave, enqueueSave]);

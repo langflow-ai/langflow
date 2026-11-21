@@ -61,7 +61,11 @@ class ModelProviderPolicyRefreshWorker:
             # The worker refreshes one shared bundle, so it may only stand down
             # when every decision the bundle carries is owned by a plugin. An
             # integration ceiling Langflow still owns keeps the worker running.
-            if catalog_service.external_policy_snapshot is not None and _integration_policy_managed_externally():
+            if (
+                catalog_service.external_policy_snapshot is not None
+                and _integration_policy_managed_externally()
+                and get_policy_bundle_service().snapshot.approved_trigger_kinds is None
+            ):
                 await logger.adebug(
                     "Policy-bundle refresh worker not started: provider, catalog, and integration policies "
                     "are externally managed"
@@ -115,7 +119,12 @@ class ModelProviderPolicyRefreshWorker:
             async with session_scope() as session:
                 state = await get_model_provider_policy_state(session)
             deny_all_required = bool(state.approved_provider_ids)
-            return apply_model_provider_policy_state(state, invalidate_external=False)
+            changed = apply_model_provider_policy_state(state, invalidate_external=False)
+            from langflow.services.triggers.policy import pause_disallowed_triggers
+
+            async with session_scope() as session:
+                paused = await pause_disallowed_triggers(session)
+            return changed or bool(paused)
         except Exception as exc:  # noqa: BLE001
             deny_all_required = deny_all_required or isinstance(exc, ModelProviderPolicyNotInitializedError)
             service = get_model_provider_policy_service()
@@ -135,7 +144,9 @@ class ModelProviderPolicyRefreshWorker:
             # already marked the shared source unavailable above.
             bundle_service = get_policy_bundle_service()
             snapshot = bundle_service.snapshot
-            if snapshot.approved_integration_provider_ids or snapshot.blocked_integration_action_keys:
+            if snapshot.approved_trigger_kinds is not None:
+                changed = bundle_service.mark_source_unavailable() or changed
+            if snapshot.approved_integration_provider_ids is not None or snapshot.blocked_integration_action_keys:
                 from lfx.services.deps import get_integration_policy_service
 
                 changed = bundle_service.mark_source_unavailable() or changed

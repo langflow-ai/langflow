@@ -67,7 +67,7 @@ export const FormKeyRender = ({
 }: {
   modalProps: ModalConfigProps | undefined;
   apiKeyName: string;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   setApiKeyName: (value: string) => void;
   expiresAt: string;
   setExpiresAt: (value: string) => void;

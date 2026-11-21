@@ -69,6 +69,7 @@ from langflow.api.v1.schemas.deployments import (
     SnapshotUpdateResponse,
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
+from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization import (
     DeploymentAction,
     ProviderAccountAction,
@@ -392,14 +393,41 @@ async def list_provider_accounts(
     page: Annotated[int, Query(ge=1)] = 1,
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
-    await ensure_provider_account_permission(
-        current_user,
-        ProviderAccountAction.READ,
-        provider_account_user_id=current_user.id,
-    )
     offset = page_offset(page, size)
-    provider_accounts = await list_provider_account_rows(session, user_id=current_user.id, offset=offset, limit=size)
-    total = await count_provider_account_rows(session, user_id=current_user.id)
+    if current_auth_is_restricted_api_key():
+        visibility = await visible_scope_prefilter(
+            current_user,
+            resource_type="provider_account",
+            act=ProviderAccountAction.READ,
+        )
+        if visibility is None:
+            visible_rows = await filter_visible_resources(
+                current_user,
+                resource_type="provider_account",
+                candidates=await list_provider_account_rows(session, user_id=current_user.id),
+                act=ProviderAccountAction.READ,
+            )
+            total = len(visible_rows)
+            provider_accounts = visible_rows[offset : offset + size]
+        else:
+            provider_accounts = await list_provider_account_rows(
+                session,
+                user_id=current_user.id,
+                offset=offset,
+                limit=size,
+                visibility=visibility,
+            )
+            total = await count_provider_account_rows(session, user_id=current_user.id, visibility=visibility)
+    else:
+        await ensure_provider_account_permission(
+            current_user,
+            ProviderAccountAction.READ,
+            provider_account_user_id=current_user.id,
+        )
+        provider_accounts = await list_provider_account_rows(
+            session, user_id=current_user.id, offset=offset, limit=size
+        )
+        total = await count_provider_account_rows(session, user_id=current_user.id)
     return DeploymentProviderAccountListResponse(
         provider_accounts=[
             get_deployment_mapper(item.provider_key).resolve_provider_account_response(item)

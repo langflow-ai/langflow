@@ -1,6 +1,8 @@
-from typing import Final
+from typing import Final, Literal
 
 DEFAULT_SEGMENT_WRITE_KEY: Final = ""
+
+Edition = Literal["opensource", "enterprise"]
 
 IBM_PRODUCT_PROPERTIES: Final = {
     "UT30": "30AS5",
@@ -10,6 +12,11 @@ IBM_PRODUCT_PROPERTIES: Final = {
     "productPlanType": "freemium",
     "productTitle": "Langflow",
 }
+
+# `subProductTitle` values: the IBM tracking plan drops `clientType` and `platform`.
+SUB_PRODUCT_OSS: Final = "Langflow OSS"
+SUB_PRODUCT_DESKTOP: Final = "Langflow Desktop"
+SUB_PRODUCT_MCP: Final = "Langflow MCP"
 
 IBM_COMMON_EVENT_MAP: Final[dict[str, tuple[str, str | None]]] = {
     "version": ("Started Process", "Langflow"),

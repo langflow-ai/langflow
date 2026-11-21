@@ -1,0 +1,251 @@
+{
+  "schema_version": 1,
+  "provider_id": "jira",
+  "distribution": "lfx-jira",
+  "manifest": {
+    "schema_version": 1,
+    "provider_id": "jira",
+    "display_name": "Jira Cloud",
+    "icon": "Jira",
+    "docs_url": "https://docs.langflow.org/next/bundles-jira",
+    "auth_profiles": [
+      {
+        "id": "user",
+        "kind": "oauth2_authorization_code",
+        "identity": "user_delegated",
+        "supports_pkce": false,
+        "supports_refresh": true,
+        "default_scopes": [
+          "offline_access",
+          "read:jira-user",
+          "read:jira-work",
+          "write:jira-work"
+        ],
+        "client_type_by_context": {
+          "hosted": "confidential",
+          "self_managed": "confidential"
+        },
+        "owner_by_context": {
+          "hosted": "either",
+          "self_managed": "customer"
+        }
+      }
+    ],
+    "capabilities": [
+      {
+        "id": "jira.issue.search",
+        "display_name": "Jira: Search Issues",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:jira-work",
+          "read:jira-user"
+        ],
+        "policy_keys": [
+          "integrations.jira.issue.search"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "JiraSearchIssuesComponent"
+      },
+      {
+        "id": "jira.issue.read",
+        "display_name": "Jira: Read Issue",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:jira-work",
+          "read:jira-user"
+        ],
+        "policy_keys": [
+          "integrations.jira.issue.read"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "JiraReadIssueComponent"
+      },
+      {
+        "id": "jira.issue.create",
+        "display_name": "Jira: Create Issue",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:jira-work",
+          "write:jira-work",
+          "read:jira-user"
+        ],
+        "policy_keys": [
+          "integrations.jira.issue.create"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "JiraCreateIssueComponent"
+      },
+      {
+        "id": "jira.issue.update",
+        "display_name": "Jira: Update Issue",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:jira-work",
+          "write:jira-work",
+          "read:jira-user"
+        ],
+        "policy_keys": [
+          "integrations.jira.issue.update"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "JiraUpdateIssueComponent"
+      },
+      {
+        "id": "jira.issue.transition",
+        "display_name": "Jira: Transition Issue",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:jira-work",
+          "write:jira-work",
+          "read:jira-user"
+        ],
+        "policy_keys": [
+          "integrations.jira.issue.transition"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "hosted",
+          "self_managed"
+        ],
+        "risk": "write",
+        "component_ref": "JiraTransitionIssueComponent"
+      },
+      {
+        "id": "jira.trigger.created",
+        "display_name": "Jira: On Issue Created",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:jira-work",
+          "offline_access",
+          "read:jira-user"
+        ],
+        "policy_keys": [
+          "integrations.jira.trigger.created"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "JiraOnIssueCreatedTriggerComponent"
+      },
+      {
+        "id": "jira.trigger.updated",
+        "display_name": "Jira: On Issue Updated",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:jira-work",
+          "offline_access",
+          "read:jira-user"
+        ],
+        "policy_keys": [
+          "integrations.jira.trigger.updated"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "JiraOnIssueUpdatedTriggerComponent"
+      },
+      {
+        "id": "jira.trigger.status",
+        "display_name": "Jira: On Issue Status Changed",
+        "auth_profile_id": "user",
+        "identity": "user_delegated",
+        "required_scopes": [
+          "read:jira-work",
+          "offline_access",
+          "read:jira-user"
+        ],
+        "policy_keys": [
+          "integrations.jira.trigger.status"
+        ],
+        "substrate": "rest",
+        "maturity": "preview",
+        "deployment_contexts": [
+          "self_managed"
+        ],
+        "risk": "read",
+        "component_ref": "JiraOnIssueStatusChangedTriggerComponent"
+      }
+    ]
+  },
+  "sources": [
+    {
+      "url": "https://developer.atlassian.com/cloud/jira/platform/oauth-2-3lo-apps/",
+      "title": "Atlassian 3LO",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issue-search/",
+      "title": "enhanced issue search",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/",
+      "title": "issue actions",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.atlassian.com/cloud/jira/platform/webhooks/",
+      "title": "webhook authentication",
+      "verified_on": "2026-10-22"
+    },
+    {
+      "url": "https://developer.atlassian.com/cloud/jira/platform/basic-auth-for-rest-apis/",
+      "title": "app security requirements",
+      "verified_on": "2026-10-22"
+    }
+  ],
+  "transport_limitations": [
+    "One operator-configured Jira Cloud site using confidential 3LO.",
+    "Self-managed polling observes latest issue state and may miss intermediate edits or transitions. Snapshots and retained cursors are bounded to 5000 matching issue IDs.",
+    "Hosted and self-managed actions are supported. Data Center, Desktop, headless and push triggers are unsupported."
+  ],
+  "evidence_paths": [
+    "docs/docs/Components/bundles-jira.mdx",
+    "src/bundles/jira/src/lfx_jira/components/jira/capabilities.v1.json",
+    "src/backend/base/langflow/services/triggers/providers/jira",
+    "src/backend/tests/unit/services/triggers/test_jira_lifecycle.py",
+    "src/backend/tests/unit/services/triggers/test_jira_provider.py"
+  ],
+  "owner_acceptance": {
+    "status": "pending",
+    "note": "Owner sign-off and live provider tenant acceptance remain pending. Synthetic contract and lifecycle tests are recorded in the referenced evidence."
+  }
+}

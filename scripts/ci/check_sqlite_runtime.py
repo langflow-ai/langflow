@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import math
 import platform
+import sys
 import tempfile
 from pathlib import Path
 
@@ -36,7 +37,8 @@ def open_connection(path: Path) -> apsw.Connection:
 
 def qualify_runtime() -> dict[str, str]:
     """Verify native versions, distance functions, WAL persistence and database integrity."""
-    if apsw.apswversion() != "3.53.4.0" or apsw.sqlitelibversion() != "3.53.4":
+    expected_apsw, expected_sqlite = ("3.54.1.0", "3.54.1") if sys.version_info >= (3, 15) else ("3.53.4.0", "3.53.4")
+    if apsw.apswversion() != expected_apsw or apsw.sqlitelibversion() != expected_sqlite:
         msg = "Unexpected APSW/SQLite version. Qualify a pin change explicitly."
         raise RuntimeError(msg)
     with tempfile.TemporaryDirectory(prefix="lfx-sqlite-runtime-") as directory:

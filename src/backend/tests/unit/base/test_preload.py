@@ -488,6 +488,32 @@ async def test_environment_sweep_failure_continues_startup_and_retries():
     assert _STATE.environment_variables_initialized is True
 
 
+async def test_saved_registration_read_failure_remains_retryable(monkeypatch):
+    """A failed master read must leave the worker fallback available."""
+    from langflow.services.connection.oauth import stored_registrations
+
+    read = AsyncMock(side_effect=[RuntimeError("database temporarily unavailable"), {}])
+    monkeypatch.setattr(stored_registrations, "session_scope", lambda: _async_cm(object()))
+    monkeypatch.setattr(stored_registrations, "read_saved_registrations", read)
+    monkeypatch.setattr(stored_registrations, "apply_saved_registrations", MagicMock(return_value=[]))
+    monkeypatch.setattr(stored_registrations, "_STARTED_WITH", {})
+
+    with _preload_env() as fx:
+        await _run_master_preload()
+
+        assert _STATE.environment_variables_initialized is False
+        fx.initialize_all_user_variables.assert_not_awaited()
+        fx.load_flows_from_directory.assert_awaited_once()
+        fx.db_engine.dispose.assert_awaited_once()
+
+        await initialize_environment_variables()
+        assert _STATE.environment_variables_initialized is True
+        await initialize_environment_variables()
+
+    assert read.await_count == 2
+    fx.initialize_all_user_variables.assert_awaited_once()
+
+
 async def test_environment_sweep_service_lookup_failure_is_best_effort():
     """Failure constructing the variable service must not prevent server readiness."""
     with patch("langflow.services.deps.get_variable_service", side_effect=RuntimeError("unavailable")):

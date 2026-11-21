@@ -8,6 +8,7 @@ import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
 import { useSessionHasMessages } from "../hooks/use-session-has-messages";
+import { useSessionLabels } from "../hooks/use-session-labels";
 import { SessionSelector, type SessionSelectorProps } from "./session-selector";
 import {
   type SessionsPagination,
@@ -76,6 +77,7 @@ export function ChatSidebar({
     new Set(),
   );
   const currentFlowId = useGetFlowId();
+  const sessionLabels = useSessionLabels(currentFlowId, sessions);
   const isShareablePlayground = useFlowStore((state) => state.playgroundPage);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   // Only the open menu shows the message-dependent actions, so one cache
@@ -267,6 +269,7 @@ export function ChatSidebar({
                 )}
                 <SessionRow
                   session={session}
+                  label={sessionLabels.get(session)}
                   currentFlowId={currentFlowId}
                   deleteSession={handleDeleteSession}
                   onSelect={handleSessionClick}

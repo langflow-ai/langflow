@@ -1,6 +1,6 @@
 import warnings
 from collections.abc import AsyncIterator, Iterator
-from typing import Any, TypeAlias, get_args
+from typing import Any, Literal, TypeAlias, get_args
 
 from pandas import DataFrame
 from pydantic import Field, SecretStr, field_validator, model_validator
@@ -53,6 +53,22 @@ def _reject_secret_in_non_password_field(v: Any, info) -> None:
             "if it is not actually sensitive."
         )
         raise ValueError(msg)
+
+
+def decision_model_field_settings(value: Any) -> dict[str, Any]:
+    """Connection settings for a decision model field, which never connects other models."""
+    if value == "connect_other_models":
+        msg = "Decision models do not support model connection handles"
+        raise ValueError(msg)
+    return {"input_types": [], "external_options": {}}
+
+
+def _is_blank_float(value: Any) -> bool:
+    """For a ``preserve_empty`` float: reject Booleans, and report whether the value is blank."""
+    if isinstance(value, bool):
+        msg = "Value must be a number, not a Boolean."
+        raise ValueError(msg)  # noqa: TRY004 - pydantic reports only ValueError as a validation error
+    return value is None or (isinstance(value, str) and not value.strip())
 
 
 class TableInput(BaseInputMixin, MetadataTraceMixin, TableMixin, ListableInputMixin, ToolModeMixin):
@@ -286,6 +302,10 @@ class ModelInput(BaseInputMixin, ModelInputMixin, ListableInputMixin, InputTrace
         - "embedding" -> ["Embeddings"]
         - "language" (default) -> ["LanguageModel"]
         """
+        if self.model_type == "decision":
+            for name, setting in decision_model_field_settings(self.value).items():
+                object.__setattr__(self, name, setting)
+            return self
         # Always set input_types based on model_type if not explicitly provided
         if not self.input_types:
             default_input_type = "Embeddings" if self.model_type == "embedding" else "LanguageModel"
@@ -646,6 +666,18 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     field_type: SerializableFieldTypes = FieldTypes.FLOAT
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
+    preserve_empty: bool = False
+
+    @model_validator(mode="wrap")
+    @classmethod
+    def preserve_empty_initial_value(cls, data, handler):
+        # Inherited value precedes preserve_empty in field order during construction.
+        blank = isinstance(data, dict) and data.get("preserve_empty", False) and _is_blank_float(data.get("value", ""))
+        result = handler(data)
+        if blank:
+            object.__setattr__(result, "value", None)
+        return result
+
     @field_validator("value")
     @classmethod
     def validate_value(cls, v: Any, info):
@@ -662,6 +694,8 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
             ValueError: If the value is not of a valid type or if the input is missing a required key.
         """
         _reject_secret_in_non_password_field(v, info)
+        if info.data.get("preserve_empty", False) and _is_blank_float(v):
+            return None
         if isinstance(v, float):
             return v
         if isinstance(v, int):
@@ -1038,6 +1072,21 @@ class DurationInput(BaseInputMixin, MetadataTraceMixin, ToolModeMixin):
         return {"value": int(v.get("value", 0) or 0), "unit": v.get("unit", "Days")}
 
 
+class TimeInput(StrInput):
+    """A time of day, saved as 24-hour ``HH:MM`` and shown in the reader's clock format.
+
+    Set ``is_list`` to let the user add several times.
+    """
+
+    input_format: Literal["time"] = "time"
+
+
+class DateTimeInput(StrInput):
+    """A local date and time, saved as ``YYYY-MM-DDTHH:MM`` and shown in the reader's format."""
+
+    input_format: Literal["datetime"] = "datetime"
+
+
 class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixin, ToolModeMixin):
     """Represents a file field.
 
@@ -1128,6 +1177,8 @@ InputTypes: TypeAlias = (
     | TabInput
     | ActionPickerInput
     | DurationInput
+    | TimeInput
+    | DateTimeInput
     | DataDisplayInput
 )
 

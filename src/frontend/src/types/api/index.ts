@@ -35,7 +35,21 @@ export type CustomFieldsType = {
 export type CustomComponentRequest = {
   data: APIClassType;
   type: string;
+  warnings?: ComponentUpdateWarning[];
 };
+
+export type ComponentUpdateWarning = {
+  code: "generated_fields_not_restored";
+  fields: string[];
+  refresh_fields: string[];
+  unverified?: boolean;
+  inputs_unverified?: boolean;
+  outputs_unverified?: boolean;
+};
+
+export type ComponentRetirement = Required<
+  Pick<APIClassType, "retired_in" | "replacement">
+>;
 
 export type APIClassType = {
   base_classes?: Array<string>;
@@ -53,6 +67,8 @@ export type APIClassType = {
   beta?: boolean;
   legacy?: boolean;
   replacement?: string[];
+  /** Release that retired the component. A retired component fails when the flow runs. */
+  retired_in?: string;
   documentation: string;
   error?: string;
   official?: boolean;
@@ -118,6 +134,10 @@ export type InputFieldType = {
   text?: string;
   temp_file?: boolean;
   separator?: string;
+  /** Translated label per option value, sent for fields that ask for it. */
+  option_labels?: Record<string, string>;
+  /** How a text field is entered: a time of day, or a local date and time. */
+  input_format?: "time" | "datetime";
 };
 
 export type OutputFieldProxyType = {

@@ -165,6 +165,7 @@ async def cascade_delete_flow(
         raise HTTPException(status_code=400, detail="UUID5 flow IDs are reserved for public execution histories.")
     # Imported lazily so this module (loaded early, via ``api.utils``) stays free
     # of the memory-base service import chain.
+    from langflow.services.evaluations.cleanup import detach_flow as detach_flow_from_evaluations
     from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
     from langflow.services.memory_base.flow_cleanup import purge_flow_memory_bases
 
@@ -186,6 +187,7 @@ async def cascade_delete_flow(
         await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
         await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
         await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
+        await detach_flow_from_evaluations(session, flow_id)
         # Explicit delete despite FK CASCADE -- SQLite doesn't enforce FK cascades
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
@@ -239,7 +241,7 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
     """
     if not files:
         return
-    expected_flow_id = str(source_flow_id).lower()
+    expected_flow_id = str(source_flow_id)
     for entry in files:
         if not isinstance(entry, str) or not entry:
             raise HTTPException(status_code=400, detail="Invalid file entry")
@@ -249,7 +251,7 @@ def validate_public_files(files: list[str] | None, source_flow_id: uuid.UUID) ->
         if not match:
             raise HTTPException(status_code=400, detail="Invalid file path format")
         flow_id_segment, basename = match.group(1), match.group(2)
-        if flow_id_segment.lower() != expected_flow_id:
+        if flow_id_segment != expected_flow_id:
             raise HTTPException(status_code=400, detail="File not in this flow's namespace")
         if basename in (".", ".."):
             raise HTTPException(status_code=400, detail="Invalid filename")

@@ -5,11 +5,16 @@ from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
-from fastapi import BackgroundTasks, FastAPI, Request
+from fastapi import FastAPI, Request
 from httpx import ASGITransport, AsyncClient
 from langflow.api.v1 import endpoints
 from langflow.api.v1.schemas import SimplifiedAPIRequest
-from lfx.integrations.errors import ActionUnsupportedError, ConnectionNotAuthorizedError, IntegrationNetworkError
+from lfx.integrations.errors import (
+    ActionUnsupportedError,
+    ConnectionNotAuthorizedError,
+    IntegrationNetworkError,
+    ResourceNotFoundError,
+)
 from lfx.services.integration_policy import IntegrationPolicyError, IntegrationPolicyPurpose
 
 pytestmark = pytest.mark.no_blockbuster
@@ -27,11 +32,13 @@ pytestmark = pytest.mark.no_blockbuster
         ),
         (ConnectionNotAuthorizedError(provider="qaprobe"), 403),
         (ActionUnsupportedError(provider="qaprobe", http_status=422), 422),
+        (ResourceNotFoundError(provider="salesforce"), 404),
         (IntegrationNetworkError(provider="google", reason="timeout", host="gmail.googleapis.com"), 504),
         (IntegrationNetworkError(provider="google", reason="dns", host="gmail.googleapis.com"), 502),
     ],
 )
 async def test_simple_run_keeps_typed_errors_through_the_http_boundary(monkeypatch, owner, error, status_code):
+    """Preserve integration error codes and status without exposing delegated-call details."""
     user = SimpleNamespace(id=uuid4(), is_superuser=False)
     flow = SimpleNamespace(
         id=uuid4(),
@@ -42,7 +49,7 @@ async def test_simple_run_keeps_typed_errors_through_the_http_boundary(monkeypat
         data={"nodes": [], "edges": []},
     )
     graph = SimpleNamespace(vertices=[], set_run_id=Mock())
-    wrapped = ValueError("Error running graph")
+    wrapped = ValueError(f"Error running graph: Error building Component: {error}")
     wrapped.__cause__ = error
     monkeypatch.setattr(endpoints, "prepare_flow_build_for_user", AsyncMock(return_value=None))
     monkeypatch.setattr(endpoints, "try_warm_run_graph", AsyncMock(return_value=graph))
@@ -57,7 +64,6 @@ async def test_simple_run_keeps_typed_errors_through_the_http_boundary(monkeypat
     @app.post("/run")
     async def run():
         return await endpoints._run_flow_internal(
-            background_tasks=BackgroundTasks(),
             flow=flow,
             input_request=SimplifiedAPIRequest(),
             stream=False,
@@ -71,6 +77,11 @@ async def test_simple_run_keeps_typed_errors_through_the_http_boundary(monkeypat
 
     assert response.status_code == status_code, response.text
     assert response.json()["detail"]["error_code"] == error.code
+    if isinstance(error, ResourceNotFoundError):
+        assert response.json()["detail"]["provider"] == "salesforce"
+        assert response.json()["detail"]["retryable"] is False
+        assert response.json()["detail"]["hint"]
+        assert response.json()["detail"]["message"]
     if not owner:
         assert "integrations.qaprobe.doc.search" not in response.text
     assert "Traceback" not in response.text

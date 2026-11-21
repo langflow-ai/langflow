@@ -679,11 +679,14 @@ async def test_flush_batch_stages_plugin_events_in_same_transaction(monkeypatch)
     assert not hasattr(events[0], "details")
 
 
-def test_stage_audit_decision_uses_caller_transaction(monkeypatch):
+@pytest.mark.parametrize(
+    ("enabled", "durable", "required"), [(True, True, False), (True, False, True), (False, False, True)]
+)
+def test_stage_audit_decision_uses_caller_transaction(monkeypatch, enabled, durable, required):
     """Mutation audit rows and plugin events are staged without a separate commit."""
     from langflow.services import deps
 
-    install_settings(monkeypatch, authz_enabled=True, audit_enabled=True, audit_durable=True)
+    install_settings(monkeypatch, authz_enabled=True, audit_enabled=enabled, audit_durable=durable)
     rows = []
     staged = []
 
@@ -707,6 +710,7 @@ def test_stage_audit_decision_uses_caller_transaction(monkeypatch):
         obj=f"user:{resource_id}",
         result="allow",
         details={"event": authz_audit.AUDIT_EVENT_MUTATION},
+        required=required,
     )
 
     assert len(rows) == 1

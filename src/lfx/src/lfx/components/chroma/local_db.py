@@ -8,6 +8,7 @@ from lfx.inputs.inputs import MultilineInput
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, TabInput
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
+from lfx.upgrade.retired import CHROMA_REPLACEMENT, CHROMA_RETIRED_IN
 
 
 class LocalDBComponent(LCVectorStoreComponent):
@@ -18,6 +19,8 @@ class LocalDBComponent(LCVectorStoreComponent):
     name = "LocalDB"
     icon = "database"
     legacy = True
+    retired_in = CHROMA_RETIRED_IN
+    replacement = list(CHROMA_REPLACEMENT)
 
     inputs = [
         TabInput(

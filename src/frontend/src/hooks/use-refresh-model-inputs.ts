@@ -14,7 +14,6 @@ export {
 export {
   buildRefreshPayload,
   createUpdatedNode,
-  findModelFieldKey,
   isModelNode,
 } from "@/utils/model-node-helpers";
 

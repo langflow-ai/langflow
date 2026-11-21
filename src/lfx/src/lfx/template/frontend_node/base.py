@@ -57,6 +57,8 @@ class FrontendNode(BaseModel):
     """Whether the frontend node is legacy."""
     replacement: list[str] | None = None
     """Replacement for the frontend node when it is deprecated."""
+    retired_in: str | None = None
+    """Release that retired the component. A retired component fails when the flow runs."""
     error: str | None = None
     """Error message for the frontend node."""
     edited: bool = False

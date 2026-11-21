@@ -10,6 +10,7 @@ import useFlowConflictStore, {
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import { customStringify } from "@/utils/reactflowUtils";
 import {
   attachTheirFlow,
@@ -43,7 +44,10 @@ const keepBuiltOnGraph = (
 };
 
 // Opt-out for callers that recover from a save failure themselves.
-export type SaveFlowOptions = { suppressErrorToast?: boolean };
+export type SaveFlowOptions = {
+  suppressErrorToast?: boolean;
+  metadataOnly?: boolean;
+};
 
 /**
  * Applies a save's persisted settings to an editor whose graph moved on while
@@ -153,9 +157,9 @@ const useSaveFlow = () => {
       return;
     }
 
-    const reportSaveError = (detail: string) => {
+    const reportSaveError = (list: string[]) => {
       if (options?.suppressErrorToast) return;
-      setErrorData({ title: t("errors.failedToSaveFlow"), list: [detail] });
+      setErrorData({ title: t("errors.failedToSaveFlow"), list });
     };
 
     if (customStringify(requestedFlow) !== customStringify(currentSavedFlow)) {
@@ -184,7 +188,7 @@ const useSaveFlow = () => {
         }
 
         if (flow) {
-          if (!flow?.data) {
+          if (!flow?.data && !options?.metadataOnly) {
             getFlow(
               { id: flow!.id },
               {
@@ -201,14 +205,22 @@ const useSaveFlow = () => {
           const { id } = flow;
           // The baseline is the last applied server response, never the canvas,
           // which can hold a token from a response this save has not adopted.
-          const updatePayload = buildFlowUpdatePayload({
-            flow,
-            persisted:
-              currentSavedFlow?.id === id ? currentSavedFlow : undefined,
-            flows: useFlowsManagerStore.getState().flows,
-            live: currentFlow?.id === id ? { nodes, edges } : undefined,
-            userEdited: useFlowStore.getState().userEditedSinceLoad,
-          });
+          const updatePayload: FlowUpdatePayload = options?.metadataOnly
+            ? {
+                id,
+                name: flow.name,
+                description: flow.description,
+                locked: flow.locked,
+                versionToken: null,
+              }
+            : buildFlowUpdatePayload({
+                flow,
+                persisted:
+                  currentSavedFlow?.id === id ? currentSavedFlow : undefined,
+                flows: useFlowsManagerStore.getState().flows,
+                live: currentFlow?.id === id ? { nodes, edges } : undefined,
+                userEdited: useFlowStore.getState().userEditedSinceLoad,
+              });
           // biome-ignore lint/suspicious/noExplicitAny: legacy
           const handleError = (e: any) => {
             const detail = e.response?.data?.detail;
@@ -223,7 +235,7 @@ const useSaveFlow = () => {
               reject(e);
               return;
             }
-            reportSaveError(detail || e.message || "Unknown error");
+            reportSaveError(extractApiErrorMessages(e));
             setSaveLoading(false);
             reject(e);
           };
@@ -263,7 +275,12 @@ const useSaveFlow = () => {
                 const liveFlow = liveState.currentFlow;
                 const graphUnchanged =
                   liveState.nodes === nodes && liveState.edges === edges;
-                if (liveState.onFlowPage && graphUnchanged) {
+                if (
+                  liveState.onFlowPage &&
+                  liveFlow?.id === updatedFlow.id &&
+                  graphUnchanged &&
+                  "data" in updatePayload
+                ) {
                   setCurrentFlow(updatedFlow);
                 } else if (
                   liveState.onFlowPage &&
@@ -276,7 +293,7 @@ const useSaveFlow = () => {
                 }
                 resolve();
               } else {
-                reportSaveError(t("errors.flowsVariableUndefined"));
+                reportSaveError([t("errors.flowsVariableUndefined")]);
                 reject(new Error("Flows variable undefined"));
               }
             }, handleError);
@@ -290,7 +307,7 @@ const useSaveFlow = () => {
             persistFlow();
           }
         } else {
-          reportSaveError(t("errors.flowNotFound"));
+          reportSaveError([t("errors.flowNotFound")]);
           reject(new Error("Flow not found"));
         }
       });

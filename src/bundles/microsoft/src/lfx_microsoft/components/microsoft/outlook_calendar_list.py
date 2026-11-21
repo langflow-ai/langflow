@@ -35,36 +35,43 @@ class OutlookCalendarListComponent(MicrosoftGraphComponent):
             # ``start_time``; the Graph query parameter is unchanged.
             info="ISO 8601 start of the window, for example 2026-09-01T00:00:00.",
             required=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="end_time",
             display_name="End",
             info="ISO 8601 end of the window.",
             required=True,
+            tool_mode=True,
         ),
         MessageTextInput(
             name="calendar_id",
             display_name="Calendar ID",
             info="Defaults to the user's default calendar.",
             advanced=True,
+            tool_mode=True,
         ),
         IntInput(
             name="top",
             display_name="Result Budget",
             value=DEFAULT_TOP,
             info="Stop after a complete page reaches this count; results can exceed it by part of a page.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="select",
             display_name="Select Fields",
             is_list=True,
             advanced=True,
+            tool_mode=True,
+            value=[],
         ),
         MessageTextInput(
             name="time_zone",
             display_name="Time Zone",
             info="Windows or IANA time zone for the returned times (Prefer: outlook.timezone).",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

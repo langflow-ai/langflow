@@ -78,6 +78,8 @@ export type ToolsComponentType = {
 
 export type FloatComponentType = {
   rangeSpec: RangeSpecType;
+  /** A blank field stays blank instead of becoming 0 (backend `preserve_empty`). */
+  preserveEmpty?: boolean;
 };
 
 export type IntComponentType = {
@@ -149,6 +151,7 @@ export type DropDownComponentType = {
   toggle?: boolean;
   toggleValue?: boolean;
   toggleDisable?: boolean;
+  optionLabels?: Record<string, string>;
 };
 
 export type TextAreaComponentType = {
@@ -171,6 +174,7 @@ export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
   hideOnSelection?: boolean;
+  optionLabels?: Record<string, string>;
 };
 
 export type TabComponentType = {

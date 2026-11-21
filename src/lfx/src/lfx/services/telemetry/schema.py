@@ -8,13 +8,13 @@ MAX_TELEMETRY_URL_SIZE = 2048
 
 
 class BasePayload(BaseModel):
-    client_type: str | None = Field(default=None, serialization_alias="clientType")
+    client_type: str | None = Field(default=None, serialization_alias="subProductTitle")
 
 
 class RunPayload(BasePayload):
     run_is_webhook: bool = Field(default=False, serialization_alias="runIsWebhook")
     run_seconds: int = Field(serialization_alias="runSeconds")
-    run_success: bool = Field(serialization_alias="runSuccess")
+    run_success: bool = Field(serialization_alias="successFlag")
     run_error_message: str | None = Field(None, serialization_alias="runErrorMessage")
 
 
@@ -38,9 +38,9 @@ class ComponentPayload(BasePayload):
 
 
 class ExceptionPayload(BasePayload):
-    exception_type: str = Field(serialization_alias="exceptionType")
+    exception_type: str = Field(serialization_alias="objectType")
     exception_message: str = Field(serialization_alias="exceptionMessage")
-    exception_context: str = Field(serialization_alias="exceptionContext")
+    exception_context: str = Field(serialization_alias="category")
     stack_trace_hash: str | None = Field(None, serialization_alias="stackTraceHash")
 
 

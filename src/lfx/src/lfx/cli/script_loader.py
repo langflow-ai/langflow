@@ -122,9 +122,9 @@ async def load_graph_from_script(script_path: Path) -> "Graph":
         # Programmatic Graph construction does not pass through the JSON flow
         # loader's warm-up. Active catalog rules need the same canonical
         # identity index before synchronous graph validation runs below.
-        from lfx.utils.flow_validation import ensure_component_hash_lookups_loaded
+        from lfx.utils.flow_validation import ensure_component_hash_lookups_loaded, flow_has_connection_refs
 
-        await ensure_component_hash_lookups_loaded()
+        await ensure_component_hash_lookups_loaded(force=flow_has_connection_refs(graph_obj))
         return _validate_graph_instance(graph_obj)
 
     except (

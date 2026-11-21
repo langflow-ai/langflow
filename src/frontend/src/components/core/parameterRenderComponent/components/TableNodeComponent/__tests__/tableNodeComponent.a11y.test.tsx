@@ -81,3 +81,23 @@ describe("TableNodeComponent", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("TableNodeComponent trigger text", () => {
+  // Every TableInput sends the English "Open table" unless the component sets
+  // its own text, so that default must give way to the translated label (LE-3117 F5).
+  it("shows the translated label in place of the backend's default text", () => {
+    render(<TableNodeComponent {...baseProps} trigger_text="Open table" />);
+    expect(screen.getByText("Open Table")).toBeInTheDocument();
+    expect(screen.queryByText("Open table")).not.toBeInTheDocument();
+  });
+
+  it("shows the translated label when no text is sent", () => {
+    render(<TableNodeComponent {...baseProps} />);
+    expect(screen.getByText("Open Table")).toBeInTheDocument();
+  });
+
+  it("keeps a component's own trigger text", () => {
+    render(<TableNodeComponent {...baseProps} trigger_text="Edit levels" />);
+    expect(screen.getByText("Edit levels")).toBeInTheDocument();
+  });
+});

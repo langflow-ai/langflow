@@ -377,6 +377,34 @@ class TestAGUIModeDispatch:
         assert detail["code"] == "MODE_UNSUPPORTED_FIELDS"
         assert detail["fields"] == ["output_ids"]
 
+    @pytest.mark.parametrize("mode", ["stream", "background"])
+    async def test_non_sync_modes_reject_globals(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        empty_flow,
+        mode: str,
+    ):
+        """Body globals is sync-only; stream/background must 422 instead of silently ignoring it.
+
+        The header transport was already rejected for GA; a caller who follows that
+        advice and moves the override into body globals must not then be silently
+        dropped on these modes (they run through the v1 build loop, which ignores it).
+        """
+        body = _agui_body(empty_flow, mode=mode)
+        body["globals"] = {"MY_VAR": "v"}
+
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "MODE_UNSUPPORTED_FIELDS"
+        assert detail["fields"] == ["globals"]
+
 
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
@@ -858,6 +886,46 @@ class TestV2WorkflowDelegatedErrorPolicy:
 class TestAGUIStreaming:
     """mode=stream returns an AG-UI server-sent event stream."""
 
+    async def test_background_token_producer_waits_for_space_and_wakes_on_close(self):
+        from langflow.api.v2.workflow_execution import _WorkflowEventQueue
+        from lfx.events.event_manager import create_default_event_manager, emit_token
+
+        queue = _WorkflowEventQueue(maxsize=1, background_bursts=True)
+        manager = create_default_event_manager(queue, await_token_capacity=True)
+        await emit_token(manager.on_token, data={"chunk": "first"})
+        second = asyncio.create_task(emit_token(manager.on_token, data={"chunk": "second"}))
+        try:
+            await asyncio.sleep(0)
+            assert not second.done()
+            assert json.loads((await queue.get())[1])["data"]["chunk"] == "first"
+            await asyncio.wait_for(second, timeout=1)
+            third = asyncio.create_task(emit_token(manager.on_token, data={"chunk": "third"}))
+            await asyncio.sleep(0)
+            assert not third.done()
+            queue.close()
+            await asyncio.wait_for(third, timeout=1)
+        finally:
+            queue.close()
+            await queue.aclose()
+
+    async def test_background_callback_burst_has_a_byte_limit(self, monkeypatch):
+        from langflow.api.v2 import workflow_execution as wf_exec
+
+        monkeypatch.setattr(wf_exec, "_BACKGROUND_BURST_BYTES", 512)
+        queue = wf_exec._WorkflowEventQueue(maxsize=1, background_bursts=True)
+        event = ("token", b"{}", time.time())
+        try:
+            queue.put_nowait(event)
+            queue.put_nowait(event)
+            queue.put_nowait(("large", bytes(512), time.time()))
+            assert await queue.get() == event
+            assert await queue.get() == event
+            assert json.loads((await asyncio.wait_for(queue.get(), timeout=1))[1])["event"] == "error"
+            assert (await queue.get())[1] is None
+        finally:
+            queue.close()
+            await queue.aclose()
+
     async def test_stream_event_queue_ignores_late_sentinel_after_overflow(self):
         """A normal completion sentinel must not race ahead of the overflow error."""
         from langflow.api.v2 import workflow_execution as wf_exec
@@ -1005,6 +1073,45 @@ class TestAGUIStreaming:
 
         assert event_types.count(terminal_type) == 1
         assert event_types[-1] == terminal_type
+
+    async def test_agui_stream_ends_at_run_error_when_build_loop_also_ends(self, monkeypatch: pytest.MonkeyPatch):
+        """A failed build reports ``error`` and then ``end``; the AG-UI stream must stop at RUN_ERROR."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+        from lfx.workflow.adapters import StreamAdapterContext, get_stream_adapter
+        from lfx.workflow.converters import ParsedWorkflowRun
+
+        async def fake_generate_flow_events(**kwargs):
+            # The order the v1 build loop emits on a component failure.
+            kwargs["event_manager"].on_error(data={"error": "qa forced failure"})
+            kwargs["event_manager"].on_end(data={"build_duration": 0.1})
+            await kwargs["event_manager"].queue.put((None, None, time.time()))
+
+        monkeypatch.setattr(wf_exec, "generate_flow_events", fake_generate_flow_events)
+
+        adapter = get_stream_adapter("agui", StreamAdapterContext(run_id="run-1", thread_id="thread-1"))
+        frames = [
+            frame
+            async for frame, _event_type in wf_exec._stream_event_frames(
+                adapter=adapter,
+                flow_id=uuid4(),
+                flow_name="flow",
+                background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+                parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+                current_user=SimpleNamespace(id=uuid4()),
+                protocol="v2",
+                execution_family="workflow_v2",
+                expose_error_details=True,
+            )
+        ]
+
+        payloads = _sse_payloads(frames)
+        payload_types = [_sse_payload_type(payload) for payload in payloads]
+        assert "RUN_FINISHED" not in payload_types
+        assert payload_types[-1] == "RUN_ERROR"
+        assert "qa forced failure" in payloads[-1]["message"]
+        # The playground's chat error bubble still gets its mirror, just before RUN_ERROR.
+        assert payloads[-2]["name"] == "langflow.event"
+        assert payloads[-2]["value"]["event_type"] == "error"
 
     @pytest.mark.parametrize(("stream_protocol", "terminal_type"), [("agui", "RUN_ERROR"), ("langflow", "error")])
     async def test_stream_error_path_uses_fallback_when_producer_raises_before_on_error(
@@ -1650,6 +1757,41 @@ class TestAGUIBackgroundReattach:
         assert "0" not in event_ids
         assert "RUN_FINISHED" in body
 
+    async def test_reattach_to_failed_run_ends_at_run_error(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """Re-attaching to a failed background run replays RUN_ERROR as the last event, with no RUN_FINISHED."""
+        from langflow.api.v2 import workflow_execution as wf_exec
+
+        async def failing_generate_flow_events(**kwargs):
+            # The order the v1 build loop emits on a component failure.
+            kwargs["event_manager"].on_error(data={"error": "qa forced failure"})
+            kwargs["event_manager"].on_end(data={"build_duration": 0.1})
+            await kwargs["event_manager"].queue.put((None, None, time.time()))
+
+        monkeypatch.setattr(wf_exec, "generate_flow_events", failing_generate_flow_events)
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_agui_body(chatbot_flow, mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        response = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+
+        assert response.status_code == 200
+        payloads = _sse_payloads([response.content])
+        payload_types = [_sse_payload_type(payload) for payload in payloads]
+        assert "RUN_FINISHED" not in payload_types
+        assert payload_types[-1] == "RUN_ERROR"
+        assert "qa forced failure" in payloads[-1]["message"]
+
     async def test_reattach_unknown_job_returns_404(
         self,
         client: AsyncClient,
@@ -1746,6 +1888,9 @@ class TestAGUIBackgroundJobStatus:
                 return []
 
         class FakeJobService:
+            async def authorize_job_start(self, *_args, **_kwargs):
+                return None
+
             async def update_job_status(self, seen_job_id, status, *, finished_timestamp=False):
                 updates.append((seen_job_id, status, finished_timestamp))
 
@@ -1821,6 +1966,9 @@ class TestAGUIBackgroundJobStatus:
         captured: dict = {}
 
         class FakeJobService:
+            async def authorize_job_start(self, *_args, **_kwargs):
+                return None
+
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
@@ -1893,6 +2041,9 @@ class TestAGUIBackgroundJobStatus:
         captured: dict = {}
 
         class FakeJobService:
+            async def authorize_job_start(self, *_args, **_kwargs):
+                return None
+
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 
@@ -1957,6 +2108,9 @@ class TestAGUIBackgroundJobStatus:
         captured: dict = {}
 
         class FakeJobService:
+            async def authorize_job_start(self, *_args, **_kwargs):
+                return None
+
             async def update_job_status(self, *_args, **_kwargs):
                 return None
 

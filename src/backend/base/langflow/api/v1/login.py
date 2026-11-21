@@ -10,11 +10,12 @@ from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
 from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.auth.cookies import auth_cookie_name
-from langflow.services.auth.exceptions import AuthenticationError
+from langflow.services.auth.exceptions import AuthBackendUnavailableError, AuthenticationError
 from langflow.services.auth.refresh_tokens import revoke_refresh_token
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
+from langflow.services.maintenance.state import maintenance_enabled
 from langflow.services.rate_limit import check_rate_limit
 
 router = APIRouter(tags=["Login"])
@@ -97,14 +98,17 @@ async def login_to_get_access_token(
             expires=None,  # Set to None to make it a session cookie
             domain=auth_settings.COOKIE_DOMAIN,
         )
-        await get_variable_service().initialize_user_variables(user.id, db)
+        paused = await maintenance_enabled(db)
+        if not paused:
+            await get_variable_service().initialize_user_variables(user.id, db)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
 
         # Create default project for user if it doesn't exist
-        _ = await get_or_create_default_folder(db, user.id)
+        if not paused:
+            _ = await get_or_create_default_folder(db, user.id)
 
-        if get_settings_service().settings.agentic_experience:
+        if not paused and get_settings_service().settings.agentic_experience:
             await initialize_agentic_user_variables(user.id, db)
 
         return tokens
@@ -150,12 +154,9 @@ async def auto_login(request: Request, response: Response, db: DbSession):
         user = await get_user_by_id(db, user_id)
 
         if user:
-            if user.store_api_key is None:
-                user.store_api_key = ""
-
             response.set_cookie(
                 auth_cookie_name("apikey_tkn_lflw", request),
-                str(user.store_api_key),  # Ensure it's a string
+                str(user.store_api_key or ""),
                 path=_cookie_path(request),
                 httponly=auth_settings.ACCESS_HTTPONLY,
                 samesite=auth_settings.ACCESS_SAME_SITE,
@@ -164,7 +165,7 @@ async def auto_login(request: Request, response: Response, db: DbSession):
                 domain=auth_settings.COOKIE_DOMAIN,
             )
 
-            if get_settings_service().settings.agentic_experience:
+            if not await maintenance_enabled(db) and get_settings_service().settings.agentic_experience:
                 from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
 
                 await initialize_agentic_user_variables(user.id, db)
@@ -232,7 +233,7 @@ async def get_session(
     It does not raise an error if unauthenticated, allowing the frontend to gracefully
     handle the session state.
     """
-    from langflow.services.auth.utils import _get_external_token, oauth2_login
+    from langflow.services.auth.utils import _auth_error_to_http, _get_external_token, oauth2_login
 
     # Try to get the token from the request (cookie or Authorization header)
     try:
@@ -255,6 +256,8 @@ async def get_session(
             authenticated=True,
             user=UserRead.model_validate(user, from_attributes=True),
         )
+    except AuthBackendUnavailableError as exc:
+        raise _auth_error_to_http(exc) from exc
     except (AuthenticationError, HTTPException, ValueError) as _:
         # Any authentication error means not authenticated
         return SessionResponse(authenticated=False)

@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { FormEventHandler, ReactNode } from "react";
+import type { ApiKeyPermissionOptions } from "@/types/api-key-permissions";
 import SecretKeyModal from "../index";
 
 // This value matches the en.json translation that the global i18n mock resolves.
@@ -38,6 +39,17 @@ jest.mock("@/customization/hooks/use-custom-generate-token", () => ({
   useGenerateToken: () => jest.fn(),
 }));
 
+jest.mock(
+  "@/controllers/API/queries/api-keys/use-get-api-key-permission-targets",
+  () => ({
+    useGetApiKeyPermissionTargets: () => ({
+      data: [],
+      isLoading: false,
+      isError: false,
+    }),
+  }),
+);
+
 const mockCreateApiKey = jest.fn();
 jest.mock("../../../controllers/API", () => ({
   createApiKey: (...args: unknown[]) => mockCreateApiKey(...args),
@@ -59,6 +71,13 @@ const defaultModalProps = {
   buttonText: "Generate Key",
   generatedKeyMessage: "Copy your key now — it won't be shown again.",
   showIcon: true,
+};
+
+const permissionOptions: ApiKeyPermissionOptions = {
+  supported: true,
+  roles: [{ id: "viewer", name: "Viewer", permissions: ["flow:read"] }],
+  resource_actions: { flow: ["read", "execute"] },
+  scope_types: { flow: ["global", "project"] },
 };
 
 const renderModal = (overrides: Record<string, unknown> = {}) =>
@@ -139,5 +158,101 @@ describe("SecretKeyModal", () => {
         expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
       );
     });
+  });
+
+  it("defaults supported creation to full owner access", async () => {
+    const user = userEvent.setup();
+    renderModal({ permissionOptions });
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    expect(
+      screen.getByRole("radio", { name: "Full owner access" }),
+    ).toBeChecked();
+    expect(screen.getByTestId("secret_key_modal_submit_button")).toBeEnabled();
+    await user.click(screen.getByTestId("secret_key_modal_submit_button"));
+    await waitFor(() =>
+      expect(mockCreateApiKey).toHaveBeenCalledWith("", null, null),
+    );
+  });
+
+  it("requires a permission selection after opting into restricted access", async () => {
+    const user = userEvent.setup();
+    renderModal({ permissionOptions });
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(screen.getByRole("radio", { name: "Restricted access" }));
+    expect(screen.getByTestId("secret_key_modal_submit_button")).toBeDisabled();
+    fireEvent.submit(
+      screen.getByTestId("secret_key_modal_submit_button").closest("form")!,
+    );
+    expect(mockCreateApiKey).not.toHaveBeenCalled();
+  });
+
+  it("submits the selected live role", async () => {
+    const user = userEvent.setup();
+    renderModal({ permissionOptions });
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(screen.getByRole("radio", { name: "Restricted access" }));
+    await user.click(screen.getByRole("button", { name: /^Use a role$/i }));
+    await user.selectOptions(screen.getByLabelText("Role 1"), "viewer");
+    await user.click(screen.getByTestId("secret_key_modal_submit_button"));
+    await waitFor(() =>
+      expect(mockCreateApiKey).toHaveBeenCalledWith("", null, {
+        roles: [{ role_id: "viewer", domain_type: "global", domain_id: null }],
+        restrictions: [],
+      }),
+    );
+  });
+
+  it("does not fall back to full access when permission metadata fails", async () => {
+    const user = userEvent.setup();
+    renderModal({ permissionsError: true });
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Could not load permission options",
+    );
+    expect(screen.getByTestId("secret_key_modal_submit_button")).toBeDisabled();
+    expect(mockCreateApiKey).not.toHaveBeenCalled();
+  });
+
+  it("does not downgrade an open restricted form when scope support disappears", async () => {
+    const user = userEvent.setup();
+    const result = renderModal({ permissionOptions });
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(screen.getByRole("radio", { name: "Restricted access" }));
+    result.rerender(
+      <SecretKeyModal
+        data={{ apikeyname: "" }}
+        modalProps={defaultModalProps}
+        permissionOptions={{ ...permissionOptions, supported: false }}
+      >
+        <button>Open</button>
+      </SecretKeyModal>,
+    );
+    expect(screen.getByTestId("secret_key_modal_submit_button")).toBeDisabled();
+    fireEvent.submit(
+      screen.getByTestId("secret_key_modal_submit_button").closest("form")!,
+    );
+    expect(mockCreateApiKey).not.toHaveBeenCalled();
+  });
+
+  it("retains the policy after a server refuses key creation", async () => {
+    const user = userEvent.setup();
+    mockCreateApiKey.mockRejectedValue({
+      response: {
+        status: 403,
+        data: { detail: "Permission selection refused" },
+      },
+    });
+    renderModal({ permissionOptions });
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(screen.getByRole("radio", { name: "Restricted access" }));
+    await user.click(screen.getByRole("button", { name: /^Use a role$/i }));
+    await user.selectOptions(screen.getByLabelText("Role 1"), "viewer");
+    await user.click(screen.getByTestId("secret_key_modal_submit_button"));
+    await waitFor(() =>
+      expect(screen.getByLabelText("Role 1")).toHaveValue("viewer"),
+    );
+    expect(
+      screen.getByRole("radio", { name: "Restricted access" }),
+    ).toBeChecked();
   });
 });

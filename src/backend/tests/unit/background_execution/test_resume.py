@@ -43,11 +43,24 @@ class _StubUser:
 
 
 class _RecordingBackend:
+    """Scaled-shaped backend double: records dispatches, never runs anything."""
+
+    external_workers = True
+
     def __init__(self) -> None:
         self.enqueued: list[str] = []
 
+    async def start(self) -> None:
+        """Nothing to start: no workers behind the double."""
+
+    async def teardown(self) -> None:
+        """Nothing to close."""
+
     async def enqueue(self, job_id: str) -> None:
         self.enqueued.append(job_id)
+
+    async def dispatch(self, job_id, *, flow_id, request, user) -> None:  # noqa: ARG002
+        await self.enqueue(str(job_id))
 
 
 def _runner(job_service, job_id, source):
@@ -528,3 +541,44 @@ async def test_resume_does_not_leave_a_queued_row_for_the_sweep(real_services_jo
         assert job_id not in queued_ids
     finally:
         await svc.stop()
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_scaled_resume_requeues_for_a_worker_instead_of_running_in_process(real_services_job_service) -> None:
+    """Scaled mode: resume hands the row back to the queue; the API must not run it.
+
+    Without the scaled branch the resume submitted the runner to the facade's
+    in-process executor, which is never started in scaled mode, so the job sat
+    IN_PROGRESS until the lease watchdog failed it worker_lost and the human's
+    decision was silently lost.
+    """
+    from langflow.services.background_execution.db_backend import DBBackgroundQueue
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = real_services_job_service
+    user_id, job_id = await _suspend_a_job(job_service, request_id="req-scaled")
+
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_noop_factory,
+        backend=DBBackgroundQueue(job_service=job_service, owner="api:test"),
+    )
+    accepted = await svc.resume_job(job_id, _StubUser(user_id), request_id="req-scaled", decision={"choice": "approve"})
+    assert accepted is True
+
+    # The row is back on the queue with the resume claim's lease cleared...
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.QUEUED
+    meta = job.job_metadata or {}
+    assert "owner" not in meta
+    assert "heartbeat_at" not in meta
+    # ...the decision is durable ahead of any worker claim...
+    resume = [s for s in await job_service.unconsumed_signals(job_id) if s.signal_type == SignalType.RESUME]
+    assert len(resume) == 1
+    assert resume[0].data["decision"] == {"choice": "approve"}
+    # ...and a worker can claim it. Target the row directly: the FIFO pick
+    # (claim_next_queued_lease) may find older QUEUED rows left by sibling
+    # tests sharing the fixture database.
+    assert await job_service.claim_queued_lease(job_id, owner="worker:test", lease_ttl_s=45.0) is True

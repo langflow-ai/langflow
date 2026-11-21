@@ -33,18 +33,21 @@ class SlackCanvasComponent(SlackBaseComponent):
             name="title",
             display_name="Title",
             info="Optional canvas title.",
+            tool_mode=True,
         ),
         MultilineInput(
             name="markdown",
             display_name="Markdown",
             required=True,
             info="Canvas body as markdown. Slack accepts up to 1 MiB.",
+            tool_mode=True,
         ),
         StrInput(
             name="channel_id",
             display_name="Channel ID",
             info="Adds the canvas as a channel tab. Required on free Slack plans.",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

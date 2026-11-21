@@ -1,8 +1,10 @@
 """Apply safe upgrades to a flow dict.
 
 Returns a deep copy of the flow with safe-upgradeable node codes replaced by the
-current registry code and any template fields the saved flow predates introduced
-with their registry defaults. Breaking and blocked nodes are left unchanged.
+current registry code, any template fields the saved flow predates introduced
+with their registry defaults, any empty field whose type changed replaced by the
+registry's declaration, and the outputs replaced by the registry's outputs. Breaking
+and blocked nodes are left unchanged.
 """
 
 from __future__ import annotations
@@ -13,7 +15,17 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
-from lfx.upgrade.checker import CompatibilityReport, build_registry_lookup, new_template_field_keys
+from lfx.template.field_migrations import can_migrate_chat_output_input
+from lfx.upgrade.checker import (
+    CompatibilityReport,
+    _canonical_types,
+    _node_is_in_tool_mode,
+    build_registry_lookup,
+    flow_node_id,
+    new_template_field_keys,
+    node_with_group_values,
+    retyped_field_keys,
+)
 
 
 def apply_safe_upgrades(
@@ -46,21 +58,21 @@ def apply_safe_upgrades(
     if registry is None:
         registry = build_registry_lookup(all_types_dict)
     updated = copy.deepcopy(flow_data)
-    count = _apply_to_nodes(updated.get("nodes", []), safe_ids, registry)
+    count, _ = _apply_to_nodes(updated.get("nodes", []), safe_ids, registry)
 
     return (updated, count) if return_count else updated
 
 
-def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, dict]) -> int:
-    """Walk top-level nodes and (one level of) nested flow nodes, applying safe upgrades.
+def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, dict]) -> tuple[int, set[str]]:
+    """Apply safe upgrades and return the ids changed at this level.
 
     Mirrors check_flow_compatibility's recursion into ``node.data.node.flow.data.nodes``
     so safe-upgradeable nodes inside grouped components are written, not silently skipped.
     """
     count = 0
+    updated_ids: set[str] = set()
     for node in nodes:
-        node_id = node.get("data", {}).get("id") or node.get("id")
-        if node_id in safe_ids:
+        if flow_node_id(node) in safe_ids:
             component_type = node.get("data", {}).get("type", "")
             entry = registry.get(component_type)
             if entry:
@@ -75,10 +87,104 @@ def _apply_to_nodes(nodes: list[dict], safe_ids: set[str], registry: dict[str, d
                     # each one exactly as the registry declares it — the state a freshly
                     # added component would carry. Deep-copied so later edits to the
                     # upgraded flow cannot reach back into the shared registry lookup.
-                    for key in new_template_field_keys(registry_template, flow_template):
-                        flow_template[key] = copy.deepcopy(registry_template[key])
+                    # Take the registry declaration for retyped fields too. Normally those are
+                    # empty and unconnected. The explicit ChatOutput migration keeps values below.
+                    for key in new_template_field_keys(registry_template, flow_template) | retyped_field_keys(
+                        registry_template, flow_template
+                    ):
+                        replacement = copy.deepcopy(registry_template[key])
+                        saved_field = flow_template.get(key, {})
+                        if can_migrate_chat_output_input(
+                            (entry.get("metadata") or {}).get("component_class_name"),
+                            key,
+                            replacement,
+                            saved_field,
+                        ):
+                            # Unlike ordinary retyping, the explicit ChatOutput migration keeps
+                            # a saved string and its literal/global source mode.
+                            for saved_key in ("value", "load_from_db"):
+                                if saved_key in saved_field:
+                                    replacement[saved_key] = copy.deepcopy(saved_field[saved_key])
+                            # Older flows lack the class identity cleanEdges uses to migrate
+                            # the saved str handle when this upgraded flow opens in the editor.
+                            node_info = node["data"]["node"]
+                            node_info["metadata"] = {
+                                **(node_info.get("metadata") or {}),
+                                "component_class_name": "ChatOutput",
+                            }
+                        flow_template[key] = replacement
+                    # Every saved output still exists on a safe node, so take the registry's
+                    # outputs, as the editor's update does: an added output reaches the node. A
+                    # tool-mode node keeps its toolset output.
+                    node_info = node["data"]["node"]
+                    saved_outputs = node_info.get("outputs") or []
+                    if entry.get("outputs") is not None and not _node_is_in_tool_mode(saved_outputs):
+                        node_info["outputs"] = _updated_outputs(entry["outputs"], saved_outputs)
                     count += 1
-        nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
+                    updated_ids.add(flow_node_id(node))
+        node_info = node.get("data", {}).get("node", {})
+        nested_flow = node_info.get("flow", {}).get("data", {})
+        nested = nested_flow.get("nodes")
         if nested:
-            count += _apply_to_nodes(nested, safe_ids, registry)
-    return count
+            effective_nodes = [node_with_group_values(child, node_info.get("template", {})) for child in nested]
+            nested_count, child_ids = _apply_to_nodes(effective_nodes, safe_ids, registry)
+            if nested_count:
+                nested_flow["nodes"] = effective_nodes
+                _update_group_inputs(node_info, effective_nodes, child_ids)
+                updated_ids.add(flow_node_id(node))
+                count += nested_count
+    return count, updated_ids
+
+
+def _update_group_inputs(node_info: dict, children: list[dict], updated_ids: set[str]) -> None:
+    """Keep exposed contracts in sync so ungrouping cannot restore an outdated field type."""
+    children_by_id = {flow_node_id(child): child for child in children}
+    for name, field_data in node_info.get("template", {}).items():
+        if not isinstance(field_data, dict) or not isinstance(proxy := field_data.get("proxy"), dict):
+            continue
+        child_id = proxy.get("id")
+        if child_id not in updated_ids:
+            continue
+        template = children_by_id[child_id].get("data", {}).get("node", {}).get("template", {})
+        child_field = template.get(proxy.get("field"))
+        if not isinstance(child_field, dict):
+            continue
+        replacement = copy.deepcopy(child_field)
+        # These properties belong to the group's exposed field, rather than its child.
+        for key in ("proxy", "name", "display_name", "show", "advanced"):
+            if key in field_data:
+                replacement[key] = copy.deepcopy(field_data[key])
+        node_info["template"][name] = replacement
+
+
+def _updated_outputs(registry_outputs: list[dict], saved_outputs: list[dict]) -> list[dict]:
+    """Return the registry's outputs with each saved output's ``hidden`` flag, ``options`` and picked type.
+
+    The picked type (``selected``) is kept when the output offers it exactly; otherwise when the output
+    offers it under its other name (``Data`` saved, ``JSON`` declared), written in the output's spelling.
+    A saved output with no picked type (or one that is not a string) and a single type counts that type
+    as its pick. Any other output takes the registry's pick.
+    """
+    saved = {output.get("name"): output for output in saved_outputs}
+    outputs = copy.deepcopy(registry_outputs)
+    for output in outputs:
+        old = saved.get(output.get("name"))
+        if old is None:
+            continue
+        if "hidden" in old:
+            output["hidden"] = old["hidden"]
+        if "options" in old:
+            output["options"] = old["options"]
+        picked = old.get("selected")
+        if not isinstance(picked, str):
+            saved_types = old.get("types")
+            picked = saved_types[0] if isinstance(saved_types, list) and len(saved_types) == 1 else None
+        if not isinstance(picked, str):
+            continue
+        types = output.get("types") or []
+        same_type = [t for t in types if _canonical_types([t]) == _canonical_types([picked])]
+        if picked in types:
+            output["selected"] = picked
+        elif same_type:
+            output["selected"] = same_type[0]
+    return outputs

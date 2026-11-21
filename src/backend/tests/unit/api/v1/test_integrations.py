@@ -109,7 +109,11 @@ def integration_policy():
     bundle = get_policy_bundle_service()
     original = bundle.snapshot
 
-    def _publish(*, providers: frozenset[str] = frozenset(), actions: frozenset[str] = frozenset()) -> None:
+    def _publish(
+        *,
+        providers: frozenset[str] | None = None,
+        actions: frozenset[str] = frozenset(),
+    ) -> None:
         bundle.publish(
             replace(
                 original,
@@ -171,6 +175,20 @@ async def test_list_integrations_omits_a_provider_outside_the_ceiling(
 
     assert response.status_code == 200, response.text
     assert [item["provider_id"] for item in response.json()["providers"]] == []
+
+
+@pytest.mark.usefixtures("active_user", "loaded_integration")
+async def test_list_integrations_allows_explicit_deny_all(
+    client: AsyncClient,
+    logged_in_headers: dict[str, str],
+    integration_policy,
+) -> None:
+    integration_policy(providers=frozenset())
+
+    response = await client.get("api/v1/integrations", headers=logged_in_headers)
+
+    assert response.status_code == 200, response.text
+    assert response.json()["providers"] == []
 
 
 @pytest.mark.usefixtures("active_user", "loaded_integration")

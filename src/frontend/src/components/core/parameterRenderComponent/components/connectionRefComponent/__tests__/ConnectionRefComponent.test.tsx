@@ -11,6 +11,24 @@ Element.prototype.scrollIntoView = jest.fn();
 jest.mock("@/controllers/API/queries/connections/use-get-connections", () => ({
   useGetConnections: jest.fn(),
 }));
+jest.mock("@tanstack/react-query", () => ({
+  ...jest.requireActual("@tanstack/react-query"),
+  useQueryClient: () => ({ setQueryData: jest.fn() }),
+}));
+jest.mock("@/controllers/API/queries/connections/use-connections", () => ({
+  useIntegrationsQuery: () => ({
+    data: { providers: [] },
+    isSuccess: true,
+    refetch: jest.fn(),
+  }),
+}));
+jest.mock(
+  "@/pages/SettingsPage/pages/ConnectionsPage/components/AddConnectionDialog",
+  () => ({
+    __esModule: true,
+    default: () => null,
+  }),
+);
 
 const CALENDAR_READ =
   "https://www.googleapis.com/auth/calendar.events.readonly";
@@ -108,6 +126,33 @@ describe("ConnectionRefComponent", () => {
       { enabled: true },
     );
   });
+
+  it.each(["ready", "pending", "expired", "revoked", "error"] as const)(
+    "shows another owner's %s ServiceNow connection as unavailable",
+    async (status) => {
+      setConnections([
+        connection({
+          provider_key: "servicenow",
+          owner_id: "u2",
+          status,
+        }),
+      ]);
+      renderPicker({
+        provider: "servicenow",
+        requiredScopes: [],
+        ownershipMode: "user",
+      });
+
+      await userEvent.click(screen.getByTestId("connectionref_connection"));
+
+      const option = await screen.findByTestId(
+        "connection-option-servicenow/work",
+      );
+      expect(option).toHaveTextContent("Unavailable");
+      expect(option).not.toHaveTextContent("Pending");
+      expect(screen.getByTitle("Not owned by the flow owner")).toBeVisible();
+    },
+  );
 
   it("prompts for a selection when the field is empty", () => {
     renderPicker();

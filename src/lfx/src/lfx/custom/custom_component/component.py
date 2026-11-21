@@ -31,6 +31,7 @@ from lfx.custom.annotation_validation import (
 )
 from lfx.custom.custom_component.input_names import ensure_inputs_not_shadowed_by_methods
 from lfx.custom.tree_visitor import RequiredInputsVisitor
+from lfx.events.event_manager import emit_token
 from lfx.exceptions.component import StreamingError
 from lfx.field_typing import Tool  # noqa: TC001
 
@@ -199,6 +200,10 @@ class PlaceholderGraph(NamedTuple):
 
 
 class Component(CustomComponent):
+    # An explicit promise by each concrete component author, not inherited approval.
+    # Supported components have static dependencies and materialized outputs, do not
+    # mutate graph scheduling/shared branch state, and own/await all their work.
+    supports_dependency_ready_scheduling: ClassVar[bool] = False
     inputs: list[InputTypes] = []
     outputs: list[Output] = []
     selected_output: str | None = None
@@ -669,6 +674,10 @@ class Component(CustomComponent):
             raise ValueError(msg)
         graph = getattr(self, "graph", None)
         principal = getattr(graph, "execution_principal", ExecutionPrincipal.unknown())
+        if self.get_vertex() is None:
+            from lfx.integrations.configuration import current_connection_configuration_principal
+
+            principal = current_connection_configuration_principal() or principal
         # Refuse before a lease exists: no credential is minted, decrypted, or
         # refreshed for a provider or action the deployment policy denies.
         capability_ids = self._require_integration_policy_for_input(input_model)
@@ -1421,48 +1430,16 @@ class Component(CustomComponent):
         if not isinstance(effective_parameters, Mapping):
             return ()
 
-        provider_ids: list[str] = []
-        for input_ in getattr(self, "_inputs", {}).values():
-            if not isinstance(input_, ModelInput) or not isinstance(input_.name, str):
-                continue
-            model_selection = effective_parameters.get(input_.name)
-            if isinstance(model_selection, Mapping):
-                model_selection = [model_selection]
-            if (
-                not isinstance(model_selection, list)
-                or not model_selection
-                or not isinstance(model_selection[0], Mapping)
-            ):
-                continue
+        from lfx.base.models.provider_selection import raw_model_provider_names
 
-            provider = ""
-            if input_.name == "model":
-                # This mirrors apply_model_overrides: a non-empty raw provider
-                # override applies to the canonical ``model`` selector only.
-                # StrInput overrides are never load_from_db, so this identity is
-                # safe to inspect before secrets.
-                provider_override = effective_parameters.get("provider")
-                provider = provider_override.strip() if isinstance(provider_override, str) else ""
-            if not provider:
-                selected_provider = model_selection[0].get("provider")
-                provider = selected_provider.strip() if isinstance(selected_provider, str) else ""
-            if provider:
-                provider_id = resolve_provider_id(provider)
-                if provider_id not in provider_ids:
-                    provider_ids.append(provider_id)
-
-        # Historical Agent/ALTK nodes used a plain DropdownInput named
-        # ``agent_llm`` instead of ModelInput. Saved flows execute their
-        # embedded component source, so they do not inherit a newer Agent
-        # override; recognize the stable legacy selector in the shared base.
-        legacy_provider = effective_parameters.get("agent_llm")
-        if isinstance(legacy_provider, str):
-            legacy_provider = legacy_provider.strip()
-            if legacy_provider and legacy_provider != "Custom":
-                provider_id = resolve_provider_id(legacy_provider)
-                if provider_id not in provider_ids:
-                    provider_ids.append(provider_id)
-        return tuple(provider_ids)
+        names = (
+            input_.name
+            for input_ in getattr(self, "_inputs", {}).values()
+            if isinstance(input_, ModelInput) and isinstance(input_.name, str)
+        )
+        return tuple(
+            dict.fromkeys(resolve_provider_id(name) for name in raw_model_provider_names(names, effective_parameters))
+        )
 
     def _selected_model_provider_policy_id(self, parameters: Mapping[str, Any] | None = None) -> str | None:
         """Return the first selected ModelInput provider for compatibility."""
@@ -1625,6 +1602,7 @@ class Component(CustomComponent):
 
         effective_purpose = purpose or IntegrationPolicyPurpose.USE
         capability_ids = self._selected_integration_capabilities(input_model.provider, input_model.capabilities)
+        self._require_headless_integration_support(input_model.provider, capability_ids)
         require_integration_actions(
             user_id=self.user_id,
             provider_id=input_model.provider,
@@ -1633,6 +1611,14 @@ class Component(CustomComponent):
             purpose=effective_purpose,
         )
         return capability_ids
+
+    def _require_headless_integration_support(self, provider_id: str, capability_ids: Iterable[str]) -> None:
+        from lfx.services.integration_policy.utils import require_headless_integration_support
+
+        graph = getattr(self, "graph", None)
+        principal = getattr(graph, "execution_principal", None)
+        if principal is not None and principal.kind == "headless_operator":
+            require_headless_integration_support(provider_id, capability_ids)
 
     def require_integration_policy(self, purpose=None) -> None:
         """Gate the selected integration actions before any adapter can run.
@@ -1656,6 +1642,7 @@ class Component(CustomComponent):
 
         for provider_id, capabilities in integration_capabilities_for_component_class(type(self).__name__).items():
             selected = self._selected_integration_capabilities(provider_id, capabilities)
+            self._require_headless_integration_support(provider_id, selected)
             require_integration_actions(
                 user_id=self.user_id,
                 provider_id=provider_id,
@@ -1678,6 +1665,16 @@ class Component(CustomComponent):
         """Build the results of the component."""
         from lfx.services.integration_policy import IntegrationPolicyPurpose
         from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+        running_output = self.__dict__.get("_running_output")
+        if running_output is not None:
+            # Raised before the error-reporting block so the outer build reports it exactly once.
+            msg = (
+                f'Output "{running_output.name}" of "{self.display_name}" uses method "{running_output.method}", '
+                f'which runs the component again instead of returning a value. Define "{running_output.method}" '
+                "on the component."
+            )
+            raise RuntimeError(msg)
 
         self.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
 
@@ -1813,10 +1810,21 @@ class Component(CustomComponent):
             msg = f'Output "{output.name}" does not have a method defined.'
             raise ValueError(msg)
 
-        method = getattr(self, output.method)
+        try:
+            method = getattr(self, output.method)
+        except AttributeError as e:
+            if hasattr(type(self), output.method):
+                raise
+            msg = (
+                f'Output "{output.name}" of "{self.display_name}" uses method "{output.method}", '
+                "which the component does not define."
+            )
+            raise AttributeError(msg) from e
         # A sync output method that merely wraps a coroutine (``delegates_to``) is awaited
         # directly instead of running in a thread that would spin up its own event loop.
         async_method = async_delegate_target(self, output.method)
+        previous_running_output = self.__dict__.get("_running_output")
+        self._running_output = output
         try:
             if async_method is not None:
                 result = await async_method()
@@ -1827,6 +1835,8 @@ class Component(CustomComponent):
         except TypeError as e:
             msg = f'Error running method "{output.method}": {e}'
             raise TypeError(msg) from e
+        finally:
+            self._running_output = previous_running_output
 
         if (
             self._vertex is not None
@@ -2565,7 +2575,7 @@ class Component(CustomComponent):
                 msg_copy.text = complete_message
                 msg_copy.properties.state = "partial"
                 await self._send_message_event(msg_copy, id_=message_id)
-            await asyncio.to_thread(
+            await emit_token(
                 self._event_manager.on_token,
                 data={
                     "chunk": chunk,
@@ -2593,7 +2603,11 @@ class Component(CustomComponent):
 
         vertex_data = getattr(self._vertex, "data", None)
         context_note = (
-            explain_restricted_component_mismatch(vertex_data.get("type"), vertex_data.get("node"))
+            explain_restricted_component_mismatch(
+                vertex_data.get("type"),
+                vertex_data.get("node"),
+                vertex=self._vertex,
+            )
             if isinstance(vertex_data, Mapping)
             else None
         )

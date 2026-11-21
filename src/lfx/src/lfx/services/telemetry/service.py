@@ -10,13 +10,19 @@ import platform
 import traceback
 import uuid
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 
 import httpx
 
 from lfx.log.logger import logger
 from lfx.services.telemetry.base import BaseTelemetryService
-from lfx.services.telemetry.constants import DEFAULT_SEGMENT_WRITE_KEY, IBM_PRODUCT_PROPERTIES, get_ibm_common_event
+from lfx.services.telemetry.constants import (
+    DEFAULT_SEGMENT_WRITE_KEY,
+    IBM_PRODUCT_PROPERTIES,
+    SUB_PRODUCT_MCP,
+    Edition,
+    get_ibm_common_event,
+)
 from lfx.services.telemetry.identity import get_hashed_user_id, get_or_create_anonymous_id
 from lfx.services.telemetry.privacy import get_safe_payload_properties
 from lfx.services.telemetry.schema import (
@@ -41,10 +47,13 @@ class TelemetryService(BaseTelemetryService):
         base_url: str | None = None,
         write_key: str | None = None,
         do_not_track: bool | None = None,
+        edition: str | None = None,
     ):
         super().__init__()
         self.base_url = base_url or os.environ.get("LANGFLOW_SEGMENT_API_URL", _DEFAULT_BASE_URL)
         self.write_key = write_key or os.environ.get("LANGFLOW_SEGMENT_WRITE_KEY") or DEFAULT_SEGMENT_WRITE_KEY
+        edition = edition or os.environ.get("LANGFLOW_EDITION", "")
+        self.edition = edition if edition in get_args(Edition) else "opensource"
 
         if do_not_track is None:
             do_not_track = os.environ.get("DO_NOT_TRACK", "false").lower() in {"1", "true"}
@@ -59,9 +68,9 @@ class TelemetryService(BaseTelemetryService):
         self._start_time = datetime.now(timezone.utc)
 
         self._common_fields = {
-            "langflow_version": self._get_version(),
-            "platform": "mcp",
-            "os": platform.system().lower(),
+            "productVersion": self._get_version(),
+            "subProductTitle": SUB_PRODUCT_MCP,
+            "osName": platform.system().lower(),
         }
         self.set_ready()
 
@@ -114,9 +123,10 @@ class TelemetryService(BaseTelemetryService):
             return
         try:
             properties = get_safe_payload_properties(payload)
-            if not isinstance(payload, VersionPayload):
-                properties.update(self._common_fields)
+            for key, value in self._common_fields.items():
+                properties.setdefault(key, value)
             properties.update(IBM_PRODUCT_PROPERTIES)
+            properties["productPlanName"] = self.edition
             properties["instanceId"] = self.anonymous_id
             properties["subscriptionId"] = self.anonymous_id
             event, process_type, legacy_event = get_ibm_common_event(path)
@@ -163,7 +173,7 @@ class TelemetryService(BaseTelemetryService):
             platform=platform.platform(),
             python=python_version,
             arch=platform.machine(),
-            client_type="mcp",
+            client_type=SUB_PRODUCT_MCP,
         )
         await self._enqueue(payload, None)
 

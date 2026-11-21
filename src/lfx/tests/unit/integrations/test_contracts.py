@@ -21,6 +21,7 @@ from lfx.integrations import (
     ScopeSet,
 )
 from lfx.integrations.capabilities import CapabilityMaturity, DeploymentContext, ExecutionSubstrate, OAuthKind
+from lfx.integrations.policy_constants import INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID
 from lfx.io.schema import create_input_schema, create_input_schema_from_dict
 from lfx.schema.dotdict import dotdict
 from pydantic import SecretStr, ValidationError
@@ -109,6 +110,12 @@ def test_scope_set_activates_conditional_requirements() -> None:
 
     assert ScopeSet.covers(capability, {"write": False}, {"drive.read"}, provider="google") == frozenset()
     assert ScopeSet.covers(capability, {"write": True}, {"drive.read"}, provider="google") == frozenset({"drive.write"})
+
+
+def test_a_provider_cannot_claim_the_policy_deny_all_identity() -> None:
+    # Otherwise the compatibility marker could approve a real integration.
+    with pytest.raises(ValidationError, match="reserved for policy storage"):
+        _provider(INTEGRATION_POLICY_DENY_ALL_PROVIDER_ID)
 
 
 def test_oauth_profile_kinds_match_discovery_schema() -> None:

@@ -64,6 +64,10 @@ async def test_environment_import_failure_does_not_abort_worker_startup(monkeypa
     from langflow.preload import _STATE
 
     monkeypatch.setattr(_STATE, "environment_variables_initialized", False)
+    load_registrations = AsyncMock()
+    monkeypatch.setattr(
+        "langflow.services.connection.oauth.stored_registrations.load_stored_oauth_registrations", load_registrations
+    )
     sweep = AsyncMock(side_effect=RuntimeError("environment import failed"))
     variable_service = AsyncMock(initialize_all_user_variables=sweep)
     monkeypatch.setattr("langflow.services.deps.get_variable_service", lambda: variable_service)
@@ -85,6 +89,7 @@ async def test_environment_import_failure_does_not_abort_worker_startup(monkeypa
         async with main_module.get_lifespan()(object()):
             pass
     assert exc.value is reached_next_step
+    load_registrations.assert_awaited_once()
     sweep.assert_awaited_once()
     assert _STATE.environment_variables_initialized is False
 

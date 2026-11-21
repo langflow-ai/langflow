@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useSidebar } from "@/components/ui/sidebar";
 import useRestoreVersion from "@/hooks/flows/use-restore-version";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import CanvasBanner, { CanvasBannerButton } from "./CanvasBanner";
 
 interface RestoreVersionButtonProps {
@@ -20,7 +21,12 @@ export default function RestoreVersionButton({
   versionTag,
 }: RestoreVersionButtonProps) {
   const { t } = useTranslation();
-  const { restore, isRestoring } = useRestoreVersion(flowId);
+  const versionToken = useFlowsManagerStore((state) =>
+    state.currentFlow?.id === flowId
+      ? state.currentFlow.version_token
+      : undefined,
+  );
+  const { restore, isRestoring } = useRestoreVersion(flowId, versionToken);
   const { setActiveSection } = useSidebar();
 
   const [showConfirm, setShowConfirm] = useState(false);

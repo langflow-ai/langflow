@@ -14,7 +14,8 @@ class ModelMetadata(TypedDict, total=False):
     not_supported: bool  # Whether model is not supported or deprecated (defaults to False)
     deprecated: bool  # Whether model is deprecated (defaults to False)
     default: bool  # Whether model is a default/recommended option (defaults to False)
-    model_type: str  # Type of model (defaults to "llm" or "embeddings")
+    model_type: str  # "llm", "embeddings", or "decision"
+    capabilities: list[str]  # Supported decision primitives: choice, boolean, score
     # Optional release date as a Unix epoch (seconds). Populated by live
     # fetches (OpenRouter ``created`` field) and by the models.dev override
     # (``release_date`` parsed as YYYY-MM-DD). Drives newest-first sorting in
@@ -438,6 +439,38 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             "model_class": "ChatOpenAI",
             "model_param": "model",
         },
+    },
+    "Perplexity": {
+        "provider_id": "perplexity",
+        "icon": "Perplexity",
+        "variables": [
+            {
+                "variable_name": "Perplexity API Key",
+                "variable_key": "PERPLEXITY_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+            }
+        ],
+        "api_docs_url": "https://docs.perplexity.ai/docs/decisions/quickstart",
+        "mapping": {},
+    },
+    "TypeSafe": {
+        "provider_id": "typesafe",
+        "icon": "Bot",
+        "variables": [
+            {
+                "variable_name": "TypeSafe API Key",
+                "variable_key": "TYPESAFE_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+            }
+        ],
+        "api_docs_url": "https://docs.typesafe.ai/api",
+        "mapping": {},
     },
 }
 

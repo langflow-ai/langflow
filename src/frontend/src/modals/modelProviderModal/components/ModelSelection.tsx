@@ -1,25 +1,42 @@
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useId, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
+import { isModelEnabledForType } from "@/controllers/API/helpers/enabled-model-policy";
+import { isAccessRefusal } from "@/controllers/API/helpers/get-axios-error-message";
 import type { ProviderScopeParams } from "@/controllers/API/helpers/provider-scope";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 
 import { Model } from "@/modals/modelProviderModal/components/types";
 import type { ModelType, ModelTypeFilter } from "@/types/models";
 import { cn } from "@/utils/utils";
+import {
+  deploymentKindsOfFilter,
+  kindsOfFilter,
+  modelsOfFilter,
+} from "../helpers/view-kinds";
 
 /** Providers where the callable model id is a user-chosen deployment name. */
 const CUSTOM_DEPLOYMENT_PROVIDERS = new Set(["Azure AI Foundry"]);
 
-/** Providers that render their own useful UI when no catalog models exist. */
-export const hasProviderOwnedEmptyState = (providerName?: string): boolean =>
-  !!providerName &&
-  (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
-    providerName.toLowerCase() === "ollama");
+/**
+ * Providers that render their own useful UI when no catalog models exist.
+ * Custom deployments and Ollama serve only language and embedding models, so
+ * a decision-only view gets the generic empty state instead; OpenRouter's
+ * decision view offers its own add-a-model-ID control.
+ */
+export const hasProviderOwnedEmptyState = (
+  providerName: string | undefined,
+  modelType: ModelTypeFilter,
+): boolean =>
+  (providerName === "OpenRouter" && modelType === "decision") ||
+  (!!providerName &&
+    deploymentKindsOfFilter(modelType).length > 0 &&
+    (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+      providerName.toLowerCase() === "ollama"));
 
 export interface ModelProviderSelectionProps extends ProviderScopeParams {
   availableModels: Model[];
@@ -131,6 +148,7 @@ const ModelRow = ({
 }: ModelRowProps) => {
   const { t } = useTranslation();
   const tags = buildCapabilityTags(model, !!showEmbeddingTag, t);
+  const name = { modelName: model.model_name };
 
   return (
     <div className="flex flex-row items-center justify-between h-[24px]">
@@ -178,9 +196,13 @@ const ModelRow = ({
           }
           data-testid={`${testIdPrefix}-toggle-${model.model_name}`}
           aria-label={
-            enabled
-              ? t("modelProvider.disableModel", { modelName: model.model_name })
-              : t("modelProvider.enableModel", { modelName: model.model_name })
+            modelType === "decision"
+              ? enabled
+                ? t("modelProvider.disableDecisionModel", name)
+                : t("modelProvider.enableDecisionModel", name)
+              : enabled
+                ? t("modelProvider.disableModel", name)
+                : t("modelProvider.enableModel", name)
           }
           stopPropagation
         />
@@ -190,7 +212,7 @@ const ModelRow = ({
 };
 
 /**
- * Displays lists of LLM and embedding models with toggle switches.
+ * Displays lists of language, embedding and decision models with toggle switches.
  * Allows users to enable/disable individual models for a provider.
  */
 const ModelSelection = ({
@@ -205,6 +227,13 @@ const ModelSelection = ({
   projectId,
 }: ModelProviderSelectionProps) => {
   const { t } = useTranslation();
+  const sectionIdPrefix = useId();
+  // Static keys, so the translation check can see each one.
+  const sectionTitles: Record<ModelType, string> = {
+    llm: t("modelProviders.languageModels"),
+    embeddings: t("modelProviders.embeddingModels"),
+    decision: t("modelProviders.decisionModels"),
+  };
   const {
     data: enabledModelsData,
     isSuccess: isEnabledModelsSuccess,
@@ -212,6 +241,7 @@ const ModelSelection = ({
     isFetchedAfterMount: isEnabledModelsFetchedAfterMount,
     fetchStatus: enabledModelsFetchStatus,
     isError: isEnabledModelsError,
+    error: enabledModelsError,
     refetch: refetchEnabledModels,
   } = useGetEnabledModels({ flowId, projectId, purpose: "configure" });
   const [modelQuery, setModelQuery] = useState<string>("");
@@ -245,22 +275,31 @@ const ModelSelection = ({
       return false;
     }
 
-    const typedProvider =
-      enabledModelsData.enabled_models_by_type?.[providerName];
-    if (typedProvider !== undefined) {
-      return typedProvider[selectedModelType]?.[modelName] ?? false;
-    }
-
-    return enabledModelsData.enabled_models[providerName]?.[modelName] ?? false;
+    return isModelEnabledForType(
+      enabledModelsData,
+      providerName,
+      modelName,
+      selectedModelType,
+    );
   };
 
-  const supportsCustomDeployments =
-    !!providerName && CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName);
-
-  const visibleDeploymentTypes = useMemo<ModelType[]>(
-    () => (modelType === "all" ? ["llm", "embeddings"] : [modelType]),
-    [modelType],
+  const visibleKinds = kindsOfFilter(modelType);
+  // OpenRouter model IDs are added only from the decision view, so a chat ID
+  // typed elsewhere is never saved as a decision model.
+  const addsOpenRouterDecisions =
+    providerName === "OpenRouter" && modelType === "decision";
+  const visibleDeploymentTypes = useMemo(
+    () =>
+      addsOpenRouterDecisions
+        ? kindsOfFilter(modelType)
+        : deploymentKindsOfFilter(modelType),
+    [addsOpenRouterDecisions, modelType],
   );
+  const supportsCustomDeployments =
+    !!providerName &&
+    (CUSTOM_DEPLOYMENT_PROVIDERS.has(providerName) ||
+      addsOpenRouterDecisions) &&
+    visibleDeploymentTypes.length > 0;
 
   // Merge enabled free-text deployments; typed API wins, legacy customs default to llm.
   const modelsWithCustomDeployments = useMemo(() => {
@@ -298,7 +337,7 @@ const ModelSelection = ({
             model_name: name,
             metadata: {
               model_type: deploymentType,
-              icon: "Azure",
+              icon: addsOpenRouterDecisions ? "OpenRouter" : "Azure",
             },
           });
         }
@@ -335,22 +374,13 @@ const ModelSelection = ({
     trimmedModelQueryLower.length === 0 ||
     model.model_name.toLowerCase().includes(trimmedModelQueryLower);
 
-  const llmModels = useMemo(
-    () =>
-      modelsWithCustomDeployments.filter(
-        (model) =>
-          model.metadata?.model_type === "llm" && matchesModelQuery(model),
-      ),
-    [modelsWithCustomDeployments, trimmedModelQueryLower],
+  const listedModels = useMemo(
+    () => modelsOfFilter(modelsWithCustomDeployments, modelType),
+    [modelsWithCustomDeployments, modelType],
   );
-  const embeddingModels = useMemo(
-    () =>
-      modelsWithCustomDeployments.filter(
-        (model) =>
-          model.metadata?.model_type === "embeddings" &&
-          matchesModelQuery(model),
-      ),
-    [modelsWithCustomDeployments, trimmedModelQueryLower],
+  const matchingModels = useMemo(
+    () => listedModels.filter(matchesModelQuery),
+    [listedModels, trimmedModelQueryLower],
   );
 
   const addableDeploymentTypes =
@@ -402,11 +432,16 @@ const ModelSelection = ({
   ) => {
     if (models.length === 0) return null;
     const [activeModels, deprecatedModels] = partitionDeprecated(models);
+    // A named group tells the same model's switches apart across sections:
+    // gpt-6-luna is both a language and a decision model.
+    const headingId = `${sectionIdPrefix}-${selectedModelType}`;
     return (
       <details
         key={`${providerName}-${selectedModelType}`}
         className="group/models"
         data-testid={`${selectedModelType}-models-section`}
+        role="group"
+        aria-labelledby={headingId}
         open={!collapsedSections[selectedModelType]}
         onToggle={(event) => {
           const isCollapsed = !event.currentTarget.open;
@@ -421,13 +456,18 @@ const ModelSelection = ({
           className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-sm text-[13px] font-semibold text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden"
           data-testid={`${selectedModelType}-models-summary`}
         >
-          {title}
+          <span id={headingId}>{title}</span>
           <ForwardedIconComponent
             name="ChevronDown"
             ariaHidden
             className="h-4 w-4 shrink-0 transition-transform group-open/models:rotate-180"
           />
         </summary>
+        {selectedModelType === "decision" && (
+          <p className="pt-1 text-xs text-muted-foreground">
+            {t("modelProviders.decisionModelsNote")}
+          </p>
+        )}
         <div className="flex flex-col gap-2 pt-4">
           {activeModels.map((model) =>
             renderModelRow(model, selectedModelType),
@@ -468,45 +508,48 @@ const ModelSelection = ({
     );
   };
 
-  const providerOwnsEmptyState = hasProviderOwnedEmptyState(providerName);
+  const providerOwnsEmptyState = hasProviderOwnedEmptyState(
+    providerName,
+    modelType,
+  );
   const isOllama =
     providerOwnsEmptyState && providerName?.toLowerCase() === "ollama";
   // Live-discovery providers have nothing to list until credentials are
   // configured; show a configure-credentials hint instead of the generic
-  // "no models" state. Ollama keeps its own specialized empty state.
+  // "no models" state. Ollama keeps its own specialized empty state, and a
+  // decision view the generic one: discovery finds only chat and embedding
+  // models.
   const awaitsCredentialDiscovery =
-    !!liveDiscovery && !isConfigured && !isOllama;
+    !!liveDiscovery &&
+    !isConfigured &&
+    !isOllama &&
+    (modelType !== "decision" || addsOpenRouterDecisions);
   // Use the unfiltered list for the empty-state check so an
   // ollama-no-models warning still fires when the search field happens to be
   // populated.
-  const llmAvailableCount = modelsWithCustomDeployments.filter(
-    (m) => m.metadata?.model_type === "llm",
-  ).length;
-  const embeddingAvailableCount = modelsWithCustomDeployments.filter(
-    (m) => m.metadata?.model_type === "embeddings",
-  ).length;
-  const noModelsAvailable =
-    (modelType === "llm" && llmAvailableCount === 0) ||
-    (modelType === "embeddings" && embeddingAvailableCount === 0) ||
-    (modelType === "all" && modelsWithCustomDeployments.length === 0);
+  const noModelsAvailable = listedModels.length === 0;
 
   const noModelsMatchQuery =
     !noModelsAvailable &&
     trimmedModelQueryLower.length > 0 &&
-    llmModels.length === 0 &&
-    embeddingModels.length === 0;
+    matchingModels.length === 0;
 
-  const showSearchInput =
-    supportsCustomDeployments ||
-    (!noModelsAvailable && modelsWithCustomDeployments.length > 0);
+  const showSearchInput = supportsCustomDeployments || !noModelsAvailable;
 
-  const searchInputLabel = supportsCustomDeployments
-    ? t("modelProviders.searchOrAddDeployment", {
-        defaultValue: "Search or add a deployment name…",
+  const searchInputLabel = addsOpenRouterDecisions
+    ? t("modelProviders.searchOrAddModel", {
+        defaultValue: "Search or add a model ID…",
       })
-    : t("modelProviders.searchModels", {
-        defaultValue: "Search models…",
-      });
+    : supportsCustomDeployments
+      ? t("modelProviders.searchOrAddDeployment", {
+          defaultValue: "Search or add a deployment name…",
+        })
+      : t("modelProviders.searchModels", {
+          defaultValue: "Search models…",
+        });
+
+  // A refusal won't change on retry: this user can't read the policy.
+  const isAccessError = isAccessRefusal(enabledModelsError);
 
   if (!canUseEnabledModels) {
     return (
@@ -514,13 +557,16 @@ const ModelSelection = ({
         data-testid="model-provider-selection"
         className="flex flex-col gap-3"
       >
-        {isEnabledModelsError ? (
+        {isEnabledModelsError && isAccessError ? (
+          <div role="alert">{t("modelProviders.errorNoAccess")}</div>
+        ) : isEnabledModelsError ? (
           <div role="alert" className="flex flex-col items-start gap-3">
             <span>{t("modelProviders.errorUnexpected")}</span>
             <Button
               type="button"
               variant="outline"
               size="sm"
+              aria-label={t("modelProviders.retryLoadingModels")}
               onClick={() => void refetchEnabledModels()}
             >
               {t("common.retry")}
@@ -542,10 +588,15 @@ const ModelSelection = ({
           className="text-xs text-muted-foreground leading-relaxed"
           data-testid="custom-deployment-hint"
         >
-          {t("modelProviders.customDeploymentHint", {
-            defaultValue:
-              "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
-          })}
+          {addsOpenRouterDecisions
+            ? t("modelProviders.openRouterModelHint", {
+                defaultValue:
+                  "Choose a listed model or enter an OpenRouter decision model ID. OpenRouter determines which requests the model supports.",
+              })
+            : t("modelProviders.customDeploymentHint", {
+                defaultValue:
+                  "Use your Azure AI Foundry deployment names from the portal (not catalog model IDs). Search or type a name to add one.",
+              })}
         </p>
       ) : null}
       {showSearchInput && (
@@ -578,22 +629,27 @@ const ModelSelection = ({
               }}
             >
               <ForwardedIconComponent name="Plus" className="mr-2 h-4 w-4" />
-              {modelType === "all"
-                ? deploymentType === "llm"
-                  ? t("modelProviders.addLanguageDeployment", {
-                      name: trimmedModelQuery,
-                      defaultValue:
-                        'Add deployment "{{name}}" as language model',
-                    })
-                  : t("modelProviders.addEmbeddingDeployment", {
-                      name: trimmedModelQuery,
-                      defaultValue:
-                        'Add deployment "{{name}}" as embedding model',
-                    })
-                : t("modelProviders.addDeployment", {
+              {addsOpenRouterDecisions
+                ? t("modelProviders.addDecisionModel", {
                     name: trimmedModelQuery,
-                    defaultValue: 'Add deployment "{{name}}"',
-                  })}
+                    defaultValue: 'Add decision model "{{name}}"',
+                  })
+                : modelType === "all"
+                  ? deploymentType === "llm"
+                    ? t("modelProviders.addLanguageDeployment", {
+                        name: trimmedModelQuery,
+                        defaultValue:
+                          'Add deployment "{{name}}" as language model',
+                      })
+                    : t("modelProviders.addEmbeddingDeployment", {
+                        name: trimmedModelQuery,
+                        defaultValue:
+                          'Add deployment "{{name}}" as embedding model',
+                      })
+                  : t("modelProviders.addDeployment", {
+                      name: trimmedModelQuery,
+                      defaultValue: 'Add deployment "{{name}}"',
+                    })}
             </Button>
           ))}
         </div>
@@ -656,34 +712,17 @@ const ModelSelection = ({
           </p>
         </div>
       ) : (
-        <>
-          {modelType === "all" ? (
-            <>
-              {renderModelSection(
-                t("modelProviders.languageModels"),
-                llmModels,
-                "llm",
-              )}
-              {renderModelSection(
-                t("modelProviders.embeddingModels"),
-                embeddingModels,
-                "embeddings",
-              )}
-            </>
-          ) : modelType === "llm" ? (
-            renderModelSection(
-              t("modelProviders.languageModels"),
-              llmModels,
-              "llm",
-            )
-          ) : (
-            renderModelSection(
-              t("modelProviders.embeddingModels"),
-              embeddingModels,
-              "embeddings",
-            )
-          )}
-        </>
+        visibleKinds.map((kind) => (
+          <Fragment key={kind}>
+            {renderModelSection(
+              sectionTitles[kind],
+              matchingModels.filter(
+                (model) => model.metadata?.model_type === kind,
+              ),
+              kind,
+            )}
+          </Fragment>
+        ))
       )}
     </div>
   );

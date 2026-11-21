@@ -1,5 +1,6 @@
 """Tests for URLComponent input type configuration."""
 
+import importlib.util
 import sys
 from unittest.mock import MagicMock
 
@@ -21,6 +22,49 @@ def url_component(monkeypatch):
     from lfx.components.data_source.url import URLComponent
 
     return URLComponent
+
+
+@pytest.fixture
+def url_module_without_markitdown(monkeypatch):
+    """Load the URL component module as Python 3.15+ sees it: with markitdown not installed.
+
+    The fresh module is registered in ``sys.modules`` through ``monkeypatch`` (components
+    resolve their source through it), so the cached module other tests use is restored.
+    """
+    monkeypatch.setitem(sys.modules, "markitdown", None)  # makes `import markitdown` raise ImportError
+    spec = importlib.util.find_spec("lfx.components.data_source.url")
+    module = importlib.util.module_from_spec(spec)
+    monkeypatch.setitem(sys.modules, spec.name, module)
+    spec.loader.exec_module(module)
+    return module
+
+
+class TestURLComponentWithoutMarkitdown:
+    """markitdown is gated off Python 3.15+; only the Markdown output format may depend on it."""
+
+    def test_module_imports_without_markitdown(self, url_module_without_markitdown):
+        assert hasattr(url_module_without_markitdown, "URLComponent")
+
+    def test_markdown_format_reports_missing_markitdown(self, url_module_without_markitdown):
+        with pytest.raises(ImportError, match="Use the Text or HTML format instead"):
+            url_module_without_markitdown.URLComponent._markdown_extractor("<h1>Heading</h1>")
+
+    @pytest.mark.parametrize("output_method", ["fetch_content", "fetch_content_as_message"])
+    async def test_outputs_raise_missing_markitdown_before_fetching(
+        self, url_module_without_markitdown, monkeypatch, output_method
+    ):
+        """Both outputs surface the ImportError itself (not a wrapped ValueError) without any network call."""
+        url_component_class = url_module_without_markitdown.URLComponent
+
+        async def _fail_fetch(*_args, **_kwargs):
+            pytest.fail("a URL was fetched although the Markdown format cannot be produced")
+
+        monkeypatch.setattr(url_component_class, "_fetch_url_with_pinning", _fail_fetch)
+        component = url_component_class()
+        component.set_attributes({"urls": ["https://example.com"], "format": "Markdown"})
+
+        with pytest.raises(ImportError, match="Use the Text or HTML format instead"):
+            await getattr(component, output_method)()
 
 
 class TestURLComponentInputTypes:

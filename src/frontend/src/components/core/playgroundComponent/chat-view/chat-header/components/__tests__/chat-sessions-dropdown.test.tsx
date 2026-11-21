@@ -9,7 +9,38 @@ jest.mock(
   }),
 );
 
+jest.mock("../../hooks/use-session-labels", () => ({
+  useSessionLabels: () =>
+    new Map([["trigger:t1:e1", "Oct 29, 3:45:12 PM · Schedule"]]),
+}));
+
 describe("ChatSessionsDropdown", () => {
+  it("names trigger runs by what started them and when", async () => {
+    const user = userEvent.setup();
+    render(
+      <ChatSessionsDropdown
+        sessions={["flow-1", "trigger:t1:e1", "my chat"]}
+        sessionsPagination={{
+          hasNextPage: false,
+          isFetchingNextPage: false,
+          fetchNextPage: jest.fn(),
+        }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("session-selector-trigger"));
+
+    expect(
+      screen.getByRole("menuitem", { name: "Oct 29, 3:45:12 PM · Schedule" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "my chat" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", { name: "Default Session" }),
+    ).toBeInTheDocument();
+  });
+
   it("loads the next page from the menu and stays open", async () => {
     const user = userEvent.setup();
     const fetchNextPage = jest.fn().mockResolvedValue({ hasNextPage: true });
