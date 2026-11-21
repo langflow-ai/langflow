@@ -1,8 +1,8 @@
 """Shared HTTP code for the cloro components.
 
-cloro returns Google search results with the AI Overview, and the answers that
-ChatGPT, Google AI Mode, Bing AI Mode and Gemini give to a prompt, with the sources
-they cite.
+cloro returns Google and Bing search results with the AI Overview, and the answers
+that ChatGPT, Google AI Mode, Bing AI Mode and Gemini give to a prompt, with the
+sources they cite.
 All components call the fixed host ``https://api.cloro.dev`` and send the API key
 as a bearer token.
 """

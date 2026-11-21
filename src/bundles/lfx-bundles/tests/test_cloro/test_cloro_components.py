@@ -15,6 +15,7 @@ import pytest
 from lfx.custom.custom_component.component import Component
 from lfx_bundles.cloro.cloro_ai_mode import CloroAIModeComponent
 from lfx_bundles.cloro.cloro_bing_ai_mode import CloroBingAIModeComponent
+from lfx_bundles.cloro.cloro_bing_search import CloroBingSearchComponent
 from lfx_bundles.cloro.cloro_chatgpt import CloroChatGPTComponent
 from lfx_bundles.cloro.cloro_common import API_BASE_URL
 from lfx_bundles.cloro.cloro_gemini import CloroGeminiComponent
@@ -25,6 +26,7 @@ API_KEY = "test-cloro-api-key-placeholder"  # pragma: allowlist secret
 
 ALL_COMPONENTS = [
     CloroGoogleSearchComponent,
+    CloroBingSearchComponent,
     CloroChatGPTComponent,
     CloroAIModeComponent,
     CloroBingAIModeComponent,
@@ -70,6 +72,40 @@ GOOGLE_RESULT = {
                 "redirectLink": "https://www.google.com/goto?url=CAESZw",
             },
             {"label": "Redirect only", "url": "https://www.google.com/goto?url=CAESkA", "position": 2},
+        ],
+        "citationPills": [],
+    },
+}
+
+# Built from a real Bing results page, in the shape that cloro returns. Bing has no people-also-ask or related searches.
+BING_RESULT = {
+    "organicResults": [
+        {
+            "position": 1,
+            "title": "10 Simple Ways to Remove Rust from Cast Iron - Tips Bulletin",
+            "link": "https://www.tipsbulletin.com/how-to-remove-rust-from-cast-iron/",
+            "displayedLink": "https://www.tipsbulletin.com > how-to-remove-rust-from-cast-iron",
+            "snippet": "Learn 10 simple ways to clean rust from cast iron pans, pots, grills, and stoves.",
+            "page": 1,
+            "date": "Apr 5, 2024",
+        },
+        {"position": 2, "title": "No link", "link": "", "snippet": "Skipped."},
+        {
+            "position": 3,
+            "title": "How to Remove Rust from a Cast Iron Skillet",
+            "link": "https://www.wikihow.com/Remove-Rust-from-a-Cast-Iron-Skillet",
+            "page": 1,
+        },
+    ],
+    "aioverview": {
+        "text": "Rust can be safely removed from cast iron using abrasives, vinegar, or salt.",
+        "sources": [
+            {
+                "label": "How Do You Remove Rust from Cast Iron Without Damaging It?",
+                "url": "https://ironpatina.com/how-to-remove-rust-from-cast-iron-cookware-complete-guide-proven-techniques/",
+                "description": None,
+                "position": 1,
+            },
         ],
         "citationPills": [],
     },
@@ -248,6 +284,74 @@ class TestCloroGoogleSearch:
             rows = _search().search()
 
         assert rows[0].data["error"].startswith("Could not reach the cloro API: ConnectError")
+
+
+def _bing_search(**values) -> CloroBingSearchComponent:
+    component = CloroBingSearchComponent()
+    component.set(**{"api_key": API_KEY, "query": "how to remove rust from cast iron", **values})
+    return component
+
+
+@pytest.mark.unit
+class TestCloroBingSearch:
+    def test_request_shape(self) -> None:
+        with patch("httpx.Client.post", return_value=_ok(BING_RESULT)) as post:
+            _bing_search(country=" gb ").search()
+
+        assert post.call_args.args == (f"{API_BASE_URL}/v1/monitor/bing",)
+        assert post.call_args.kwargs["headers"] == {"Authorization": f"Bearer {API_KEY}"}
+        assert post.call_args.kwargs["json"] == {
+            "query": "how to remove rust from cast iron",
+            "country": "GB",
+            "include": {"aioverview": True},
+        }
+
+    def test_ai_overview_can_be_turned_off(self) -> None:
+        with patch("httpx.Client.post", return_value=_ok(BING_RESULT)) as post:
+            _bing_search(include_ai_overview=False).search()
+
+        assert "include" not in post.call_args.kwargs["json"]
+
+    def test_ai_overview_and_organic_rows(self) -> None:
+        with patch("httpx.Client.post", return_value=_ok(BING_RESULT)):
+            frame = _bing_search().search_dataframe()
+
+        assert list(frame["type"]) == ["ai_overview", "organic", "organic"]
+        assert frame["sources"][0] == [
+            {
+                "label": "How Do You Remove Rust from Cast Iron Without Damaging It?",
+                "url": "https://ironpatina.com/how-to-remove-rust-from-cast-iron-cookware-complete-guide-proven-techniques/",
+            }
+        ]
+        # The result with an empty link is skipped.
+        assert list(frame["position"])[1:] == [1, 3]
+        assert list(frame["link"])[1:] == [
+            "https://www.tipsbulletin.com/how-to-remove-rust-from-cast-iron/",
+            "https://www.wikihow.com/Remove-Rust-from-a-Cast-Iron-Skillet",
+        ]
+
+    def test_no_ai_overview_in_response(self) -> None:
+        result = {"organicResults": BING_RESULT["organicResults"]}
+        with patch("httpx.Client.post", return_value=_ok(result)):
+            rows = _bing_search().search()
+
+        assert [row.data["type"] for row in rows] == ["organic", "organic"]
+        # A result with no snippet falls back to its title as text.
+        assert rows[-1].text == "How to Remove Rust from a Cast Iron Skillet"
+
+    def test_empty_query_makes_no_request(self) -> None:
+        with patch("httpx.Client.post") as post:
+            rows = _bing_search(query="   ").search()
+
+        post.assert_not_called()
+        assert rows[0].data["error"] == "Enter a search query."
+
+    def test_blocked_country_error_is_returned(self) -> None:
+        message = "This model is not available in this country. Please select a different country."
+        with patch("httpx.Client.post", return_value=_error(400, "VALIDATION_ERROR", message)):
+            rows = _bing_search(country="CN").search()
+
+        assert rows[0].data["error"] == f"cloro API error (400): VALIDATION_ERROR: {message}"
 
 
 @pytest.mark.unit
