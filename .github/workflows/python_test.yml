@@ -204,6 +204,23 @@ jobs:
     # Python 3.15 is a preview lane: it reports ecosystem readiness without failing the run.
     continue-on-error: ${{ matrix.python-version == '3.15' }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
+    # PostgreSQL for the lfx PG-mechanics tests (src/lfx/tests/unit/services/
+    # test_session_scope_autocommit.py), same service/env convention as
+    # migration-validation.yml; those tests skip cleanly when the URI is unset.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow  # pragma: allowlist secret
+          POSTGRES_DB: langflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U langflow"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
     strategy:
       fail-fast: false
       matrix:
@@ -233,6 +250,7 @@ jobs:
         run: make lfx_tests args="--deselect=tests/unit/upgrade/test_component_compat.py::test_source_release_statuses"
         env:
           DO_NOT_TRACK: true # disable telemetry reporting
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
       - name: Enforce exact historical LFX pins
         run: >-
           uv run --project src/lfx --no-sync python scripts/ci/historical_compatibility_gate.py
