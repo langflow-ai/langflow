@@ -48,7 +48,7 @@ from lfx.schema.token_usage import accumulate_usage, extract_usage_from_chunk
 from lfx.serialization.serialization import serialize
 from lfx.template.field.base import UNDEFINED, Input, Output
 from lfx.template.frontend_node.custom_components import ComponentFrontendNode
-from lfx.utils.async_helpers import async_delegate_target, run_until_complete
+from lfx.utils.async_helpers import async_delegate_target, run_in_thread, run_until_complete
 from lfx.utils.secrets import is_secret_value, unwrap_secret_value
 from lfx.utils.util import find_closest_match
 
@@ -1148,7 +1148,7 @@ class Component(CustomComponent):
             if asyncio.iscoroutinefunction(_input.value):
                 self._inputs[key].value = await _input.value()
             elif callable(_input.value):
-                self._inputs[key].value = await asyncio.to_thread(_input.value)
+                self._inputs[key].value = await run_in_thread(_input.value)
 
         self.set_attributes({})
 
@@ -1831,7 +1831,7 @@ class Component(CustomComponent):
             elif inspect.iscoroutinefunction(method):
                 result = await method()
             else:
-                result = await asyncio.to_thread(method)
+                result = await run_in_thread(method)
         except TypeError as e:
             msg = f'Error running method "{output.method}": {e}'
             raise TypeError(msg) from e
@@ -2467,7 +2467,7 @@ class Component(CustomComponent):
                     case _:
                         self._event_manager.on_message(data=data_dict)
 
-            await asyncio.to_thread(_send_event)
+            await run_in_thread(_send_event)
 
     def _should_stream_message(self, stored_message: Message, original_message: Message) -> bool:
         from lfx.memory.flow_context import should_persist_messages

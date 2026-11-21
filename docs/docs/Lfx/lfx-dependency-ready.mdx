@@ -105,7 +105,7 @@ Under this option, `next_vertices_ids` means newly dependency-ready successors. 
 
 :::warning Cancellation waits for admitted tasks to unwind
 
-Cancellation or a component failure stops new admission and cancels already admitted build tasks. On outer cancellation this matches the default execution path, whose gather delivers cancellation to its children the same way. On component failure the default path instead lets same-layer siblings finish naturally and admits no further layers, while this path cancels the admitted siblings. The invocation waits for each admitted task to finish unwinding before it returns or raises, so a component that suppresses cancellation can still delay the return. Synchronous work already handed to a worker thread is not interrupted and finishes in the background. There is no timeout that abandons a task.
+Cancellation or a component failure stops new admission and cancels already admitted build tasks. The default path also cancels its children on outer cancellation. On component failure, the default path lets same-layer siblings finish naturally and admits no further layers. The dependency-ready path waits for each admitted task to unwind before it returns or raises. This includes waiting for synchronous output methods already running in framework worker threads to finish. A component that suppresses cancellation or a worker that never finishes can keep the run open indefinitely.
 
 :::
 

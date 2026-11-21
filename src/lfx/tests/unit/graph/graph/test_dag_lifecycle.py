@@ -178,46 +178,51 @@ async def test_initialization_partial_failure_ends_once(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_outer_cancel_does_not_wait_for_sync_thread_work():
-    import gc
+@pytest.mark.parametrize("trigger", ["outer_cancel", "sibling_failure"])
+async def test_run_waits_for_sync_thread_before_raising(trigger, monkeypatch):
     import threading
 
     from lfx.graph import Graph
 
     from tests.unit.graph.graph._dag_components import StaticNode, ThreadNode
 
-    source, target = ThreadNode(_id="source"), StaticNode(_id="target")
-    source._entered, source._release, source._finished = (threading.Event() for _ in range(3))
-    target.set(messages=[source.message_response])
+    source, fast, target = [StaticNode(_id=key) for key in ("source", "fast", "target")]
+    slow = ThreadNode(_id="slow")
+    slow._entered, slow._release, slow._finished = (threading.Event() for _ in range(3))
+    slow.set(messages=[source.message_response])
+    fast.set(messages=[source.message_response])
+    target.set(messages=[slow.message_response, fast.message_response])
     graph = Graph(source, target)
-    loop = asyncio.get_running_loop()
-    loop_errors = []
-    previous_handler = loop.get_exception_handler()
-    loop.set_exception_handler(lambda _loop, context: loop_errors.append(context))
+    build = graph.build_vertex
+    failing = asyncio.Event()
+    error = LookupError("sibling failure")
+
+    async def controlled(vertex_id, **kwargs):
+        if vertex_id == "fast" and trigger == "sibling_failure":
+            assert await asyncio.to_thread(slow._entered.wait, 3)
+            failing.set()
+            raise error
+        return await build(vertex_id=vertex_id, **kwargs)
+
+    monkeypatch.setattr(graph, "build_vertex", controlled)
     task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
     try:
-        assert await asyncio.to_thread(source._entered.wait, 3)
-        task.cancel()
-        # The run ends promptly: the admitted build task is cancelled, and the
-        # invocation does not wait for the framework's worker thread, matching
-        # the default path. The thread itself keeps running until released.
-        with pytest.raises(asyncio.CancelledError):
-            await _await_run(task, 3)
-        assert not source._finished.is_set()
-        assert not graph.vertex_map["target"].built
+        if trigger == "outer_cancel":
+            assert await asyncio.to_thread(slow._entered.wait, 3)
+            task.cancel()
+        else:
+            await asyncio.wait_for(failing.wait(), 3)
+        done, _pending = await asyncio.wait({task}, timeout=0.5)
+        assert not done
     finally:
-        source._release.set()
-    # The uninterrupted thread still completes cleanly afterwards.
-    assert await asyncio.to_thread(source._finished.wait, 3)
-    # No abandoned to_thread future surfaces an unretrieved exception or any
-    # other unhandled loop error once references are collected (custom loop
-    # exception handler + gc.collect() + a loop turn).
-    try:
-        gc.collect()
-        await asyncio.sleep(0)
-        assert loop_errors == []
-    finally:
-        loop.set_exception_handler(previous_handler)
+        slow._release.set()
+        expected = asyncio.CancelledError if trigger == "outer_cancel" else LookupError
+        with pytest.raises(expected) as caught:
+            await _await_run(task, 10)
+    if trigger == "sibling_failure":
+        assert caught.value is error
+    assert slow._finished.is_set()
+    assert not graph.vertex_map["target"].built
 
 
 @pytest.mark.asyncio
@@ -634,21 +639,25 @@ async def test_completed_failure_group_uses_graph_order_not_finish_order(monkeyp
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("trigger", ["outer_cancel", "sibling_failure"])
+@pytest.mark.parametrize("trigger", ["outer_cancel", "sibling_failure", "webhook_failure"])
 async def test_run_returns_only_after_admitted_unwind_completes(trigger, monkeypatch):
-    graph = branched()
+    webhook_start = "webhook-source" if trigger == "webhook_failure" else None
+    graph = branched(webhook_start or "source")
     build = graph.build_vertex
     entered = asyncio.Event()
+    build_release = asyncio.Event()
     unwind_started = asyncio.Event()
     unwind_release = asyncio.Event()
     unwind_finished = asyncio.Event()
+    log_started = asyncio.Event()
+    log_release = asyncio.Event()
     error = LookupError("fast failed")
 
     async def controlled(vertex_id, **kwargs):
         if vertex_id == "slow":
             entered.set()
             try:
-                await asyncio.Event().wait()  # parked until cancelled
+                await build_release.wait()
             except asyncio.CancelledError:
                 # Hold the unwind open: the run must not return before it ends.
                 unwind_started.set()
@@ -657,19 +666,31 @@ async def test_run_returns_only_after_admitted_unwind_completes(trigger, monkeyp
                 raise
         if vertex_id == "fast":
             await entered.wait()
-            if trigger == "sibling_failure":
+            if trigger != "outer_cancel":
                 raise error
         return await build(vertex_id=vertex_id, **kwargs)
 
+    async def log_failure(vertex_id, result):
+        assert vertex_id == "fast"
+        assert result is error
+        log_started.set()
+        await log_release.wait()
+
     monkeypatch.setattr(graph, "build_vertex", controlled)
-    task = asyncio.create_task(graph.process(fallback_to_env_vars=False, dag_max_concurrency=2))
+    monkeypatch.setattr(graph, "_log_vertex_build_from_exception", log_failure)
+    task = asyncio.create_task(
+        graph.process(fallback_to_env_vars=False, dag_max_concurrency=2, start_component_id=webhook_start)
+    )
     try:
         await asyncio.wait_for(entered.wait(), 3)
         if trigger == "outer_cancel":
             task.cancel()
+        if webhook_start:
+            await asyncio.wait_for(log_started.wait(), 3)
         await asyncio.wait_for(unwind_started.wait(), 3)
-        # The held sibling unwind deterministically blocks the run's return:
-        # cancel_admitted has fired but the drain is still awaiting the gather.
+        log_release.set()
+        # After logging finishes, the sibling's unwind must still hold up the
+        # run. Cancelling it again would interrupt cleanup and end the run.
         done, _pending = await asyncio.wait({task}, timeout=0.5)
         assert not done
         unwind_release.set()
@@ -679,7 +700,12 @@ async def test_run_returns_only_after_admitted_unwind_completes(trigger, monkeyp
         # The admitted sibling finished unwinding before the run returned.
         assert unwind_finished.is_set()
     finally:
+        log_release.set()
+        build_release.set()
         unwind_release.set()
+        if not task.done():
+            task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
 @pytest.mark.asyncio

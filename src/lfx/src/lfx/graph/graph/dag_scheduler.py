@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
 from lfx.template.field.base import UNDEFINED
+from lfx.utils.async_helpers import wait_for_thread_workers
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -153,6 +154,7 @@ def select_dag_candidate(graph: Graph, candidate: DagCandidate, first_layer: lis
 class DagRunContext:
     eligible: bool = False
     initialization_attempted: bool = False
+    cancellation_requested: bool = False
     owned_tasks: set = field(default_factory=set)
     primary: BaseException | None = None
     finalized: bool = False
@@ -186,6 +188,9 @@ def cancel_admitted(context: DagRunContext) -> None:
     failure the default path lets same-layer siblings finish naturally; this
     path cancels the admitted siblings instead and awaits their unwinding.
     """
+    if context.cancellation_requested:
+        return
+    context.cancellation_requested = True
     for admitted in context.owned_tasks:
         if not admitted.done():
             admitted.cancel()
@@ -246,9 +251,10 @@ async def execute_dependency_ready(
                         msg = "Dependency-ready vertex was admitted twice"
                         raise RuntimeError(msg)
                     scheduled.add(vertex_id)
-                    task = asyncio.create_task(
-                        graph.build_vertex(vertex_id=vertex_id, **build_kwargs), name=f"{vertex_id} DAG"
-                    )
+                    with wait_for_thread_workers():
+                        task = asyncio.create_task(
+                            graph.build_vertex(vertex_id=vertex_id, **build_kwargs), name=f"{vertex_id} DAG"
+                        )
                     pending[task] = vertex_id
                     context.owned_tasks.add(task)
                 done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
@@ -261,6 +267,7 @@ async def execute_dependency_ready(
                 if error is not None:
                     context.latch(error)
                     if has_webhook_component and isinstance(error, Exception):
+                        cancel_admitted(context)
                         await graph._log_vertex_build_from_exception(pending[task], error)  # noqa: SLF001
                     raise error
             for task in ordered:

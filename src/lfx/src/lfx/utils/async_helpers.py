@@ -1,7 +1,8 @@
 import asyncio
 import threading
-from collections.abc import Awaitable, Callable
-from contextlib import asynccontextmanager
+from collections.abc import Awaitable, Callable, Iterator
+from contextlib import asynccontextmanager, contextmanager
+from contextvars import ContextVar
 from typing import Any, TypeVar
 
 import anyio
@@ -9,6 +10,8 @@ import anyio
 from lfx.log.logger import logger
 
 _F = TypeVar("_F", bound=Callable[..., Any])
+_T = TypeVar("_T")
+_wait_for_thread_workers = ContextVar("wait_for_thread_workers", default=False)
 
 # Dunder-named so ``unittest.mock`` objects report it missing instead of inventing a value.
 _ASYNC_DELEGATE_ATTR = "__lfx_async_delegate__"
@@ -93,6 +96,52 @@ def async_delegate_target(obj: object, method_name: str) -> Callable[..., Awaita
     if not isinstance(async_name, str):
         return None
     return getattr(obj, async_name)
+
+
+@contextmanager
+def wait_for_thread_workers() -> Iterator[None]:
+    """Start component tasks in a context that joins their framework thread work."""
+    token = _wait_for_thread_workers.set(True)
+    try:
+        yield
+    finally:
+        _wait_for_thread_workers.reset(token)
+
+
+async def run_in_thread(function: Callable[[], _T]) -> _T:
+    """During dependency-ready builds, keep caller resources alive until the worker exits."""
+    if not _wait_for_thread_workers.get():
+        return await asyncio.to_thread(function)
+
+    # A queued worker can race with cancellation as the executor starts it.
+    start_lock = threading.Lock()
+    started = False
+    cancelled_before_start = False
+
+    def run() -> _T:
+        nonlocal started
+        with start_lock:
+            if cancelled_before_start:
+                raise asyncio.CancelledError
+            started = True
+        return function()
+
+    worker = asyncio.create_task(asyncio.to_thread(run))
+    try:
+        return await asyncio.shield(worker)
+    except asyncio.CancelledError:
+        with start_lock:
+            if not started:
+                cancelled_before_start = True
+                worker.cancel()
+        while not worker.done():
+            try:
+                await asyncio.wait({worker})
+            except asyncio.CancelledError:
+                continue
+        if not worker.cancelled():
+            worker.exception()
+        raise
 
 
 async def acquire_thread_lock(lock: threading.Lock) -> None:
