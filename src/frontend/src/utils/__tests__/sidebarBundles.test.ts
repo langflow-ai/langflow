@@ -126,6 +126,18 @@ describe("SIDEBAR_BUNDLES", () => {
       ]),
     );
   });
+
+  it("classifies Clawifi as a sidebar bundle", () => {
+    expect(SIDEBAR_BUNDLES).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          display_name: "Clawifi",
+          icon: "Clawifi",
+          name: "clawifi",
+        }),
+      ]),
+    );
+  });
 });
 
 it("uses the Salesforce logo for its integration palette group", () => {
