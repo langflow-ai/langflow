@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING
 
 from lfx.integrations.errors import AuthExpiredError, ConnectionUnresolvedError
-from lfx.services.deps import session_scope_readonly
+from lfx.services.deps import session_scope_autocommit, session_scope_readonly
 from sqlmodel import update
 
 from langflow.services.database.models.trigger.model import Trigger
@@ -292,7 +292,7 @@ async def mark_interrupted_activations(*, limit: int = 5) -> None:
         for mechanism in (kind.listener_mechanism, kind.poll_mechanism, kind.push_mechanism)
         if mechanism is not None
     }
-    async with session_scope_readonly() as session:
+    async with session_scope_autocommit() as session:
         ids = (
             await session.exec(
                 select(Trigger.id)

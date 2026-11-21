@@ -25,7 +25,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.log.logger import logger
 
 from langflow.api.global_variable_fields import is_global_variable_eligible_field
-from langflow.services.deps import get_variable_service, session_scope
+from langflow.services.deps import get_variable_service, session_scope_autocommit
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -121,7 +121,7 @@ async def apply_global_variable_defaults(
 
     try:
         variable_service = get_variable_service()
-        async with session_scope() as session:
+        async with session_scope_autocommit() as session:
             bindings = await variable_service.get_default_field_bindings(user_id=user_id, session=session)
     except Exception as exc:  # noqa: BLE001 - never block flow runs on variable lookup
         await logger.awarning(

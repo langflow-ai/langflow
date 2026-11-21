@@ -8,6 +8,9 @@ from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
 from fastapi.exceptions import RequestValidationError, WebSocketRequestValidationError
+from sqlalchemy import event
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from lfx.log.logger import logger
 from lfx.services.config_discovery import resolve_config_dir
@@ -16,8 +19,6 @@ from lfx.services.schema import ServiceType
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
     from pathlib import Path
-
-    from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.adapters.registry import AdapterRegistry
     from lfx.services.catalog_policy.base import BaseCatalogPolicyService
@@ -432,3 +433,153 @@ async def session_scope_readonly() -> AsyncGenerator[AsyncSession, None]:
         # No commit - read-only
         # No clean up - client is responsible (plus, read only sessions are not committed)
         # No explicit close needed - _with_session() handles it
+
+
+_AUTOCOMMIT_GUARD_FLAG = "autocommit_read_guard"
+_AUTOCOMMIT_ALLOWED_KEYWORDS = {"SELECT", "SHOW", "VALUES", "WITH"}
+
+
+class AutocommitReadGuardError(SQLAlchemyError):
+    """Raised when a write is attempted inside an autocommit read scope.
+
+    A SQLAlchemyError subclass so fail-closed handlers catching SQLAlchemyError
+    (e.g. migration_pause) treat it like any other database failure.
+    """
+
+
+def _first_sql_keyword(statement: str) -> str:
+    """Return the leading alphabetic run after stripping whitespace, parens and comments.
+
+    Not SQL parsing: exotic prefixes can still mask the verb. This is a tripwire for
+    audited call sites, not a sandbox.
+    """
+    s = statement.lstrip()
+    while True:
+        if s.startswith("("):
+            s = s[1:].lstrip()
+            continue
+        if s.startswith("--"):
+            nl = s.find("\n")
+            if nl < 0:
+                return ""
+            s = s[nl + 1 :].lstrip()
+            continue
+        if s.startswith("/*"):
+            end = s.find("*/")
+            if end < 0:
+                return ""
+            s = s[end + 2 :].lstrip()
+            continue
+        break
+    keyword = ""
+    for ch in s:
+        if ch.isalpha():
+            keyword += ch
+        else:
+            break
+    return keyword.upper()
+
+
+def _guard_blocked(statement: str) -> bool:
+    """Deliberately conservative: ANY semicolon blocks (fail-closed).
+
+    A parameterless multi-statement string is sent by psycopg3 over the simple
+    protocol, so "SELECT 1; INSERT ..." would execute the write past a first-keyword
+    check. False positive by design: a read with ';' inside a string literal is
+    blocked too. None of the audited call sites use literals.
+    """
+    if ";" in statement:
+        return True
+    return _first_sql_keyword(statement) not in _AUTOCOMMIT_ALLOWED_KEYWORDS
+
+
+def ensure_autocommit_guard(sync_engine) -> None:
+    """Install ONE permanent flag-predicated listener pair on a sync engine.
+
+    Synchronous check-and-set with no suspension point: atomic within one event loop.
+    A rebuilt engine (new instance) gets its own pair on first arm; the discarded
+    engine's listeners die with it. The checkout listener bounds the flag's lifetime
+    to the checkout, so an orphaned flag can never poison a later borrower.
+    """
+    if getattr(sync_engine, "_ac_guard_installed", False):
+        return
+
+    def guard(conn, cursor, statement, parameters, context, executemany):  # noqa: ARG001
+        if not conn.info.get(_AUTOCOMMIT_GUARD_FLAG):
+            return
+        if _guard_blocked(statement):
+            msg = "autocommit read scope: only single-statement reads are allowed"
+            raise AutocommitReadGuardError(msg)
+
+    def clear_on_checkout(dbapi_connection, connection_record, connection_proxy):  # noqa: ARG001
+        connection_record.info.pop(_AUTOCOMMIT_GUARD_FLAG, None)
+
+    event.listen(sync_engine, "before_cursor_execute", guard)
+    event.listen(sync_engine.pool, "checkout", clear_on_checkout)
+    sync_engine._ac_guard_installed = True  # noqa: SLF001
+
+
+@asynccontextmanager
+async def session_scope_autocommit() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for AUDITED single-statement read scopes without a transaction.
+
+    Same lifecycle as session_scope_readonly (via _with_session), but on PostgreSQL
+    with the default READ COMMITTED isolation the connection is switched to driver
+    AUTOCOMMIT for the scope, saving the BEGIN/COMMIT round trips per read.
+
+    Supported contract (anything else degrades to a plain session or raises):
+    - fresh session per scope (this helper creates it; do NOT reuse a session across
+      scopes - a degraded scope on a reused session is not transactional),
+    - single statement per execute; any semicolon is rejected (fail-closed),
+    - pure reads: SELECT/SHOW/VALUES/WITH-led statements only,
+    - no commit/rollback inside the scope (a mid-scope commit releases the armed
+      checkout; subsequent statements run plain and unguarded).
+
+    Known limitations (the per-caller audit, not the guard, is the safety mechanism):
+    WITH-led statements can still write (data-modifying CTEs or top-level DML after
+    the WITH clause), FOR UPDATE/SHARE passes, volatile SELECT can side-effect,
+    SELECT INTO passes. On any other configuration (SQLite, non-default isolation,
+    cold engine before first connect) the scope degrades to a plain session.
+    """
+    db_service = get_db_service()
+    async with db_service._with_session() as session:  # noqa: SLF001
+        if not isinstance(session, AsyncSession):
+            # NoopDatabaseService has no engine; NoopSession.connection() takes no
+            # execution_options. The isinstance check is the detection.
+            yield session
+            return
+        bind = session.get_bind()
+        dialect = bind.dialect
+        effective = getattr(dialect, "_on_connect_isolation_level", None) or getattr(
+            dialect, "default_isolation_level", None
+        )
+        if effective != "READ COMMITTED":
+            yield session
+            return
+        ensure_autocommit_guard(bind)
+        if session.in_transaction():
+            # Connection already acquired before entry.
+            conn = await session.connection()
+            fairy = conn.sync_connection.connection
+            if fairy.info.get(_AUTOCOMMIT_GUARD_FLAG):
+                # Nested armed scope on one connection: fail closed BEFORE any
+                # try/finally exists, so the outer scope's flag is never touched.
+                msg = "nested autocommit read scope on one connection rejected"
+                raise AutocommitReadGuardError(msg)
+            yield session  # pre-acquired by other means: degrade, no AUTOCOMMIT claim
+            return
+        conn = await session.connection(execution_options={"isolation_level": "AUTOCOMMIT"})
+        fairy = conn.sync_connection.connection
+        fairy.info[_AUTOCOMMIT_GUARD_FLAG] = True
+        try:
+            yield session
+        finally:
+            # Pure dict pop on the captured fairy: cannot raise, even after
+            # mid-statement cancellation (conn.info would revalidate an invalidated
+            # connection and raise, masking the propagating CancelledError).
+            fairy.info.pop(_AUTOCOMMIT_GUARD_FLAG, None)
+
+
+async def injectable_session_scope_autocommit():
+    async with session_scope_autocommit() as session:
+        yield session

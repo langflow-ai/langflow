@@ -13,7 +13,7 @@ from lfx.integrations.errors import (
     ProviderUnavailableError,
     ResourceNotFoundError,
 )
-from lfx.services.deps import session_scope_readonly
+from lfx.services.deps import session_scope_autocommit
 from lfx_gitlab.client import GitLabClient, api_origin, positive_id
 from sqlmodel import select
 
@@ -260,7 +260,7 @@ async def revoke(task, lease):
     if task.provider_subscription_id != expected_id or not isinstance(state.get("ownership_tag"), str):
         msg = "The GitLab cleanup identity is invalid."
         raise SourceConfigurationError(msg)
-    async with session_scope_readonly() as session:
+    async with session_scope_autocommit() as session:
         if await leases.holder(session, name=f"trigger-source:{task.trigger_id}") is not None:
             msg = "The GitLab activation is still in progress. Cleanup will retry after it stops."
             raise SourceConfigurationError(msg)

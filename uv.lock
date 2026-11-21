@@ -9839,6 +9839,7 @@ toolguard = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "aiosqlite" },
     { name = "asgi-lifespan" },
     { name = "blockbuster" },
     { name = "coverage" },
@@ -9846,6 +9847,8 @@ dev = [
     { name = "langchain-anthropic" },
     { name = "langchain-community" },
     { name = "lfx", extra = ["otel"] },
+    { name = "psycopg", version = "3.3.4", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version < '3.15'" },
+    { name = "psycopg", version = "3.3.6", source = { registry = "https://pypi.org/simple" }, extra = ["binary"], marker = "python_full_version >= '3.15'" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -9943,6 +9946,7 @@ provides-extras = ["sqlite", "sandbox", "cassandra", "toolguard", "otel", "bundl
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "aiosqlite", specifier = ">=0.20.0,<1.0.0" },
     { name = "asgi-lifespan", specifier = ">=2.1.0" },
     { name = "blockbuster", specifier = ">=1.5.25" },
     { name = "coverage", specifier = ">=7.9.2" },
@@ -9950,6 +9954,7 @@ dev = [
     { name = "langchain-anthropic", specifier = "~=1.4.6" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "lfx", extras = ["otel"], editable = "src/lfx" },
+    { name = "psycopg", extras = ["binary"], specifier = ">=3.1,<4.0" },
     { name = "pytest", specifier = ">=9.0.3" },
     { name = "pytest-asyncio", specifier = ">=0.26.0" },
     { name = "pytest-cov", specifier = ">=7.0.0" },
