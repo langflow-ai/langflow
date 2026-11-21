@@ -51,7 +51,7 @@ from ._state import (
     should_apply_edits_live,
     should_propose_existing_edits,
 )
-from .edit_tools import emit_field_edit_proposal
+from .edit_tools import _normalize_field_replacement, _prepare_field_edit_proposal
 
 
 class AddComponent(Component):
@@ -511,6 +511,22 @@ class ConfigureComponent(Component):
             logger.warning("configure_component rejected: %s", e)
             return Data(data={"error": str(e)})
 
+        if "tools_metadata" in params:
+            node = _find_node(flow, self.component_id)
+            template = node.get("data", {}).get("node", {}).get("template", {}) if node is not None else {}
+            field = template.get("tools_metadata")
+            if isinstance(field, dict):
+                try:
+                    params = {
+                        **params,
+                        "tools_metadata": _normalize_field_replacement(
+                            "tools_metadata", field.get("value"), params["tools_metadata"]
+                        ),
+                    }
+                except (TypeError, ValueError) as e:
+                    logger.warning("configure_component tools_metadata validation failed: %s", e)
+                    return Data(data={"error": str(e)})
+
         # Deterministic review gate (Bug B): editing a TEXT field on a pre-existing
         # component is surfaced as a reviewable diff; model/number/bool still apply live.
         if (
@@ -518,11 +534,22 @@ class ConfigureComponent(Component):
             and node_existed_at_start(self.component_id)
             and not should_apply_edits_live()
         ):
-            text_params = {k: v for k, v in params.items() if isinstance(v, str) and k != "model"}
-            if text_params:
-                proposed: list[str] = [
-                    k for k, v in text_params.items() if emit_field_edit_proposal(flow, self.component_id, k, v)
-                ]
+            proposal_params = {
+                k: v for k, v in params.items() if k == "tools_metadata" or (isinstance(v, str) and k != "model")
+            }
+            if proposal_params:
+                try:
+                    prepared = [
+                        (k, proposal)
+                        for k, v in proposal_params.items()
+                        if (proposal := _prepare_field_edit_proposal(flow, self.component_id, k, v)) is not None
+                    ]
+                except (TypeError, ValueError) as e:
+                    logger.warning("configure_component proposal validation failed: %s", e)
+                    return Data(data={"error": str(e)})
+                proposed = [field_name for field_name, _ in prepared]
+                for _, proposal in prepared:
+                    _emit("edit_field", **proposal)
                 remaining = {k: v for k, v in params.items() if k not in proposed}
                 if remaining:
                     try:
