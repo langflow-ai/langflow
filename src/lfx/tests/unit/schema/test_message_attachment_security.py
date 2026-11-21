@@ -2,6 +2,7 @@
 
 import asyncio
 import base64
+import os
 from types import SimpleNamespace
 
 import pytest
@@ -61,6 +62,7 @@ def test_graph_scope_denies_other_uploads_and_keeps_own_attachment(attachment_la
     assert "foreign attachment canary" not in str(content)
 
 
+@pytest.mark.skipif(os.name == "nt", reason="symlink creation requires privileges on Windows")
 def test_symlink_attachment_cannot_escape_graph_scope(attachment_layout):
     """Resolve symlinks before allowing a scoped attachment read."""
     link = attachment_layout.storage / "flow-id" / "alias.txt"
