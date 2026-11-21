@@ -30,12 +30,12 @@ class TestBundleContract:
     """Class names, tool names and icons are identifiers in saved flows: they must not change."""
 
     COMPONENTS = {
-        TurboNotifySendTextComponent: ("turbo_notify_send_text", "Turbo Notify: Send Text"),
-        TurboNotifySendMediaComponent: ("turbo_notify_send_media", "Turbo Notify: Send Media"),
-        TurboNotifyReplyComponent: ("turbo_notify_reply", "Turbo Notify: Reply"),
-        TurboNotifyGetMessagesComponent: ("turbo_notify_get_messages", "Turbo Notify: Get Messages"),
-        TurboNotifyGetMessageStatusComponent: ("turbo_notify_get_message_status", "Turbo Notify: Get Message Status"),
-        TurboNotifyListGroupsComponent: ("turbo_notify_list_groups", "Turbo Notify: List Groups"),
+        TurboNotifySendTextComponent: ("turbo_notify_send_text", "Send WhatsApp Text (Turbo Notify)"),
+        TurboNotifySendMediaComponent: ("turbo_notify_send_media", "Send WhatsApp Media (Turbo Notify)"),
+        TurboNotifyReplyComponent: ("turbo_notify_reply", "Reply on WhatsApp (Turbo Notify)"),
+        TurboNotifyGetMessagesComponent: ("turbo_notify_get_messages", "Get WhatsApp Messages (Turbo Notify)"),
+        TurboNotifyGetMessageStatusComponent: ("turbo_notify_get_message_status", "Get WhatsApp Message Status (Turbo Notify)"),
+        TurboNotifyListGroupsComponent: ("turbo_notify_list_groups", "List WhatsApp Groups (Turbo Notify)"),
     }
 
     @pytest.mark.parametrize(("component_class", "expected"), COMPONENTS.items())
@@ -45,6 +45,12 @@ class TestBundleContract:
         assert component_class.icon == "TurboNotify"
         assert [output.method for output in component_class.outputs] == [method]
         assert callable(getattr(component_class, method))
+
+    @pytest.mark.parametrize("component_class", COMPONENTS)
+    def test_display_name_says_whatsapp_and_names_the_service(self, component_class):
+        """The editor search matches the display name, so every component says what it does on WhatsApp."""
+        assert "WhatsApp" in component_class.display_name
+        assert component_class.display_name.endswith("(Turbo Notify)")
 
     @pytest.mark.parametrize("component_class", COMPONENTS)
     def test_api_key_is_a_secret_and_base_url_is_advanced(self, component_class):

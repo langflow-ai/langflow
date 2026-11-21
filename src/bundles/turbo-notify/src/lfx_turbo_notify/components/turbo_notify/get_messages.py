@@ -9,7 +9,7 @@ DEFAULT_LIMIT = 20
 class TurboNotifyGetMessagesComponent(TurboNotifyComponent):
     """Read the recent messages of a number, newest first."""
 
-    display_name = "Turbo Notify: Get Messages"
+    display_name = "Get WhatsApp Messages (Turbo Notify)"
     description = "Read recent WhatsApp messages of your number, newest first. Filter by direction, contact or group."
     documentation = "https://docs.turbonotify.com/en/messages/list/"
 

@@ -9,7 +9,7 @@ DEFAULT_LIMIT = 50
 class TurboNotifyListGroupsComponent(TurboNotifyComponent):
     """List the WhatsApp groups the number takes part in."""
 
-    display_name = "Turbo Notify: List Groups"
+    display_name = "List WhatsApp Groups (Turbo Notify)"
     description = "List the WhatsApp groups of your number with their IDs, to send to a group or read its messages."
     documentation = "https://docs.turbonotify.com/en/groups/overview/"
 

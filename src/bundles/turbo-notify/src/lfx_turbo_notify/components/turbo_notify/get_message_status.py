@@ -7,7 +7,7 @@ from lfx_turbo_notify._base import TurboNotifyComponent, base_url_input, connect
 class TurboNotifyGetMessageStatusComponent(TurboNotifyComponent):
     """Read the delivery state of one message."""
 
-    display_name = "Turbo Notify: Get Message Status"
+    display_name = "Get WhatsApp Message Status (Turbo Notify)"
     description = "Check whether a message you sent is pending, sent, delivered, read or failed."
     documentation = "https://docs.turbonotify.com/en/messages/status/"
 

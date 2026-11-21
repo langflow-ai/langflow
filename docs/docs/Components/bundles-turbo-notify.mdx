@@ -36,12 +36,12 @@ For example, a key without the right permission fails with `insufficient_scope` 
 
 Only a `2xx` answer counts as success. A redirect or any other answer is an error, and redirects are not followed, so the API key is never sent to another address.
 When a send fails after the request may have been transmitted, for example a timeout while waiting for the answer, the error says that the message may have gone out.
-Check **Turbo Notify: Get Messages** before sending it again, or repeat the send with the same **Idempotency Key**.
+Check **Get WhatsApp Messages (Turbo Notify)** before sending it again, or repeat the send with the same **Idempotency Key**.
 A send that failed while connecting never reached Turbo Notify, so the error carries no such note.
 
 ## Send without duplicates {#idempotency}
 
-**Turbo Notify: Send Text**, **Turbo Notify: Send Media**, and **Turbo Notify: Reply** have an advanced **Idempotency Key** input.
+**Send WhatsApp Text (Turbo Notify)**, **Send WhatsApp Media (Turbo Notify)**, and **Reply on WhatsApp (Turbo Notify)** have an advanced **Idempotency Key** input.
 It is sent as the `Idempotency-Key` header.
 Turbo Notify keeps the key per number: if a send is repeated with the same key on the same number, the message is not sent again, and the answer carries the `message_id` of the original message.
 Without a key, repeating a send can deliver the message twice.
@@ -50,15 +50,15 @@ Use a value that is unique for each message and comes from something stable on y
 Do not type one fixed value into a component that sends different messages, because every later send with that key is treated as a repeat of the first.
 The key has 1 to 255 printable characters, without line breaks or tabs. An empty input sends no key.
 
-## Turbo Notify: Send Text
+## Send WhatsApp Text (Turbo Notify)
 
 This component sends a text message to a phone number, a contact, or a group.
 
-Fill in exactly one recipient. The message is accepted immediately and delivered later. Use **Turbo Notify: Get Message Status** to follow it.
+Fill in exactly one recipient. The message is accepted immediately and delivered later. Use **Get WhatsApp Message Status (Turbo Notify)** to follow it.
 
 It outputs the API response as [`Data`](/data-types#data): `message_id` and a `status` object with `state`, `at`, and `error`.
 
-### Turbo Notify: Send Text parameters
+### Send WhatsApp Text (Turbo Notify) parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -68,30 +68,30 @@ It outputs the API response as [`Data`](/data-types#data): `message_id` and a `s
 | Text (`text`) | String | Input parameter. The message, 1 to 4096 characters. It is sent exactly as written, including spaces and line breaks at the start or end, and the limit counts them. A text with only white space is refused. |
 | Idempotency Key (`idempotency_key`) | String | Input parameter. Advanced. Optional. See [Send without duplicates](#idempotency). |
 
-## Turbo Notify: Send Media
+## Send WhatsApp Media (Turbo Notify)
 
 This component sends an image, video, audio file, document, or sticker from a public `http://` or `https://` address. Turbo Notify downloads the file before it goes to WhatsApp.
 
-Fill in exactly one recipient. It outputs the API response as `Data`, like **Turbo Notify: Send Text**.
+Fill in exactly one recipient. It outputs the API response as `Data`, like **Send WhatsApp Text (Turbo Notify)**.
 
 The address must be public. A host written as `localhost`, or as a loopback, private, link-local, or unspecified IP address, is refused before any request is made. The check reads the host as written and does not resolve DNS, so a name that resolves to a private address is not covered.
 
-### Turbo Notify: Send Media parameters
+### Send WhatsApp Media (Turbo Notify) parameters
 
 | Name | Type | Description |
 |------|------|-------------|
-| Phone Number (`phone`), Contact ID (`contact_id`), Group ID (`group_id`) | String | Input parameters. The recipient, as in **Turbo Notify: Send Text**. |
+| Phone Number (`phone`), Contact ID (`contact_id`), Group ID (`group_id`) | String | Input parameters. The recipient, as in **Send WhatsApp Text (Turbo Notify)**. |
 | Media Type (`media_type`) | Dropdown | Input parameter. `image`, `video`, `audio`, `document`, or `sticker`. Default: `image`. |
 | Media URL (`media_url`) | String | Input parameter. A public `http://` or `https://` address of the file. Local and private addresses are refused. |
 | Caption (`caption`) | String | Input parameter. Optional, 1 to 1024 characters, sent exactly as written. For an image, video, or document only. |
 | File Name (`filename`) | String | Input parameter. Advanced. Optional. The name shown on a document in the chat. For a document only. |
 | Idempotency Key (`idempotency_key`) | String | Input parameter. Advanced. Optional. See [Send without duplicates](#idempotency). |
 
-## Turbo Notify: Reply
+## Reply on WhatsApp (Turbo Notify)
 
 This component replies to an earlier message and quotes it in the chat. It outputs the API response as `Data`.
 
-### Turbo Notify: Reply parameters
+### Reply on WhatsApp (Turbo Notify) parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -99,13 +99,13 @@ This component replies to an earlier message and quotes it in the chat. It outpu
 | Text (`text`) | String | Input parameter. The reply, 1 to 4096 characters, sent exactly as written. |
 | Idempotency Key (`idempotency_key`) | String | Input parameter. Advanced. Optional. See [Send without duplicates](#idempotency). |
 
-## Turbo Notify: Get Messages
+## Get WhatsApp Messages (Turbo Notify)
 
 This component reads the recent messages of a number, newest first.
 
 It outputs `Data` with `messages` (a list), `has_more`, and `cursor`. To read the next page, pass the returned `cursor` back with the same filters.
 
-### Turbo Notify: Get Messages parameters
+### Get WhatsApp Messages (Turbo Notify) parameters
 
 | Name | Type | Description |
 |------|------|-------------|
@@ -115,26 +115,26 @@ It outputs `Data` with `messages` (a list), `has_more`, and `cursor`. To read th
 | Limit (`limit`) | Integer | Input parameter. How many messages to return, from `1` to `200`. Default: `20`. |
 | Cursor (`cursor`) | String | Input parameter. Advanced. Optional. The cursor of the previous page. |
 
-## Turbo Notify: Get Message Status
+## Get WhatsApp Message Status (Turbo Notify)
 
 This component reads the delivery state of one message.
 
 It outputs `Data` with `message_id`, `state`, `at`, and `error`, and the full `status` object.
 `state` is one of `pending`, `sent`, `delivered`, `read`, or `failed`. When `state` is `failed`, `error` describes the reason.
 
-### Turbo Notify: Get Message Status parameters
+### Get WhatsApp Message Status (Turbo Notify) parameters
 
 | Name | Type | Description |
 |------|------|-------------|
 | Message ID (`message_id`) | String | Input parameter. The `message_id` returned when the message was sent. |
 
-## Turbo Notify: List Groups
+## List WhatsApp Groups (Turbo Notify)
 
-This component lists the groups of the number, with the IDs that **Turbo Notify: Send Text** and **Turbo Notify: Get Messages** accept.
+This component lists the groups of the number, with the IDs that **Send WhatsApp Text (Turbo Notify)** and **Get WhatsApp Messages (Turbo Notify)** accept.
 
 It outputs `Data` with `groups` (a list), `has_more`, and `cursor`.
 
-### Turbo Notify: List Groups parameters
+### List WhatsApp Groups (Turbo Notify) parameters
 
 | Name | Type | Description |
 |------|------|-------------|

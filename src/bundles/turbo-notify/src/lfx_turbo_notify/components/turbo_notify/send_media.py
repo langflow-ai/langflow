@@ -7,7 +7,7 @@ from lfx_turbo_notify._base import TurboNotifyComponent, base_url_input, connect
 class TurboNotifySendMediaComponent(TurboNotifyComponent):
     """Send an image, video, audio file, document or sticker from a public web address."""
 
-    display_name = "Turbo Notify: Send Media"
+    display_name = "Send WhatsApp Media (Turbo Notify)"
     description = "Send an image, video, audio file, document or sticker from a public URL on your own WhatsApp number."
     documentation = "https://docs.turbonotify.com/en/messages/send-media/"
 

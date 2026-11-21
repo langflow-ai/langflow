@@ -7,7 +7,7 @@ from lfx_turbo_notify._base import TurboNotifyComponent, base_url_input, connect
 class TurboNotifyReplyComponent(TurboNotifyComponent):
     """Quote an earlier message in the same chat and reply to it."""
 
-    display_name = "Turbo Notify: Reply"
+    display_name = "Reply on WhatsApp (Turbo Notify)"
     description = "Reply to an earlier WhatsApp message, quoting it in the chat."
     documentation = "https://docs.turbonotify.com/en/messages/send/"
 

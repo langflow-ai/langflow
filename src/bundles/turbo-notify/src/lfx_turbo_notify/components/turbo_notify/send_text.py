@@ -7,7 +7,7 @@ from lfx_turbo_notify._base import TurboNotifyComponent, base_url_input, connect
 class TurboNotifySendTextComponent(TurboNotifyComponent):
     """Send a WhatsApp text message to a phone number, a contact or a group."""
 
-    display_name = "Turbo Notify: Send Text"
+    display_name = "Send WhatsApp Text (Turbo Notify)"
     description = "Send a WhatsApp text message from your own number to a phone number, a contact or a group."
     documentation = "https://docs.turbonotify.com/en/messages/send/"
 
