@@ -151,6 +151,83 @@ describe("FlowEditCarousel — Accept All applies patches (data-loss regression)
     expect(onUpdateAction).toHaveBeenCalledWith("a1", "applied");
     expect(onUpdateAction).toHaveBeenCalledWith("a2", "applied");
   });
+
+  it("should_merge_separate_metadata_row_proposals_into_the_latest_canvas_value", () => {
+    const first = {
+      name: "FIRST_TOOL",
+      description: "First old description",
+      tags: ["FIRST_TOOL"],
+      status: true,
+      future_metadata: { preserve: "first" },
+    };
+    const second = {
+      name: "SECOND_TOOL",
+      description: "Second old description",
+      tags: ["SECOND_TOOL"],
+      status: true,
+      future_metadata: { preserve: "second" },
+    };
+    const original = [first, second];
+    let nodes = [
+      {
+        data: {
+          node: {
+            template: { tools_metadata: { value: original } },
+          },
+        },
+      },
+    ];
+    flowStoreState.setNodes.mockImplementation(
+      (updater: (current: typeof nodes) => typeof nodes) => {
+        nodes = updater(nodes);
+      },
+    );
+
+    const metadataAction = (id: string, value: typeof original) => ({
+      id,
+      type: "edit_field" as const,
+      description: `Update ${id}`,
+      component_id: "RunFlow-1",
+      component_type: "RunFlow",
+      field: "tools_metadata",
+      old_value: original,
+      new_value: value,
+      patch: [
+        {
+          op: "replace",
+          path: "/data/nodes/0/data/node/template/tools_metadata/value",
+          value,
+        },
+      ],
+      status: "pending" as const,
+    });
+
+    render(
+      <FlowEditCarousel
+        actions={
+          [
+            metadataAction("first", [
+              { ...first, description: "First new description" },
+              second,
+            ]),
+            metadataAction("second", [
+              first,
+              { ...second, description: "Second new description" },
+            ]),
+          ] as never
+        }
+        onUpdateAction={jest.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /accept all/i }));
+
+    expect(nodes[0].data.node.template.tools_metadata.value).toEqual([
+      { ...first, description: "First new description" },
+      { ...second, description: "Second new description" },
+    ]);
+    flowStoreState.setNodes.mockReset();
+  });
 });
 
 describe("FlowEditCarousel — hooks order (crash regression)", () => {
