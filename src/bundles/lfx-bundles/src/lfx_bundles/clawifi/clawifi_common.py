@@ -15,7 +15,7 @@ import httpx
 
 API_BASE_URL = "https://api.clawifi.dev"
 DOCUMENTATION_URL = "https://clawifi.dev/docs"
-SIGNUP_URL = "https://clawifi.dev/signup"
+SIGNUP_URL = "https://clawifi.dev/signup?utm_source=langflow&utm_medium=integration&utm_campaign=component"
 DEFAULT_TIMEOUT_SECONDS = 60.0
 
 API_KEY_INFO = f"Your Clawifi API key. Create one at {SIGNUP_URL}."
