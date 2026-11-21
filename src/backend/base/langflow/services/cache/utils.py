@@ -44,6 +44,9 @@ def clear_old_cache_files(max_cache_size: int = 3) -> None:
                 cache_file.unlink()
 
 
+_NODE_LAYOUT_KEYS = ("position", "positionAbsolute", "selected", "dragging")
+
+
 def filter_json(json_data):
     filtered_data = json_data.copy()
 
@@ -53,17 +56,17 @@ def filter_json(json_data):
     if "chatHistory" in filtered_data:
         del filtered_data["chatHistory"]
 
-    # Filter nodes
+    # Filter nodes. Build new node dicts instead of deleting from the caller's
+    # nodes: this runs on the flow payload the caller keeps using (the session
+    # key hash), and dropping its layout keys left that caller with a flow whose
+    # nodes had no coordinates.
     if "nodes" in filtered_data:
-        for node in filtered_data["nodes"]:
-            if "position" in node:
-                del node["position"]
-            if "positionAbsolute" in node:
-                del node["positionAbsolute"]
-            if "selected" in node:
-                del node["selected"]
-            if "dragging" in node:
-                del node["dragging"]
+        filtered_data["nodes"] = [
+            {key: value for key, value in node.items() if key not in _NODE_LAYOUT_KEYS}
+            if isinstance(node, dict)
+            else node
+            for node in filtered_data["nodes"]
+        ]
 
     return filtered_data
 
