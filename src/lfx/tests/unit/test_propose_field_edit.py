@@ -596,6 +596,27 @@ class TestProposeFieldEditStructuredValues:
         assert node["data"]["node"]["template"]["input_value"]["value"] == old_input_value
         assert node["data"]["node"]["template"]["tools_metadata"]["value"] == [original]
 
+    def test_configure_component_bridge_emits_nothing_when_remaining_parameter_is_invalid(self):
+        original = _tool_row("TEST-FLOW-1_TOOL", "Old description")
+        flow, component_id = self._setup_tools_field([original])
+        set_propose_existing_edits(enabled=True)
+
+        tool = ConfigureComponent()
+        tool.set(
+            component_id=component_id,
+            params={
+                "tools_metadata": {"description": "Run Flow 1"},
+                "unknown_numeric_parameter": 1,
+            },
+        )
+        result = tool.configure_component()
+
+        assert "error" in result.data
+        assert "unknown parameter" in result.data["error"].lower()
+        assert drain_flow_events() == []
+        node = next(node for node in flow["data"]["nodes"] if node["data"]["id"] == component_id)
+        assert node["data"]["node"]["template"]["tools_metadata"]["value"] == [original]
+
     def test_configure_component_bridge_rejects_invalid_metadata_without_falling_back_to_apply(self):
         original = _tool_row("TEST-FLOW-1_TOOL", "Old description")
         flow, component_id = self._setup_tools_field([original])

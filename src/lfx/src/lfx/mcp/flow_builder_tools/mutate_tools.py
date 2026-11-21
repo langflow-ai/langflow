@@ -548,8 +548,6 @@ class ConfigureComponent(Component):
                     logger.warning("configure_component proposal validation failed: %s", e)
                     return Data(data={"error": str(e)})
                 proposed = [field_name for field_name, _ in prepared]
-                for _, proposal in prepared:
-                    _emit("edit_field", **proposal)
                 remaining = {k: v for k, v in params.items() if k not in proposed}
                 if remaining:
                     try:
@@ -570,6 +568,8 @@ class ConfigureComponent(Component):
                     except (ValueError, KeyError) as e:
                         logger.warning("configure_component (non-text remainder) failed: %s", e)
                         return Data(data={"error": str(e)})
+                for _, proposal in prepared:
+                    _emit("edit_field", **proposal)
                 if proposed:
                     fields = ", ".join(proposed)
                     return Data(
