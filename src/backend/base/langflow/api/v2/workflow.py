@@ -99,12 +99,14 @@ from langflow.services.background_execution.service import (
 )
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import Job, JobType
+from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import (
     get_background_execution_service,
     get_job_service,
     get_memory_base_service,
     get_task_service,
+    session_scope,
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
 from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
@@ -622,7 +624,21 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     terminal_error_type = adapter.terminal_error_type
 
     async def _source(*, job_id=None, resume=None, **_kwargs):
-        flow = await resolve_flow_for_execution(str(flow_id), user)
+        # Durable jobs carry only a user id. Read current privileges before
+        # validating the graph so demotions also affect queued and resumed jobs.
+        async with session_scope() as session:
+            owner = await get_user_by_id(session, user.id) if user is not None else None
+            if owner is None or not owner.is_active:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
+            current_user = UserRead.model_validate(owner, from_attributes=True)
+        flow = await resolve_flow_for_execution(str(flow_id), current_user)
+        execution_parsed = _validate_flow_data_for_execution(
+            parsed, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
+        )
+        if parsed.component_substitution_warning and not execution_parsed.component_substitution_warning:
+            execution_parsed = replace(
+                execution_parsed, component_substitution_warning=parsed.component_substitution_warning
+            )
         fresh_background_tasks = BackgroundTasks()
         errored = False
         try:
@@ -631,11 +647,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 flow_id=flow.id,
                 flow_name=flow.name,
                 background_tasks=fresh_background_tasks,
-                parsed=parsed,
-                current_user=user,
+                parsed=execution_parsed,
+                current_user=current_user,
                 provider_policy_flow=flow,
                 source_flow_owner_id=flow.user_id,
-                expose_error_details=caller_owns_flow(flow, user),
+                expose_error_details=caller_owns_flow(flow, current_user),
                 job_id=job_id,
                 resume=resume,
                 # Key the persisted vertex builds by the durable job_id so a completed run's GET

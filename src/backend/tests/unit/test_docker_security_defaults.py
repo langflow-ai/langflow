@@ -312,7 +312,7 @@ def test_public_docker_targets_apply_release_version_overrides() -> None:
     assert 'm.version("langflow-base")' in source
 
     assert workflow.count("MAIN_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
-    assert workflow.count("BASE_VERSION=${{ needs.determine-main-version.outputs.version }}") == 6
+    assert workflow.count("BASE_VERSION=${{ needs.determine-main-version.outputs.version }}") == 8
     assert workflow.count("BASE_VERSION=${{ needs.determine-base-version.outputs.version }}") == 2
 
 
@@ -333,13 +333,13 @@ def test_published_images_pin_hardened_package_managers() -> None:
     assert 'if [ "$actual_npm_version" != "$NPM_VERSION" ]; then' in install_script
 
     for variable, version, package, validation_entry in (
-        ("IP_ADDRESS_VERSION", "10.7.4", "ip-address", '"ip-address": "10.7.4"'),
+        ("IP_ADDRESS_VERSION", "10.7.6", "ip-address", '"ip-address": "10.7.6"'),
         ("BRACE_EXPANSION_VERSION", "5.0.12", "brace-expansion", '"brace-expansion": "5.0.12"'),
         ("TAR_VERSION", "7.5.22", "tar", 'tar: "7.5.22"'),
         ("UNDICI_VERSION", "6.29.1", "undici", 'undici: "6.29.1"'),
         ("POSTCSS_SELECTOR_PARSER_VERSION", "7.1.6", "postcss-selector-parser", '"postcss-selector-parser": "7.1.6"'),
-        ("GLOB_VERSION", "14.0.2", "glob", 'glob: "14.0.2"'),
-        ("MINIMATCH_VERSION", "11.0.1", "minimatch", 'minimatch: "11.0.1"'),
+        ("GLOB_VERSION", "14.0.6", "glob", 'glob: "14.0.6"'),
+        ("MINIMATCH_VERSION", "11.0.8", "minimatch", 'minimatch: "11.0.8"'),
         ("PATH_SCURRY_VERSION", "3.0.0", "path-scurry", '"path-scurry": "3.0.0"'),
         (
             "NONRECURSIVE_GLOB_MATCH_VERSION",
