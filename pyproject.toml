@@ -88,6 +88,7 @@ dev = [
     "hypothesis>=6.123.17",
     # Locust remains excluded from the Python 3.15 preview environment.
     "locust>=2.47.0,<3.0.0; python_version < '3.15'",
+    "langflow-base[guard]",
     "pytest-rerunfailures>=15.0",
     "scrapegraph-py>=1.10.2",
     'elevenlabs==1.58.1; python_version == "3.12"',
@@ -239,6 +240,10 @@ docling-image-description = [
 
 audio = [
     "langflow-base[audio]==1.14.0",
+]
+
+guard = [
+    "langflow-base[guard]==1.14.0",
 ]
 
 # Opt-in microVM sandbox backend for code-execution components
