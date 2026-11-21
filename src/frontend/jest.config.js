@@ -40,7 +40,7 @@ const markdownEsmPackages = [
 module.exports = {
   preset: "ts-jest",
   testEnvironment: "jsdom",
-  coverageProvider: "v8",
+  coverageProvider: "babel",
   injectGlobals: true,
   moduleNameMapper: {
     "\\.(css|less|scss|sass)$": "<rootDir>/src/__mocks__/styleMock.js",

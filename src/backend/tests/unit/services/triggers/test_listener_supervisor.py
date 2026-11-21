@@ -537,8 +537,10 @@ async def test_persistent_failures_back_off_and_surface_the_error_then_a_success
     from langflow.services.deps import get_settings_service
 
     settings = get_settings_service().settings
-    monkeypatch.setattr(settings, "listener_backoff_base_s", 0.01)
-    monkeypatch.setattr(settings, "listener_backoff_cap_s", 0.02)
+    # A long rest window keeps the resting() check below from racing the real clock.
+    # The test clears next_attempt_at before every spawn, so it never waits on this.
+    monkeypatch.setattr(settings, "listener_backoff_base_s", 30)
+    monkeypatch.setattr(settings, "listener_backoff_cap_s", 60)
 
     adapter = adapter_registry(RecordingAdapter(fail_with=failure))
     connection_id = await make_connection()

@@ -11,7 +11,7 @@ const requestErrors: Record<string, { status: number; key: string }> = {
   },
   "The instance migration pause does not permit repairs": {
     status: 503,
-    key: "settings.upgrade.freezeRequired",
+    key: "settings.upgrade.migrationPause",
   },
   "The target registry changed. Preview the selected flows again": {
     status: 409,
@@ -40,7 +40,8 @@ const categories: Record<string, string> = {
   malformed_edge: "invalid",
   malformed_flow: "invalid",
   duplicate_node_id: "invalid",
-  blocked: "policy",
+  blocked: "missingComponent",
+  flow_not_found: "missing",
   owner_policy_denied: "policy",
   provider_selection_unverifiable: "providerSelection",
   authorization_denied: "policy",

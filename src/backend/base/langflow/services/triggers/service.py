@@ -160,6 +160,17 @@ class TriggerService(Service):
     def __init__(self) -> None:
         self.set_ready()
 
+    async def resolve_run_user_id(self, session: AsyncSession, *, flow_id: UUID, trigger_owner_id: UUID) -> UUID | None:
+        """Return the user who will own the background job. OSS uses the trigger owner.
+
+        An override can look up the flow's deployment binding using the supplied
+        session. Return None to refuse a run, or raise to retry a failed lookup.
+        This hook applies only to flow execution. Source connections belong to
+        the trigger owner.
+        """
+        _ = session, flow_id
+        return trigger_owner_id
+
     async def authorize_trigger(self, *, context: TriggerPolicyContext) -> None:
         """Enterprise approval/quota hook; OSS adds no restrictions.
 

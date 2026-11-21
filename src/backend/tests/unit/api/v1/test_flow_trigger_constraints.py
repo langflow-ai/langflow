@@ -366,3 +366,68 @@ def test_trigger_validation_tolerates_unrelated_malformed_nodes(model) -> None:
     flow = model(name="tolerant trigger count", data=graph)
 
     assert flow.data == graph
+
+
+GROUPED_TRIGGER_MESSAGE = "A trigger can't be inside a group. Ungroup it and try again."
+
+
+def _group_node(node_id: str, *inner: dict) -> dict:
+    return {
+        "id": node_id,
+        "data": {"type": "GroupNode", "node": {"flow": {"data": _graph(*inner)}}},
+    }
+
+
+@pytest.mark.parametrize(
+    "group",
+    [
+        _group_node("group-a", _schedule_node("schedule-a"), {"id": "parser-a", "data": {"type": "ParserComponent"}}),
+        _group_node(
+            "group-outer",
+            _group_node("group-inner", {"id": "webhook-a", "data": {"type": "InboundWebhookTrigger"}}),
+        ),
+    ],
+    ids=["direct", "nested"],
+)
+async def test_create_rejects_a_trigger_inside_a_group(
+    client: AsyncClient, logged_in_headers: dict[str, str], group: dict
+) -> None:
+    payload = _payload(group)
+    response = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+
+    assert response.status_code == 422, response.text
+    assert GROUPED_TRIGGER_MESSAGE in response.text
+    async with session_scope() as session:
+        assert (await session.exec(select(Flow).where(Flow.name == payload["name"]))).first() is None
+
+
+async def test_update_rejects_a_trigger_inside_a_group_without_changing_the_flow(
+    client: AsyncClient, logged_in_headers: dict[str, str]
+) -> None:
+    payload = _payload(_schedule_node("schedule-a"))
+    created = await client.post("api/v1/flows/", json=payload, headers=logged_in_headers)
+    assert created.status_code == 201, created.text
+    flow_id = created.json()["id"]
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"data": _graph(_group_node("group-a", _schedule_node("schedule-a")))},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 422, response.text
+    assert GROUPED_TRIGGER_MESSAGE in response.text
+    fetched = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
+    assert fetched.json()["data"] == payload["data"]
+
+
+@pytest.mark.parametrize("model", [FlowCreate, FlowUpdate])
+def test_group_without_a_trigger_is_still_saved(model) -> None:
+    graph = _graph(
+        _schedule_node("schedule-a"),
+        _group_node("group-a", {"id": "parser-a", "data": {"type": "ParserComponent"}}),
+        {"id": "broken-group", "data": {"type": "GroupNode", "node": {"flow": None}}},
+    )
+    flow = model(name="group without trigger", data=graph)
+
+    assert flow.data == graph

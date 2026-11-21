@@ -121,6 +121,8 @@ it("reports a maintenance refusal before a background run starts", async () => {
         data: { ...chatInput.data, id: "HumanInput-1", type: "HumanInput" },
       },
     ],
+    // Background runs from the shared playground are owner-only; this covers the editor run.
+    playgroundPage: false,
   });
   jest.spyOn(api, "post").mockRejectedValue({
     response: {
@@ -311,6 +313,8 @@ it.each([
             data: { ...chatInput.data, id: "HumanInput-1", type: "HumanInput" },
           },
         ],
+        // Background runs from the shared playground are owner-only; this covers the editor run.
+        playgroundPage: false,
       });
       jest.spyOn(api, "post").mockResolvedValue({ data: { job_id: "run-1" } });
     }

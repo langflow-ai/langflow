@@ -904,3 +904,165 @@ async def test_public_agui_stream_carries_no_graph_state(client: AsyncClient, pu
     sources = _mirrored_sources(body)
     assert sources, "expected at least one mirrored message to check"
     assert all(not any(source.values()) for source in sources), sources
+
+
+_FORMAT_ANSWER_CODE = """from lfx.custom.custom_component.component import Component
+from lfx.io import MessageTextInput, Output
+from lfx.schema.message import Message
+
+
+class FormatAnswer(Component):
+    display_name = "Format Answer"
+    name = "FormatAnswer"
+    inputs = [MessageTextInput(name="input_value", display_name="Input")]
+    outputs = [Output(display_name="Answer", name="answer", method="build_answer")]
+
+    def build_answer(self) -> Message:
+        return Message(text=f"You asked: {self.input_value}")
+"""
+
+
+def _edge(source: str, source_type: str, output: str, target: str, input_types: list[str], field_type: str) -> dict:
+    source_handle = {"dataType": source_type, "id": source, "name": output, "output_types": ["Message"]}
+    target_handle = {"fieldName": "input_value", "id": target, "inputTypes": input_types, "type": field_type}
+    return {
+        "id": f"edge-{source}-{target}",
+        "source": source,
+        "target": target,
+        "data": {"sourceHandle": source_handle, "targetHandle": target_handle},
+        "sourceHandle": json.dumps(source_handle),
+        "targetHandle": json.dumps(target_handle),
+    }
+
+
+async def _create_public_custom_component_flow(
+    client: AsyncClient, headers: dict, *, custom_type: str = "CustomComponent"
+) -> UUID:
+    """Chat Input -> user-authored Format Answer -> Chat Output, saved as the editor saves it."""
+    all_types = (await client.get("api/v1/all", headers=headers)).json()
+
+    def template(name: str) -> dict:
+        return copy.deepcopy(next(category[name] for category in all_types.values() if name in category))
+
+    response = await client.post(
+        "api/v1/custom_component",
+        json={"code": _FORMAT_ANSWER_CODE, "frontend_node": template("CustomComponent")},
+        headers=headers,
+    )
+    assert response.status_code == codes.OK, response.text
+    nodes = [
+        ("ChatInput-a", "ChatInput", template("ChatInput")),
+        ("Custom-b", custom_type, response.json()["data"]),
+        ("ChatOutput-c", "ChatOutput", template("ChatOutput")),
+    ]
+    flow = {
+        "name": f"public-custom-{uuid4().hex[:8]}",
+        "data": {
+            "nodes": [
+                {
+                    "id": node_id,
+                    "type": "genericNode",
+                    "position": {"x": 0, "y": 0},
+                    "data": {"id": node_id, "type": typ, "node": node},
+                }
+                for node_id, typ, node in nodes
+            ],
+            "edges": [
+                _edge("ChatInput-a", "ChatInput", "message", "Custom-b", ["Message"], "str"),
+                _edge("Custom-b", custom_type, "answer", "ChatOutput-c", ["Data", "DataFrame", "Message"], "other"),
+            ],
+        },
+    }
+    response = await client.post("api/v1/flows/", json=flow, headers=headers)
+    assert response.status_code == codes.CREATED, response.text
+    flow_id = response.json()["id"]
+    await _make_flow_public(client, flow_id, headers)
+    return flow_id
+
+
+def _set_public_custom_code_policy(monkeypatch, *, allow_public: bool) -> None:
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
+    monkeypatch.setattr(settings, "allow_public_custom_components", allow_public)
+
+
+@pytest.mark.security
+@pytest.mark.parametrize("custom_type", ["CustomComponent", "FormatAnswer"])
+async def test_public_endpoint_refuses_custom_components_with_a_clear_error_by_default(
+    client: AsyncClient, logged_in_headers_super_user, monkeypatch, custom_type
+):
+    """Default policy: an owner's custom component is refused once, before any build, with a safe message.
+
+    The editor saves user-authored components under the ``CustomComponent`` template type. That
+    node must be refused like an unknown type, not swapped for the template's code (which built a
+    different component and failed or recursed for every visitor).
+    """
+    from lfx.utils.flow_validation import PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE
+
+    _set_public_custom_code_policy(monkeypatch, allow_public=False)
+    flow_id = await _create_public_custom_component_flow(client, logged_in_headers_super_user, custom_type=custom_type)
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+
+    _send_unauthenticated(client, f"custom-component-default-{custom_type}")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json() == {"detail": PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE}
+    assert "Format Answer" not in response.text
+    assert "FormatAnswer" not in response.text
+    assert captured == {}
+
+
+@pytest.mark.security
+async def test_public_endpoint_runs_owner_custom_component_when_operator_opts_in(
+    client: AsyncClient, logged_in_headers_super_user, monkeypatch
+):
+    """With the public custom-code opt-in, visitors get the same answer as the owner."""
+    _set_public_custom_code_policy(monkeypatch, allow_public=True)
+    flow_id = await _create_public_custom_component_flow(client, logged_in_headers_super_user)
+
+    _send_unauthenticated(client, "custom-component-opt-in")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "Hi"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        body = "".join([chunk async for chunk in response.aiter_text()])
+
+    assert "You asked: Hi" in body
+    assert "not found in" not in body
+
+
+@pytest.mark.security
+async def test_public_endpoint_refuses_visitor_code_tweaks_even_when_custom_code_is_allowed(
+    client: AsyncClient, logged_in_headers_super_user, monkeypatch
+):
+    """Visitors can never send their own component code, even when the owner's code may run."""
+    _set_public_custom_code_policy(monkeypatch, allow_public=True)
+    flow_id = await _create_public_custom_component_flow(client, logged_in_headers_super_user)
+    captured: dict = {}
+    _stub_generate_flow_events(monkeypatch, captured)
+
+    _send_unauthenticated(client, "custom-component-code-tweak")
+    response = await client.post(
+        "api/v2/workflows/public",
+        json={
+            "flow_id": str(flow_id),
+            "input_value": "Hi",
+            "tweaks": {"Custom-b": {"code": "import os\nos.system('id')"}},
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.UNPROCESSABLE_ENTITY
+    assert captured == {}

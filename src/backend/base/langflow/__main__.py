@@ -1180,13 +1180,10 @@ async def _create_superuser(username: str, password: str, auth_token: str | None
         from langflow.services.deps import get_auth_service
 
         auth = get_auth_service()
-        if await auth.create_super_user(username, password, db=session):
+        created_user = await auth.create_super_user(username, password, db=session)
+        if created_user:
             # Verify that the superuser was created
-            from langflow.services.database.models.user.model import User
-
-            stmt = select(User).where(User.username == username)
-            created_user: User = (await session.exec(stmt)).first()
-            if created_user is None or not created_user.is_superuser:
+            if not created_user.is_superuser:
                 typer.echo("Superuser creation failed.")
                 return
             # Now create the first folder for the user
@@ -1893,7 +1890,7 @@ def upgrade_check(
         default=False, help=_SERVER_SETTING_HELP.format("block_code_interpreter_components")
     ),
     custom_component_admin_only: bool = typer.Option(  # noqa: FBT001
-        default=False, help=_SERVER_SETTING_HELP.format("custom_component_admin_only")
+        default=True, help=_SERVER_SETTING_HELP.format("custom_component_admin_only")
     ),
     allow_components_paths_override: bool = typer.Option(  # noqa: FBT001
         default=True, help=_SERVER_SETTING_HELP.format("allow_components_paths_override")
