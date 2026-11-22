@@ -254,14 +254,36 @@ async def test_gmail_cleanup_preserves_sibling_watch_even_after_opt_out(
 
 
 @pytest.mark.usefixtures("client")
-async def test_heartbeat_keeps_long_work_owned():
+async def test_heartbeat_keeps_long_work_owned(monkeypatch):
+    # A fake lease clock makes the result depend on the order of events, not on wall time.
+    # run_guarded gives each renewal ttl_s / 3 of real time, so the TTL stays large enough for a slow runner.
+    ttl_s = 3
+    start = datetime.now(timezone.utc)
+    clock = [start]
+    monkeypatch.setattr(leases, "_now", lambda: clock[0])
     name = f"long-work-{uuid4()}"
     async with session_scope() as session:
-        assert await leases.acquire(session, name=name, owner="first", ttl_s=0.9)
-    task = asyncio.create_task(run_guarded(asyncio.sleep(2), name=name, owner="first", ttl_s=0.9))
-    await asyncio.sleep(1.3)
+        assert await leases.acquire(session, name=name, owner="first", ttl_s=ttl_s)
+    release = asyncio.Event()
+    task = asyncio.create_task(run_guarded(release.wait(), name=name, owner="first", ttl_s=ttl_s))
+
+    async def _expires_at() -> datetime:
+        async with session_scope() as session:
+            value = (await session.exec(select(TriggerLease.expires_at).where(TriggerLease.name == name))).one()
+        return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
+
+    # Move the clock inside the first lease, then wait for a heartbeat to extend the expiry.
+    clock[0] = start + timedelta(seconds=ttl_s / 2)
+    deadline = asyncio.get_running_loop().time() + 5
+    while await _expires_at() <= start + timedelta(seconds=ttl_s):
+        assert asyncio.get_running_loop().time() < deadline, "heartbeat never renewed the lease"
+        await asyncio.sleep(0.02)
+
+    # Past the first expiry but inside the renewed one: only the heartbeat keeps "first" the owner.
+    clock[0] = start + timedelta(seconds=ttl_s * 1.2)
     async with session_scope() as session:
         assert not await leases.acquire(session, name=name, owner="second", ttl_s=10)
+    release.set()
     await task
 
 

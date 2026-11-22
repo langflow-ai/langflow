@@ -62,6 +62,25 @@ def test_source_connection_errors_do_not_echo_credentials():
         assert value not in message
 
 
+@pytest.mark.parametrize("database_url", ["sqlite:///source.db", "not a database URL"])
+def test_missing_module_only_suggests_postgres_driver_for_postgres(database_url):
+    message = _source_message(ModuleNotFoundError("No module named 'unrelated'"), database_url)
+
+    assert "PostgreSQL" not in message
+
+
+@pytest.mark.parametrize("scheme", ["postgresql", "postgresql+asyncpg", "postgres"])
+def test_missing_postgres_driver_keeps_install_hint_without_credentials(scheme):
+    url = (
+        f"{scheme}://private-user:private-password@db.example.test/app?token=private-token"  # pragma: allowlist secret
+    )
+    message = _source_message(ModuleNotFoundError("No module named 'psycopg'"), url)
+
+    assert "pip install 'langflow[postgresql]'" in message
+    for value in (url, "private-user", "private-password", "private-token"):
+        assert value not in message
+
+
 @pytest.mark.parametrize("suffix", ["-wal", "-shm", "-journal"])
 @pytest.mark.parametrize("alias", ["direct", "symlink", "hardlink"])
 def test_report_destination_refuses_sqlite_journal_aliases(suffix, alias, tmp_path):
@@ -315,6 +334,7 @@ def test_interrupted_cli_reaps_a_child_that_ignores_termination(monkeypatch):
                 database_url="sqlite:////unused.db",
                 serving_database_url=None,
                 components_path=[],
+                discovery_timeout=300,
                 allow_custom_components=True,
                 substitute_outdated_component_code=True,
                 block_code_interpreter_components=False,

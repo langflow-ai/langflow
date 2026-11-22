@@ -36,7 +36,9 @@ def _session_digest(session_id: str, user_id: str) -> str:
     return hashlib.sha256(f"{UUID(user_id)}:{session_id}".encode()).hexdigest()
 
 
-async def create_refresh_session(session_id: str, user_id: str, expires_at: datetime, db: AsyncSession) -> bool:
+async def create_refresh_session(
+    session_id: str, user_id: str, expires_at: datetime, db: AsyncSession, session_version: str | None
+) -> bool:
     """Persist a login only while its native owner remains active in this transaction."""
     statement = (
         insert(RefreshTokenSession)
@@ -47,7 +49,11 @@ async def create_refresh_session(session_id: str, user_id: str, expires_at: date
                 col(User.id),
                 literal(expires_at, type_=RefreshTokenSession.__table__.c.expires_at.type),
                 false(),
-            ).where(User.id == UUID(user_id), col(User.is_active).is_(True)),
+            ).where(
+                User.id == UUID(user_id),
+                col(User.is_active).is_(True),
+                User.session_version == session_version,
+            ),
         )
         .returning(col(RefreshTokenSession.session_digest))
     )

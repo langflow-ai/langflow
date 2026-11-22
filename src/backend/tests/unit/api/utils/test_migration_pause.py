@@ -955,8 +955,9 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     try:
         await listener.reconcile()
         queue.start_job(job_id, asyncio.sleep(0))
-        # Long enough for the flow sync to begin a pass.
-        await asyncio.sleep(0)
+        task = queue.get_queue_data(job_id)[2]
+        assert task is not None
+        await asyncio.wait_for(task, timeout=5)
     finally:
         await listener.stop()
         sync.cancel()
