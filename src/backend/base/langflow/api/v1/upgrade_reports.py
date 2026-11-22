@@ -23,7 +23,7 @@ from langflow.services.upgrade_reports.history import (
     list_reports,
     store_report,
 )
-from langflow.services.upgrade_reports.schema import UpgradeReportMetadata
+from langflow.services.upgrade_reports.schema import ReportHistorySummary, UpgradeReportMetadata
 
 router = APIRouter(prefix="/upgrade-reports", tags=["Upgrade Reports"])
 Superuser = Annotated[User, Depends(get_current_active_superuser)]
@@ -33,7 +33,7 @@ ReportHistoryEntry = UpgradeReportMetadata
 
 
 class ReportHistory(BaseModel):
-    items: list[ReportHistoryEntry]
+    items: list[ReportHistorySummary]
     total: int
     offset: int
     limit: int
@@ -45,9 +45,6 @@ class ReportDetail(ReportHistoryEntry):
 
 def entry(row: UpgradeReport | UpgradeReportMetadata) -> ReportHistoryEntry:
     values = {name: getattr(row, name) for name in ReportHistoryEntry.model_fields}
-    for name in ("created_at", "generated_at"):
-        if values[name].tzinfo is None:
-            values[name] = values[name].replace(tzinfo=timezone.utc)
     return ReportHistoryEntry(**values)
 
 
@@ -59,7 +56,13 @@ async def read_row(session: DbSessionReadOnly, report_id: UUID) -> UpgradeReport
 
 
 @router.post("", status_code=201)
-async def import_report(request: Request, response: Response, admin: Superuser, session: DbSession) -> ReportDetail:
+async def import_report(
+    request: Request,
+    response: Response,
+    admin: Superuser,
+    _changes: Annotated[None, Depends(changes_the_instance)],
+    session: DbSession,
+) -> ReportDetail:
     content = bytearray()
     async for chunk in request.stream():
         if len(content) + len(chunk) > MAX_REPORT_BYTES:
@@ -94,7 +97,7 @@ async def history(
 ) -> ReportHistory:
     rows, total = await list_reports(session, offset=offset, limit=limit, target_version=target_version)
     response.headers["Cache-Control"] = "no-store"
-    return ReportHistory(items=[entry(row) for row in rows], total=total, offset=offset, limit=limit)
+    return ReportHistory(items=rows, total=total, offset=offset, limit=limit)
 
 
 @router.get("/{report_id}")

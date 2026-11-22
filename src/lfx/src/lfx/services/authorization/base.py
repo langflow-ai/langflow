@@ -149,6 +149,7 @@ class AuthorizationMutationKind(str, Enum):
     """Canonical policy-relevant lifecycle mutations emitted by Langflow."""
 
     USER_CREATED = "user.created"
+    USER_ACTIVATED = "user.activated"
     USER_DISABLED = "user.disabled"
     USER_SUPERUSER_DEMOTED = "user.superuser_demoted"
     USER_DELETED = "user.deleted"
@@ -704,6 +705,7 @@ class BaseAuthorizationService(Service, abc.ABC):
         }
         user_kinds = {
             AuthorizationMutationKind.USER_CREATED,
+            AuthorizationMutationKind.USER_ACTIVATED,
             AuthorizationMutationKind.USER_DISABLED,
             AuthorizationMutationKind.USER_SUPERUSER_DEMOTED,
             AuthorizationMutationKind.USER_DELETED,

@@ -1190,6 +1190,43 @@ def test_full_sequence_ending_in_error_is_well_formed():
     assert "the agent crashed" in out[-1].message
 
 
+def test_end_after_error_emits_no_run_finished():
+    """RUN_ERROR is terminal: the build loop's trailing ``end`` must not add RUN_FINISHED."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    errored = t.translate("error", {"error": "qa forced failure"})
+    after = t.translate("end", {})
+
+    assert isinstance(errored[-1], RunErrorEvent)
+    assert after == []
+
+
+def test_events_after_error_are_dropped():
+    """No event may follow RUN_ERROR, including a cancel or a second error."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+    t.translate("error", {"error": "qa forced failure"})
+
+    assert t.translate("error", {"error": "again"}) == []
+    assert t.translate("warning", {"message": "late"}) == []
+    assert t.translate("token", {"id": "m1", "chunk": "late"}) == []
+    assert t.cancel("Workflow run cancelled.") == []
+
+
+def test_pause_after_error_still_emits_human_input_marker():
+    """A sibling branch can pause after another failed; the runners detect a suspend from this frame."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+    t.translate("error", {"error": "qa forced failure"})
+
+    out = t.translate("human_input_required", {"request_id": "req-1"})
+
+    assert len(out) == 1
+    assert isinstance(out[0], CustomEvent)
+    assert out[0].name == "langflow.human_input_required"
+
+
 def test_user_add_message_emits_no_text_message():
     """A user-sender add_message must emit no events (else AG-UI shows a stray empty bubble)."""
     t = AGUITranslator(run_id="r1", thread_id="t1")

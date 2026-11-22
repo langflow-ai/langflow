@@ -1,4 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import CustomSettingsPageFrame from "./custom-settings-page-frame";
 
 jest.mock("@/components/common/pageLayout", () => ({
@@ -11,7 +13,7 @@ jest.mock("@/components/common/pageLayout", () => ({
 jest.mock("@/components/core/sidebarComponent", () => ({
   __esModule: true,
   default: ({ items }: { items: Array<{ title: string }> }) => (
-    <nav>
+    <nav aria-label="Desktop settings">
       {items.map((item) => (
         <span key={item.title}>{item.title}</span>
       ))}
@@ -24,7 +26,7 @@ jest.mock("@/components/ui/sidebar", () => ({
 }));
 
 describe("CustomSettingsPageFrame", () => {
-  it("preserves the community Settings list and content", () => {
+  it("preserves the community Settings list and content and supports mobile navigation", async () => {
     render(
       <CustomSettingsPageFrame
         title="Settings"
@@ -33,10 +35,17 @@ describe("CustomSettingsPageFrame", () => {
       >
         <div>Settings content</div>
       </CustomSettingsPageFrame>,
+      { wrapper: MemoryRouter },
     );
 
     expect(screen.getByTestId("settings-page-layout")).toBeInTheDocument();
-    expect(screen.getByText("General")).toBeInTheDocument();
+    const desktop = screen.getByRole("navigation", {
+      name: "Desktop settings",
+    });
+    expect(within(desktop).getByText("General")).toBeInTheDocument();
+    const mobile = screen.getByRole("combobox");
+    await userEvent.selectOptions(mobile, "/settings/general");
+    expect(mobile).toHaveValue("/settings/general");
     const content = screen.getByText("Settings content");
     expect(content).toBeInTheDocument();
     expect(content.parentElement).toHaveClass("min-w-0", "overflow-x-clip");
@@ -55,11 +64,14 @@ describe("CustomSettingsPageFrame", () => {
       >
         <div>Settings content</div>
       </CustomSettingsPageFrame>,
+      { wrapper: MemoryRouter },
     );
 
     const scroller = screen.getByTestId("settings-content-scroll");
     expect(scroller).toContainElement(screen.getByText("Settings content"));
     expect(scroller).toHaveClass("min-h-0", "overflow-y-auto");
-    expect(scroller).not.toContainElement(screen.getByText("General"));
+    expect(scroller).not.toContainElement(
+      screen.getByRole("navigation", { name: "Desktop settings" }),
+    );
   });
 });
