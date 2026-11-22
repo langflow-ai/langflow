@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from "uuid";
 import { queryClient } from "@/contexts";
 import type { Message } from "@/types/messages";
 
@@ -29,7 +30,10 @@ const findMessageContext = (
   return null;
 };
 
-export const updateMessage = (updatedMessage: Message) => {
+export const updateMessage = (
+  updatedMessage: Message,
+  placeholderId?: string,
+) => {
   // For streaming tokens, if flow_id/session_id are missing, try to find from existing message
   let flowId = updatedMessage.flow_id;
   let sessionId = updatedMessage.session_id;
@@ -112,12 +116,17 @@ export const updateMessage = (updatedMessage: Message) => {
     // For non-streaming messages (add_message), always replace completely - don't accumulate
 
     // If this is a real user message, remove matching placeholder
-    if (newMessage.sender === "User" && newMessage.id) {
+    if (
+      newMessage.sender === "User" &&
+      newMessage.id &&
+      (!existingMessage || placeholderId)
+    ) {
       const placeholderIndex = old.findIndex(
         (msg) =>
           msg.id === null &&
           msg.session_id === newMessage.session_id &&
-          msg.sender === newMessage.sender,
+          msg.sender === newMessage.sender &&
+          (!placeholderId || msg.properties?.client_send_id === placeholderId),
       );
 
       if (placeholderIndex !== -1) {
@@ -161,36 +170,49 @@ export const updateMessage = (updatedMessage: Message) => {
 export const removePlaceholderUserMessage = (
   sessionId: string,
   flowId: string,
-) => {
+  placeholderId?: string,
+): boolean => {
   const cacheKey = [MESSAGES_QUERY_KEY, { id: flowId, session_id: sessionId }];
+  let removed = false;
 
   queryClient.setQueryData(cacheKey, (old: Message[] = []) => {
     const placeholderIndex = old.findIndex(
-      (msg) => msg.id === null && msg.sender === "User",
+      (msg) =>
+        msg.id === null &&
+        msg.sender === "User" &&
+        (!placeholderId || msg.properties?.client_send_id === placeholderId),
     );
     if (placeholderIndex === -1) return old;
+    removed = true;
     return old.filter((_, idx) => idx !== placeholderIndex);
   });
+  return removed;
 };
 
 export const addUserMessage = (updatedMessage: Message) => {
+  const placeholderId = uuidv4();
   const cacheKey = [
     MESSAGES_QUERY_KEY,
     { id: updatedMessage.flow_id, session_id: updatedMessage.session_id },
   ];
 
-  // Ensure query exists
-  queryClient.ensureQueryData({
-    queryKey: cacheKey,
-    queryFn: () => [],
-  });
-
-  // Add placeholder to cache
+  // setQueryData creates a missing cache entry without an async empty result
+  // that could overwrite the placeholder before the server responds.
   queryClient.setQueryData(cacheKey, (old: Message[] = []) => {
-    return [...old, updatedMessage];
+    return [
+      ...old,
+      {
+        ...updatedMessage,
+        properties: {
+          ...updatedMessage.properties,
+          client_send_id: placeholderId,
+        },
+      },
+    ];
   });
 
   // setQueryData automatically notifies observers - no need to invalidate
+  return placeholderId;
 };
 
 export const updateMessages = (updatedMessages: Message[]) => {

@@ -8,6 +8,25 @@ test(
   async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 600 });
     await awaitBootstrapTest(page, { skipModal: true });
+
+    // The production build bundles ChevronLeft into the main chunk, so only the dev server loads it lazily.
+    const backIconIsLazy = process.env.PW_FRONTEND_BUILD !== "1";
+
+    // Hold the lazy Back icon so the header is measured with its loading placeholder.
+    let loadBackIcon = () => {};
+    const backIconReady = new Promise<void>((resolve) => {
+      loadBackIcon = resolve;
+    });
+    if (backIconIsLazy) {
+      await page.route(
+        /\/chevron-left(?:-[^/?]+)?\.js(?:\?|$)/,
+        async (route) => {
+          await backIconReady;
+          await route.continue();
+        },
+      );
+    }
+
     await navigateSettingsPages(page, "Settings", "General");
     await expect(page.getByText("Profile Picture").first()).toBeVisible();
 
@@ -15,8 +34,22 @@ test(
     const menuItem = page.getByTestId("sidebar-nav-General");
     const content = page.getByTestId("settings-content-scroll");
 
-    const titleBefore = await title.boundingBox();
-    const menuBefore = await menuItem.boundingBox();
+    const backButton = page.getByTestId("back_page_button");
+    let titleBefore: Awaited<ReturnType<typeof title.boundingBox>>;
+    let menuBefore: Awaited<ReturnType<typeof menuItem.boundingBox>>;
+    if (backIconIsLazy) {
+      await expect(backButton.locator(".animate-pulse")).toBeVisible();
+      titleBefore = await title.boundingBox();
+      menuBefore = await menuItem.boundingBox();
+
+      loadBackIcon();
+      await expect(backButton.getByTestId("icon-ChevronLeft")).toBeVisible();
+      expect(await title.boundingBox()).toEqual(titleBefore);
+    } else {
+      await expect(backButton.getByTestId("icon-ChevronLeft")).toBeVisible();
+      titleBefore = await title.boundingBox();
+      menuBefore = await menuItem.boundingBox();
+    }
 
     const contentBox = await content.boundingBox();
     await page.mouse.move(

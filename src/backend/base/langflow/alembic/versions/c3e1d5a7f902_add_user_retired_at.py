@@ -34,3 +34,12 @@ def downgrade() -> None:
     with op.batch_alter_table("user", schema=None) as batch_op:
         if migration.column_exists("user", "retired_at", conn):
             batch_op.drop_column("retired_at")
+    if conn.dialect.name == "sqlite":
+        # Batch recreation cannot reflect SQLite expression indexes.
+        op.create_index(
+            "ix_user_username_lower",
+            "user",
+            [sa.text("lower(username)")],
+            unique=True,
+            if_not_exists=True,
+        )

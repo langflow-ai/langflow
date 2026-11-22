@@ -9,6 +9,7 @@ from langflow.services.base import Service
 from langflow.services.schema import ServiceType
 from lfx.services.manager import get_service_manager
 from sqlmodel.ext.asyncio.session import AsyncSession
+from starlette.requests import Request
 
 
 class DummyAuthService(Service):
@@ -93,12 +94,13 @@ async def test_api_key_security_uses_registered_service(dummy_auth_registration)
 
 @pytest.mark.anyio
 async def test_get_current_user_delegates_to_service(dummy_auth_registration):
+    """Retain registered-service delegation with the real request header interface."""
     dummy = dummy_auth_registration
     db = MagicMock(spec=AsyncSession)
     # get_current_user now extracts the external credential from the request and
     # threads it to the service as external_token. With external auth disabled the
     # extractor returns None, so delegation records external_token=None.
-    request = SimpleNamespace(headers={}, cookies={})
+    request = Request({"type": "http", "headers": []})
     response = await auth_utils.get_current_user(request, token=None, query_param="q", header_param=None, db=db)
 
     assert ("get_current_user", None, "q", None, None) in dummy.calls
@@ -110,7 +112,7 @@ async def test_get_current_user_delegates_to_service(dummy_auth_registration):
 async def test_get_current_user_mcp_delegates_external_credential(dummy_auth_registration):
     dummy = dummy_auth_registration
     db = MagicMock(spec=AsyncSession)
-    request = SimpleNamespace(headers={}, cookies={})
+    request = Request({"type": "http", "headers": []})
 
     with patch.object(auth_utils, "_get_external_token", return_value="external-mcp-credential"):
         response = await auth_utils.get_current_user_mcp(
@@ -126,7 +128,7 @@ async def test_get_current_user_mcp_delegates_external_credential(dummy_auth_reg
 async def test_get_current_user_mcp_supports_legacy_signature_with_external_auth_disabled():
     service = LegacyDummyAuthService()
     db = MagicMock(spec=AsyncSession)
-    request = SimpleNamespace(headers={}, cookies={})
+    request = Request({"type": "http", "headers": []})
 
     with (
         patch.object(auth_utils, "_auth_service", return_value=service),
@@ -145,7 +147,7 @@ async def test_get_current_user_mcp_supports_legacy_signature_with_external_auth
 async def test_get_current_user_mcp_supports_legacy_signature_with_external_auth_enabled():
     service = LegacyDummyAuthService()
     db = MagicMock(spec=AsyncSession)
-    request = SimpleNamespace(headers={}, cookies={})
+    request = Request({"type": "http", "headers": []})
     native_token = "legacy-native-token"  # noqa: S105  # pragma: allowlist secret
 
     with (
@@ -164,7 +166,7 @@ async def test_get_current_user_mcp_supports_legacy_signature_with_external_auth
 @pytest.mark.anyio
 async def test_get_current_user_mcp_does_not_mask_service_type_errors():
     service = BrokenDummyAuthService()
-    request = SimpleNamespace(headers={}, cookies={})
+    request = Request({"type": "http", "headers": []})
 
     with (
         patch.object(auth_utils, "_auth_service", return_value=service),

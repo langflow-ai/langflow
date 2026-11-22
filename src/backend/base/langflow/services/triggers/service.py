@@ -16,7 +16,7 @@ from __future__ import annotations
 import secrets
 from copy import deepcopy
 from datetime import datetime, timezone
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlmodel import col, select
 
@@ -42,11 +42,18 @@ from langflow.services.triggers.providers.registry import canvas_only_kinds, pus
 from langflow.services.triggers.reconciliation import (
     NODE_REMOVED_ERROR,
     apply_config_verdict,
+    schedule_pick_error,
     sync_display_name,
     trigger_node_on_canvas,
     validate_single_trigger_per_flow,
 )
-from langflow.services.triggers.schedule_config import schedule_timing_changed, validate_schedule_config
+from langflow.services.triggers.schedule_config import (
+    InvalidScheduleError,
+    has_timing,
+    run_at_instant,
+    schedule_timing_changed,
+    validate_schedule_config,
+)
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -98,6 +105,23 @@ def _reject_mechanism(config: dict | None) -> None:
         raise ValueError(msg)
 
 
+def _check_schedule_can_arm(row: Trigger, flow_data: dict[str, Any] | None) -> None:
+    """Refuse a schedule that would never fire, saying what to fix."""
+    try:
+        config = validate_schedule_config(row.config or {})
+    except InvalidScheduleError as exc:
+        # An unusable pick blanks the timing, and the user cannot see the cron
+        # field: refuse with the picker's reason. Pausing clears the reason the
+        # reconciler kept, so ask the saved node first.
+        reason = schedule_pick_error(row, flow_data) or row.last_error
+        if reason and not has_timing(row.config or {}):
+            raise InvalidScheduleError(reason) from exc
+        raise
+    if "run_at" in config and run_at_instant(config) <= datetime.now(timezone.utc):
+        msg = "The date and time to run at has already passed. Pick a later one."
+        raise InvalidScheduleError(msg)
+
+
 async def _arm_slack(session: AsyncSession, row: Trigger, *, connection_ids: frozenset[UUID]) -> None:
     """Re-check a Slack trigger's filters, re-derive its connection and transport, and check it may run unattended.
 
@@ -135,6 +159,17 @@ class TriggerService(Service):
 
     def __init__(self) -> None:
         self.set_ready()
+
+    async def resolve_run_user_id(self, session: AsyncSession, *, flow_id: UUID, trigger_owner_id: UUID) -> UUID | None:
+        """Return the user who will own the background job. OSS uses the trigger owner.
+
+        An override can look up the flow's deployment binding using the supplied
+        session. Return None to refuse a run, or raise to retry a failed lookup.
+        This hook applies only to flow execution. Source connections belong to
+        the trigger owner.
+        """
+        _ = session, flow_id
+        return trigger_owner_id
 
     async def authorize_trigger(self, *, context: TriggerPolicyContext) -> None:
         """Enterprise approval/quota hook; OSS adds no restrictions.
@@ -326,7 +361,7 @@ class TriggerService(Service):
             msg = "This trigger provider is unavailable. Install its integration bundle before enabling it."
             raise ValueError(msg)
         if row.kind == "schedule":
-            validate_schedule_config(row.config or {})
+            _check_schedule_can_arm(row, flow.data if flow else None)
         if row.kind in SLACK_TRIGGER_KINDS:
             await _arm_slack(session, row, connection_ids=connection_ids)
         if row.kind in source_kinds():

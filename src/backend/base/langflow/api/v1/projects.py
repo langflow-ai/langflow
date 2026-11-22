@@ -139,6 +139,13 @@ from langflow.services.deps import (
     get_storage_service,
 )
 from langflow.services.evaluations.cleanup import delete_project_evaluations
+from langflow.services.replacement_hooks import (
+    ReplacementCommittedContext,
+    ReplacementContext,
+    registered_replacement_committed_hooks,
+    run_replacement_committed_hooks,
+    run_replacement_hooks,
+)
 from langflow.services.schema import ServiceType
 from langflow.services.storage.service import StorageService
 from langflow.services.triggers.reconciliation import reconcile_flow_triggers_safely
@@ -698,7 +705,10 @@ async def read_project(
         # and widening the lookup would expose foreign projects without any
         # policy check.
         share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
-        stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.id == project_id)
+        is_paginated = page is not None and size is not None
+        stmt = select(Folder).where(Folder.id == project_id)
+        if not is_paginated:
+            stmt = stmt.options(selectinload(Folder.flows))
         if not share_aware:
             stmt = stmt.where(Folder.user_id == current_user.id)
         project = (await session.exec(stmt)).first()
@@ -746,7 +756,7 @@ async def read_project(
         )
 
         # Check if pagination is explicitly requested by the user (both page and size provided)
-        if page is not None and size is not None:
+        if is_paginated:
             stmt = select(Flow).where(Flow.folder_id == project_id)
             if not treat_as_shared:
                 stmt = stmt.where(Flow.user_id == current_user.id)
@@ -860,6 +870,11 @@ def _replacement_request_digest(request_body: ProjectReplacementRequest) -> str:
         normalized.pop("dependencies", None)
     if request_body.variables is None:
         normalized.pop("variables", None)
+    # Same for the optional hook carrier: absent and explicit null mean the same thing, so old digests stay unchanged.
+    if request_body.execution_principal_id is None:
+        normalized.pop("execution_principal_id", None)
+    if not request_body.prepare_memory_bases:
+        normalized.pop("prepare_memory_bases", None)
     try:
         return canonical_json_digest(normalized)
     except UnicodeEncodeError as exc:
@@ -1055,6 +1070,8 @@ async def replace_project_operation(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Replace a project's full flow set and persist an immutable retry receipt."""
+    from langflow.services.deployment_artifacts.activation import activation_attempt
+
     if request_body.project_name is not None and (audited := current_operation()) is not None:
         audited.identify(
             action=audit_vocab.PROJECT_CREATE,
@@ -1064,15 +1081,16 @@ async def replace_project_operation(
         try:
             # Save helpers mutate the body. Each aborted transaction must start
             # from the original graph and its original receipt digest.
-            with batch_audit_events(session):
-                return await _replace_project_operation_once(
-                    session=session,
-                    project_id=project_id,
-                    operation_id=operation_id,
-                    request_body=request_body.model_copy(deep=True),
-                    current_user=current_user,
-                    storage_service=storage_service,
-                )
+            async with activation_attempt(session):
+                with batch_audit_events(session):
+                    return await _replace_project_operation_once(
+                        session=session,
+                        project_id=project_id,
+                        operation_id=operation_id,
+                        request_body=request_body.model_copy(deep=True),
+                        current_user=current_user,
+                        storage_service=storage_service,
+                    )
         except DBAPIError as exc:
             # Replacement locks the project's Folder row and then its existing
             # Flow rows (see the ``with_for_update()`` loads below). A concurrent
@@ -1143,13 +1161,15 @@ async def _replace_project_operation_once(
                     denied_error_code=_REPLACEMENT_PROJECT_NOT_FOUND_CODE,
                 )
                 if (audited := current_operation()) is not None:
-                    name = (
-                        await session.exec(
-                            select(Folder.name).where(
-                                Folder.id == project_id, Folder.user_id == receipt.project_user_id
+                    name = receipt.project_name
+                    if name is None:
+                        name = (
+                            await session.exec(
+                                select(Folder.name).where(
+                                    Folder.id == project_id, Folder.user_id == receipt.project_user_id
+                                )
                             )
-                        )
-                    ).first()
+                        ).first()
                     if name is None:
                         # The receipt can outlive the project. Reuse a committed
                         # audit name rather than the retry's caller-supplied name.
@@ -1202,6 +1222,23 @@ async def _replace_project_operation_once(
                     status_code=status.HTTP_409_CONFLICT,
                     detail="Operation ID already used with a different request",
                     headers={ERROR_CODE_HEADER: "replacement_operation_id_conflict"},
+                )
+            if registered_replacement_committed_hooks():
+                # Nothing was written, but the project lock is still held. Release it before the hooks, which open
+                # their own sessions (SQLite would otherwise refuse their writes). Without hooks nothing changes.
+                await session.commit()
+                mark_committed()
+                await run_replacement_committed_hooks(
+                    ReplacementCommittedContext(
+                        current_user=current_user,
+                        project_id=project_id,
+                        project_user_id=receipt.project_user_id,
+                        operation_id=operation_id,
+                        request=activation_request,
+                        flows_before=None,
+                        flows_after={flow.id: flow.name for flow in saved_result.flows},
+                        replayed=True,
+                    )
                 )
             return saved_result
 
@@ -1618,13 +1655,39 @@ async def _replace_project_operation_once(
             )
             result_flows.append(flow_read)
 
-        from langflow.services.deployment_artifacts.activation import guard_project_activation
+        from langflow.services.deployment_artifacts.activation import (
+            guard_project_activation,
+            mark_activation_committed,
+        )
 
         await guard_project_activation(
             session=session,
             project=project,
             current_user=current_user,
             request=activation_request,
+        )
+
+        flows_after = {flow.id: flow.name for flow in result_flows}
+        await run_replacement_hooks(
+            ReplacementContext(
+                session=session,
+                current_user=current_user,
+                project=project,
+                created=newly_created_project is not None,
+                request=activation_request,
+                flows_before=membership_before,
+                flows_after=flows_after,
+            )
+        )
+        committed_context = ReplacementCommittedContext(
+            current_user=current_user,
+            project_id=project_id,
+            project_user_id=project.user_id,
+            operation_id=operation_id,
+            request=activation_request,
+            flows_before=membership_before,
+            flows_after=flows_after,
+            replayed=False,
         )
 
         result = ProjectReplacementResult(
@@ -1658,14 +1721,9 @@ async def _replace_project_operation_once(
         session.add(receipt)
         await session.flush()
 
-        # Prune old receipts for this project in the same transaction as the
-        # new one, keeping only the newest _MAX_REPLACEMENT_RECEIPTS_PER_PROJECT
-        # readable. A pruned row is tombstoned (its result cleared) rather than
-        # deleted: the row, digest, and owner/workspace survive so a retry against
-        # it - even one whose body still matches the original digest - gets an
-        # explicit 410 instead of silently re-executing and overwriting newer
-        # content with a stale one. created_at ties (possible with low-resolution
-        # clocks) break on operation_id for a deterministic ordering.
+        # Keep the newest receipts readable. For older receipts, clear the result
+        # and keep the Project name, digest, owner and workspace. A retry returns
+        # 410 and cannot overwrite newer content. Break timestamp ties by operation ID.
         #
         # Ranking (and therefore the offset boundary) includes the just-inserted
         # receipt like every other row - excluding it from the ranking itself
@@ -1692,8 +1750,12 @@ async def _replace_project_operation_once(
                 .where(
                     ProjectReplacementOperation.project_id == project_id,
                     ProjectReplacementOperation.operation_id.in_(stale_receipt_ids),
+                    ProjectReplacementOperation.result.is_not(None),
                 )
-                .values(result=null())
+                .values(
+                    project_name=ProjectReplacementOperation.result["project"]["name"].as_string(),
+                    result=null(),
+                )
             )
 
         for stale_flow in stale_flows:
@@ -1717,10 +1779,11 @@ async def _replace_project_operation_once(
             project_name=result.project.name,
             description=result.project.description,
             flows_before=membership_before,
-            flows_after={flow.id: flow.name for flow in result_flows},
+            flows_after=flows_after,
         )
         await flush_audit_event_batch(session)
         await session.commit()
+        mark_activation_committed()
         mark_committed()
     except (HTTPException, DBAPIError):
         raise
@@ -1759,6 +1822,9 @@ async def _replace_project_operation_once(
             await logger.awarning(
                 "Failed to clear MCP server cache for %s after replacement commit", server_name, exc_info=True
             )
+    # Last, so a failing hook cannot skip the best-effort cleanup above. The replacement is durable; a failure here
+    # answers an error and the caller's retry replays the receipt and runs the hooks again.
+    await run_replacement_committed_hooks(committed_context)
     return result
 
 

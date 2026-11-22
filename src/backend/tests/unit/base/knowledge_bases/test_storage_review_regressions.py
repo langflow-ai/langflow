@@ -126,6 +126,7 @@ async def test_knowledge_component_embeds_without_lock_and_rechecks_before_write
             pd.DataFrame({"text": ["overlapping document"]}),
             [{"column_name": "text", "vectorize": True, "identifier": True}],
             SimpleNamespace(aembed_documents=embed),
+            record=row,
         )
     )
     await asyncio.wait_for(started.wait(), 1)
