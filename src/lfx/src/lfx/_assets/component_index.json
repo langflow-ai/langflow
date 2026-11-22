@@ -34469,6 +34469,6 @@
     "num_components": 132,
     "num_modules": 17
   },
-  "version": "1.14.0",
-  "sha256": "bc010314e416e3002fa9b63cbb81e50871662a930db2602c7c787181b720b921"
+  "sha256": "bc010314e416e3002fa9b63cbb81e50871662a930db2602c7c787181b720b921",
+  "version": "1.14.0"
 }
