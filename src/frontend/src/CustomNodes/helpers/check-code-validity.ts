@@ -214,6 +214,7 @@ export const checkCodeValidity = (
   templates: { [key: string]: APIClassType },
   allowCustomComponents = true,
   connectedFields?: ReadonlySet<string>,
+  missingTemplateRetirement?: Pick<APIClassType, "retired_in" | "replacement">,
 ): CodeValidityType | undefined => {
   if (!data?.node || !templates) return;
   const template = templates[data.type]?.template;
@@ -227,9 +228,10 @@ export const checkCodeValidity = (
     typeof thisNodesCode === "string" && thisNodesCode.length > 0;
   // As in _classify_node in src/lfx/src/lfx/upgrade/checker.py: only a node with code and a type
   // that is not ignored can be retired, and a retired entry wins before its template is read.
+  const retirement = templates[data.type] ?? missingTemplateRetirement;
   const retiredIn =
     hasNodeCode && !componentsToIgnoreUpdate.includes(data.type)
-      ? templates[data.type]?.retired_in
+      ? retirement?.retired_in
       : undefined;
   const isBlocked = hasNodeCode && !template && !retiredIn;
 
@@ -265,7 +267,7 @@ export const checkCodeValidity = (
     retired: !!retiredIn,
     ...(retiredIn && {
       retiredIn,
-      replacement: templates[data.type]?.replacement ?? [],
+      replacement: retirement?.replacement ?? [],
     }),
   };
 };

@@ -9,6 +9,7 @@ import type {
 } from "@xyflow/react";
 import type { SaveFlowOptions } from "@/hooks/flows/use-save-flow";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import type { Message } from "@/types/messages";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../../api";
 import type { ChatInputType, ChatOutputType } from "../../chat";
@@ -240,6 +241,7 @@ export type FlowStoreType = {
     session,
     stream,
     eventDelivery,
+    onUserMessage,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -249,6 +251,7 @@ export type FlowStoreType = {
     session?: string;
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
+    onUserMessage?: (message: Message) => void;
   }) => Promise<void>;
   getFlow: () => { nodes: Node[]; edges: EdgeType[]; viewport: Viewport };
   updateVerticesBuild: (

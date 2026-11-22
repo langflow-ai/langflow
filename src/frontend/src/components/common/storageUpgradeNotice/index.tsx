@@ -183,7 +183,7 @@ export function StorageUpgradeNotice() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <div
-        className="fixed bottom-4 right-4 z-50 max-w-sm rounded-lg border border-border bg-background p-3 shadow-lg"
+        className="fixed bottom-[calc(theme(spacing.4)+env(safe-area-inset-bottom))] right-4 z-50 max-w-sm rounded-lg border border-border bg-background p-3 shadow-lg"
         data-testid="storage-upgrade-notice"
         role="region"
         aria-label={t("storageUpgrade.title")}

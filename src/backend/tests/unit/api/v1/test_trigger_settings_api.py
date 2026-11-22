@@ -971,6 +971,26 @@ async def test_a_stored_and_a_refused_schedule_error_carry_a_code_the_ui_transla
     assert refused.json()["detail"] == {"code": "invalid_cron", "message": INVALID_CRON_ERROR}
 
 
+async def test_resume_is_not_offered_for_a_schedule_the_enable_route_refuses(client: AsyncClient) -> None:
+    """The listed actions never promise a resume that the route then answers with 409."""
+    owner_id, _ = await _user()
+    headers = await _login(client, await _username(owner_id))
+    trigger_id = await _trigger(
+        await _flow(owner_id),
+        owner_id,
+        state="pending",
+        config={"cron": "not a cron", "timezone": "UTC"},
+        last_error=INVALID_CRON_ERROR,
+    )
+
+    shown = (await client.get(f"api/v1/triggers/{trigger_id}", headers=headers)).json()
+    refused = await client.post(f"api/v1/triggers/{trigger_id}/enable", headers=headers)
+
+    assert "resume" not in shown["allowed_actions"]
+    assert shown["blocked_actions"] == {"resume": "config_invalid"}
+    assert refused.status_code == 409, refused.text
+
+
 async def test_an_error_without_a_code_is_shown_as_written(client: AsyncClient) -> None:
     owner_id, _ = await _user()
     headers = await _login(client, await _username(owner_id))

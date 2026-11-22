@@ -283,11 +283,67 @@ jobs:
           echo "matrix={\"include\":[$MATRIX_COMBINATIONS]}" >> "$GITHUB_OUTPUT"
           echo "shard_count=$SHARD_COUNT" >> "$GITHUB_OUTPUT"
 
+  # Build the instrumented frontend once, in parallel with determine-test-suite.
+  # Every shard downloads this build and serves it with vite preview.
+  build-frontend:
+    name: Build Instrumented Frontend
+    runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
+    timeout-minutes: 20
+    continue-on-error: ${{ inputs.runs-on == 'windows-latest' }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v7
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      # npm caching is decoupled from setup-node so a transient cache-service
+      # hiccup (frequent on Windows runners) never fails the job. See #25 / #1.
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v6
+        continue-on-error: true
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
+      - name: Build Instrumented Frontend
+        working-directory: ./src/frontend
+        env:
+          PW_FRONTEND_BUILD: "1"
+          # Istanbul instrumentation plus sourcemaps needs more than the default heap.
+          NODE_OPTIONS: --max-old-space-size=14336
+        run: npx vite build
+
+      - name: Upload Frontend Build
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-frontend-build-${{ runner.os }}
+          path: src/frontend/build
+          retention-days: 1
+          if-no-files-found: error
+          overwrite: true
+
   setup-and-test:
     name: Playwright Tests - Shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }}
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-24.04' }}
     if: ${{ needs.determine-test-suite.outputs.test_grep != '' }}
-    needs: determine-test-suite
+    needs: [determine-test-suite, build-frontend]
     # Without this the job inherits GitHub's 6-hour ceiling: a hung setup step
     # (apt-get in `playwright install --with-deps`) burns six hours and still
     # takes the report gate down with it.
@@ -388,10 +444,17 @@ jobs:
         shell: bash
         run: uvx --with 'mcp~=1.28' mcp-proxy --help > /dev/null
 
+      - name: Download Frontend Build
+        uses: actions/download-artifact@v8
+        with:
+          name: playwright-frontend-build-${{ runner.os }}
+          path: src/frontend/build
+
       - name: Execute Playwright Tests
         timeout-minutes: 18
         shell: bash
         env:
+          PW_FRONTEND_BUILD: "1"
           SERVER_LOG: playwright-server-${{ runner.os }}-${{ matrix.shardIndex }}-${{ github.run_attempt }}.log
           TESTS_FOLDER: ${{ inputs.tests_folder }}
           TEST_GREP: ${{ needs.determine-test-suite.outputs.test_grep }}
@@ -415,7 +478,7 @@ jobs:
             WORKERS=1
           fi
 
-          command=("${base_command[@]}" --trace on --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers "$WORKERS" --retries=1)
+          command=("${base_command[@]}" --trace retain-on-failure --shard ${{ matrix.shardIndex }}/${{ matrix.shardTotal }} --workers "$WORKERS" --retries=1)
           printf 'Running:'
           printf ' %q' "${command[@]}"
           printf '\n'
@@ -485,6 +548,9 @@ jobs:
       # jobs" only re-runs the shards that failed, so the shards that passed
       # first time around keep their earlier attempt-N artifact names. Filtering
       # to github.run_attempt would leave the gate permanently short.
+      # skip-decompress keeps each artifact as its raw ZIP. The action's
+      # streaming unzip fails on some valid archives ("unexpected end of
+      # file"), so the next step extracts the chosen ZIPs with unzip instead.
       - name: Download blob reports
         id: download
         continue-on-error: true
@@ -492,6 +558,7 @@ jobs:
         with:
           path: all-blob-reports-raw
           pattern: blob-report-${{ runner.os }}-*-of-${{ needs.determine-test-suite.outputs.shard_count }}-attempt-*
+          skip-decompress: true
 
       - name: Check report count, merge, and validate
         id: validate
@@ -524,13 +591,13 @@ jobs:
           # descending, and keep the first row per shard so the newest attempt
           # wins. Avoids associative arrays, which need bash 4+ (macOS ships 3.2).
           manifest=$(mktemp)
-          zip_count=$(find "$raw_dir" -type f -name '*.zip' | wc -l | tr -d ' ')
-          find "$raw_dir" -type f -name '*.zip' -print | while IFS= read -r zip; do
+          zip_count=$(find "$raw_dir" -type f | wc -l | tr -d ' ')
+          find "$raw_dir" -type f -print | while IFS= read -r zip; do
             artifact=$(basename "$(dirname "$zip")")
             fields=$(printf '%s\n' "$artifact" \
               | sed -nE 's/.*-([0-9]+)-of-[0-9]+-attempt-([0-9]+)$/\1 \2/p')
             # download-artifact flattens a single matching artifact. Its pattern
-            # above fixes the total; accept only the sole ZIP for a one-shard run.
+            # above fixes the total; accept only the sole file for a one-shard run.
             if [[ -z "$fields" && "$EXPECTED_REPORTS" == "1" && "$zip_count" == "1" && "$(dirname "$zip")" == "$raw_dir" ]]; then
               fields="1 0"
             fi
@@ -563,7 +630,7 @@ jobs:
             else
               echo "Shard $shard <- attempt $attempt"
             fi
-            cp "$zip" "$report_dir/"
+            unzip -q -o "$zip" -d "$report_dir"
           done < "$manifest"
 
           npx playwright@"${PLAYWRIGHT_VERSION}" merge-reports --reporter json "$report_dir"

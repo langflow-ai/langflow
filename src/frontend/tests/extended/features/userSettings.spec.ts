@@ -29,7 +29,9 @@ test(
       .catch(() => {});
     await page.waitForTimeout(1000);
 
-    await expect(page.getByText("General").nth(2)).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: "General", exact: true, level: 2 }),
+    ).toBeVisible({
       timeout: 10000,
     });
     await expect(page.getByText("Profile Picture").first()).toBeVisible();
@@ -82,9 +84,15 @@ test(
     });
     await page.getByTestId("user-profile-settings").click();
     await page.getByText(TEXTS.settings).click();
-    await page.getByText("Global Variables").click();
+    await page
+      .getByRole("link", { name: "Global Variables", exact: true })
+      .click();
     await expect(
-      page.getByText("Global Variables", { exact: true }).nth(1),
+      page.getByRole("heading", {
+        name: "Global Variables",
+        exact: true,
+        level: 2,
+      }),
     ).toBeVisible({ timeout: 10000 });
     await page.getByText("Add New").click();
     await page.getByPlaceholder(TEXTS.placeholderVariableName).fill(randomName);
@@ -191,17 +199,19 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
     .catch(() => {});
   await page.waitForTimeout(1000);
 
-  await expect(page.getByText("General").nth(2)).toBeVisible({
+  await expect(
+    page.getByRole("heading", { name: "General", exact: true, level: 2 }),
+  ).toBeVisible({
     timeout: 10000,
   });
-  await page.getByText("Shortcuts").nth(0).click();
+  await page.getByRole("link", { name: "Shortcuts", exact: true }).click();
 
   // Wait for shortcuts section to load
   await page.waitForTimeout(1000);
 
-  await expect(page.getByText("Shortcuts", { exact: true }).nth(1)).toBeVisible(
-    { timeout: 10000 },
-  );
+  await expect(
+    page.getByRole("heading", { name: "Shortcuts", exact: true, level: 2 }),
+  ).toBeVisible({ timeout: 10000 });
   //TODO Do not seem to be in the list, is it a product change?
   // await expect(page.getByText("Controls", { exact: true })).toBeVisible({
   //   timeout: 10000,
@@ -327,12 +337,19 @@ test(
     await page.getByTestId("user-profile-settings").click();
     await page.getByText(TEXTS.settings).click();
 
-    const langflowApiNavItem = page.getByText("Langflow API").first();
+    const langflowApiNavItem = page.getByRole("link", {
+      name: "Langflow API Keys",
+      exact: true,
+    });
     await expect(langflowApiNavItem).toBeVisible({ timeout: 10000 });
     await langflowApiNavItem.click();
 
     await expect(
-      page.getByText("Langflow API Keys", { exact: true }).nth(1),
+      page.getByRole("heading", {
+        name: "Langflow API Keys",
+        exact: true,
+        level: 2,
+      }),
     ).toBeVisible({ timeout: 10000 });
     await page.getByText("Add New").click();
     await expect(page.getByPlaceholder("My API Key")).toBeVisible({
@@ -399,14 +416,22 @@ test(
     await page.getByTestId("menu_settings_button").click();
 
     // Verify we're on the settings page
-    await expect(page.getByText("General").nth(2)).toBeVisible({
+    await expect(
+      page.getByRole("heading", { name: "General", exact: true, level: 2 }),
+    ).toBeVisible({
       timeout: 15000,
     });
 
     // Navigate to Global Variables
-    await page.getByText("Global Variables").click();
+    await page
+      .getByRole("link", { name: "Global Variables", exact: true })
+      .click();
     await expect(
-      page.getByText("Global Variables", { exact: true }).nth(1),
+      page.getByRole("heading", {
+        name: "Global Variables",
+        exact: true,
+        level: 2,
+      }),
     ).toBeVisible({ timeout: 10000 });
 
     // Click the back button - this should take us back to the flow, not to the main settings page

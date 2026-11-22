@@ -39,8 +39,10 @@ from lfx.schema.workflow import (
 )
 from lfx.utils.flow_validation import (
     PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+    PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE,
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
+    PublicCustomComponentBlockedError,
     prepare_public_flow_build,
     validate_catalog_policy_for_flow,
     validate_public_flow_no_code_execution,
@@ -61,6 +63,7 @@ from langflow.api.utils.flow_utils import (
     validate_public_files,
     verify_public_flow_and_get_user,
 )
+from langflow.api.v1.run_validation import flow_requires_hitl
 from langflow.services.auth.utils import get_current_user_optional
 from langflow.services.authorization.public_access import (
     PUBLIC_FLOW_NOT_FOUND_DETAIL,
@@ -70,6 +73,11 @@ from langflow.services.authorization.public_access import (
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
+
+PUBLIC_HITL_UNSUPPORTED_DETAIL = (
+    "This flow uses Human-in-the-Loop (a Human Input node or a tool that requires approval), which "
+    "the public workflow endpoint cannot execute because it cannot pause and resume."
+)
 
 router = APIRouter(prefix="/workflows/public", tags=["Workflow (public)"], include_in_schema=False)
 
@@ -199,6 +207,10 @@ async def execute_public_workflow(
             # Smart Transform lambda). Without this, any public flow containing
             # such a component is an unauthenticated code-execution primitive.
             validate_public_flow_no_code_execution(flow.data)
+            # Stream-only and not resumable by a visitor, so a Human Input would run
+            # every branch before anyone decides.
+            if flow_requires_hitl(flow.data):
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=PUBLIC_HITL_UNSUPPORTED_DETAIL)
             # Mirror v1's public build: substitute trusted server component
             # source and reject unknown custom components before the graph is
             # built. The explicit custom-code opt-in may preserve approved code,
@@ -214,6 +226,10 @@ async def execute_public_workflow(
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail=PUBLIC_CATALOG_POLICY_UNAVAILABLE_MESSAGE,
+        ) from exc
+    except PublicCustomComponentBlockedError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE
         ) from exc
     except CustomComponentValidationError as exc:
         # The raw message embeds the blocked component class names; do

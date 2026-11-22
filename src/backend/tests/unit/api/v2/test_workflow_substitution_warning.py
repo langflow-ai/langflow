@@ -120,6 +120,7 @@ async def test_sync_response_preserves_warning_without_changing_status(custom_ag
         )
     monkeypatch.setattr(workflow_execution, "warm_deepcopy", AsyncMock(return_value=None))
     monkeypatch.setattr(workflow_execution.Graph, "from_payload", lambda *_args, **_kwargs: graph)
+    monkeypatch.setattr(workflow_execution, "get_authorized_legacy_flow_ids", AsyncMock(return_value=frozenset()))
     monkeypatch.setattr(workflow_execution, "get_job_service", lambda: job_service)
     monkeypatch.setattr(deps, "get_telemetry_service", lambda: SimpleNamespace(log_package_run=AsyncMock()))
 
