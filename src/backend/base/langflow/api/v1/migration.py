@@ -34,6 +34,7 @@ from fastapi.responses import StreamingResponse
 from lfx.base.knowledge_bases.backends import is_local_backend
 from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured
 from lfx.log.logger import logger
+from lfx.utils.file_path_security import flow_storage_scope, user_storage_scope
 from pydantic import BaseModel, SecretStr, StringConstraints, ValidationError
 from sqlalchemy.engine import make_url
 from sqlmodel import select
@@ -601,9 +602,8 @@ async def start_check(admin: Superuser) -> dict[str, str]:
     _require_not_started(record)
     needed, skipped = _needs(state["instance"])
     let_in = _check_reads(record, needed)
-    held = _secrets.get("for") or {}
     # The knowledge base store has no secret of its own: it is the destination database.
-    if any(held.get(part) != saved for part, saved in let_in["destination"].items() if part != "vectors"):
+    if not _destination_secrets_available(let_in["destination"]):
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"})
     # The new instance has folders of its own. The check is given an empty one, so that it reads
     # nothing of this instance's. The folder stays empty: the check only reads, and it saves no key.
@@ -737,9 +737,8 @@ async def start_copy(step_id: str, admin: Superuser, request: RunRequest | None 
         # Asked here whatever the step reads: a copy that was made says nothing of how the server was started since.
         raise HTTPException(status_code=409, detail={"code": "pgvector_env_missing"})
     let_in = _lets_in(record, step_id)
-    held = _secrets.get("for") or {}
     # The knowledge base store has no secret of its own: it is the destination database.
-    if any(held.get(part) != saved for part, saved in let_in["destination"].items() if part != "vectors"):
+    if not _destination_secrets_available(let_in["destination"]):
         # This worker was never given the destination that is saved, or it restarted since, or it holds the
         # secrets of an earlier one. The page asks for it again.
         raise HTTPException(status_code=409, detail={"code": "secrets_missing"})
@@ -1155,14 +1154,19 @@ async def _state(record: dict[str, Any]) -> dict[str, Any]:
     reached = next(step for step in steps if step["id"] == "start_target")["state"] != "locked"
     runs = {**record["steps"], **copies}
     check = record["steps"].get(CHECK_STEP)
-    if check and check["status"] != "running" and not _counting_check(record):
+    counted = _counting_check(record)
+    if check and check["status"] != "running" and not counted:
         # A page is given the check only while it counts, or still runs and can be stopped. One of another
         # pause, of another destination or older than a copy says nothing of what the destination holds now.
         del runs[CHECK_STEP]
+    needed = counted["needed"] if counted else _needed_destinations(instance)
     return {
         "instance": instance,
         "record": {**record, "steps": runs},
         "steps": steps,
+        "destination_secrets_available": _destination_secrets_available(
+            {part: saved for part, saved in (record.get("destinations") or {}).items() if part in needed}
+        ),
         "blocking_findings": blocking,
         "acceptable_checks": sorted(ACCEPTABLE_FINDINGS),
         # A new instance starts on finished copies, so its settings are given once the start is reached.
@@ -1186,7 +1190,12 @@ async def _instance() -> dict[str, Any]:
         ).all()
         has_files = (await session.exec(select(File.id).limit(1))).first() is not None
         # relocate-files copies from the folder of each user and each flow, and from no other.
-        namespaces = {str(identifier) for model in (User, Flow) for identifier in await session.exec(select(model.id))}
+        namespaces = {
+            namespace
+            for model, typed_scope in ((User, user_storage_scope), (Flow, flow_storage_scope))
+            for identifier in await session.exec(select(model.id))
+            for namespace in (str(identifier), typed_scope(identifier))
+        }
     if settings.storage_type.lower() == "s3":
         files = {
             "storage": "s3",
@@ -1496,6 +1505,16 @@ def _start_settings(instance: dict[str, Any], record: dict[str, Any]) -> list[di
         superuser=auth.SUPERUSER,
         source_env=dict(os.environ),
         opensearch_variables=instance["knowledge_bases"].get("environment_variables", []),
+    )
+
+
+def _destination_secrets_available(destination: dict[str, Any]) -> bool:
+    """Whether this worker still holds the secrets of the saved destination, without exposing them."""
+    held = _secrets.get("for") or {}
+    return all(
+        name in _secrets and held.get(part) == saved
+        for part, saved in destination.items()
+        if (name := {"database": "database_url", "files": "files"}.get(part))
     )
 
 

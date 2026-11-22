@@ -5,6 +5,17 @@ from lfx.io import DataInput, DropdownInput, MessageTextInput, Output
 from lfx.schema.data import Data
 
 
+def _as_text(value: Any) -> str:
+    """Return a filter input as text.
+
+    In a graph run the input is already validated, but a connected Data can still carry a
+    non-str text value (for example a number). Direct SDK calls can pass a Data or Message.
+    None becomes "" so the missing-filter guard still applies.
+    """
+    text = value.get_text() if isinstance(value, Data) else value
+    return "" if text is None else str(text)
+
+
 class DataFilterComponent(Component):
     display_name = "Filter Values"
     description = (
@@ -63,10 +74,10 @@ class DataFilterComponent(Component):
         return False
 
     def filter_data(self) -> list[Data]:
-        # Extract inputs
+        """Return the items whose ``filter_key`` value matches ``filter_value`` under ``operator``."""
         input_data: list[Data] = self.input_data
-        filter_key: str = self.filter_key.text
-        filter_value: str = self.filter_value.text
+        filter_key = _as_text(self.filter_key)
+        filter_value = _as_text(self.filter_value)
         operator: str = self.operator
 
         # Validate inputs

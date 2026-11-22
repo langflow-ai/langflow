@@ -8,18 +8,26 @@ from uuid import uuid4
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
-from lfx.log.logger import logger
+from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
-from platformdirs import user_cache_dir
 
 
 @pytest.fixture(autouse=True)
 def unrestricted_standalone_attachments(monkeypatch):
     """These standalone conversion tests intentionally attach temporary local paths."""
     monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", False)
+
+
+@pytest.fixture(autouse=True)
+def isolated_user_cache_dir(tmp_path, monkeypatch):
+    """Resolve Message's "<flow>/<file>" paths under tmp_path (the langflow_cache_dir folder).
+
+    The image tests then never copy into or delete the real user cache folder.
+    """
+    monkeypatch.setattr("lfx.schema.image.user_cache_dir", lambda appname, *_args, **_kwargs: str(tmp_path / appname))
 
 
 @pytest.fixture
@@ -44,16 +52,6 @@ def sample_image(langflow_cache_dir):
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
     )
     image_path.write_bytes(image_content)
-
-    # Use platformdirs to get the cache directory
-    real_cache_dir = Path(user_cache_dir("langflow"))
-    real_cache_dir.mkdir(parents=True, exist_ok=True)
-    real_flow_dir = real_cache_dir / "test_flow"
-    real_flow_dir.mkdir(parents=True, exist_ok=True)
-
-    # Copy the image to the real cache location
-    real_image_path = real_flow_dir / "test_image.png"
-    shutil.copy2(str(image_path), str(real_image_path))
 
     return image_path
 
@@ -125,12 +123,6 @@ def test_message_with_multiple_images(sample_image, langflow_cache_dir):
     flow_dir = langflow_cache_dir / "test_flow"
     second_image = flow_dir / "second_image.png"
     shutil.copy2(str(sample_image), str(second_image))
-
-    # Use platformdirs for the real cache location
-    real_cache_dir = Path(user_cache_dir("langflow")) / "test_flow"
-    real_cache_dir.mkdir(parents=True, exist_ok=True)
-    real_second_image = real_cache_dir / "second_image.png"
-    shutil.copy2(str(sample_image), str(real_second_image))
 
     text = "Multiple images"
     message = Message(
@@ -403,19 +395,6 @@ def test_should_not_use_attachment_prefix_that_triggers_gemini_refusal_in_file_t
         Path(tmp_path).unlink(missing_ok=True)
 
 
-# Clean up the cache directory after all tests
-@pytest.fixture(autouse=True)
-def cleanup():
-    yield
-    # Clean up the real cache directory after tests
-    cache_dir = Path(user_cache_dir("langflow"))
-    if cache_dir.exists():
-        try:
-            shutil.rmtree(str(cache_dir))
-        except OSError as exc:
-            logger.error(f"Error cleaning up cache directory: {exc}")
-
-
 class _StorageBackendError(Exception):
     """Stand-in for a botocore ClientError.
 
@@ -538,3 +517,42 @@ def test_local_file_with_image_extension_but_non_image_content_is_not_sent_as_im
     content = Message(text="what is it?", files=["fake.png" if relative else str(fake_png)]).get_file_content_dicts()
 
     assert content == []
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(42, "42"), (0, "0"), (3.5, "3.5"), (False, "False"), ({"a": 1}, "{'a': 1}"), (["a"], "['a']")],
+    ids=["int", "zero", "float", "bool", "dict", "list"],
+)
+def test_non_string_text_is_kept_as_text(value, expected):
+    message = Data(data={"text": value}).to_message()
+    message.sender = MESSAGE_SENDER_USER
+
+    assert message.text == expected
+    assert message.text_stream is None
+    assert message.data["text"] == expected
+    assert message.to_lc_message().content == expected
+    assert Message(**message.model_dump()).text == expected
+
+
+def test_iterator_text_stays_a_stream():
+    stream = iter(["a", "b"])
+
+    message = Message(text=stream)
+
+    assert message.text is stream
+    assert message.text_stream is stream
+    assert message.data["text"] == ""
+
+
+def test_async_iterator_text_stays_a_stream():
+    async def chunks():
+        yield "a"
+
+    stream = chunks()
+
+    message = Message(text=stream)
+
+    assert message.text is stream
+    assert message.text_stream is stream
+    assert message.data["text"] == ""

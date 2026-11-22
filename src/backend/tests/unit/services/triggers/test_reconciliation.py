@@ -2,13 +2,22 @@
 
 from __future__ import annotations
 
+import subprocess
+import sys
 from typing import Any
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerSessionPolicy, TriggerState
-from langflow.services.deps import session_scope
-from langflow.services.triggers.reconciliation import find_trigger_nodes, reconcile_flow_triggers
+from langflow.services.deps import get_trigger_service, session_scope
+from langflow.services.triggers.error_codes import refusal_detail
+from langflow.services.triggers.reconciliation import (
+    NODE_REMOVED_ERROR,
+    find_trigger_nodes,
+    reconcile_flow_triggers,
+    schedule_pick_error,
+)
 from sqlmodel import select
 
 pytestmark = pytest.mark.no_blockbuster
@@ -43,6 +52,125 @@ def test_only_trigger_nodes_are_recognised() -> None:
     assert [node_id for node_id, _kind, _config in found] == ["ScheduleTrigger-abc123"]
     assert found[0][1] == "schedule"
     assert found[0][2]["cron"] == "0 8 * * 1-5"
+
+
+def _picked_schedule_node(cron: str, **picked: Any) -> dict:
+    node = _schedule_node(cron=cron)
+    node["data"]["node"]["template"].update({name: {"value": value} for name, value in picked.items()})
+    return node
+
+
+@pytest.mark.parametrize(
+    ("picked", "timing"),
+    [
+        ({"schedule_type": "Daily", "times_of_day": ["09:00"]}, {"cron": "0 9 * * *"}),
+        ({"schedule_type": "Daily", "times_of_day": ["09:00", "18:30"]}, {"crons": ["0 9 * * *", "30 18 * * *"]}),
+        (
+            {"schedule_type": "Weekly", "times_of_day": ["17:30"], "days_of_week": ["Saturday"]},
+            {"cron": "30 17 * * 6"},
+        ),
+        ({"schedule_type": "At regular intervals", "interval_minutes": 7}, {"interval_minutes": 7}),
+        ({"schedule_type": "Once", "run_at": "2026-12-24T18:30"}, {"run_at": "2026-12-24T18:30"}),
+        ({"schedule_type": "Custom (cron)", "times_of_day": ["09:00"]}, {"cron": "0 8 * * 1-5"}),
+        ({}, {"cron": "0 8 * * 1-5"}),
+    ],
+)
+def test_the_picked_schedule_is_compiled_whatever_cron_the_node_carries(picked, timing) -> None:
+    """A save that skipped the canvas refresh (API, import, Assistant) still runs what the node shows."""
+    _node_id, _kind, config = find_trigger_nodes(_flow_data(_picked_schedule_node("0 8 * * 1-5", **picked)))[0]
+    assert {key: config[key] for key in ("cron", "crons", "interval_minutes", "run_at") if key in config} == timing
+
+
+@pytest.mark.parametrize(
+    "picked",
+    [
+        {"schedule_type": "Weekly", "times_of_day": ["08:00"], "days_of_week": []},
+        {"schedule_type": "Daily", "times_of_day": ["8:5x"]},
+        {"schedule_type": "Daily", "times_of_day": [1730]},
+        {"schedule_type": "At regular intervals", "interval_minutes": 0},
+        {"schedule_type": "Once", "run_at": ""},
+    ],
+)
+def test_an_unusable_pick_stops_the_old_schedule_instead_of_keeping_it(picked) -> None:
+    _node_id, _kind, config = find_trigger_nodes(_flow_data(_picked_schedule_node("0 8 * * 1-5", **picked)))[0]
+    assert config["cron"] == ""
+    assert not {"crons", "interval_minutes", "run_at"} & config.keys()
+
+
+async def test_an_unusable_pick_reports_what_to_fix_not_the_hidden_cron(trigger_owner, owned_flow) -> None:
+    empty_week = _picked_schedule_node("0 8 * * 1-5", schedule_type="Weekly", times_of_day=["08:00"], days_of_week=[])
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(empty_week)
+        )
+    rows = await _triggers(owned_flow)
+    assert rows[0].last_error == "Pick at least one day of the week."
+    assert "schedule_error" not in rows[0].config
+
+
+async def test_enabling_an_unusable_pick_says_what_to_fix(trigger_owner, owned_flow) -> None:
+    empty_week = _picked_schedule_node("0 8 * * 1-5", schedule_type="Weekly", times_of_day=["08:00"], days_of_week=[])
+    async with session_scope() as session:
+        await reconcile_flow_triggers(
+            session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=_flow_data(empty_week)
+        )
+    [row] = await _triggers(owned_flow)
+    async with session_scope() as session:
+        with pytest.raises(ValueError, match=r"^Pick at least one day of the week\.$") as refusal:
+            await get_trigger_service().enable(session, row=await session.get(Trigger, row.id))
+    assert refusal_detail(refusal.value)["code"] is None
+
+
+@pytest.mark.parametrize(
+    "picked",
+    [
+        {"schedule_type": "Weekly", "times_of_day": ["08:00"], "days_of_week": []},
+        {"schedule_type": "Monthly", "times_of_day": ["08:00"], "days_of_month": []},
+    ],
+)
+async def test_resuming_an_unusable_pick_after_pausing_says_what_to_fix(trigger_owner, owned_flow, picked) -> None:
+    """Pausing clears the trigger's reason, so the refusal must come from the saved node, not a hidden cron."""
+    from langflow.services.database.models.flow.model import Flow
+
+    data = _flow_data(_picked_schedule_node("0 8 * * 1-5", **picked))
+    async with session_scope() as session:
+        flow = await session.get(Flow, owned_flow)
+        flow.data = data
+        session.add(flow)
+        await reconcile_flow_triggers(session, flow_id=owned_flow, owner_id=trigger_owner, flow_data=data)
+    [row] = await _triggers(owned_flow)
+    async with session_scope() as session:
+        await get_trigger_service().set_state(
+            session, row=await session.get(Trigger, row.id), state=TriggerState.PAUSED
+        )
+    async with session_scope() as session:
+        with pytest.raises(ValueError, match=r"^Pick at least one day of the (week|month)\.$"):
+            await get_trigger_service().enable(session, row=await session.get(Trigger, row.id))
+
+
+@pytest.mark.parametrize(
+    "flow_data",
+    [
+        None,
+        {"nodes": None},
+        {"nodes": [{"id": "ScheduleTrigger-abc123", "data": {"type": "ScheduleTrigger", "node": "broken"}}]},
+        {"nodes": [{"id": "ScheduleTrigger-abc123", "data": {"type": "ScheduleTrigger", "node": {"template": []}}}]},
+        {"nodes": [{"id": "ScheduleTrigger-abc123", "data": None}]},
+        _flow_data(_picked_schedule_node("0 8 * * 1-5", schedule_type="Daily", times_of_day=["09:00"])),
+    ],
+)
+def test_a_saved_node_without_an_unusable_pick_gives_no_pick_message(flow_data) -> None:
+    row = Trigger(flow_id=uuid4(), user_id=uuid4(), kind="schedule", node_id="ScheduleTrigger-abc123", config={})
+    assert schedule_pick_error(row, flow_data) is None
+
+
+def test_loading_langflow_before_lfx_components_keeps_component_importable() -> None:
+    """The reconciler's lfx import must not run while ``lfx.inputs`` is half loaded."""
+    code = "import langflow.utils.i18n_keys\nfrom lfx.custom.custom_component.component import Component"
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", code], capture_output=True, text=True, encoding="utf-8", check=False, timeout=300
+    )
+    assert result.returncode == 0, result.stderr[-2000:]
 
 
 def test_missing_template_fields_fall_back_rather_than_crash() -> None:
@@ -372,16 +500,21 @@ async def test_fixing_a_paused_schedule_clears_the_reason_but_stays_paused(trigg
     assert (row.state, row.last_error) == (TriggerState.PAUSED.value, None)
 
 
-async def test_a_clean_save_keeps_the_reason_a_removed_node_was_paused(trigger_owner, owned_flow) -> None:
-    """Undoing a node delete keeps the trigger paused, and says why."""
+async def test_undoing_a_node_delete_keeps_the_trigger_paused_and_clears_the_removal(trigger_owner, owned_flow) -> None:
+    """The node is back, so the removal no longer explains the pause or blocks resuming it.
+
+    The trigger stays paused: arming it again is still the owner's act.
+    """
     await _save(owned_flow, trigger_owner, _schedule_node())
     await _set_state(owned_flow, "active")
     await _save(owned_flow, trigger_owner)
+    (row,) = await _triggers(owned_flow)
+    assert (row.state, row.last_error) == (TriggerState.PAUSED.value, NODE_REMOVED_ERROR)
+
     await _save(owned_flow, trigger_owner, _schedule_node())
 
     (row,) = await _triggers(owned_flow)
-    assert row.state == TriggerState.PAUSED.value
-    assert "removed" in row.last_error
+    assert (row.state, row.last_error) == (TriggerState.PAUSED.value, None)
 
 
 async def test_a_clean_save_leaves_a_dead_trigger_alone(trigger_owner, owned_flow) -> None:
@@ -396,3 +529,54 @@ async def test_a_clean_save_leaves_a_dead_trigger_alone(trigger_owner, owned_flo
 
     (row,) = await _triggers(owned_flow)
     assert (row.state, row.last_error) == (TriggerState.DEAD.value, "dead-lettered")
+
+
+async def _rename(owned_flow, name: str) -> None:
+    async with session_scope() as session:
+        row = (await session.exec(select(Trigger).where(Trigger.flow_id == owned_flow))).one()
+        row.name = name
+        session.add(row)
+
+
+async def test_changing_the_cron_renames_the_schedule(trigger_owner, owned_flow) -> None:
+    """Settings and the events drawer show the name; it must name the cron the trigger fires on."""
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+    await _set_state(owned_flow, "active")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert (row.name, row.config["cron"], row.state) == ("Schedule */5 * * * *", "*/5 * * * *", "active")
+
+
+async def test_a_name_the_owner_chose_survives_a_cron_change(trigger_owner, owned_flow) -> None:
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+    await _rename(owned_flow, "Morning digest")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Morning digest"
+
+
+async def test_a_save_repairs_a_name_an_earlier_cron_change_left_stale(trigger_owner, owned_flow) -> None:
+    """Rows renamed before names followed the config still carry the cron they were created with."""
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+    await _rename(owned_flow, "Schedule 0 8 * * 1-5")
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule */5 * * * *"
+
+
+async def test_an_invalid_cron_drops_out_of_the_name_until_it_is_fixed(trigger_owner, owned_flow) -> None:
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="0 8 * * 1-5"))
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="not a cron"))
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule"
+
+    await _save(owned_flow, trigger_owner, _schedule_node(cron="*/5 * * * *"))
+    (row,) = await _triggers(owned_flow)
+    assert row.name == "Schedule */5 * * * *"

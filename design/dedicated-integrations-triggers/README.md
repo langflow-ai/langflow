@@ -148,7 +148,7 @@ Role placeholders remain until the release owner assigns names.
 | langflow-base owner | `trigger-contract.md`, `decisions/process-model.md`, `decisions/delivery-semantics.md` | | | |
 | Enterprise owner | `trigger-contract.md`, `decisions/process-model.md`, `decisions/self-managed-ingress.md` | | | |
 | hosted-app owner | `decisions/self-managed-ingress.md`, and the event rows of every matrix (hosted subscriptions, verification of event scopes, the Slack Events API on the hosted app) | | | |
-| frontend owner | `frontend-surfaces.md` | | | |
+| frontend owner | `frontend-surfaces.md`, `qa-acceptance.md` | | | |
 | release owner | every record in this directory, `estimate.md`, gate close | Eric Hare | 2026-09-05 | #14911 |
 
 ## Running the checker

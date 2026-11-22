@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { format } from "date-fns";
 import { FormKeyRender } from "../form-key-render";
 
 // These values match the en.json translations that the global i18n mock resolves.
@@ -26,10 +25,6 @@ const makeProps = (overrides = {}) => ({
 describe("FormKeyRender", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
   });
 
   it("renders the name input with label from modalProps", () => {
@@ -68,20 +63,28 @@ describe("FormKeyRender", () => {
     );
   });
 
-  it("calls setExpiresAt with empty string when the active preset is clicked again", async () => {
-    jest.useFakeTimers({ now: new Date("2026-10-17T02:00:00Z") });
-    const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
-    const setExpiresAt = jest.fn();
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    // The picker stores a local calendar date; UTC can be a different day.
-    const activeDate = format(d, "yyyy-MM-dd");
-    render(
-      <FormKeyRender {...makeProps({ expiresAt: activeDate, setExpiresAt })} />,
-    );
-    await user.click(screen.getByText(PRESET_WEEK));
-    expect(setExpiresAt).toHaveBeenCalledWith("");
-  });
+  it.each(["2026-10-22T00:30:00", "2026-10-22T23:30:00"])(
+    "clears the active local-date preset at %s",
+    async (localTime) => {
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date(localTime));
+      try {
+        const user = userEvent.setup({
+          advanceTimers: jest.advanceTimersByTime,
+        });
+        const setExpiresAt = jest.fn();
+        render(
+          <FormKeyRender
+            {...makeProps({ expiresAt: "2026-10-29", setExpiresAt })}
+          />,
+        );
+        await user.click(screen.getByText(PRESET_WEEK));
+        expect(setExpiresAt).toHaveBeenCalledWith("");
+      } finally {
+        jest.useRealTimers();
+      }
+    },
+  );
 
   it("renders preset buttons even when modalProps is undefined", () => {
     render(<FormKeyRender {...makeProps({ modalProps: undefined })} />);

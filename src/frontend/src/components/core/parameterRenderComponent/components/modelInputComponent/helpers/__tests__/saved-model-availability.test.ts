@@ -95,6 +95,99 @@ describe("isSavedModelUnavailable", () => {
     ).toBe(false);
   });
 
+  describe("on a decision field", () => {
+    const luna: ModelOption = {
+      name: "gpt-6-luna",
+      icon: "OpenAI",
+      provider: "OpenAI",
+      metadata: { model_type: "decision" },
+    };
+    const openaiListing = (
+      models: ModelProviderWithStatus["models"],
+    ): ModelProviderWithStatus => ({ ...openai, models });
+    const decisionBase = {
+      savedValue: luna,
+      modelStatusIsReliable: true,
+      modelType: "decision" as const,
+    };
+
+    it.each([true, false])(
+      "checks an unconfigured provider's catalog only when status is reliable: %s",
+      (modelStatusIsReliable) => {
+        expect(
+          isSavedModelUnavailable({
+            ...decisionBase,
+            modelStatusIsReliable,
+            providers: [{ ...openaiListing([]), is_configured: false }],
+            enabledModels: { OpenAI: { "gpt-6-luna": false } },
+          }),
+        ).toBe(modelStatusIsReliable);
+      },
+    );
+
+    it("keeps an allowed decision model available for provider setup", () => {
+      expect(
+        isSavedModelUnavailable({
+          ...decisionBase,
+          providers: [
+            {
+              ...openaiListing([
+                {
+                  model_name: "gpt-6-luna",
+                  metadata: { model_type: "decision" },
+                },
+              ]),
+              is_configured: false,
+            },
+          ],
+          enabledModels: { OpenAI: { "gpt-6-luna": false } },
+        }),
+      ).toBe(false);
+    });
+
+    it("is not kept available by a chat model of the same name", () => {
+      expect(
+        isSavedModelUnavailable({
+          ...decisionBase,
+          providers: [
+            openaiListing([
+              { model_name: "gpt-6-luna", metadata: { model_type: "llm" } },
+            ]),
+          ],
+          enabledModels: { OpenAI: { "gpt-6-luna": true } },
+        }),
+      ).toBe(true);
+    });
+
+    it("is unavailable once the catalog leaves it out, though the typed map keeps it switched off", () => {
+      // Policy-blocked decision rows stay in enabled_models_by_type as false.
+      expect(
+        isSavedModelUnavailable({
+          ...decisionBase,
+          providers: [openaiListing([])],
+          enabledModels: { OpenAI: { "gpt-6-luna": false } },
+        }),
+      ).toBe(true);
+    });
+
+    it("is available while the catalog lists it as a decision model", () => {
+      expect(
+        isSavedModelUnavailable({
+          ...decisionBase,
+          providers: [
+            openaiListing([
+              {
+                model_name: "gpt-6-luna",
+                metadata: { model_type: "decision" },
+              },
+            ]),
+          ],
+          enabledModels: { OpenAI: {} },
+        }),
+      ).toBe(false);
+    });
+  });
+
   it("cannot judge a legacy name-only value or a missing enabled-models map", () => {
     expect(
       isSavedModelUnavailable({

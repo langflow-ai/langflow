@@ -136,7 +136,7 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
 
         with pytest.raises(ValueError, match="KB path escapes root directory"):
-            await component._kb_path()
+            await component._kb_path(record)
 
     def test_new_knowledge_dialog_uses_provider_credentials(self, component_class, default_kwargs):
         """Test the create-knowledge dialog no longer exposes a redundant API key override."""
@@ -356,10 +356,13 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         for _ in range(2):
             component = component_class(**default_kwargs)
             with (
-                patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
+                patch.object(component, "_find_record", wraps=component._find_record) as lookup,
+                patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})) as store,
                 patch.object(component, "_refresh_kb_stats"),
             ):
                 result = await component.build_kb_info()
+            lookup.assert_awaited_once_with()
+            assert result.data["kb_id"] == str(store.await_args.kwargs["record"].id)
             kb_ids.append(result.data["kb_id"])
 
         assert kb_ids == [str(record.id), str(record.id)]

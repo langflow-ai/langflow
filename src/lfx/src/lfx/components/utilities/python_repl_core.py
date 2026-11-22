@@ -20,7 +20,11 @@ class PythonREPLComponent(Component):
         StrInput(
             name="global_imports",
             display_name="Global Imports",
-            info="A comma-separated list of modules to import globally, e.g. 'math,numpy,pandas'.",
+            info=(
+                "A comma-separated list of modules to import globally. Without a sandbox, only math, json, "
+                "and statistics are supported. Other modules, including numpy and pandas, require an isolated "
+                "sandbox configured by the server administrator."
+            ),
             # Default kept minimal: powerful modules (e.g. pandas, whose read_pickle/eval
             # are code-execution sinks) must be opted into explicitly via this field.
             value="math",

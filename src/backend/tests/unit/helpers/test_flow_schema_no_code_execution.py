@@ -24,6 +24,7 @@ import pytest
 from langflow.api.v1 import mcp_utils
 from langflow.helpers.flow import get_flow_input_tweaks, json_schema_from_flow
 from lfx.graph.graph.base import Graph
+from lfx.services.deps import get_settings_service
 
 _STARTERS = Path(langflow.__file__).parent / "initial_setup" / "starter_projects"
 
@@ -136,3 +137,41 @@ async def test_anonymous_project_tools_list_does_not_execute_stored_code(monkeyp
     assert not marker.exists()
     assert [tool.name for tool in result.tools] == ["planted_flow"]
     assert "input_value" in result.tools[0].inputSchema["properties"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("project_scoped", [False, True], ids=["global", "project"])
+@pytest.mark.parametrize("is_superuser", [False, True], ids=["non_admin", "admin"])
+async def test_authenticated_tools_list_does_not_execute_stored_code(
+    monkeypatch, planted_flow_data, marker, project_scoped, is_superuser
+):
+    """Listing metadata must not run code, including code blocked by the admin-only policy."""
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+    monkeypatch.setattr(settings, "custom_component_admin_only", True)
+    user_id = uuid4()
+    project_id = uuid4() if project_scoped else None
+    flow = SimpleNamespace(
+        id=uuid4(),
+        name="planted_flow",
+        user_id=user_id,
+        folder_id=project_id,
+        action_name="planted_flow",
+        action_description=None,
+        description=None,
+        mcp_enabled=True,
+        data=planted_flow_data,
+    )
+    monkeypatch.setattr(mcp_utils, "session_scope", lambda: _FakeSessionContext(_FakeSession([flow])))
+
+    user_token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id, is_superuser=is_superuser))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(user_id)
+    try:
+        tools = await mcp_utils.handle_list_tools(project_id=project_id, mcp_enabled_only=project_scoped)
+    finally:
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
+        mcp_utils.current_user_ctx.reset(user_token)
+
+    assert not marker.exists()
+    assert [tool.name for tool in tools] == ["planted_flow"]
+    assert "input_value" in tools[0].inputSchema["properties"]

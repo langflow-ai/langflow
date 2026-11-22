@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 from pathlib import Path
 
 import yaml
@@ -22,6 +23,42 @@ def _job_block(path: Path, start_job: str, end_job: str) -> str:
     start = workflow.index(f"\n  {start_job}:")
     end = workflow.index(f"\n  {end_job}:", start)
     return workflow[start:end]
+
+
+def test_release_and_nightly_use_current_python_matrix() -> None:
+    for name, job_name in [("release.yml", "ci"), ("nightly_build.yml", "backend-unit-tests")]:
+        jobs = yaml.safe_load((WORKFLOWS_DIR / name).read_text())["jobs"]
+        versions = ast.literal_eval(jobs[job_name]["with"]["python-versions"])
+        assert set(versions) == {"3.11", "3.12", "3.13", "3.14", "3.15"}, name
+
+
+def test_installation_gate_requires_stable_python_and_isolates_preview() -> None:
+    jobs = yaml.safe_load(CROSS_PLATFORM_WORKFLOW_PATH.read_text())["jobs"]
+    stable = jobs["test-installation-stable"]
+    preview = jobs["test-installation-experimental"]
+    assert not stable.get("continue-on-error", False)
+    assert preview["continue-on-error"] is True
+    assert preview["strategy"]["fail-fast"] is False
+    for os_name in ("linux", "macos", "windows"):
+        versions = {leg["python-version"] for leg in stable["strategy"]["matrix"]["include"] if leg["os"] == os_name}
+        assert versions == {"3.11", "3.12", "3.13", "3.14"}, os_name
+    assert {leg["python-version"] for leg in preview["strategy"]["matrix"]["include"]} == {"3.15"}
+
+
+def test_release_python_preview_failures_cannot_cancel_required_jobs() -> None:
+    matrix_jobs = {
+        "backend-unit-tests.yml": ["test", "report"],
+        "python_test.yml": ["bundle-guarded-tests", "integration-tests", "lfx-tests", "test-cli"],
+        "release-inventory-gate.yml": ["python-base-inventory", "python-inventory"],
+        "release-lfx.yml": ["run-tests"],
+        "release_bundles.yml": ["test-install"],
+    }
+    for name, job_names in matrix_jobs.items():
+        jobs = yaml.safe_load((WORKFLOWS_DIR / name).read_text())["jobs"]
+        for job_name in job_names:
+            job = jobs[job_name]
+            assert job["continue-on-error"] == "${{ matrix.python-version == '3.15' }}", (name, job_name)
+            assert job["strategy"]["fail-fast"] is False, (name, job_name)
 
 
 def test_finalized_bundles_do_not_influence_shared_rc_number() -> None:
@@ -209,6 +246,59 @@ def test_release_docker_builds_consume_built_wheels() -> None:
     assert "release_artifacts: ${{ needs.build-base.result == 'success' }}" in base_docker_job
     assert "pattern: dist-*" in docker_workflow
     assert "path: .release-artifacts" in docker_workflow
+
+
+def test_backend_release_docker_build_consumes_the_base_release_artifacts() -> None:
+    jobs = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))["jobs"]
+    backend = jobs["call_docker_build_main_backend"]
+
+    assert "build-base" in backend["needs"]
+    assert backend["with"]["release_artifacts"] == "${{ needs.build-base.result == 'success' }}"
+
+
+def test_backend_docker_job_downloads_release_wheels_only_when_requested() -> None:
+    workflow = yaml.safe_load((WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build-main-backend"]["steps"]
+    downloads = [step for step in steps if step.get("uses", "").startswith("actions/download-artifact@")]
+
+    assert len(downloads) == 1
+    download = downloads[0]
+    assert download["if"] == "${{ inputs.release_artifacts }}"
+    assert download["with"] == {"pattern": "dist-*", "path": ".release-artifacts", "merge-multiple": True}
+    first_build = next(step for step in steps if step.get("uses", "").startswith("docker/build-push-action@"))
+    assert steps.index(download) < steps.index(first_build)
+
+
+def test_backend_docker_builds_pass_the_resolved_version_to_both_registries() -> None:
+    workflow = yaml.safe_load((WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build-main-backend"]["steps"]
+    builds = [step["with"] for step in steps if step.get("uses", "").startswith("docker/build-push-action@")]
+
+    assert len(builds) == 2
+    for build in builds:
+        assert build["file"] == "./docker/build_and_push_backend.Dockerfile"
+        assert "BASE_VERSION=${{ needs.determine-main-version.outputs.version }}" in build["build-args"].splitlines()
+        assert "LANGFLOW_IMAGE=" not in build["build-args"]
+
+
+def test_backend_docker_build_applies_release_version_and_wheels_after_source_install() -> None:
+    dockerfile = (WORKFLOWS_DIR.parents[1] / "docker" / "build_and_push_backend.Dockerfile").read_text(encoding="utf-8")
+
+    assert 'ARG BASE_VERSION=""' in dockerfile
+    restamp = dockerfile.index('if [ -n "$BASE_VERSION" ]; then')
+    source_install = dockerfile.index("uv pip install")
+    release_install = dockerfile.index("python3.14 /tmp/install_release_wheels.py")
+    frontend_cleanup = dockerfile.index('shutil.rmtree(Path(find_spec("langflow").origin).parent / "frontend"')
+    runtime_copy = dockerfile.index("COPY --from=builder --chown=1000:0 /app/.venv /app/.venv")
+
+    assert restamp < source_install < release_install < frontend_cleanup < runtime_copy
+    assert 'sed -i "s/^version = .*/version = \\"${BASE_VERSION}\\"/"' in dockerfile[restamp:source_install]
+    assert "/app/src/backend/base/pyproject.toml" in dockerfile[restamp:source_install]
+    assert "COPY ./.release-artifacts /tmp/release-artifacts" in dockerfile
+    assert "--mode base" in dockerfile[release_install:runtime_copy]
+    assert "--frontend-source" not in dockerfile
+    assert 'metadata.version("langflow-base")' in dockerfile[release_install:runtime_copy]
+    assert 'os.environ["BASE_VERSION"]' in dockerfile[release_install:runtime_copy]
 
 
 def test_release_docker_jobs_are_not_skipped_by_skipped_ancestors() -> None:

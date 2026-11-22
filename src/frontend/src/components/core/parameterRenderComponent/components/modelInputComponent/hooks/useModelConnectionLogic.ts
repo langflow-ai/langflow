@@ -6,12 +6,15 @@ import { groupByFamily } from "@/utils/utils";
 
 interface UseModelConnectionLogicProps {
   nodeId: string;
+  /** The model field entering connection mode. */
+  fieldName: string;
   closePopover: () => void;
   clearSelection: () => void;
 }
 
 export function useModelConnectionLogic({
   nodeId,
+  fieldName,
   closePopover,
   clearSelection,
 }: UseModelConnectionLogicProps) {
@@ -27,7 +30,7 @@ export function useModelConnectionLogic({
       try {
         const store = useFlowStore.getState();
         const node = store.getNode(nodeId!);
-        const templateField = node?.data?.node?.template?.["model"];
+        const templateField = node?.data?.node?.template?.[fieldName];
         if (!templateField) {
           return;
         }
@@ -56,7 +59,7 @@ export function useModelConnectionLogic({
 
         // Build a pseudo source so compatible target handles (left side) glow
         const pseudoSourceHandle = scapedJSONStringfy({
-          fieldName: "model",
+          fieldName,
           id: nodeId,
           inputTypes: effectiveInputTypes,
           type: "str",
@@ -69,6 +72,7 @@ export function useModelConnectionLogic({
           targetHandle: pseudoSourceHandle,
           type: "LanguageModel",
           color: "datatype-fuchsia",
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
         } as any;
 
         // Mark this node as being in connection mode, clear the model value
@@ -78,14 +82,15 @@ export function useModelConnectionLogic({
           nodeId,
           (prevNode) => {
             const template = { ...prevNode.data.node.template };
-            if (template.model) {
-              template.model = {
-                ...template.model,
+            if (template[fieldName]) {
+              template[fieldName] = {
+                ...template[fieldName],
                 value: [],
                 _connection_mode: true,
               };
             }
             for (const [key, field] of Object.entries(template)) {
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               const f = field as any;
               if (f?.password || f?._input_type === "SecretStrInput") {
                 template[key] = { ...f, value: "", load_from_db: false };
@@ -110,7 +115,7 @@ export function useModelConnectionLogic({
         console.warn("Error setting up connection mode:", error);
       }
     },
-    [nodeId, closePopover, clearSelection],
+    [nodeId, fieldName, closePopover, clearSelection],
   );
 
   return { handleExternalOptions };

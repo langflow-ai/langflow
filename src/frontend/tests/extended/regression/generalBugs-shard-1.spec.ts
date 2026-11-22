@@ -25,8 +25,7 @@ test(
     await page.waitForSelector('text="Settings"');
     await page.getByText(TEXTS.settings).last().click();
 
-    await page.waitForSelector('text="Messages"');
-    await page.getByText("Messages").last().click();
+    await page.getByTestId("sidebar-nav-Messages").click();
 
     await page.waitForSelector(".ag-checkbox-input");
     await page.locator(".ag-checkbox-input").first().click();

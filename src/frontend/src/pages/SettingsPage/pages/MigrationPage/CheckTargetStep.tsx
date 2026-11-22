@@ -10,7 +10,12 @@ import {
   useStopCopyMutation,
 } from "@/controllers/API/queries/migration";
 import { Details } from "./CheckStep";
-import { COPY_CODES, STEP_SLUGS, targetCheck } from "./catalog";
+import {
+  COPY_CODES,
+  needsDestinationSecrets,
+  STEP_SLUGS,
+  targetCheck,
+} from "./catalog";
 
 const STEP = "check_target";
 // Why the server did not take the admin's word about the differences. The record it sends back says what to
@@ -204,24 +209,30 @@ export function CheckTargetStep({ migration }: { migration: MigrationState }) {
         </p>
       )}
       <div className="flex w-full flex-col gap-2 sm:flex-row">
-        <Button
-          // With differences on the page, checking again comes after copying again, so it is the second choice
-          // only once the admin said that they are expected.
-          variant={expected ? "outline" : "default"}
-          className="w-full sm:w-fit"
-          loading={start.isPending}
-          onClick={() => {
-            accept.reset();
-            start.mutate(false);
-          }}
-          ignoreTitleCase
-        >
-          {t(
-            run
-              ? "settings.migration.checkTarget.again"
-              : "settings.migration.checkTarget.action",
-          )}
-        </Button>
+        {needsDestinationSecrets(migration) ? (
+          <p role="status" className="text-sm">
+            {t("settings.migration.dest.credentialsMissing")}
+          </p>
+        ) : (
+          <Button
+            // With differences on the page, checking again comes after copying again, so it is the second choice
+            // only once the admin said that they are expected.
+            variant={expected ? "outline" : "default"}
+            className="w-full sm:w-fit"
+            loading={start.isPending}
+            onClick={() => {
+              accept.reset();
+              start.mutate(false);
+            }}
+            ignoreTitleCase
+          >
+            {t(
+              run
+                ? "settings.migration.checkTarget.again"
+                : "settings.migration.checkTarget.action",
+            )}
+          </Button>
+        )}
         {differing.length > 0 && !unreadable && (
           <Button
             variant={expected ? "default" : "outline"}

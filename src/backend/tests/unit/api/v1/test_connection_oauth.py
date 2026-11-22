@@ -266,6 +266,39 @@ async def callback(client, query, **kwargs):
 
 
 @pytest.mark.usefixtures("active_user", "oauth_config")
+@pytest.mark.parametrize("code", [None, "oauth-refresh-token-missing"])
+@pytest.mark.parametrize(
+    "required_scopes", [(), ("offline_access",), ("api", "id", "refresh_token"), ("langflow_table_read",)]
+)
+async def test_callback_uses_fixed_error_text_instead_of_provider_message(
+    client, logged_in_headers, monkeypatch, code, required_scopes
+):
+    _row, query = await begin(client, logged_in_headers)
+
+    async def reject(*_args, **_kwargs):
+        msg = "private-provider-response"
+        raise OAuthError(msg, code=code)
+
+    monkeypatch.setattr(providers, "exchange", reject)
+    from types import SimpleNamespace
+
+    monkeypatch.setattr(
+        "langflow.api.v1.connections.provider_adapter",
+        lambda _provider: SimpleNamespace(required_scopes=required_scopes),
+    )
+    failed = await callback(client, query)
+
+    assert failed.status_code == 400
+    assert "private-provider-response" not in failed.text
+    assert ("refresh token" in failed.text) is (code == "oauth-refresh-token-missing")
+    for scope in required_scopes:
+        assert (scope in failed.text) is (code == "oauth-refresh-token-missing")
+    assert ("offline_access" in failed.text) is (
+        code == "oauth-refresh-token-missing" and "offline_access" in required_scopes
+    )
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
 async def test_callback_pkce_storage_replay_and_revoke(client, logged_in_headers, monkeypatch):
     row, query = await begin(client, logged_in_headers)
     calls = provider_double(monkeypatch, query)
@@ -568,6 +601,122 @@ async def test_start_denies_scope_escalation_and_unknown_registration(client, lo
             json={"registration_id": registration_id, "scopes": scopes},
         )
         assert response.status_code == 400
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+@pytest.mark.parametrize("expanded_at", ["consent", "refresh"])
+@pytest.mark.parametrize("read_scope", ["calendar.readonly", "https://www.googleapis.com/auth/calendar.readonly"])
+async def test_provider_cannot_expand_connection_scopes_without_owner_consent(
+    client, logged_in_headers, monkeypatch, expanded_at, read_scope
+):
+    from dataclasses import replace
+
+    from langflow.services.connection.oauth.broker import digest
+
+    row, query = await begin(client, logged_in_headers)
+    assert query["scope"] == ["calendar.readonly"]
+
+    async def expanded_response(*_args, **_kwargs):
+        return {
+            "access_token": "expanded-provider-access",
+            "refresh_token": "rotated-provider-refresh",
+            "token_type": "Bearer",
+            "scope": f"{read_scope} calendar.events",
+            "expires_in": 3600,
+        }
+
+    provider_double(monkeypatch, query)
+    if expanded_at == "consent":
+        monkeypatch.setattr(providers, "_request", expanded_response)
+    assert (await callback(client, query)).status_code == 200
+
+    rejected_digest = None
+    if expanded_at == "refresh":
+        monkeypatch.setattr(providers, "_request", expanded_response)
+        rejected_digest = digest("access-must-not-leak")
+    request = replace(
+        resolution(row),
+        required_scopes=frozenset({"calendar.events"}),
+        rejected_token_digest=rejected_digest,
+    )
+    with pytest.raises(ScopeMissingError):
+        await get_connection_resolver_service().resolve(request)
+
+    async with session_scope() as session:
+        stored = await session.get(Connection, UUID(row["id"]))
+        assert stored.granted_scopes == [read_scope]
+        secret = await session.get(ConnectionSecret, stored.id)
+        payload = _decrypt_credential_payload(secret.encrypted_payload)
+        # Scope denial must not discard a provider's newly rotated credential.
+        assert payload["access_token"] == "expanded-provider-access"  # noqa: S105 - test fixture
+        assert payload["refresh_token"] == "rotated-provider-refresh"  # noqa: S105 - test fixture
+    read_request = replace(resolution(row), required_scopes=frozenset({"calendar.readonly"}))
+    credential = await get_connection_resolver_service().resolve(read_request)
+    assert credential.granted_scopes == frozenset({read_scope})
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_existing_overgranted_connection_is_repaired_before_its_token_expires(
+    client, logged_in_headers, monkeypatch
+):
+    from dataclasses import replace
+
+    row, query = await begin(client, logged_in_headers)
+    calls = provider_double(monkeypatch, query)
+    assert (await callback(client, query)).status_code == 200
+    async with session_scope() as session:
+        stored = await session.get(Connection, UUID(row["id"]))
+        # Simulate credentials saved before requested scope bounds were enforced.
+        stored.granted_scopes = ["calendar.readonly", "calendar.events"]
+        session.add(stored)
+    with pytest.raises(ScopeMissingError):
+        await get_connection_resolver_service().resolve(
+            replace(resolution(row), required_scopes=frozenset({"calendar.events"}))
+        )
+    async with session_scope() as session:
+        stored = await session.get(Connection, UUID(row["id"]))
+        assert stored.granted_scopes == ["calendar.readonly"]
+    assert len(calls) == 1  # Repair does not wait for token refresh.
+
+
+@pytest.mark.usefixtures("active_user", "oauth_config")
+async def test_narrower_pending_reconnect_does_not_reduce_the_completed_grant(client, logged_in_headers, monkeypatch):
+    from dataclasses import replace
+
+    monkeypatch.setenv(
+        "LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS",
+        json.dumps({"google-work": registration(scopes=["calendar.readonly", "calendar.events"])}),
+    )
+    row, _ = await begin(client, logged_in_headers, handoff=True)
+    started = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "google-work", "scopes": ["calendar.readonly", "calendar.events"]},
+    )
+    assert started.status_code == 200, started.text
+    query = await consent_query(client, started)
+
+    async def broad_response(*_args, **_kwargs):
+        return {
+            "access_token": "consented-write-access",
+            "refresh_token": "consented-write-refresh",
+            "scope": "calendar.readonly calendar.events",
+            "expires_in": 3600,
+        }
+
+    monkeypatch.setattr(providers, "_request", broad_response)
+    assert (await callback(client, query)).status_code == 200
+    pending = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": "google-work", "scopes": ["calendar.readonly"]},
+    )
+    assert pending.status_code == 200, pending.text
+    credential = await get_connection_resolver_service().resolve(
+        replace(resolution(row), required_scopes=frozenset({"calendar.events"}))
+    )
+    assert credential.granted_scopes == frozenset({"calendar.readonly", "calendar.events"})
+    assert credential.access_token.get_secret_value() == "consented-write-access"
 
 
 @pytest.mark.usefixtures("active_user", "oauth_config")

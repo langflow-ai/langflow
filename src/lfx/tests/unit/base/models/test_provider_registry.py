@@ -746,3 +746,20 @@ def test_zero_registration_is_noop():
     provider_registry.clear()
     assert set(MODEL_PROVIDER_METADATA) == before
     assert provider_registry.registered_provider_names() == frozenset()
+
+
+def fake_decision_catalog_loader():
+    return [{"name": "fake-judge", "model_type": "decision", "capabilities": ["choice"]}]
+
+
+def test_extension_decision_catalog_rows_fail_clearly():
+    """Decision models run only on the built-in decision providers, so extensions cannot list them."""
+    register_provider(
+        ProviderSpec(
+            name="FakeDecision",
+            metadata={"icon": "Bot", "variables": [], "mapping": {"model_class": "ChatOpenAI"}},
+            catalog_loader=f"{__name__}:fake_decision_catalog_loader",
+        )
+    )
+    with pytest.raises(ValueError, match="unsupported model_type 'decision'"):
+        provider_registry.validate_registered_provider_catalogs(["FakeDecision"])

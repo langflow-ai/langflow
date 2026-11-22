@@ -143,6 +143,8 @@ export interface MigrationStepState {
 
 /** `GET /api/v1/migration`: this instance, the migration record and what it means for each step. */
 export interface MigrationState {
+  /** Whether this worker still holds the credentials for the saved destinations. */
+  destination_secrets_available?: boolean;
   instance: {
     version: string;
     /** `location` is the host, the port and the database name. It holds no user and no password. */

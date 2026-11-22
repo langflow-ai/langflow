@@ -85,7 +85,7 @@ class ModelProviderPolicyPurpose(str, Enum):
 # original home) pulls service dependencies this stable contract module must
 # not load. A drift guard in the unified-model tests keeps the mirrors equal.
 MODEL_POLICY_KEY_SEPARATOR = "::"
-MODEL_POLICY_KEY_TYPES = ("llm", "embeddings")
+MODEL_POLICY_KEY_TYPES = ("llm", "embeddings", "decision")
 
 
 def normalize_blocked_model_key(key: str) -> str:
@@ -304,7 +304,7 @@ class BaseModelProviderPolicyService(Service, abc.ABC):
         """Return normalized blocked-model keys for this context and purpose.
 
         Keys use the model-status identity grammar (bare ``model``,
-        ``provider::model``, ``provider::<llm|embeddings>::model``) with the
+        ``provider::model``, ``provider::<llm|embeddings|decision>::model``) with the
         provider segment already canonicalized to its stable ID. The default
         blocks nothing; implementations typically surface a deployment-wide
         deny-list from the shared policy bundle. This is an in-memory read on

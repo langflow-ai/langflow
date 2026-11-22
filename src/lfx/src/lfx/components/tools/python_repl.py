@@ -41,7 +41,11 @@ class PythonREPLToolComponent(LCToolComponent):
         StrInput(
             name="global_imports",
             display_name="Global Imports",
-            info="A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
+            info=(
+                "A comma-separated list of modules to import globally. Without a sandbox, only math, json, "
+                "and statistics are supported. Other modules, including numpy and pandas, require an isolated "
+                "sandbox configured by the server administrator."
+            ),
             value="math",
         ),
         StrInput(
@@ -165,7 +169,8 @@ class PythonREPLToolComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Execute the configured Python code with workflow callbacks and return its output."""
         tool = self.build_tool()
         code_input = "" if self.python_code is None else self.python_code
-        result = tool.run({"code": code_input})
+        result = tool.run({"code": code_input}, callbacks=self.get_langchain_callbacks())
         return [Data(data={"result": result})]

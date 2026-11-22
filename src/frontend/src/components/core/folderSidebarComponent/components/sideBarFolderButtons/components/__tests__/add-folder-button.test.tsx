@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { AddFolderButton } from "../add-folder-button";
 
 jest.mock("react-i18next", () => ({
+  initReactI18next: { type: "3rdParty", init: jest.fn() },
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
@@ -14,7 +15,13 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  default: ({
+    children,
+    content,
+  }: {
+    children: React.ReactNode;
+    content?: string;
+  }) => <div data-tooltip={content}>{children}</div>,
 }));
 
 jest.mock("@/components/ui/button", () => ({
@@ -59,5 +66,23 @@ describe("AddFolderButton", () => {
   it("is disabled when disabled prop is true", () => {
     render(<AddFolderButton {...defaultProps} disabled />);
     expect(screen.getByTestId("add-project-button")).toBeDisabled();
+  });
+
+  it("shows the create tooltip when not blocked", () => {
+    render(<AddFolderButton {...defaultProps} />);
+    const btn = screen.getByTestId("add-project-button");
+    expect(btn.closest("[data-tooltip]")).toHaveAttribute(
+      "data-tooltip",
+      "folder.createNewProject",
+    );
+  });
+
+  it("shows the reason in the tooltip when blocked", () => {
+    render(<AddFolderButton {...defaultProps} blockedReason="Plan limit" />);
+    const btn = screen.getByTestId("add-project-button");
+    expect(btn.closest("[data-tooltip]")).toHaveAttribute(
+      "data-tooltip",
+      "Plan limit",
+    );
   });
 });

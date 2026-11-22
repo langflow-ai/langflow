@@ -28,9 +28,9 @@ def source_fingerprint(code: str) -> str:
                 {
                     key: canonical(value)
                     for key, value in ast.iter_fields(node)
-                    # Python 3.12 added this empty field to class/function nodes.
-                    # Nonempty type parameters remain part of the fingerprint.
-                    if not (key == "type_params" and not value)
+                    # New AST fields must preserve fingerprints for older syntax.
+                    # Keep nonempty type parameters and lazy imports distinct.
+                    if not ((key == "type_params" and not value) or (key == "is_lazy" and value == 0))
                 },
             ]
         if isinstance(node, list):
@@ -67,6 +67,13 @@ def resolve_shipped_storage_component(code: str):
             "ChromaVectorStoreComponent",
             "LocalDBComponent",
             "ALTKAgentComponent",
+            "MrscraperAiScraper",
+            "MrscraperBatchScrape",
+            "MrscraperCrawlWebsite",
+            "MrscraperGetResult",
+            "MrscraperGetResults",
+            "MrscraperRunAiScraper",
+            "MrscraperRunManualScraper",
         )
     ):
         return None

@@ -66,7 +66,7 @@ class LangflowWorkflowHost(WorkflowHostBase):
         token = await oauth2_login(request)
         query_param = await api_key_query(request)
         header_param = await api_key_header(request)
-        return await get_current_user_for_workflow(token, query_param, header_param)
+        return await get_current_user_for_workflow(request, token, query_param, header_param)
 
     async def get_flow(self, flow_id: str, caller: Any) -> ResolvedFlow:
         """Share-aware fetch + langflow error mapping; carries the ``FlowRead``.

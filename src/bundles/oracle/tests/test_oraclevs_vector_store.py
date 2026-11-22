@@ -22,12 +22,16 @@ from lfx.schema.data import Data
 from lfx_oracle.components.oracle import OracleVectorStoreComponent
 from lfx_oracle.components.oracle.connection import build_connection_params, split_credentialized_dsn
 from oracle_test_utils import (
+    MOCK_ORACLE_DSN,
+    get_oracle_connect_string,
     get_oracle_connection_inputs,
     get_oracle_connection_params,
     get_oracle_embedding_params,
     get_oracle_test_connection_inputs,
 )
 from pydantic import BaseModel
+
+pytestmark = pytest.mark.usefixtures("trusted_mock_oracle_endpoint")
 
 
 def _expected_connection_params(kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -68,7 +72,7 @@ def test_connection_params_rejects_sensitive_keys() -> None:
                 "config_dir": "/wallet/config",
                 "private_key": "key",  # pragma: allowlist secret
             },
-            dsn="host/service",
+            dsn=MOCK_ORACLE_DSN,
         )
 
 
@@ -76,18 +80,18 @@ def test_connection_params_rejects_normalized_sensitive_keys() -> None:
     with pytest.raises(ValueError, match="connection_params contains sensitive keys"):
         build_connection_params(
             {"password ": "secret", "wallet-password": "wallet-secret"},  # pragma: allowlist secret
-            dsn="host/service",
+            dsn=MOCK_ORACLE_DSN,
         )
 
 
 def test_connection_params_allows_non_secret_sharding_keys() -> None:
     params = build_connection_params(
         {"shardingkey": ["tenant"], "supershardingkey": ["region"]},
-        dsn="host/service",
+        dsn=MOCK_ORACLE_DSN,
     )
 
     assert params == {
-        "dsn": "host/service",
+        "dsn": get_oracle_connect_string(MOCK_ORACLE_DSN),
         "shardingkey": ["tenant"],
         "supershardingkey": ["region"],
     }
@@ -96,12 +100,12 @@ def test_connection_params_allows_non_secret_sharding_keys() -> None:
 def test_build_connection_params_parses_credentials_from_dsn() -> None:
     params = build_connection_params(
         {"config_dir": "/wallet/config"},
-        dsn="user/p@ssword@host/service",
+        dsn=f"user/p@ssword@{MOCK_ORACLE_DSN}",
     )
 
     assert params == {
         "config_dir": "/wallet/config",
-        "dsn": "host/service",
+        "dsn": get_oracle_connect_string(MOCK_ORACLE_DSN),
         "password": "p" + "@ssword",
         "user": "user",
     }

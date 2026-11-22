@@ -18,6 +18,8 @@ interface PostGlobalVariablesParams extends ProviderScopeParams {
   type?: string;
   default_fields?: string[];
   category?: VariableCategory;
+  /** The kind this key was just checked for, so saving it doesn't check it again. */
+  checkedModelType?: "decision";
 }
 
 interface PostGlobalVariablesResponse {
@@ -40,9 +42,12 @@ export const usePostGlobalVariables: useMutationFunctionType<
     category,
     flowId,
     projectId,
+    checkedModelType,
   }: PostGlobalVariablesParams): Promise<PostGlobalVariablesResponse> => {
     const queryParams = new URLSearchParams();
     appendProviderScope(queryParams, { flowId, projectId });
+    if (checkedModelType)
+      queryParams.set("checked_model_type", checkedModelType);
     const res = await api.post(
       `${getURL("VARIABLES")}/${
         queryParams.toString() ? `?${queryParams.toString()}` : ""

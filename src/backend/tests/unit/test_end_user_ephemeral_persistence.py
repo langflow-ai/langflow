@@ -245,7 +245,7 @@ def test_background_reparse_defaults_end_user_id_none_for_legacy_rows():
     assert parsed.end_user_id is None
 
 
-async def test_identified_graph_run_persists_end_to_end(client):  # noqa: ARG001
+async def test_identified_graph_run_persists_end_to_end(client, active_user):  # noqa: ARG001
     """The same graph with the default (persist=True) does write memory."""
     session_id = f"ident-e2e-{uuid4()}"
     chat_input = ChatInput(_id="chat_input")
@@ -253,7 +253,7 @@ async def test_identified_graph_run_persists_end_to_end(client):  # noqa: ARG001
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=chat_input.message_response)
 
-    flow_id, owner_id = uuid4(), uuid4()
+    flow_id, owner_id = uuid4(), active_user.id
     graph = Graph(chat_input, chat_output, flow_id=str(flow_id), user_id=str(owner_id))
     graph.session_id = session_id
     # persist_messages defaults True
@@ -264,14 +264,14 @@ async def test_identified_graph_run_persists_end_to_end(client):  # noqa: ARG001
     assert len(await aget_messages(session_id=session_id, flow_id=flow_id, user_id=owner_id)) >= 1
 
 
-async def test_identified_run_stamps_message_owner_with_end_user(client):  # noqa: ARG001
+async def test_identified_run_stamps_message_owner_with_end_user(client, active_user):  # noqa: ARG001
     """On the serving plane the stored message.user_id is the END USER, not the SID.
 
     Write and read both resolve through resolve_message_owner_id, so a run whose graph
     carries end_user_id stamps messages to the end user: querying by the end-user id
     returns them, and querying by the service-account id (SID) returns nothing.
     """
-    sid, uid = uuid4(), uuid4()
+    sid, uid = active_user.id, uuid4()
     session_id = f"uid-stamp-{uuid4()}"
     chat_input = ChatInput(_id="chat_input")
     chat_input.set(input_value="hi there")
@@ -290,7 +290,7 @@ async def test_identified_run_stamps_message_owner_with_end_user(client):  # noq
     assert await aget_messages(session_id=session_id, flow_id=flow_id, user_id=sid) == []
 
 
-async def test_non_uuid_end_user_stamps_derived_owner_end_to_end(client):  # noqa: ARG001
+async def test_non_uuid_end_user_stamps_derived_owner_end_to_end(client, active_user):  # noqa: ARG001
     """A non-UUID end-user id maps to a stable derived UUID for message.user_id.
 
     The UUID-typed column cannot hold "alice", so the write derives a stable uuid5;
@@ -299,7 +299,7 @@ async def test_non_uuid_end_user_stamps_derived_owner_end_to_end(client):  # noq
     """
     from lfx.memory.flow_context import derive_message_owner_uuid
 
-    sid = uuid4()
+    sid = active_user.id
     session_id = f"uid-derive-{uuid4()}"
     chat_input = ChatInput(_id="chat_input")
     chat_input.set(input_value="hi there")

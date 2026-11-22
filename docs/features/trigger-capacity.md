@@ -19,6 +19,10 @@ The figures on this page describe implementation defaults. They are sizing estim
 
 Use a shared PostgreSQL database for deployments with multiple API or listener replicas. Subprocess listener mode still creates a second process; it does not remove SQLite write contention. Keep the database URL, encryption key, and OAuth registrations consistent across API and listener processes.
 
+API worker count and listener replica count are separate settings. With `LANGFLOW_LISTENERS_MODE=subprocess`, the database elects one API worker to host one listener child across the shared database. Increasing API replicas therefore does not add listener children. Run separate `langflow listeners` processes when listeners need independent scaling, and leave subprocess mode off on those APIs.
+
+Listener balancing counts connections rather than triggers or event volume. Several triggers on one connection stay together. A balanced connection count can still leave one replica with most of the work. All processes must use consistent lease settings and synchronized clocks because expiry comparisons use their local UTC clocks.
+
 ## Estimate dispatch capacity
 
 By default, a dispatcher pass claims at most 25 ledger rows. A full batch of successful submissions immediately starts another pass, yielding to other async work between passes. A partly full or blocked pass waits `LANGFLOW_TRIGGER_DISPATCHER_POLL_INTERVAL_S` (five seconds by default).
@@ -52,6 +56,10 @@ The dispatcher, source-maintenance, and renewal passes heartbeat their named lea
 These safeguards reduce overlap during slow work. They cannot undo a provider operation already accepted before cancellation or guarantee progress through a database outage. Keep external actions idempotent and measure failover under the deployment's actual process and database failure modes.
 
 Listener connection leases default to 30 seconds, with a 10-second heartbeat checked by the five-second reconcile loop. The recovery target is two lease lifetimes under a responsive database and process, not an outage-independent bound. Provider reconnection, backoff, database latency, and process stalls can extend recovery. Track actual delivery lag in addition to listener readiness.
+
+The scheduler takes its named lease at the start of a pass and does not run the independent heartbeat used by dispatch and source maintenance. Tick identity still comes from the scheduled instant and the ledger uniqueness constraint. Do not extend the dispatcher heartbeat evidence to a schedule pass that exceeds its TTL. A clean dispatcher stop releases dispatch and source-maintenance ownership, while scheduler ownership remains until expiry.
+
+An external listener that cannot reconcile with the database records an error and retries. Its adapter tasks can remain alive while connection leases expire. The old and replacement provider connections can therefore overlap after recovery. Cursor and event writes require the captured listener lease generation to remain current. Stale event emission raises a typed rejection instead of reporting a duplicate, so adapters cannot acknowledge it as persisted. Event deduplication still depends on a committed ledger row. Provider acknowledgment must follow persistence.
 
 Rate-limit storage defaults to `memory://`, which makes counters local to each API process. Configure shared storage through `LANGFLOW_RATE_LIMIT_STORAGE_URI` when limits must apply across workers and replicas. More ingress replicas can otherwise admit more work while the singleton dispatcher retains the same normal service rate.
 
@@ -110,3 +118,5 @@ Test the actual flow mix and database before describing a deployment as supporti
 5. Soak long enough to include subscription renewal, cleanup, and realistic retained-ledger size. Report latency percentiles and loss/retry behavior as well as average throughput.
 
 Publish the measured envelope and its workload assumptions. A local microbenchmark or a green unit suite does not establish a production capacity guarantee.
+
+The [replica validation record](./trigger-replica-validation.md) describes the process-level PostgreSQL checks and the deployment behavior they leave unverified.

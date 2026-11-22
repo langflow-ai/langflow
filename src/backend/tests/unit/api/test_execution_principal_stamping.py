@@ -171,6 +171,20 @@ async def test_build_graph_from_data_without_a_principal_fails_closed() -> None:
     assert graph.execution_principal.kind == "unknown"
 
 
+@pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("collides_with_user", [False, True])
+async def test_build_graph_from_data_authorizes_only_noncolliding_legacy_flow_ids(
+    active_user,
+    collides_with_user,
+) -> None:
+    flow_id = active_user.id if collides_with_user else uuid4()
+
+    graph = await build_graph_from_data(flow_id, _MINIMAL_FLOW, flow_name="flow", user_id=str(active_user.id))
+
+    expected = frozenset() if collides_with_user else frozenset({str(flow_id)})
+    assert graph.authorized_legacy_flow_ids == expected
+
+
 async def test_the_playground_cache_seam_stamps_too() -> None:
     """``build_and_cache_graph_from_data`` is the primary Playground build path."""
 
@@ -189,10 +203,12 @@ async def test_the_playground_cache_seam_stamps_too() -> None:
         flow_id,
         chat_service,
         _MINIMAL_FLOW,
+        user_id=principal.user_id,
         execution_principal=principal,
     )
 
     assert graph.execution_principal == principal
+    assert graph.user_id == principal.user_id
     assert chat_service.cached[str(flow_id)] is graph
 
 

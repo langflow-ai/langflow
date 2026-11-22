@@ -1,7 +1,13 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  type UseQueryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { AxiosError, AxiosResponse } from "axios";
 import { api, performStreamingRequest } from "../../api";
 import { getURL } from "../../helpers/constants";
+import { isExternalAuthMaintenanceRefusal } from "../../helpers/maintenance";
 import type {
   CopyDecision,
   CopyEvent,
@@ -22,14 +28,43 @@ export const migrationKeys = {
 };
 
 /** Whether this instance refuses changes now. Any signed-in user may ask: every page says so while it does. */
-export const useMigrationPauseQuery = (enabled: boolean) =>
-  useQuery<{ paused: boolean }>({
+export type MaintenancePauseStatus = {
+  paused: boolean;
+  maintenance?: boolean;
+  migration?: boolean;
+  running_jobs?: number;
+  externalAuthenticationPaused?: boolean;
+};
+
+export type MaintenancePauseQueryOptions = Omit<
+  UseQueryOptions<MaintenancePauseStatus>,
+  "queryKey" | "queryFn" | "enabled"
+>;
+
+export const useMigrationPauseQuery = (
+  enabled = true,
+  options: MaintenancePauseQueryOptions = {},
+) =>
+  useQuery<MaintenancePauseStatus>({
     queryKey: migrationKeys.pause,
-    queryFn: async () =>
-      (await api.get(getURL("MIGRATION", { path: "pause" }))).data,
+    queryFn: async () => {
+      try {
+        return (await api.get(getURL("MAINTENANCE", { path: "status" }))).data;
+      } catch (error) {
+        if (!isExternalAuthMaintenanceRefusal(error)) throw error;
+        return {
+          paused: true,
+          maintenance: true,
+          externalAuthenticationPaused: true,
+        };
+      }
+    },
     enabled,
+    // Reuse a just-completed read when another status consumer mounts.
+    staleTime: 1000,
     // An admin can pause at any time, from another browser.
     refetchInterval: 30000,
+    ...options,
   });
 
 export const useMigrationQuery = (enabled = true) =>

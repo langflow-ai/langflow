@@ -21,12 +21,11 @@ if TYPE_CHECKING:
 
 @register_service(ServiceType.INTEGRATION_POLICY_SERVICE)
 class IntegrationPolicyService(BaseIntegrationPolicyService):
-    """OSS default: an empty ceiling is unrestricted, blocking nothing.
+    """OSS default: a missing ceiling is unrestricted, blocking nothing.
 
     This preserves pass-through behavior for every installation that never
-    configures integration governance. An Enterprise plugin replaces the
-    service through ``lfx.toml``. Installing it must preserve persisted empty
-    ceilings; deny-all requires an explicitly configured external ceiling.
+    configures integration governance. An explicit empty ceiling denies every
+    provider.
     """
 
     def __init__(self, policy_bundle_service: BasePolicyBundleService | None = None) -> None:
@@ -66,8 +65,8 @@ class IntegrationPolicyService(BaseIntegrationPolicyService):
             self._resolution_state.reset(token)
 
     @property
-    def approved_provider_ids(self) -> frozenset[str]:
-        """Return the install-wide integration ceiling; empty means unrestricted."""
+    def approved_provider_ids(self) -> frozenset[str] | None:
+        """Return the install-wide integration ceiling; ``None`` means unrestricted."""
         return self._current_bundle_state()[0].approved_integration_provider_ids
 
     @property
@@ -95,9 +94,9 @@ class IntegrationPolicyService(BaseIntegrationPolicyService):
         purpose: IntegrationPolicyPurpose,  # noqa: ARG002
     ) -> Collection[str]:
         approved_provider_ids = self.approved_provider_ids
-        if not self.policy_source_available and (approved_provider_ids or self.blocked_action_keys):
+        if not self.policy_source_available and (approved_provider_ids is not None or self.blocked_action_keys):
             return frozenset()
-        if not approved_provider_ids:
+        if approved_provider_ids is None:
             # An unconfigured installation must not become deny-all after a
             # transient refresh failure, matching the model-provider default.
             return candidate_provider_ids

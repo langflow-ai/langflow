@@ -521,6 +521,10 @@ async def migrate_one(kb_id: UUID) -> None:
 
 async def fence_legacy_records() -> None:
     """Also catch rows adopted after Alembic, before starting any background writer."""
+    from langflow.api.utils.migration_pause import writes_paused
+
+    if await writes_paused():
+        return
     async with session_scope() as session:
         await session.execute(
             update(KnowledgeBaseRecord)
@@ -823,8 +827,14 @@ async def published_inventory_status() -> dict:
 
 async def run_pending() -> None:
     """Reconcile legacy inventory, resume eligible storage migrations, then drop a finished upgrade's backup."""
+    from langflow.api.utils.migration_pause import writes_paused
+
+    if await writes_paused():
+        return
     async with application_backup.upgrade_pass():
         await _resume_pending()
+        if await writes_paused():
+            return
         try:
             await application_backup.discard_if_finished(inventory_complete=_inventory_complete)
         except Exception as exc:  # noqa: BLE001 -- the next pass or erase retries; migrated data is unaffected
@@ -871,6 +881,10 @@ async def _resume_pending() -> None:
     shared = _pass_attribution.set([])
     try:
         for row in rows:
+            from langflow.api.utils.migration_pause import writes_paused
+
+            if await writes_paused():
+                return
             try:
                 await migrate_one(row.id)
             except StorageUnavailableError:
@@ -903,8 +917,31 @@ def schedule_upgrade(*, retry: bool = False) -> asyncio.Task:
     async def run_requested():
         """Replay accepted retries after the current batch, including earlier failures."""
         global _retry_requested  # noqa: PLW0603 -- same event-loop coordinator flag
+        from langflow.api.utils.migration_pause import writes_paused
+
         while True:
+            while await writes_paused():  # noqa: ASYNC110
+                await asyncio.sleep(0.1)
+            from langflow.api.utils import knowledge_base_service
+
+            # A failed adoption must not strand migrations of already registered bases.
+            steps = []
+            if get_settings_service().settings.kb_disk_reconcile_enabled:
+                steps.append(("disk adoption", knowledge_base_service.backfill_all_users_from_disk))
+            steps.extend(
+                [
+                    ("Memory Base adoption", knowledge_base_service.backfill_memory_base_rows),
+                    ("legacy record fencing", fence_legacy_records),
+                ]
+            )
+            for step, callback in steps:
+                try:
+                    await callback()
+                except Exception:  # noqa: BLE001 -- resume registered bases despite transient discovery failures
+                    await logger.awarning("Deferred storage %s failed. Resuming registered knowledge bases.", step)
             await run_pending()
+            if await writes_paused():
+                continue
             if not _retry_requested:
                 return
             _retry_requested = False

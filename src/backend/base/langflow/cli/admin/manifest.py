@@ -113,13 +113,36 @@ class AdminState(ManifestModel):
 
 
 class DirectoryConnectionTrust(ManifestModel):
-    """Credential-free external OAuth trust metadata."""
+    """Credential-free Microsoft Entra OAuth trust metadata."""
 
+    auth_mode: Literal["entra_jwt"] = "entra_jwt"
+    display_name: str | None = Field(default=None, min_length=1, max_length=256)
     tenant_id: str = Field(min_length=1, max_length=64)
     issuer: str = Field(min_length=1, max_length=512)
     audience: str = Field(min_length=1, max_length=512)
     jwks_url: str = Field(min_length=1, max_length=2048)
     allowed_client_id: str = Field(min_length=1, max_length=256)
+
+
+class BearerDirectoryConnectionTrust(ManifestModel):
+    """Public SCIM configuration bound to an existing OIDC provider."""
+
+    auth_mode: Literal["bearer_token"]
+    display_name: str = Field(min_length=1, max_length=256)
+    sso_provider_key: str = Field(min_length=1, max_length=256)
+    sso_issuer: str = Field(min_length=1, max_length=512)
+    subject_claim: str = Field(default="sub", min_length=1, max_length=256)
+
+
+DirectoryConnection = DirectoryConnectionTrust | BearerDirectoryConnectionTrust
+
+
+def directory_connection_payload(connection: DirectoryConnection) -> dict[str, str]:
+    """Serialize only modeled public fields and preserve omitted legacy mode."""
+    payload = connection.model_dump(mode="json", exclude_none=True)
+    if isinstance(connection, DirectoryConnectionTrust) and "auth_mode" not in connection.model_fields_set:
+        payload.pop("auth_mode")
+    return payload
 
 
 class DirectoryTeamLink(ManifestModel):
@@ -139,7 +162,7 @@ class DirectoryState(ManifestModel):
 
     api_version: Literal["langflow.ai/v1"] = Field(alias="apiVersion")
     kind: Literal["DirectoryState"]
-    connection: DirectoryConnectionTrust | None = None
+    connection: DirectoryConnection | None = None
     team_links: list[DirectoryTeamLink] = Field(default_factory=list, alias="teamLinks")
     role_mappings: list[DirectoryRoleMapping] = Field(default_factory=list, alias="roleMappings")
 
@@ -209,6 +232,8 @@ def dump_directory_state(
 ) -> str:
     """Serialize reviewed directory intent without catalog identities or secrets."""
     data = state.model_dump(mode="json", by_alias=True, exclude_none=True)
+    if state.connection is not None:
+        data["connection"] = directory_connection_payload(state.connection)
     if format_name == "json":
         return json.dumps(data, indent=2, sort_keys=True) + "\n"
     return yaml.safe_dump(data, sort_keys=False)

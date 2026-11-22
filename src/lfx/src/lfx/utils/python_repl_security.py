@@ -26,7 +26,9 @@ This module restricts that environment:
   attributes that are invisible to the AST, and it rejects literal replacement-field
   templates that reach into a dunder regardless of which formatter ultimately consumes
   them.
-* :func:`import_allowed_module` wraps each allow-listed module in :class:`_ModuleProxy`
+* :func:`import_allowed_module` limits in-process Global Imports to ``math``,
+  ``json`` and ``statistics`` before importing them. Other modules require an
+  isolated sandbox. Accepted modules are wrapped in :class:`_ModuleProxy`
   before it is injected into the exec globals. Module-granularity trust is unsound in
   Python: a module object transitively exposes its entire import graph through ordinary
   public attributes, so e.g. ``json.codecs.sys.modules["os"]`` (also ``re.enum.sys``,
@@ -49,6 +51,7 @@ import builtins
 import importlib
 import re
 import types
+from typing import Any
 
 # Builtins considered safe to expose to interpreter code. Deliberately excludes anything
 # that can import modules, execute/compile code, touch the filesystem, or reach
@@ -195,9 +198,8 @@ _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 # typing.sys and numpy.sys all bind ``sys`` at top level, and from there
 # ``sys.modules["os"]`` is a one-step direct hit. These chains use no dunder and no
 # blocked AST attribute, so the gate cannot see them; _ModuleProxy refuses these names
-# instead. Note this intentionally does NOT block the top-level allow-listed module
-# itself: allow-listing ``os`` in Global Imports remains an explicit (trusted) admin
-# choice — what is closed here is *transitive* exposure through an unrelated module.
+# instead. Explicit Global Imports are separately restricted to a small safe set
+# before importing on the host.
 _BLOCKED_MODULE_ATTRIBUTES = frozenset(
     {
         # Module system / interpreter internals: reaching these reaches sys.modules.
@@ -238,6 +240,13 @@ _BLOCKED_MODULE_ATTRIBUTES = frozenset(
         "enum",
     }
 )
+
+
+# Global Imports is user-controlled. A denylist cannot enumerate every module
+# that executes code or accesses the host (including import-time side effects).
+# Keep the in-process surface small and require the existing isolated sandbox
+# for every other exact module name, including dotted submodules.
+_SAFE_GLOBAL_IMPORT_MODULES = frozenset({"math", "json", "statistics"})
 
 
 class _ModuleProxy:
@@ -291,8 +300,17 @@ def import_allowed_module(name: str) -> tuple[str, _ModuleProxy]:
         wrapping the module so its transitive import graph stays out of the sandbox.
 
     Raises:
+        ValueError: If the requested module requires isolated sandbox execution.
         ImportError: If the module cannot be imported.
     """
+    # Check the exact name before importing because module initialization runs on the host.
+    # Sandbox execution uses a guest-side import preamble instead of this helper.
+    if name not in _SAFE_GLOBAL_IMPORT_MODULES:
+        msg = (
+            f"Module {name!r} is not allowed in Global Imports for in-process Python execution. "
+            "Configure LANGFLOW_SANDBOX_BACKEND to use this module in isolation."
+        )
+        raise ValueError(msg)
     module = importlib.import_module(name)
     return module.__name__, _ModuleProxy(module)
 
@@ -341,28 +359,42 @@ def ensure_code_execution_enabled() -> None:
             "be resolved. Check the server configuration and try again."
         )
         raise CodeExecutionDisabledError(msg)
-    if not getattr(settings_service.settings, "allow_custom_components", True):
-        msg = (
-            "Python code execution is disabled because allow_custom_components is False. "
-            "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to enable this component."
-        )
-        raise CodeExecutionDisabledError(msg)
-    if getattr(settings_service.settings, "block_code_interpreter_components", False):
-        msg = (
-            "Python code execution is disabled because block_code_interpreter_components is True. "
-            "Set LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=false to enable this component."
-        )
-        raise CodeExecutionDisabledError(msg)
-    if getattr(settings_service.settings, "custom_component_admin_only", False) is True:
+    settings = settings_service.settings
+    is_superuser = False
+    if getattr(settings, "custom_component_admin_only", False) is True:
         from lfx.services.model_provider_policy import current_model_provider_policy_context
 
         # The execution host binds this principal from the authenticated user.
         # Do not infer administrator privilege from graph input fields or the flow
         # owner's identity. Missing context must fail closed, including direct calls.
         principal = current_model_provider_policy_context()
-        if principal is None or principal.user_id is None or principal.attributes.get("is_superuser") is not True:
-            msg = "Python code execution is restricted to administrators because custom_component_admin_only is True."
-            raise CodeExecutionDisabledError(msg)
+        is_superuser = (
+            principal is not None and principal.user_id is not None and principal.attributes.get("is_superuser") is True
+        )
+    refusal = code_execution_refusal(settings, is_superuser=is_superuser)
+    if refusal is not None:
+        raise CodeExecutionDisabledError(refusal)
+
+
+def code_execution_refusal(settings: Any, *, is_superuser: bool) -> str | None:
+    """Return why ``settings`` refuse Python code execution to a caller, or ``None`` when they allow it.
+
+    The decision :func:`ensure_code_execution_enabled` enforces, which resolves the settings and
+    the authenticated caller itself. The upgrade check asks it for another server's settings.
+    """
+    if not getattr(settings, "allow_custom_components", True):
+        return (
+            "Python code execution is disabled because allow_custom_components is False. "
+            "Set LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true to enable this component."
+        )
+    if getattr(settings, "block_code_interpreter_components", False):
+        return (
+            "Python code execution is disabled because block_code_interpreter_components is True. "
+            "Set LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=false to enable this component."
+        )
+    if getattr(settings, "custom_component_admin_only", False) is True and not is_superuser:
+        return "Python code execution is restricted to administrators because custom_component_admin_only is True."
+    return None
 
 
 def safe_builtins() -> dict:
@@ -403,6 +435,19 @@ def validate_code_safety(code: str) -> None:
         if isinstance(node, ast.Attribute) and _is_blocked_attribute(node.attr):
             msg = f"Access to attribute '{node.attr}' is not allowed."
             raise ValueError(msg)
+        if isinstance(node, ast.MatchClass):
+            # Positional patterns resolve attributes through the pattern class's assignable __match_args__.
+            # Relaxing this guard also requires restricting those assignments.
+            if node.patterns:
+                msg = (
+                    "Positional class patterns are not allowed in saved Python Interpreter, Python REPL, "
+                    "or Lambda Filter code. Use keyword patterns with named attributes instead."
+                )
+                raise ValueError(msg)
+            for attr in node.kwd_attrs:
+                if _is_blocked_attribute(attr):
+                    msg = f"Access to attribute '{attr}' is not allowed."
+                    raise ValueError(msg)
         if (
             isinstance(node, ast.Constant)
             and isinstance(node.value, str)

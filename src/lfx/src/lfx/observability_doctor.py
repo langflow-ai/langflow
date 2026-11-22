@@ -29,6 +29,7 @@ import os
 import threading
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from http import HTTPStatus
 
 from lfx.log.logger import logger
 from lfx.observability import (
@@ -171,12 +172,10 @@ def _response_class(signal: str):
 
 
 def _recording_session():
-    """A requests session that keeps the last response, so we can inspect what the exporter ignored.
+    """Keep the exporter's response so delivery checks can inspect its history and body.
 
-    The HTTP exporter decides success on ``resp.ok`` alone: it never looks at redirects and never
-    parses the body. That makes several "delivered nothing" situations indistinguishable from a
-    real success, which is exactly what this command exists to tell apart. Keeping the response
-    lets :func:`_delivery_problem` apply the checks the exporter skips.
+    Capture at ``send`` so both the SDK's older ``post`` calls and its newer ``request`` calls
+    retain the response. The exporter can report success without accepting the whole payload.
     """
     import requests
 
@@ -185,8 +184,8 @@ def _recording_session():
             super().__init__()
             self.last_response = None
 
-        def post(self, *args, **kwargs):
-            response = super().post(*args, **kwargs)
+        def send(self, *args, **kwargs):
+            response = super().send(*args, **kwargs)
             self.last_response = response
             return response
 
@@ -198,9 +197,8 @@ def _delivery_problem(session, signal: str) -> str | None:
 
     Three cases the exporter reports as success:
 
-    - A redirect. ``requests`` follows a 302 by downgrading POST to GET and dropping the body, so
-      an auth proxy or an ingress with a trailing-slash rule swallows the payload and answers 200
-      from a login page.
+    - A redirect. Newer exporters return the redirect response without following it. Older
+      exporters can follow a 302 as a GET, dropping the payload before a login page answers 200.
     - A partial success. The collector accepted the request and then rejected some or all of the
       items, for quota, cardinality or an unknown tenant. The count is in the response body, which
       the exporter never reads.
@@ -214,8 +212,15 @@ def _delivery_problem(session, signal: str) -> str | None:
     if response.history:
         chain = " -> ".join(str(r.status_code) for r in response.history)
         return (
-            f"the request was redirected ({chain}) to {response.url} and the payload was dropped; "
-            f"redirects turn the POST into a GET, so nothing was delivered"
+            f"the request was redirected ({chain}) to {response.url}, so delivery to the "
+            f"configured collector was not confirmed"
+        )
+
+    if HTTPStatus.MULTIPLE_CHOICES <= response.status_code < HTTPStatus.BAD_REQUEST:
+        target = response.headers.get("Location", "an unspecified location")
+        return (
+            f"the endpoint redirected the request ({response.status_code}) to {target}; "
+            f"the redirect was not followed, so delivery was not confirmed"
         )
 
     body = response.content
@@ -393,7 +398,7 @@ def _check_signal(signal: str, resource, timeout: float | None) -> SignalReport:
         )
     except Exception as exc:  # noqa: BLE001
         # Endpoint and protocol belong on every failure line, not only the ones that reached the
-        # wire: a malformed OTEL_EXPORTER_OTLP_TIMEOUT raises here, before any request exists, and
+        # wire: a malformed gRPC OTEL_EXPORTER_OTLP_TIMEOUT raises before any request exists, and
         # "which end is wrong" is still the question. (A bad certificate path does not: both
         # transports construct fine and fail later, which the export branch below covers.)
         report.status = FAILED
@@ -453,9 +458,8 @@ def _check_signal(signal: str, resource, timeout: float | None) -> SignalReport:
     report.exporter_logs = capture.messages
     # Every signal's export result enum spells success as a member named SUCCESS.
     if getattr(result, "name", "") == "SUCCESS":
-        # SUCCESS only means the exporter saw a status under 400. It never checks whether it was
-        # redirected away from the collector, and never reads the response body, so several
-        # "delivered nothing" cases reach here looking identical to a real success.
+        # SUCCESS only means the exporter saw a status under 400. It never checks redirects or
+        # reads the response body, so "delivered nothing" can look identical to a real success.
         problem = _delivery_problem(session, signal) if session is not None else None
         if problem:
             report.status = FAILED

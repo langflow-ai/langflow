@@ -9,12 +9,15 @@ import {
   isBlockedByCatalogPolicy,
 } from "@/CustomNodes/helpers/check-code-validity";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import TriggerNodeControls from "@/components/core/triggers/TriggerNodeControls";
 import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
+import { ENABLE_TRIGGERS } from "@/customization/feature-flags";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import type { FlowStoreType } from "@/types/zustand/flow";
+import { isTriggerComponent } from "@/utils/trigger-component";
 import { Button } from "../../components/ui/button";
 import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
@@ -168,11 +171,15 @@ function GenericNode({
     blocked: isBlocked,
     breakingChange: hasBreakingChange,
     userEdited: isUserEdited,
+    retired: isRetired,
+    retiredIn,
   } = componentUpdate ?? {
     outdated: false,
     blocked: false,
     breakingChange: false,
     userEdited: false,
+    retired: false,
+    retiredIn: undefined,
   };
 
   const updateNodeCode = useUpdateNodeCode(
@@ -281,10 +288,10 @@ function GenericNode({
   );
 
   const handleUpdateCodeWShortcut = useCallback(() => {
-    if (isOutdated && selected) {
+    if (isOutdated && !isRetired && selected) {
       void handleUpdateCode().catch(() => undefined);
     }
-  }, [isOutdated, selected, handleUpdateCode]);
+  }, [isOutdated, isRetired, selected, handleUpdateCode]);
 
   const update = useShortcutsStore((state) => state.update);
   useHotkeys(update, handleUpdateCodeWShortcut, { preventDefault: true });
@@ -461,12 +468,14 @@ function GenericNode({
   const shouldShowUpdateComponent = useMemo(
     () =>
       (isBlocked && blockedIsFatal) ||
-      (!allowCustomComponents
-        ? isOutdated || hasBreakingChange
-        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll),
+      (!isRetired &&
+        (!allowCustomComponents
+          ? isOutdated || hasBreakingChange
+          : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll)),
     [
       isBlocked,
       blockedIsFatal,
+      isRetired,
       isOutdated,
       hasBreakingChange,
       isUserEdited,
@@ -475,9 +484,12 @@ function GenericNode({
     ],
   );
 
+  // A retired component's bar cannot be dismissed: the component fails when the flow runs.
   const shouldShowLegacyComponent = useMemo(
-    () => (data.node?.legacy || data.node?.replacement) && !dismissAllLegacy,
-    [data.node?.legacy, data.node?.replacement, dismissAllLegacy],
+    () =>
+      isRetired ||
+      ((data.node?.legacy || data.node?.replacement) && !dismissAllLegacy),
+    [isRetired, data.node?.legacy, data.node?.replacement, dismissAllLegacy],
   );
 
   const memoizedNodeToolbarComponent = useMemo(() => {
@@ -509,7 +521,9 @@ function GenericNode({
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
             updateNode={() => void handleUpdateCode().catch(() => undefined)}
-            isOutdated={isOutdated && (dismissAll || isUserEdited)}
+            isOutdated={
+              isOutdated && !isRetired && (dismissAll || isUserEdited)
+            }
             isUserEdited={isUserEdited}
             hasBreakingChange={hasBreakingChange}
             openDropdownOnRightClick={isRightClicked}
@@ -567,6 +581,7 @@ function GenericNode({
     showNode,
     handleUpdateCode,
     isOutdated,
+    isRetired,
     isUserEdited,
     selected,
     shortcuts,
@@ -643,7 +658,10 @@ function GenericNode({
         ) : shouldShowLegacyComponent ? (
           <NodeLegacyComponent
             legacy={data.node?.legacy}
-            replacement={data.node?.replacement}
+            replacement={
+              isRetired ? componentUpdate?.replacement : data.node?.replacement
+            }
+            retiredIn={isRetired ? retiredIn : undefined}
             setDismissAll={memoizedSetDismissAllLegacy}
             disabled={isReadOnly}
           />
@@ -762,6 +780,9 @@ function GenericNode({
                 shownOutputs={shownOutputs}
                 showHiddenOutputs={showHiddenOutputs}
               />{" "}
+              {ENABLE_TRIGGERS && isTriggerComponent(data.node) && (
+                <TriggerNodeControls nodeId={data.id} />
+              )}
               <div
                 className={classNames(
                   Object.keys(data.node.template).length < 1 ? "hidden" : "",

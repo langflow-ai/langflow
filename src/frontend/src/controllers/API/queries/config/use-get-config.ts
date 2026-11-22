@@ -3,12 +3,16 @@ import {
   DEFAULT_ASSISTANT_MAX_MESSAGE_LENGTH,
   DEFAULT_POLLING_INTERVAL,
   DEFAULT_TIMEOUT,
+  normalizeTriggerPollingInterval,
 } from "@/constants/constants";
 import { EventDeliveryType } from "@/constants/enums";
 import { recomputeComponentsToUpdateIfNeeded } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import type { useQueryFunctionType } from "../../../../types/api";
+import type {
+  ComponentRetirement,
+  useQueryFunctionType,
+} from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -38,6 +42,8 @@ export interface ConfigResponse extends BaseConfig {
   health_check_max_retries: number;
   feature_flags: Record<string, unknown>;
   webhook_polling_interval: number;
+  /** Milliseconds between trigger state polls (backend default 5000, minimum 1000). */
+  trigger_polling_interval?: number;
   serialization_max_items_length: number;
   webhook_auth_enable: boolean;
   default_folder_name: string;
@@ -48,6 +54,7 @@ export interface ConfigResponse extends BaseConfig {
   hide_new_flow_button: boolean;
   hide_starter_projects: boolean;
   mcp_servers_locked: boolean;
+  retired_components?: Record<string, ComponentRetirement>;
   custom_component_admin_only: boolean;
   a2a_enabled: boolean;
   agentic_experience: boolean;
@@ -91,6 +98,9 @@ export const useGetConfig: useQueryFunctionType<
   const setFeatureFlags = useUtilityStore((state) => state.setFeatureFlags);
   const setWebhookPollingInterval = useUtilityStore(
     (state) => state.setWebhookPollingInterval,
+  );
+  const setTriggerPollingInterval = useUtilityStore(
+    (state) => state.setTriggerPollingInterval,
   );
   const setEventDelivery = useUtilityStore((state) => state.setEventDelivery);
   const setWebhookAuthEnable = useUtilityStore(
@@ -174,6 +184,11 @@ export const useGetConfig: useQueryFunctionType<
       setCatalogGovernanceEnabled(Boolean(data.catalog_governance_enabled));
       setMcpBaseUrl(data.mcp_base_url ?? "");
       setEnableExtensionReload(Boolean(data.enable_extension_reload));
+      useUtilityStore.setState({
+        retiredComponents: isFullConfig(data)
+          ? (data.retired_components ?? {})
+          : {},
+      });
       recomputeComponentsToUpdateIfNeeded();
 
       // Set authenticated-only fields if present (full config)
@@ -194,6 +209,9 @@ export const useGetConfig: useQueryFunctionType<
         setSerializationMaxItemsLength(data.serialization_max_items_length);
         setWebhookPollingInterval(
           data.webhook_polling_interval ?? DEFAULT_POLLING_INTERVAL,
+        );
+        setTriggerPollingInterval(
+          normalizeTriggerPollingInterval(data.trigger_polling_interval),
         );
         setWebhookAuthEnable(data.webhook_auth_enable ?? true);
         setDefaultFolderName(data.default_folder_name ?? "Starter Project");

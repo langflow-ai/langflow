@@ -8,7 +8,7 @@ Langflow is a visual workflow builder for AI-powered agents. It has a Python/Fas
 
 ## Prerequisites
 
-- **Python:** 3.10-3.14
+- **Python:** 3.10-3.14 (3.15 in preview)
 - **uv:** >=0.4 (Python package manager)
 - **Node.js:** >=20.19.0 (v22.12 LTS recommended)
 - **npm:** v10.9+
@@ -37,10 +37,9 @@ LFX_DEV=mistral,openai make backend       # Load only specific modules
 
 ### Code Quality
 ```bash
-make format_backend    # Format Python (ruff) - run FIRST before lint
+make format_backend    # Format Python (ruff)
 make format_frontend   # Format TypeScript (biome)
 make format            # Both
-make lint              # mypy type checking
 ```
 
 ### Testing
@@ -69,7 +68,6 @@ src/
 ├── backend/
 │   ├── base/langflow/     # Core backend package (langflow-base)
 │   │   ├── api/           # FastAPI routes (v1/, v2/)
-│   │   ├── components/    # Built-in Langflow components
 │   │   ├── services/      # Service layer (auth, database, cache, etc.)
 │   │   ├── graph/         # Flow graph execution engine
 │   │   └── custom/        # Custom component framework
@@ -79,18 +77,17 @@ src/
 │       ├── components/    # UI components
 │       ├── stores/        # Zustand state management
 │       └── icons/         # Component icons
-├── langflow-core/         # Usable provider-free Langflow distribution
 ├── bundles/               # Curated provider integrations
 └── lfx/                   # Lightweight executor and shared primitives
+    └── src/lfx/components/ # Built-in Langflow components
 ```
 
 ### Key Packages
-- **langflow**: Full end-user package; depends on `langflow-core` and curated provider bundles
-- **langflow-core**: Service-complete, provider-bundle-free distribution; owns the `langflow` CLI
-- **langflow-base**: Modular application platform (API, services, graph engine); extras add service integrations
+- **langflow**: Full end-user package; depends on `langflow-base` and curated provider bundles
+- **langflow-base**: Modular application platform (API, services, graph engine); owns the `langflow` CLI; extras add service integrations
 - **lfx**: Shared execution primitives and standalone CLI (`lfx serve`, `lfx run`)
 
-The public dependency direction is `langflow → langflow-core → langflow-base → lfx`.
+The public dependency direction is `langflow → langflow-base → lfx`.
 Provider packages under `src/bundles/` are added only by the full `langflow` distribution.
 
 ### Service Layer
@@ -116,6 +113,7 @@ Route guards live in `langflow.services.authorization.guards` (the legacy `langf
 - `ensure_deployment_permission(user, DeploymentAction.*, deployment_id=..., deployment_user_id=..., workspace_id=..., project_id=...)`
 - `ensure_project_permission(user, ProjectAction.*, project_id=..., project_user_id=..., workspace_id=...)`
 - `ensure_knowledge_base_permission(user, KnowledgeBaseAction.*, kb_name=..., kb_user_id=...)`
+- `ensure_dataset_permission(user, DatasetAction.*, dataset_id=..., dataset_user_id=...)` — Evals datasets
 - `ensure_variable_permission(user, VariableAction.*, variable_id=..., variable_user_id=...)`
 - `ensure_file_permission(user, FileAction.*, file_id=..., file_user_id=...)`
 - `ensure_share_permission(user, ShareAction.*, share_id=..., share_user_id=...)`
@@ -137,7 +135,7 @@ The enforcement request shape is `(subject, domain, object, action)`:
 
 ## Component Development
 
-Components live in `src/backend/base/langflow/components/`. To add a new component:
+Core components live in `src/lfx/src/lfx/components/`. Provider-specific components live in their standalone package under `src/bundles/<provider>/`. To add a new component:
 
 1. Create component class inheriting from `Component`
 2. Define `display_name`, `description`, `icon`, `inputs`, `outputs`
@@ -148,8 +146,8 @@ Components live in `src/backend/base/langflow/components/`. To add a new compone
 
 ### Component Structure
 ```python
-from langflow.custom import Component
-from langflow.io import MessageTextInput, Output
+from lfx.custom import Component
+from lfx.io import MessageTextInput, Output
 
 class MyComponent(Component):
     display_name = "My Component"
@@ -235,7 +233,20 @@ changes:
 
 ## Documentation
 
-Documentation uses Docusaurus and lives in `docs/`:
+Two places hold docs, and they serve different readers.
+
+**Feature notes** go in `docs/features/`. Agents and developers write here while implementing a change: behavior, design details, and anything that should stay on record. One markdown file per topic, named for the change. This folder is not published.
+
+Follow the [Google Developer Documentation Style Guide](https://developers.google.com/style) for feature notes and user-facing docs.
+
+**User-facing docs** are the Docusaurus site. Pages live in `docs/docs/` and `docs/versioned_docs/`, and the nav lives in `docs/sidebars.js`. People read these on the docs site, and models retrieve them from the published docs. Edit these only when the task is a user-facing docs change that the docs writer should review.
+
+**Model docs** for a release are generated by `npm run docs:version`, then committed under `docs/static/llms.txt`, `docs/static/llms-full.txt`, and `docs/static/llms/<version>/`.
+This folder holds the page map, the component catalog from the component index, and an OpenAPI snapshot. Leave those files unchanged.
+
+A pull request that touches any file under `docs/` flags the docs team. That notice is optional and does not block merge.
+
+To preview the published site:
 ```bash
 cd docs
 yarn install

@@ -17,6 +17,7 @@ import {
   formatA11yFailure,
   isCheckerReport,
 } from "./utils/accessibility-checker";
+import { installDocumentRequestCleanup } from "./utils/document-request-cleanup";
 import {
   createPendingRequestTracker,
   createServerErrorContract,
@@ -434,6 +435,12 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     page.on("response", responseListener);
     page.on("requestfinished", requestFinishedListener);
     page.on("requestfailed", requestFailedListener);
+    // Chromium can omit failure/finish events for XHRs canceled by reload.
+    // Only retire requests captured before a confirmed document replacement.
+    const stopDocumentRequestCleanup = await installDocumentRequestCleanup(
+      page,
+      [pendingApiResponseStatuses, pendingApiRequestLifecycles],
+    );
 
     await use(page as LangflowPage);
     // Freeze only the finite lifecycle set at the test boundary. Existing
@@ -466,6 +473,7 @@ export const test = base.extend<{ page: LangflowPage }, A11yFixtures>({
     page.off("response", responseListener);
     page.off("requestfinished", requestFinishedListener);
     page.off("requestfailed", requestFailedListener);
+    stopDocumentRequestCleanup();
     let responseInspectionDrainTimeoutId:
       | ReturnType<typeof setTimeout>
       | undefined;

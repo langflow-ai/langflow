@@ -6,6 +6,6 @@ import { evaluatePlacement } from "@/utils/componentConstraints";
  * shared constraint engine so the policy lives in one place.
  */
 export const disableItem = (
-  SBItemName: string,
+  candidate: string | readonly string[],
   presentTypes: ReadonlySet<string>,
-): boolean => evaluatePlacement(SBItemName, presentTypes) !== null;
+): boolean => evaluatePlacement(candidate, presentTypes) !== null;

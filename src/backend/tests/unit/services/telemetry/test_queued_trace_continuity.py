@@ -56,10 +56,9 @@ def span_exporter():
         try:
             yield exporter
         finally:
-            # Shut the processor down rather than detach it: a provider has no removal API,
-            # so clearing the exporter empties the list and leaves the processor registered,
-            # still appending every later span in this worker to it for the rest of the run.
-            processor.shutdown()
+            # The provider has no processor-removal API. Stop only the exporter so it
+            # retains no later spans and the attached processor stays quiet and usable.
+            exporter.shutdown()
             exporter.clear()
         return
 
@@ -69,7 +68,7 @@ def span_exporter():
     try:
         yield exporter
     finally:
-        provider.shutdown()
+        exporter.shutdown()
         exporter.clear()
 
 

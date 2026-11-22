@@ -1,4 +1,5 @@
 import type { EventDeliveryType } from "@/constants/enums";
+import type { ComponentRetirement } from "@/types/api";
 import type { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
@@ -20,6 +21,8 @@ export type UtilityStoreType = {
   setFeatureFlags: (featureFlags: Record<string, unknown>) => void;
   webhookPollingInterval: number;
   setWebhookPollingInterval: (webhookPollingInterval: number) => void;
+  triggerPollingInterval: number;
+  setTriggerPollingInterval: (triggerPollingInterval: number) => void;
   chatValueStore: string;
   setChatValueStore: (value: string) => void;
   currentSessionId: string;
@@ -36,6 +39,7 @@ export type UtilityStoreType = {
   setDefaultFolderName: (defaultFolderName: string) => void;
   hideGettingStartedProgress: boolean;
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
+  retiredComponents: Record<string, ComponentRetirement>;
   allowCustomComponents: boolean;
   setAllowCustomComponents: (allowCustomComponents: boolean) => void;
   substituteOutdatedComponentCode: boolean;

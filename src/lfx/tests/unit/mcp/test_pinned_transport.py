@@ -69,6 +69,13 @@ def manager() -> MCPSessionManager:
     return MCPSessionManager()
 
 
+@pytest.fixture(autouse=True)
+def allow_mock_endpoint(monkeypatch):
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "ssrf_allowed_hosts", ["mcp.test.invalid"])
+
+
 async def test_server_info_is_retained_from_the_streamable_http_handshake(manager):
     initialize_result = SimpleNamespace(serverInfo=SimpleNamespace(name="example-mcp", version="2.1.0"))
     session_stub = _FakeSession(initialize_result)
@@ -191,7 +198,7 @@ async def test_update_tools_keeps_the_raw_schemas_and_forwards_the_transport_pin
     client.connect_to_server = AsyncMock(return_value=[discovered])
     client._connected = True
 
-    with patch("lfx.base.mcp.util.validate_connector_url_for_ssrf"):
+    with patch("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise"):
         mode, tools, cache = await update_tools(
             "pinned-server",
             {"url": "https://mcp.example.com/mcp", "mode": "Streamable_HTTP", "allow_sse_fallback": False},
@@ -225,7 +232,7 @@ async def test_update_tools_defaults_to_allowing_the_sse_fallback():
     client.connect_to_server = AsyncMock(return_value=[discovered])
     client._connected = True
 
-    with patch("lfx.base.mcp.util.validate_connector_url_for_ssrf"):
+    with patch("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise"):
         await update_tools(
             "vendor-server",
             {"url": "https://mcp.example.com/mcp", "mode": "Streamable_HTTP"},

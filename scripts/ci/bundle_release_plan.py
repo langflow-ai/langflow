@@ -438,18 +438,20 @@ def check_plan_against_index(
 def ensure_unpublished_bundles_fit_lfx_line(
     lfx_version: str, client: IndexClient, *, base_dir: Path = BASE_DIR
 ) -> None:
-    """Fail before a nightly publishes a stable bundle version into another lfx line's bundle minor."""
+    """Validate published reuse and new bundle versions against the nightly's lfx line."""
     errors: list[str] = []
     for bundle in _discover_bundles(base_dir).values():
-        if client.get_release(bundle.name, bundle.version) is not None:
-            continue
         try:
-            lfx_range = _requirement_parts(bundle.lfx_requirement)[1]
-            _ensure_new_version_fits_lfx_line(bundle.name, bundle.version, lfx_range, lfx_version, client)
+            release = client.get_release(bundle.name, bundle.version)
+            if release is None:
+                lfx_range = _requirement_parts(bundle.lfx_requirement)[1]
+                _ensure_new_version_fits_lfx_line(bundle.name, bundle.version, lfx_range, lfx_version, client)
+            else:
+                _ensure_reusable_for_lfx_line(bundle.name, bundle.version, release, lfx_version)
         except PlanError as exc:
             errors.append(str(exc))
     if errors:
-        raise PlanError("Unpublished bundle versions conflict with another lfx line:\n" + "\n".join(errors))
+        raise PlanError("Bundle versions conflict with the nightly lfx line:\n" + "\n".join(errors))
 
 
 def bump_version(version: str, bump: str = "patch", prerelease: str | None = None) -> str:

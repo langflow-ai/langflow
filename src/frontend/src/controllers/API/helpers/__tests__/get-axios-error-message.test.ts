@@ -22,6 +22,24 @@ describe("getAxiosErrorMessage", () => {
     expect(getAxiosErrorMessage(err)).toBe("Not found");
   });
 
+  it("returns the message of a coded refusal detail", () => {
+    const err = makeAxiosError({
+      detail: {
+        code: "node_removed",
+        message: "The trigger node was removed.",
+      },
+    });
+    expect(getAxiosErrorMessage(err)).toBe("The trigger node was removed.");
+    expect(getAxiosErrorDetail(err, "fallback")).toBe(
+      "The trigger node was removed.",
+    );
+  });
+
+  it("falls back when an object detail carries no message", () => {
+    const err = makeAxiosError({ detail: { code: "migration_running" } });
+    expect(getAxiosErrorDetail(err, "fallback")).toBe("fallback");
+  });
+
   it("returns joined msg fields when detail is a Pydantic validation error array", () => {
     const err = makeAxiosError({
       detail: [

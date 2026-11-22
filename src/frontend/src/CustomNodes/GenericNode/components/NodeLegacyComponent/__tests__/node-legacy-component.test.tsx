@@ -1,6 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { I18nextProvider, type I18nextProviderProps } from "react-i18next";
+import en from "@/locales/en.json";
+import fr from "@/locales/fr.json";
 import { applyComponentFilter } from "@/pages/FlowPage/components/flowSidebarComponent/helpers/apply-component-filter";
 import NodeLegacyComponent from "../index";
+
+jest.unmock("react-i18next");
 
 const mockData = {
   google: {
@@ -37,10 +42,6 @@ jest.mock("@/stores/flowStore", () => ({
     }),
 }));
 
-jest.mock("react-i18next", () => ({
-  useTranslation: () => ({ t: (key: string) => key }),
-}));
-
 jest.mock("@/components/ui/button", () => ({
   Button: ({
     children,
@@ -58,13 +59,29 @@ jest.mock("@/utils/utils", () => ({
   cn: (...classes: unknown[]) => classes.filter(Boolean).join(" "),
 }));
 
-const renderBanner = (replacement?: string[]) =>
+const testI18n = jest
+  .requireActual<{
+    createInstance: () => I18nextProviderProps["i18n"];
+  }>("i18next")
+  .createInstance();
+void testI18n.init({
+  lng: "en",
+  fallbackLng: "en",
+  initImmediate: false,
+  resources: { en: { translation: en }, fr: { translation: fr } },
+  interpolation: { escapeValue: false },
+});
+
+const renderBanner = (replacement?: string[], retiredIn?: string) =>
   render(
-    <NodeLegacyComponent
-      legacy
-      replacement={replacement}
-      setDismissAll={jest.fn()}
-    />,
+    <I18nextProvider i18n={testI18n}>
+      <NodeLegacyComponent
+        legacy
+        replacement={replacement}
+        retiredIn={retiredIn}
+        setDismissAll={jest.fn()}
+      />
+    </I18nextProvider>,
   );
 
 const hintText = () => screen.getByText(/^Use/).textContent;
@@ -72,6 +89,7 @@ const hintText = () => screen.getByText(/^Use/).textContent;
 describe("NodeLegacyComponent replacement hint", () => {
   beforeEach(() => {
     mockSetFilterComponent.mockClear();
+    void testI18n.changeLanguage("en");
   });
 
   it("names extension-bundle replacements", () => {
@@ -113,6 +131,32 @@ describe("NodeLegacyComponent replacement hint", () => {
       "ext:google:GoogleSerperAPICore@official",
     ]);
     expect(filtered.data).toEqual({});
+  });
+
+  it("says a retired component fails and offers no dismiss", () => {
+    renderBanner(["data.APIRequest"], "1.13.0");
+
+    expect(
+      screen.getByText(
+        "Retired in 1.13.0. This component fails when the flow runs.",
+      ),
+    ).toBeInTheDocument();
+    expect(hintText()).toBe("Use API Request.");
+    expect(screen.queryByTestId("dismiss-warning-bar")).not.toBeInTheDocument();
+  });
+
+  it("translates the retirement warning in the selected language", async () => {
+    await testI18n.changeLanguage("fr");
+
+    renderBanner(["data.APIRequest"], "1.13.0");
+
+    expect(screen.getByTestId("retired-component-bar")).toHaveTextContent(
+      fr["node.retiredWarning"].replace("{{version}}", "1.13.0"),
+    );
+    expect(screen.getByTestId("retired-component-bar")).not.toHaveTextContent(
+      "This component fails when the flow runs.",
+    );
+    expect(screen.queryByTestId("dismiss-warning-bar")).not.toBeInTheDocument();
   });
 
   it("filters the palette to a built-in replacement on click", () => {

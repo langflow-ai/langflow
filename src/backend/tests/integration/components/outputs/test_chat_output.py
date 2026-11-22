@@ -7,25 +7,27 @@ from lfx.schema.message import Message
 from tests.integration.utils import run_single_component
 
 
-async def test_string():
-    outputs = await run_single_component(ChatOutput, inputs={"input_value": "hello"})
+async def test_string(active_user):
+    outputs = await run_single_component(ChatOutput, inputs={"input_value": "hello"}, user_id=str(active_user.id))
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == "hello"
     assert outputs["message"].sender == "Machine"
     assert outputs["message"].sender_name == "AI"
 
 
-async def test_message():
-    outputs = await run_single_component(ChatOutput, inputs={"input_value": Message(text="hello")})
+async def test_message(active_user):
+    outputs = await run_single_component(
+        ChatOutput, inputs={"input_value": Message(text="hello")}, user_id=str(active_user.id)
+    )
     assert isinstance(outputs["message"], Message)
     assert outputs["message"].text == "hello"
     assert outputs["message"].sender == "Machine"
     assert outputs["message"].sender_name == "AI"
 
 
-async def test_do_not_store_message():
+async def test_do_not_store_message(active_user):
     session_id = "test-session-id"
-    flow_id, user_id = str(uuid4()), str(uuid4())
+    flow_id, user_id = str(uuid4()), str(active_user.id)
     outputs = await run_single_component(
         ChatOutput,
         inputs={"input_value": Message(text="hello"), "should_store_message": True},

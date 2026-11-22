@@ -114,7 +114,7 @@ class GraphRAGComponent(LCVectorStoreComponent):
             strategy=strategy_class(**additional_params),
         )
 
-        return docs_to_data(retriever.invoke(self.search_query))
+        return docs_to_data(retriever.invoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()}))
 
     def _edge_definition_from_input(self) -> tuple:
         """Generates the edge definition from the input data.

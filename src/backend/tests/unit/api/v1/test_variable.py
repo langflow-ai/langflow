@@ -3,7 +3,7 @@ import socket
 import sys
 from types import ModuleType, SimpleNamespace
 from unittest import mock
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException, status
@@ -65,6 +65,61 @@ async def test_create_variable(client: AsyncClient, generic_variable, logged_in_
     assert result["can_manage_shares"] is True
     # GENERIC_TYPE variables should NOT be encrypted (stored as plaintext)
     assert generic_variable["value"] == result["value"]
+
+
+@pytest.fixture
+def post_creation_registry():
+    from langflow.services import creation_hooks
+
+    saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+    yield creation_hooks
+    for resource, hooks in saved.items():
+        creation_hooks._post_creation_hooks[resource][:] = hooks
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_create_variable_runs_post_creation_hooks_after_the_row_is_committed(
+    post_creation_registry, client: AsyncClient, generic_variable, logged_in_headers, active_user
+):
+    seen = []
+
+    async def hook(context):
+        # A separate session sees the row only if the route committed before calling the hook.
+        from langflow.services.database.models.variable.model import Variable
+        from langflow.services.deps import session_scope
+
+        async with session_scope() as other:
+            seen.append((context, await other.get(Variable, context.resource_id) is not None))
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_VARIABLE, hook)
+
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert len(seen) == 1
+    context, row_was_visible = seen[0]
+    assert row_was_visible is True
+    assert context.resource == "variable"
+    assert context.owner_id == active_user.id
+    assert str(context.resource_id) == response.json()["id"]
+    assert context.name == generic_variable["name"]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_create_variable_keeps_the_row_when_a_hook_fails_the_request(
+    post_creation_registry, client: AsyncClient, generic_variable, logged_in_headers
+):
+    async def hook(_context):
+        raise HTTPException(status_code=500, detail="follow-up failed")
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_VARIABLE, hook)
+
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "follow-up failed"
+    listed = await client.get("api/v1/variables/", headers=logged_in_headers)
+    assert generic_variable["name"] in [item["name"] for item in listed.json()]
 
 
 @pytest.mark.usefixtures("active_user")
@@ -999,3 +1054,46 @@ async def test_delete_variable_cross_user_denied_with_plugin(
     # The deny short-circuited before the delete — the owner's row is intact.
     owner_vars = (await client.get("api/v1/variables/", headers=logged_in_headers)).json()
     assert any(v["id"] == saved["id"] for v in owner_vars)
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_a_provider_key_that_no_longer_decrypts_can_be_replaced(client: AsyncClient, logged_in_headers):
+    """A key stored under another LANGFLOW_SECRET_KEY must not block saving a new one.
+
+    Saving reads the provider's other settings to validate the new key; the key being replaced
+    is overwritten anyway, so it is never read.
+    """
+    from langflow.services.database.models.variable.model import Variable
+    from langflow.services.deps import session_scope
+    from sqlmodel import select
+
+    validate = "langflow.api.v1.variable.validate_model_provider_key"
+    # The server may already hold one, copied from its environment at startup.
+    listed = await client.get("api/v1/variables/", headers=logged_in_headers)
+    variable_id = next((v["id"] for v in listed.json() if v["name"] == "OPENAI_API_KEY"), None)
+    if variable_id is None:
+        with mock.patch(validate):
+            created = await client.post(
+                "api/v1/variables/",
+                json={"name": "OPENAI_API_KEY", "value": "sk-old-key", "type": CREDENTIAL_TYPE, "default_fields": []},
+                headers=logged_in_headers,
+            )
+        assert created.status_code == status.HTTP_201_CREATED, created.text
+        variable_id = created.json()["id"]
+
+    # What a value encrypted with a different secret key looks like to this server.
+    async with session_scope() as session:
+        stored = (await session.exec(select(Variable).where(Variable.id == UUID(variable_id)))).one()
+        stored.value = "gAAAAABnot-decryptable-with-this-secret-key"
+        session.add(stored)
+
+    with mock.patch(validate) as validated:
+        replaced = await client.patch(
+            f"api/v1/variables/{variable_id}",
+            json={"id": variable_id, "value": "sk-new-key"},
+            headers=logged_in_headers,
+        )
+
+    assert replaced.status_code == status.HTTP_200_OK, replaced.text
+    validated.assert_called_once()
+    assert validated.call_args.args[1]["OPENAI_API_KEY"] == "sk-new-key"

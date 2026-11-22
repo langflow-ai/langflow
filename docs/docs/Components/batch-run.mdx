@@ -10,6 +10,7 @@ import PartialParams from '@site/docs/_partial-hidden-params.mdx';
 import PartialDevModeWindows from '@site/docs/_partial-dev-mode-windows.mdx';
 
 The **Batch Run** component runs a language model over _each row of one text column_ in a [`Table`](/data-types#table), and then returns a new `Table` with the original text and an LLM response.
+Requests run in configurable batches. If a provider returns a rate-limit response, Batch Run retries the affected rows with a smaller batch, using a numeric `Retry-After` value when available (capped at 300 seconds) and exponential backoff otherwise. HTTP-date `Retry-After` values are not currently supported.
 The output contains the following columns:
 
 * `text_input`: The original text from the input `Table`
@@ -58,6 +59,9 @@ For example, `Create a business card for each name.`
 | model | HandleInput | Input parameter. Connect the 'Language Model' output from a language model component. Required. |
 | system_message | MultilineInput | Input parameter. A multi-line system instruction for all rows in the DataFrame. |
 | df | DataFrameInput | Input parameter. The DataFrame whose column is treated as text messages, as specified by 'column_name'. Required. |
+| batch_size | IntInput | Input parameter. Maximum number of model requests in one batch. Rate-limit responses automatically reduce the batch size. Default=`5`. |
+| delay_between_batches | FloatInput | Input parameter. Optional pause in seconds between batches. Default=`0`. |
+| max_rate_limit_retries | IntInput | Input parameter. Maximum retries per rate-limited request. Default=`3`. |
 | column_name | MessageTextInput | Input parameter. The name of the DataFrame column to treat as text messages. If empty, all columns are formatted in TOML. |
 | output_column_name | MessageTextInput | Input parameter. Name of the column where the model's response is stored. Default=`model_response`. |
 | enable_metadata | BoolInput | Input parameter. If `True`, add metadata to the output DataFrame. |

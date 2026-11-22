@@ -3,9 +3,8 @@
 Two decisions travel together on the shared policy bundle:
 
 * ``approved_integration_provider_ids`` -- an operator ceiling over providers.
-  Empty means unrestricted in persisted OSS policy. Plugins must preserve this
-  meaning on installation; deny-all requires an explicitly configured external
-  ceiling and an operator-visible migration or configuration step.
+  ``None`` means unrestricted, an empty set denies every provider, and a
+  non-empty set allows only those providers.
 * ``blocked_integration_action_keys`` -- a deny-list of capability policy keys
   sourced verbatim from bundle capability manifests
   (:class:`lfx.integrations.capabilities.IntegrationCapability.policy_keys`).

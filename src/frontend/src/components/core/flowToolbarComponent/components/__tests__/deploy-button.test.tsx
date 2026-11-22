@@ -13,6 +13,17 @@ const mockHandleDeploy = jest.fn();
 const mockSetChoiceDialogOpen = jest.fn();
 const mockSetDeployModalOpen = jest.fn();
 
+let mockBlockedReason: string | null = null;
+let mockCanExecute = true;
+
+jest.mock("@/customization/hooks/use-custom-deploy-button", () => ({
+  useCustomDeployButton: () => ({ blockedReason: mockBlockedReason }),
+}));
+
+jest.mock("@/contexts/permissionsContext", () => ({
+  usePermissions: () => ({ can: () => mockCanExecute }),
+}));
+
 jest.mock("@/stores/utilityStore", () => ({
   useUtilityStore: (
     selector: (s: { featureFlags: Record<string, unknown> }) => unknown,
@@ -79,6 +90,8 @@ beforeEach(() => {
   mockIsPreparingDeploy = false;
   mockChoiceDialogOpen = false;
   mockDeployModalOpen = false;
+  mockBlockedReason = null;
+  mockCanExecute = true;
 });
 
 // ---------------------------------------------------------------------------
@@ -109,7 +122,12 @@ describe("DeployButton — disabled states", () => {
   it("is enabled when currentFlowId is set and nothing is busy", () => {
     render(<DeployButton />);
 
-    expect(screen.getByTestId("deploy-btn-flow")).not.toBeDisabled();
+    const btn = screen.getByTestId("deploy-btn-flow");
+    expect(btn).not.toBeDisabled();
+    // Pins the OSS look: no shared Button interaction styles.
+    expect(btn.className).not.toMatch(
+      /active:scale|transition-all|focus-visible:ring/,
+    );
   });
 
   it("is disabled when currentFlowId is undefined", () => {
@@ -189,5 +207,44 @@ describe("DeployButton — loading pulse", () => {
     expect(screen.getByTestId("icon-Rocket").className).not.toContain(
       "animate-pulse",
     );
+  });
+});
+
+describe("DeployButton — blocked seam", () => {
+  it("blocks with aria-disabled, keeps focus and describes the reason", async () => {
+    const user = userEvent.setup();
+    mockBlockedReason = "Deployments are not in your plan";
+    render(<DeployButton />);
+
+    const btn = screen.getByTestId("deploy-btn-flow");
+    expect(btn).toHaveAttribute("aria-disabled", "true");
+    expect(btn).not.toBeDisabled();
+    expect(btn).toHaveAccessibleDescription("Deployments are not in your plan");
+
+    await user.tab();
+    expect(btn).toHaveFocus();
+    await user.keyboard("{Enter}");
+    await user.keyboard(" ");
+    await user.click(btn);
+    expect(mockHandleDeploy).not.toHaveBeenCalled();
+  });
+
+  it("treats an empty reason as not blocked", async () => {
+    const user = userEvent.setup();
+    mockBlockedReason = "";
+    render(<DeployButton />);
+
+    const btn = screen.getByTestId("deploy-btn-flow");
+    expect(btn).not.toHaveAttribute("aria-disabled");
+    await user.click(btn);
+    expect(mockHandleDeploy).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays natively disabled without execute permission", () => {
+    mockBlockedReason = "Deployments are not in your plan";
+    mockCanExecute = false;
+    render(<DeployButton />);
+
+    expect(screen.getByTestId("deploy-btn-flow")).toBeDisabled();
   });
 });

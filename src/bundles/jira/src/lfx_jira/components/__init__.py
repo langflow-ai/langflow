@@ -1,0 +1,1 @@
+"""Jira component categories."""

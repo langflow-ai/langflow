@@ -189,3 +189,127 @@ async def test_verify_project_auth_records_auto_login_caller_and_resets_stale_co
         authenticated_caller_ctx.reset(token)
 
     assert result is superuser
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_conditional_accepts_external_only_credential(tmp_path):
+    from fastapi import Request
+    from langflow.api.v1.mcp_projects import verify_project_auth_conditional
+    from langflow.services.auth.context import clear_current_auth_context
+    from langflow.services.auth.external import identity_from_claims, set_current_external_access_context
+    from langflow.services.auth.service import AuthService
+    from langflow.services.database.models.user.model import User
+    from lfx.services.settings.auth import AuthSettings
+    from pydantic import SecretStr
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")  # pragma: allowlist secret
+    settings.AUTO_LOGIN = False
+    settings.EXTERNAL_AUTH_ENABLED = True
+    settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    settings.EXTERNAL_AUTH_PROVIDER = "external"
+    settings.EXTERNAL_AUTH_TOKEN_HEADER = "X-External-Auth"  # noqa: S105
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path), mcp_composer_enabled=False),
+    )
+    service = AuthService(settings_service)
+    owner = User(id=uuid4(), username="owner", password="hashed", is_active=True, is_superuser=False)  # noqa: S106
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    credential = "external-project-credential"  # pragma: allowlist secret
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"x-external-auth", credential.encode())],
+            "query_string": b"",
+        }
+    )
+    identity = identity_from_claims({"sub": "external-project-subject"}, settings)
+    resolver = AsyncMock(return_value=identity)
+    caller_token = authenticated_caller_ctx.set(None)
+
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=settings_service),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+            patch("langflow.services.auth.utils._auth_service", return_value=service),
+            patch("langflow.services.auth.utils.get_settings_service", return_value=settings_service),
+            patch("langflow.services.auth.service.resolve_external_identity", new=resolver),
+            patch.object(service, "_materialize_external_user", new=AsyncMock(return_value=owner)),
+            patch.object(service, "_reconcile_verified_external_groups", new=AsyncMock()),
+        ):
+            result = await verify_project_auth_conditional(project.id, request)
+    finally:
+        authenticated_caller_ctx.reset(caller_token)
+        clear_current_auth_context()
+        set_current_external_access_context(None)
+
+    assert result is owner
+    resolver.assert_awaited_once_with(credential, settings)
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_conditional_falls_back_to_api_key_after_external_rejection(tmp_path):
+    from fastapi import Request
+    from langflow.api.v1.mcp_projects import verify_project_auth_conditional
+    from langflow.services.auth.context import clear_current_auth_context
+    from langflow.services.auth.exceptions import InvalidTokenError
+    from langflow.services.auth.external import set_current_external_access_context
+    from langflow.services.auth.service import AuthService
+    from langflow.services.database.models.api_key.crud import ApiKeyAuthResult
+    from langflow.services.database.models.user.model import User
+    from lfx.services.settings.auth import AuthSettings
+    from pydantic import SecretStr
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")  # pragma: allowlist secret
+    settings.AUTO_LOGIN = False
+    settings.EXTERNAL_AUTH_ENABLED = True
+    settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    settings.EXTERNAL_AUTH_PROVIDER = "external"
+    settings.EXTERNAL_AUTH_TOKEN_HEADER = "X-External-Auth"  # noqa: S105
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path), mcp_composer_enabled=False),
+    )
+    service = AuthService(settings_service)
+    owner = User(id=uuid4(), username="owner", password="hashed", is_active=True, is_superuser=False)  # noqa: S106
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    credential = "rejected-external-credential"  # pragma: allowlist secret
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [
+                (b"x-external-auth", credential.encode()),
+                (b"x-api-key", b"valid-project-key"),
+            ],
+            "query_string": b"",
+        }
+    )
+    resolver = AsyncMock(side_effect=InvalidTokenError("External credential rejected"))
+    api_key_result = ApiKeyAuthResult(user=owner, api_key_source="db", api_key_id=uuid4())
+    authenticate_key = AsyncMock(return_value=api_key_result)
+    caller_token = authenticated_caller_ctx.set(None)
+
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=settings_service),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+            patch("langflow.services.auth.utils._auth_service", return_value=service),
+            patch("langflow.services.auth.utils.get_settings_service", return_value=settings_service),
+            patch("langflow.services.auth.service.resolve_external_identity", new=resolver),
+            patch("langflow.services.auth.service.authenticate_api_key", new=authenticate_key),
+        ):
+            result = await verify_project_auth_conditional(project.id, request)
+    finally:
+        authenticated_caller_ctx.reset(caller_token)
+        clear_current_auth_context()
+        set_current_external_access_context(None)
+
+    assert result.id == owner.id
+    resolver.assert_awaited_once_with(credential, settings)
+    authenticate_key.assert_awaited_once_with("valid-project-key")

@@ -43,6 +43,26 @@ def test_validate_hostname_rejects_unsafe_characters():
         validate_hostname("localhost;rm -rf /")
 
 
+@pytest.mark.parametrize("hostname", ["169.254.169.254", "10.1.2.3", "192.168.1.2"])
+def test_validate_hostname_rejects_internal_destinations(monkeypatch, hostname):
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+    with pytest.raises(ValueError, match="blocked"):
+        validate_hostname(hostname)
+
+
+def test_validate_hostname_rejects_internal_dns_answer(monkeypatch):
+    monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "true")
+    monkeypatch.setenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED", "true")
+    monkeypatch.delenv("LANGFLOW_SSRF_ALLOWED_HOSTS", raising=False)
+    with (
+        patch("lfx.utils.ssrf_protection.resolve_hostname", return_value=["10.1.2.3"]),
+        pytest.raises(ValueError, match="blocked"),
+    ):
+        validate_hostname("db.example.test")
+
+
 def test_validate_port_accepts_valid_port():
     """Valid TCP ports should pass validation."""
     assert validate_port(50000) == 50000

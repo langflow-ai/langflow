@@ -467,7 +467,12 @@ async def _audit_writer_loop() -> None:
 
 
 async def _flush_audit_batch(batch: list[_AuditEntry]) -> None:
-    """Insert a batch of ``_AuditEntry`` rows in a single session."""
+    """Commit security events even during database maintenance.
+
+    Audit logging is an explicit maintenance exception. Pausing this writer
+    would leave durable read authorizations waiting for an uncommitted event.
+    Operators stop traffic and drain this pipeline before the final backup.
+    """
     if not batch:
         return
     from langflow.services.deps import session_scope
@@ -519,16 +524,20 @@ def stage_audit_decision(
     obj: str,
     result: str,
     details: dict[str, Any] | None = None,
+    required: bool = False,
 ) -> bool:
     """Stage a durable audit row in a caller-owned mutation transaction.
 
     Returns ``True`` when the row was staged. Best-effort mode returns ``False``
     so the caller can submit through the asynchronous audit pipeline after its
-    mutation commits.
+    mutation commits. ``required=True`` always stages the row, independently of
+    the general audit settings, for mutations whose contract requires an audit.
+    Staging failures propagate so the caller can roll back the mutation.
     """
     auth_settings = get_settings_service().auth_settings
-    if not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", False) or not getattr(
-        auth_settings, "AUTHZ_AUDIT_DURABLE", False
+    if not required and (
+        not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", False)
+        or not getattr(auth_settings, "AUTHZ_AUDIT_DURABLE", False)
     ):
         return False
 

@@ -5,6 +5,8 @@ import {
   customGetLatestVersion,
 } from "@/customization/utils/custom-get-app-latest-version";
 import { getBaseUrl } from "@/customization/utils/urls";
+import type { ApiKeyPermissionPolicy } from "@/types/api-key-permissions";
+import { apiKeyPermissionPoliciesEqual } from "@/types/api-key-permissions";
 import { api } from "../../controllers/API/api";
 import type {
   VertexBuildTypeAPI,
@@ -42,14 +44,31 @@ export async function getDiscordCount() {
 export const getAppVersions = customGetAppVersions;
 export const getLatestVersion = customGetLatestVersion;
 
-export async function createApiKey(name: string, expiresAt?: string | null) {
+export async function createApiKey(
+  name: string,
+  expiresAt?: string | null,
+  permissions?: ApiKeyPermissionPolicy | null,
+) {
   try {
-    const payload: { name: string; expires_at?: string } = { name };
+    const payload: {
+      name: string;
+      expires_at?: string;
+      permissions?: ApiKeyPermissionPolicy | null;
+    } = { name };
     if (expiresAt) {
       payload.expires_at = expiresAt;
     }
+    if (permissions !== undefined) payload.permissions = permissions;
     const res = await api.post(`${getBaseUrl()}api_key/`, payload);
     if (res.status === 200) {
+      if (
+        permissions !== undefined &&
+        !apiKeyPermissionPoliciesEqual(permissions, res.data.permissions)
+      ) {
+        throw Object.assign(new Error("API_KEY_PERMISSION_MISMATCH"), {
+          code: "API_KEY_PERMISSION_MISMATCH",
+        });
+      }
       return res.data;
     }
   } catch (error) {

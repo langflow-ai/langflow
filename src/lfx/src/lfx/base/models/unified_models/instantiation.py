@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
 from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, replace_with_live_models
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.log.logger import logger
 from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
@@ -495,6 +496,19 @@ def get_llm(
         "base_url" in remediation_overrides or (overrides and "base_url" in overrides)
     ):
         connection_url_param = "base_url"
+
+    if model_class_name == "ChatOpenAI":
+        endpoint = kwargs.get("base_url") if "base_url" in kwargs else kwargs.get("openai_api_base")
+        endpoint = _to_str(endpoint) or os.getenv("OPENAI_API_BASE") or os.getenv("OPENAI_BASE_URL")
+        if endpoint:
+            kwargs["base_url"] = endpoint
+            connection_url_param = "base_url"
+        ensure_credential_endpoint_allowed(
+            kwargs.get("api_key", kwargs.get("openai_api_key")),
+            endpoint,
+            default_url=model_provider_metadata.get(provider, {}).get("base_url") or "https://api.openai.com/v1",
+            sdk_env_fallback="OPENAI_API_KEY",
+        )
 
     _protect_model_connection(
         kwargs,

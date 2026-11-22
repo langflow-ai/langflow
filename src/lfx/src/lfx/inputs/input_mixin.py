@@ -158,7 +158,7 @@ class ModelInputMixin(BaseModel):
     model_name: str | None = None
     """Name of the model to be used in the input."""
     model_type: str | None = "language"
-    """Type of model: 'language' or 'embedding'. Defaults to 'language'."""
+    """Type of model: 'language', 'embedding', or 'decision'. Defaults to 'language'."""
     model_options: list[dict[str, Any]] | None = Field(
         default=None,
         validation_alias="options",
@@ -325,6 +325,8 @@ class DropDownMixin(BaseModel):
     """Variable that defines the value of the toggle button. Defaults to None."""
     toggle_disable: bool | None = None
     """Variable that defines if the toggle button is disabled. Defaults to None."""
+    translate_options: bool | None = None
+    """Show the options in the reader's language; the value saved is still the English option."""
 
     @field_validator("toggle_value")
     @classmethod

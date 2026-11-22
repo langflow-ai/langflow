@@ -140,6 +140,8 @@ class Graph:
         context: dict[str, Any] | None = None,
         *,
         instantiate_components: bool = True,
+        snapshot_history_limit: int | None = None,
+        authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -148,6 +150,7 @@ class Graph:
         otherwise a TypeError is raised. Internal data structures for vertices, edges, state management,
         run management, and tracing are set up during initialization.
         """
+        self._snapshot_history_limit = self._validate_snapshot_history_limit(snapshot_history_limit)
         if log_config:
             configure(**log_config)
 
@@ -161,6 +164,9 @@ class Graph:
         # Server-set provenance for a public flow whose execution uses a virtual
         # flow_id. Request data must never populate this storage scope.
         self.source_flow_id: str | None = None
+        # False for a shipped flow run under another flow's id: no stored copy holds its tool settings.
+        self.runs_stored_flow = True
+        self.authorized_legacy_flow_ids = frozenset(authorized_legacy_flow_ids or ())
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
@@ -214,6 +220,7 @@ class Graph:
         # Conditional routing system (separate from ACTIVE/INACTIVE cycle management)
         self.conditionally_excluded_vertices: set = set()  # Vertices excluded by conditional routing
         self.conditional_exclusion_sources: dict[str, set[str]] = {}  # Maps source vertex -> excluded vertices
+        self.conditional_exclusion_outputs: dict[str, set[str]] = {}  # Maps source vertex -> excluded outputs
         self.edges: list[CycleEdge] = []
         self.vertices: list[Vertex] = []
         self.run_manager = RunnableVerticesManager()
@@ -528,11 +535,15 @@ class Graph:
         config: StartConfigDict | None = None,
         event_manager: EventManager | None = None,
         *,
+        user_id: str | None = None,
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
         open_flow_span: bool = True,
     ):
         """Run the graph, yielding each step.
+
+        Pass the authenticated caller as ``user_id``. It is forwarded to each
+        vertex build and is never inferred from cached graph state.
 
         open_flow_span=False says the caller already opened the flow span and this run belongs
         to it. Prefer that: a span opened here cannot be made current, because this is an async
@@ -562,7 +573,10 @@ class Graph:
 
             while should_continue(yielded_counts, max_iterations):
                 result = await self.astep(
-                    event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+                    event_manager=event_manager,
+                    inputs=inputs,
+                    user_id=user_id,
+                    fallback_to_env_vars=fallback_to_env_vars,
                 )
                 yield result
                 if isinstance(result, Finish):
@@ -880,10 +894,18 @@ class Graph:
         self.pause_info = {"reason": reason, "data": data or {}}
 
     @classmethod
-    def resume_from_checkpoint(cls, checkpoint: GraphCheckpoint, *, checkpoint_store: CheckpointStore | None = None):
+    def resume_from_checkpoint(
+        cls,
+        checkpoint: GraphCheckpoint,
+        *,
+        checkpoint_store: CheckpointStore | None = None,
+        snapshot_history_limit: int | None = None,
+    ):
         from lfx.graph.checkpoint.resume import restore_graph_from_checkpoint
 
-        return restore_graph_from_checkpoint(checkpoint, store=checkpoint_store)
+        return restore_graph_from_checkpoint(
+            checkpoint, store=checkpoint_store, snapshot_history_limit=snapshot_history_limit
+        )
 
     def resume_first_layer(self) -> list[str]:
         from lfx.graph.checkpoint.resume import compute_resume_layer
@@ -1216,6 +1238,7 @@ class Graph:
         session_id: str,
         fallback_to_env_vars: bool,
         event_manager: EventManager | None = None,
+        dag_max_concurrency: int | None = None,
     ) -> list[ResultData | None]:
         """Runs the graph with the given inputs.
 
@@ -1228,6 +1251,7 @@ class Graph:
             session_id (str): The session ID for the graph.
             fallback_to_env_vars (bool): Whether to fallback to environment variables.
             event_manager (EventManager | None): The event manager for the graph.
+            dag_max_concurrency: Optional positive static-DAG concurrency bound.
 
         Returns:
             List[Optional["ResultData"]]: The outputs of the graph.
@@ -1258,47 +1282,69 @@ class Graph:
         except Exception:  # noqa: BLE001
             logger.exception("Error setting cache")
 
+        from lfx.graph.graph.dag_scheduler import DagRunContext, finalize_dag_run
+
+        context = DagRunContext() if dag_max_concurrency is not None else None
+        run_error = None
         try:
-            # Prioritize the webhook component if it exists
-            start_component_id = find_start_component_id(self._is_input_vertices)
-            await self.process(
-                start_component_id=start_component_id,
-                fallback_to_env_vars=fallback_to_env_vars,
-                event_manager=event_manager,
-            )
-            self.increment_run_count()
-        except (GraphPausedException, asyncio.CancelledError):
-            # Why: a HITL pause/cancel must propagate UNWRAPPED so the job/runner layer suspends the
-            # run instead of finalizing it; wrapping it as ValueError terminalizes the job (LE-1440).
+            try:
+                # Prioritize the webhook component if it exists
+                start_component_id = find_start_component_id(self._is_input_vertices)
+                await self.process(
+                    start_component_id=start_component_id,
+                    fallback_to_env_vars=fallback_to_env_vars,
+                    event_manager=event_manager,
+                    **(
+                        {"dag_max_concurrency": dag_max_concurrency, "_dag_context": context}
+                        if context is not None
+                        else {}
+                    ),
+                )
+                self.increment_run_count()
+            except (GraphPausedException, asyncio.CancelledError):
+                # Why: a HITL pause/cancel must propagate UNWRAPPED so the job/runner layer suspends the
+                # run instead of finalizing it; wrapping it as ValueError terminalizes the job (LE-1440).
+                raise
+            except Exception as exc:
+                if context is None or not context.eligible:
+                    self._end_all_traces_async(error=exc)
+                msg = f"Error running graph: {exc}"
+                raise ValueError(msg) from exc
+
+            if context is None or not context.eligible:
+                self._end_all_traces_async()
+            # Get the outputs
+            vertex_outputs = []
+            for vertex in self.vertices:
+                if not vertex.built:
+                    continue
+                if vertex is None:
+                    msg = f"Vertex {vertex_id} not found"
+                    raise ValueError(msg)
+
+                if (
+                    not vertex.result
+                    and not stream
+                    and vertex.id not in self.checkpoint_restored_built_ids
+                    and hasattr(vertex, "consume_async_generator")
+                ):
+                    # A vertex restored from a checkpoint already consumed its generator in the original
+                    # run; re-consuming here would re-iterate an exhausted/absent iterator and raise.
+                    await vertex.consume_async_generator()
+                if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
+                    vertex_outputs.append(vertex.result)
+
+            return vertex_outputs  # noqa: TRY300 - finalizer must cover output collection
+        except BaseException as exc:
+            run_error = exc
+            if context is not None and context.eligible:
+                context.latch(exc)
             raise
-        except Exception as exc:
-            self._end_all_traces_async(error=exc)
-            msg = f"Error running graph: {exc}"
-            raise ValueError(msg) from exc
-
-        self._end_all_traces_async()
-        # Get the outputs
-        vertex_outputs = []
-        for vertex in self.vertices:
-            if not vertex.built:
-                continue
-            if vertex is None:
-                msg = f"Vertex {vertex_id} not found"
-                raise ValueError(msg)
-
-            if (
-                not vertex.result
-                and not stream
-                and vertex.id not in self.checkpoint_restored_built_ids
-                and hasattr(vertex, "consume_async_generator")
-            ):
-                # A vertex restored from a checkpoint already consumed its generator in the original
-                # run; re-consuming here would re-iterate an exhausted/absent iterator and raise.
-                await vertex.consume_async_generator()
-            if (not outputs and vertex.is_output) or (vertex.display_name in outputs or vertex.id in outputs):
-                vertex_outputs.append(vertex.result)
-
-        return vertex_outputs
+        finally:
+            if context is not None and context.eligible:
+                await finalize_dag_run(self, context)
+                if run_error is None and context.primary is not None:
+                    raise context.primary
 
     async def arun(
         self,
@@ -1311,11 +1357,28 @@ class Graph:
         stream: bool = False,
         fallback_to_env_vars: bool = False,
         event_manager: EventManager | None = None,
+        dag_max_concurrency: int | None = None,
     ) -> list[RunOutputs]:
         """Runs the graph with the given inputs via the configured executor."""
-        from lfx.execution import aget_default_coordinator
+        from lfx.execution import Coordinator, aget_default_coordinator
+        from lfx.graph.graph.dag_scheduler import validate_dag_max_concurrency
+
+        validate_dag_max_concurrency(dag_max_concurrency)
 
         coordinator = await aget_default_coordinator()
+        dag_options = {}
+        if dag_max_concurrency is not None:
+            if type(self) is Graph and type(coordinator) is Coordinator:
+                dag_options["_dag_max_concurrency"] = dag_max_concurrency
+            else:
+                logger.warning(
+                    "dag_max_concurrency=%s is ignored; falling back to the configured executor. "
+                    "Dependency-ready scheduling requires exact Graph and Coordinator types. "
+                    "Graph type: %s; coordinator type: %s.",
+                    dag_max_concurrency,
+                    type(self).__name__,
+                    type(coordinator).__name__,
+                )
         return await coordinator.run_to_completion(
             self,
             inputs=inputs,
@@ -1327,6 +1390,7 @@ class Graph:
             fallback_to_env_vars=fallback_to_env_vars,
             event_manager=event_manager,
             _use_arun_legacy=True,
+            **dag_options,
         )
 
     async def _arun_legacy(
@@ -1340,6 +1404,7 @@ class Graph:
         stream: bool = False,
         fallback_to_env_vars: bool = False,
         event_manager: EventManager | None = None,
+        dag_max_concurrency: int | None = None,
     ) -> list[RunOutputs]:
         vertex_outputs = []
         if not isinstance(inputs, list):
@@ -1369,6 +1434,7 @@ class Graph:
                     session_id=session_id or "",
                     fallback_to_env_vars=fallback_to_env_vars,
                     event_manager=event_manager,
+                    **({"dag_max_concurrency": dag_max_concurrency} if dag_max_concurrency is not None else {}),
                 )
                 run_output_object = RunOutputs(inputs=run_inputs, outputs=run_outputs)
                 await logger.adebug(f"Run outputs: {run_output_object}")
@@ -1549,7 +1615,9 @@ class Graph:
             for held_vertex_id in branch_vertices & self._held_branch_inactivations():
                 self.mark_vertex(held_vertex_id, VertexStates.INACTIVE)
 
-    def _replace_conditional_exclusions(self, vertex_id: str, excluded: set[str]) -> None:
+    def _replace_conditional_exclusions(
+        self, vertex_id: str, excluded: set[str], output_names: set[str] | None = None
+    ) -> None:
         """Replace ``vertex_id``'s conditional exclusions with ``excluded``.
 
         Any vertices this source previously excluded are cleared first so the routing
@@ -1561,6 +1629,33 @@ class Graph:
         self.conditionally_excluded_vertices.update(excluded)
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
+        if output_names is None:
+            self.conditional_exclusion_outputs.pop(vertex_id, None)
+        else:
+            self.conditional_exclusion_outputs[vertex_id] = output_names
+
+    def branch_skips(self) -> dict[str, dict[str, Any]]:
+        """Map each conditionally excluded vertex to its router and the outputs that router took.
+
+        A whole-branch exclusion records no outputs, so it reports no taken outputs.
+        """
+        skips: dict[str, dict[str, Any]] = {}
+        excluded_outputs = getattr(self, "conditional_exclusion_outputs", {})
+        for source_id, excluded in getattr(self, "conditional_exclusion_sources", {}).items():
+            stopped = excluded_outputs.get(source_id)
+            source = self.get_vertex(source_id)
+            taken = (
+                [
+                    output["name"]
+                    for output in source.outputs
+                    if isinstance(output, dict) and output.get("name") and output["name"] not in stopped
+                ]
+                if stopped is not None
+                else []
+            )
+            for vertex_id in excluded:
+                skips[vertex_id] = {"skipped_by": source_id, "taken_outputs": taken}
+        return skips
 
     def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
         """Marks a branch as conditionally excluded (for conditional routing).
@@ -1612,7 +1707,7 @@ class Graph:
         for output_name in output_names:
             excluded.update(self._collect_branch_vertices(vertex_id, {output_name}))
         excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, output_names_set)
-        self._replace_conditional_exclusions(vertex_id, excluded)
+        self._replace_conditional_exclusions(vertex_id, excluded, output_names_set)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
@@ -1638,10 +1733,13 @@ class Graph:
         # We don't need to save the state_manager because it is
         # a singleton and it is not necessary to save it
         return {
+            "_snapshot_history_limit": self._snapshot_history_limit,
             "vertices": self.vertices,
             "edges": self.edges,
             "flow_id": self.flow_id,
             "source_flow_id": self.source_flow_id,
+            "runs_stored_flow": self.runs_stored_flow,
+            "authorized_legacy_flow_ids": self.authorized_legacy_flow_ids,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1690,6 +1788,7 @@ class Graph:
         if id(self) in memo:
             return memo[id(self)]
 
+        policy_kwargs = self._snapshot_history_kwargs(self.snapshot_history_limit)
         if self._start is not None and self._end is not None:
             # Deep copy start and end components
             start_copy = copy.deepcopy(self._start, memo)
@@ -1702,7 +1801,10 @@ class Graph:
                 description=copy.deepcopy(self.description, memo),
                 user_id=user_id,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
+                **policy_kwargs,
             )
+            self._verify_snapshot_history_policy(new_graph, self.snapshot_history_limit)
             if before_initialize is not None:
                 before_initialize(new_graph)
             new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
@@ -1715,7 +1817,10 @@ class Graph:
                 description=copy.deepcopy(self.description, memo),
                 user_id=user_id,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
+                **policy_kwargs,
             )
+            self._verify_snapshot_history_policy(new_graph, self.snapshot_history_limit)
             # add_nodes_and_edges synchronously builds FileInput parameters, so
             # trusted public-flow provenance must exist before reconstruction.
             new_graph.source_flow_id = copy.deepcopy(self.source_flow_id, memo)
@@ -1749,6 +1854,7 @@ class Graph:
 
         new_graph.requires_extension_event_replay = self.requires_extension_event_replay
         new_graph.execution_principal = self.execution_principal
+        new_graph.runs_stored_flow = self.runs_stored_flow
         if user_id == self.user_id:
             new_graph._headless_filesystem_user_id = self._headless_filesystem_user_id  # noqa: SLF001
 
@@ -1788,6 +1894,8 @@ class Graph:
         return new_graph
 
     def __setstate__(self, state):
+        policy = self._validate_snapshot_history_limit(state.get("_snapshot_history_limit"))
+        state["_snapshot_history_limit"] = policy
         # Cache/checkpoint payloads written before lazy warm templates existed
         # must retain the historical eager-instantiation behavior.
         state.setdefault("_instantiate_components_on_initialize", True)
@@ -1795,6 +1903,8 @@ class Graph:
         # Graphs cached before source-flow provenance was introduced remain
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
+        state.setdefault("runs_stored_flow", True)
+        state.setdefault("authorized_legacy_flow_ids", frozenset())
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
         state.setdefault("_headless_filesystem_user_id", None)
         state.setdefault("branch_inactivation_sources", {})
@@ -1807,6 +1917,8 @@ class Graph:
         else:
             state["run_manager"] = RunnableVerticesManager.from_dict(run_manager)
         self.__dict__.update(state)
+        self.__dict__.setdefault("_snapshots", [])
+        self.__dict__.setdefault("_call_order", [])
         self.vertex_map = {vertex.id: vertex for vertex in self.vertices}
         # Tracing service will be lazily initialized via property when needed
         self.set_run_id(self._run_id)
@@ -1821,7 +1933,9 @@ class Graph:
         context: dict | None = None,
         *,
         instantiate_components: bool = True,
+        snapshot_history_limit: int | None = None,
         emit_extension_events: bool = True,
+        authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1834,13 +1948,18 @@ class Graph:
             instantiate_components: Whether to run component constructors while
                 parsing. Warm templates disable this and instantiate only on the
                 request-local copy with the authenticated caller identity.
+            snapshot_history_limit: None retains full automatic history; 0 disables it;
+                a positive built-in integer retains the newest N snapshots per graph.
             emit_extension_events: Whether migration reports should be published
                 to the extension event service. Background warm parsing disables
                 this because it is not scoped to an active caller.
+            authorized_legacy_flow_ids: Server-authorized non-colliding flow IDs
+                whose raw legacy storage namespaces remain readable.
 
         Returns:
             Graph: The created graph.
         """
+        Graph._validate_snapshot_history_limit(snapshot_history_limit)
         from lfx.extension.migration import migrate_flow_payload
         from lfx.services.deps import get_catalog_policy_service
         from lfx.utils.flow_validation import (
@@ -1965,7 +2084,10 @@ class Graph:
                 user_id=user_id,
                 context=context,
                 instantiate_components=instantiate_components,
+                authorized_legacy_flow_ids=authorized_legacy_flow_ids,
+                **Graph._snapshot_history_kwargs(snapshot_history_limit),
             )
+            Graph._verify_snapshot_history_policy(graph, snapshot_history_limit)
             graph.add_nodes_and_edges(vertices, edges)
             graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
@@ -2289,8 +2411,42 @@ class Graph:
             }
         )
 
+    @staticmethod
+    def _validate_snapshot_history_limit(limit: int | None) -> int | None:
+        if limit is not None:
+            if type(limit) is not int:
+                msg = "snapshot_history_limit must be None or a built-in int"
+                raise TypeError(msg)
+            if limit < 0:
+                msg = "snapshot_history_limit must be nonnegative"
+                raise ValueError(msg)
+        return limit
+
+    @property
+    def snapshot_history_limit(self) -> int | None:
+        """Automatic history per Graph: None is full, 0 disables, N retains newest N."""
+        return self._snapshot_history_limit
+
+    @staticmethod
+    def _snapshot_history_kwargs(limit: int | None) -> dict[str, int]:
+        # Default construction stays compatible with subclasses' old signatures.
+        return {} if limit is None else {"snapshot_history_limit": limit}
+
+    @staticmethod
+    def _verify_snapshot_history_policy(graph: Graph, limit: int | None) -> None:
+        if limit is not None:
+            missing = object()
+            actual = getattr(graph, "_snapshot_history_limit", missing)
+            if type(actual) is not int or actual != limit or getattr(graph, "snapshot_history_limit", missing) != limit:
+                msg = "Graph subclass did not preserve snapshot_history_limit"
+                raise TypeError(msg)
+
     def _record_snapshot(self, vertex_id: str | None = None) -> None:
-        self._snapshots.append(self.get_snapshot())
+        limit = self._snapshot_history_limit
+        if limit != 0:
+            self._snapshots.append(self.get_snapshot())
+            if limit is not None and len(self._snapshots) > limit:
+                del self._snapshots[:-limit]
         if vertex_id:
             self._call_order.append(vertex_id)
 
@@ -2313,35 +2469,28 @@ class Graph:
         """
         return run_until_complete(self.astep(inputs, files, user_id))
 
-    def _vertex_result_cache_key(self, vertex_id: str) -> str:
+    def _vertex_result_cache_key(self, vertex_id: str, *, user_id: str | None) -> str:
         """Namespace the vertex result cache key to the executing principal.
 
-        Frozen-vertex results were historically cached under the bare vertex UUID,
-        which let any tenant read or overwrite another tenant's cached component
-        output by reusing the vertex id in their own flow (H1-3985565). Served
-        executions always carry the authenticated user (editor/API plane) or the
-        executing flow (anonymous public runs), so the key is prefixed with that
-        principal scope; entries written under other scopes become unreachable,
-        which fails closed against stale keys written by older versions. Graphs
-        with no principal context (standalone ``lfx run``, scripted graphs) have
-        no tenant boundary and keep the bare key, matching the empty-scope
-        contract of ``enforce_storage_key_scope``.
+        Use the same user that authorizes and builds the vertex. Cached graphs
+        can have missing or stale user state. Public and unscoped runs use
+        separate namespaces and cannot restore legacy flow-scoped results.
         """
-        user_scope = str(self.user_id).strip() if self.user_id is not None else ""
-        if user_scope:
-            from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
+        from lfx.services.authorization import PUBLIC_ANONYMOUS_ACTOR_ID
 
-            if user_scope != str(PUBLIC_ANONYMOUS_ACTOR_ID):
-                # Serving-plane runs execute as a service account on behalf of many
-                # end users, so include the end-user identity when one is present.
-                end_user_scope = str(self.end_user_id).strip() if self.end_user_id is not None else ""
-                if end_user_scope:
-                    return f"user:{user_scope}:end-user:{end_user_scope}:{vertex_id}"
-                return f"user:{user_scope}:{vertex_id}"
+        user_scope = str(user_id).strip() if user_id is not None else ""
+        if user_scope and user_scope != str(PUBLIC_ANONYMOUS_ACTOR_ID):
+            # Serving-plane runs execute as a service account on behalf of many
+            # end users, so include the end-user identity when one is present.
+            end_user_scope = str(self.end_user_id).strip() if self.end_user_id is not None else ""
+            if end_user_scope:
+                return f"user:{user_scope}:end-user:{end_user_scope}:{vertex_id}"
+            return f"user:{user_scope}:{vertex_id}"
+        scope = "public" if user_scope == str(PUBLIC_ANONYMOUS_ACTOR_ID) else "unscoped"
         flow_scope = str(self.flow_id).strip() if self.flow_id is not None else ""
         if flow_scope:
-            return f"flow:{flow_scope}:{vertex_id}"
-        return vertex_id
+            return f"{scope}:flow:{flow_scope}:{vertex_id}"
+        return f"{scope}:{vertex_id}"
 
     async def build_vertex(
         self,
@@ -2375,6 +2524,12 @@ class Graph:
             ValueError: If no result is found for the vertex.
         """
         vertex = self.get_vertex(vertex_id)
+        user_scope = str(user_id).strip() if user_id is not None else ""
+        if not user_scope and (user_id is not None or self.user_id is not None):
+            # Components can fall back to the graph's user when no caller is supplied.
+            # Missing or blank caller IDs cannot safely share that result cache.
+            get_cache = None
+            set_cache = None
         self.run_manager.add_to_vertices_being_run(vertex_id)
         try:
             params = ""
@@ -2391,7 +2546,7 @@ class Graph:
                 await vertex.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 # Check the cache for the vertex under the principal-scoped key
                 if get_cache is not None:
-                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id))
+                    cached_result = await get_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id))
                 else:
                     cached_result = CacheMiss()
                 if isinstance(cached_result, CacheMiss):
@@ -2437,7 +2592,7 @@ class Graph:
                         "full_data": vertex.full_data,
                     }
 
-                    await set_cache(key=self._vertex_result_cache_key(vertex.id), data=vertex_dict)
+                    await set_cache(key=self._vertex_result_cache_key(vertex.id, user_id=user_id), data=vertex_dict)
 
         except Exception as exc:
             if not isinstance(exc, ComponentBuildError):
@@ -2491,8 +2646,21 @@ class Graph:
         fallback_to_env_vars: bool,
         start_component_id: str | None = None,
         event_manager: EventManager | None = None,
+        dag_max_concurrency: int | None = None,
+        _dag_context=None,
     ) -> Graph:
         """Processes the graph with vertices in each layer run in parallel."""
+        from lfx.graph.graph.dag_scheduler import (
+            DagRunContext,
+            execute_dependency_ready,
+            finalize_dag_run,
+            inspect_dag_candidate,
+            select_dag_candidate,
+            validate_dag_max_concurrency,
+        )
+
+        validate_dag_max_concurrency(dag_max_concurrency)
+        candidate = inspect_dag_candidate(self) if dag_max_concurrency is not None else "default path"
         has_webhook_component = "webhook" in start_component_id.lower() if start_component_id else False
         if self.resumed_from_checkpoint:
             # A full re-sort would reset the restored run state and re-queue built vertices.
@@ -2515,6 +2683,37 @@ class Graph:
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
+
+        selection = select_dag_candidate(self, candidate, first_layer) if not isinstance(candidate, str) else candidate
+        if not isinstance(selection, str):
+            context = _dag_context if _dag_context is not None else DagRunContext()
+            context.eligible = True
+            try:
+                context.initialization_attempted = True
+                await self.initialize_run()
+                await execute_dependency_ready(
+                    self,
+                    selection,
+                    max_concurrency=dag_max_concurrency,
+                    build_kwargs={
+                        "user_id": self.user_id,
+                        "inputs_dict": {},
+                        "fallback_to_env_vars": fallback_to_env_vars,
+                        "get_cache": get_cache_func,
+                        "set_cache": set_cache_func,
+                        "event_manager": event_manager,
+                        "has_webhook_component": has_webhook_component,
+                    },
+                    context=context,
+                )
+            except BaseException as exc:  # noqa: BLE001 - drain/finalize every terminal outcome
+                context.latch(exc)
+            finally:
+                if _dag_context is None:
+                    await finalize_dag_run(self, context)
+            if context.primary is not None:
+                raise context.primary
+            return self
 
         await self.initialize_run()
         lock = asyncio.Lock()
@@ -2649,6 +2848,34 @@ class Graph:
             job_id=self._run_id if self._run_id else None,
         )
 
+    async def _record_vertex_build_result(self, result: VertexBuildResult) -> None:
+        if self.flow_id is not None and self.persist_messages:
+            await log_vertex_build(
+                flow_id=self.flow_id,
+                vertex_id=result.vertex.id,
+                valid=result.valid,
+                params=result.params,
+                data=result.result_dict,
+                artifacts=result.artifacts,
+                job_id=self._run_id if self._run_id else None,
+            )
+
+    async def _emit_vertex_build_result(self, result: VertexBuildResult, next_vertices_ids: list[str]) -> None:
+        from lfx.graph.utils import emit_vertex_build_event
+
+        if self.flow_id is not None:
+            await emit_vertex_build_event(
+                flow_id=self.flow_id,
+                vertex_id=result.vertex.id,
+                valid=result.valid,
+                params=result.params,
+                data_dict=result.result_dict,
+                artifacts_dict=result.artifacts,
+                next_vertices_ids=next_vertices_ids,
+                top_level_vertices=self.get_top_level_vertices(next_vertices_ids),
+                inactivated_vertices=list(self.inactivated_vertices.union(self.conditionally_excluded_vertices)),
+            )
+
     async def _execute_tasks(
         self, tasks: list[asyncio.Task], lock: asyncio.Lock, *, has_webhook_component: bool = False
     ) -> list[str]:
@@ -2659,8 +2886,6 @@ class Graph:
             lock: Async lock for synchronization
             has_webhook_component: Whether the graph has a webhook component
         """
-        from lfx.graph.utils import emit_vertex_build_event
-
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
         vertices: list[Vertex] = []
@@ -2681,21 +2906,8 @@ class Graph:
                     t.cancel()
                 raise result
             if isinstance(result, VertexBuildResult):
+                await self._record_vertex_build_result(result)
                 if self.flow_id is not None:
-                    # Ephemeral (anonymous serving) runs skip the persisted build
-                    # record — vertex-build rows retain params/outputs — but still
-                    # register the result so live SSE emission is unaffected.
-                    if self.persist_messages:
-                        await log_vertex_build(
-                            flow_id=self.flow_id,
-                            vertex_id=result.vertex.id,
-                            valid=result.valid,
-                            params=result.params,
-                            data=result.result_dict,
-                            artifacts=result.artifacts,
-                            job_id=self._run_id if self._run_id else None,
-                        )
-                    # Store for SSE emission later
                     build_results[result.vertex.id] = result
 
                 vertices.append(result.vertex)
@@ -2717,23 +2929,7 @@ class Graph:
 
             # Emit SSE event with complete data including next_vertices_ids
             if self.flow_id is not None and v.id in build_results:
-                build_result = build_results[v.id]
-                # Get top level vertices for these next runnable vertices
-                top_level = self.get_top_level_vertices(next_runnable_vertices)
-                # Get inactivated vertices
-                inactivated = list(self.inactivated_vertices.union(self.conditionally_excluded_vertices))
-
-                await emit_vertex_build_event(
-                    flow_id=self.flow_id,
-                    vertex_id=v.id,
-                    valid=build_result.valid,
-                    params=build_result.params,
-                    data_dict=build_result.result_dict,
-                    artifacts_dict=build_result.artifacts,
-                    next_vertices_ids=next_runnable_vertices,
-                    top_level_vertices=top_level,
-                    inactivated_vertices=inactivated,
-                )
+                await self._emit_vertex_build_result(build_results[v.id], next_runnable_vertices)
 
         return list(set(results))
 
@@ -2893,14 +3089,15 @@ class Graph:
         return self._cycle_vertices
 
     def _build_edges(self) -> list[CycleEdge]:
-        """Builds the edges of the graph."""
+        """Builds the edges of the graph, in the flow's edge order, without duplicates."""
         # Edge takes two vertices as arguments, so we need to build the vertices first
         # and then build the edges
         # if we can't find a vertex, we raise an error
-        edges: set[CycleEdge | Edge] = set()
+        # A dict, not a set: a set's order follows the hash seed, and list inputs read this order.
+        edges: dict[CycleEdge | Edge, None] = {}
         for edge in self._edges:
             new_edge = self.build_edge(edge)
-            edges.add(new_edge)
+            edges.setdefault(new_edge, None)
         if self.vertices and not edges:
             logger.warning("Graph has vertices but no edges")
         return list(cast("Iterable[CycleEdge]", edges))
@@ -3263,6 +3460,8 @@ class Graph:
             flow_name=f"{self.flow_name}_subgraph" if self.flow_name else "subgraph",
             user_id=self.user_id,
             context=dict(self.context) if self.context else None,
+            authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
+            snapshot_history_limit=self.snapshot_history_limit,
         )
 
         # Inherit parent's tracing context - subgraph is an extension of parent's execution
@@ -3279,6 +3478,7 @@ class Graph:
         # the identity carrier propagates down (memory scopes to the same end user).
         subgraph.end_user_id = self.end_user_id
         subgraph.source_flow_id = self.source_flow_id
+        subgraph.runs_stored_flow = self.runs_stored_flow
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges

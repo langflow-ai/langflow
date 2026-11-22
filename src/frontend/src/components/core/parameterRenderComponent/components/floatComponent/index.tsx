@@ -17,31 +17,35 @@ export default function FloatComponent({
   value,
   handleOnNewValue,
   rangeSpec,
+  preserveEmpty = false,
   disabled,
   editNode = false,
   id = "",
   nodeId,
   showParameter = true,
   ariaLabelledBy,
-}: InputProps<number, FloatComponentType>): JSX.Element | null {
+}: InputProps<number | "" | null, FloatComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const step = rangeSpec?.step ?? 0.1;
   const min = rangeSpec?.min;
   const max = rangeSpec?.max;
 
   // Local state for input value
-  const [localValue, setLocalValue] = useState<string>(value.toString());
+  // A blank preserve_empty field arrives as null from the backend and is always written back
+  // as ""; both mean unset. The Controls table passes the raw value through as is.
+  const [localValue, setLocalValue] = useState<string>(String(value ?? ""));
 
-  // Clear component state
+  // Clear component state; a preserve_empty field clears to blank, never to 0.
   useEffect(() => {
-    if (disabled && value !== 0) {
-      handleOnNewValue({ value: 0 }, { skipSnapshot: true });
+    const cleared = preserveEmpty ? "" : 0;
+    if (disabled && (value ?? "") !== cleared) {
+      handleOnNewValue({ value: cleared }, { skipSnapshot: true });
     }
   }, [disabled, handleOnNewValue]);
 
   // Update local value when prop changes
   useEffect(() => {
-    setLocalValue(value.toString());
+    setLocalValue(String(value ?? ""));
   }, [value]);
 
   const [cursor, setCursor] = useState<number | null>(null);
@@ -57,6 +61,11 @@ export default function FloatComponent({
   };
 
   const handleBlur = () => {
+    // Number("") is 0, which would silently satisfy a required threshold.
+    if (preserveEmpty && localValue.trim() === "") {
+      handleOnNewValue({ value: "" });
+      return;
+    }
     handleOnNewValue({ value: Number(localValue) });
   };
 

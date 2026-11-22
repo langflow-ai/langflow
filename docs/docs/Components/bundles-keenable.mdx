@@ -1,0 +1,68 @@
+---
+title: Keenable
+slug: /bundles-keenable
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Keenable** bundle.
+
+[Keenable](https://keenable.ai) is a web search and page fetch API built for AI agents.
+
+Both components work without an API key.
+Without a key, they call Keenable's keyless public endpoints, which have lower [rate limits](https://docs.keenable.ai/rate-limits) per IP address.
+To lift those limits, create an API key in the [Keenable console](https://app.keenable.ai/console) and enter it in the **Keenable API Key** field, or store it in a [global variable](/configuration-global-variables).
+
+For more information, see the [Keenable documentation](https://docs.keenable.ai).
+
+## Keenable Search
+
+This component searches the web with Keenable.
+
+It returns the results as a [`Table`](/data-types#table), with one row per result.
+Each row has the page's `title`, `url`, and `snippet`, the text extracted from the page.
+The `snippet` is often enough for an agent to answer without fetching the page.
+
+When the component is used as a [tool](/agents-tools), the agent can set the search query, the site, and the publication dates.
+
+### Keenable Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Keenable API Key (`api_key`) | SecretString | Input parameter. Optional. Without a key, the component uses the keyless public endpoint. |
+| Search Query (`query`) | String | Input parameter. The query to search the web for. |
+| Max Results (`max_results`) | Integer | Input parameter. The number of results to return, from 1 to 50. Default: `5`. |
+| Site (`site`) | String | Input parameter. Only return results from this domain, such as `docs.python.org`. |
+| Published After (`published_after`) | String | Input parameter. Only return pages published on or after this date, in `YYYY-MM-DD` format. |
+| Published Before (`published_before`) | String | Input parameter. Only return pages published on or before this date, in `YYYY-MM-DD` format. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Keenable to answer. Default: `30`. |
+
+## Keenable Fetch
+
+This component fetches one web page through Keenable and returns its main content as markdown.
+
+It outputs a [`Data`](/data-types#json) object with the page's `url`, `title`, and `content`.
+
+Keenable downloads the page on its own servers, so Langflow only sends the URL to `api.keenable.ai` and never connects to the page itself.
+
+### Keenable Fetch parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Keenable API Key (`api_key`) | SecretString | Input parameter. Optional. Without a key, the component uses the keyless public endpoint. |
+| URL (`url`) | String | Input parameter. The `http://` or `https://` URL of the page to fetch. |
+| Live Fetch (`live`) | Boolean | Input parameter. Fetch the page from its source instead of Keenable's indexed copy. Default: `false`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Keenable to answer. Default: `30`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**DuckDuckGo** bundle](/bundles-duckduckgo)

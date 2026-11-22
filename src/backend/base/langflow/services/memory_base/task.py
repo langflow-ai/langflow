@@ -557,8 +557,8 @@ async def _ingest_memory_task_in_scope(
                 embedding_function=embeddings,
                 before_write=validate_source_snapshot,
                 expected_record=storage_record,
+                preserve_existing_documents=True,
             )
-            written = 0
             try:
                 await backend.ensure_ready()
 
@@ -569,7 +569,7 @@ async def _ingest_memory_task_in_scope(
                     job_service=job_service,
                 )
 
-                if written == len(documents):
+                if written.processed == len(documents):
                     try:
                         await sync_kb_stats_to_record(user_id=owner_user_id, kb_name=kb_name, backend=backend)
                     except Exception as exc:  # noqa: BLE001 -- cached counters cannot undo a confirmed write
@@ -594,7 +594,7 @@ async def _ingest_memory_task_in_scope(
             finally:
                 await backend.teardown()
 
-            if written < len(documents):
+            if written.processed < len(documents):
                 await logger.awarning("Ingestion job %s was cancelled. Cleaning up partial data...", task_job_id)
                 await KBIngestionHelper.cleanup_chroma_chunks_by_job(
                     task_job_id,

@@ -175,15 +175,9 @@ def validate_prompt(prompt_template: str, *, silent_errors: bool = False, is_mus
         # This handles cases where template has both {var} and {{var}}
         input_variables = [v for v in input_variables if v not in fstring_vars or f"{{{{{v}}}}}" in prompt_template]
     else:
-        # Extract f-string variables
+        # f-string variables. {{var}} is an escaped literal, which the formatter already skips, so a
+        # name written both as {var} and {{var}} is still a variable the template needs at run time.
         input_variables = extract_input_variables_from_prompt(prompt_template)
-
-        # Also get mustache variables to filter them out
-        mustache_vars = mustache_template_vars(prompt_template)
-
-        # Only keep variables that are NOT in mustache syntax
-        # This handles cases where template has both {var} and {{var}}
-        input_variables = [v for v in input_variables if v not in mustache_vars]
 
     # Check if there are invalid characters in the input_variables
     input_variables = _check_input_variables(input_variables)

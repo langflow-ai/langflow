@@ -13,6 +13,8 @@ from __future__ import annotations
 import asyncio
 import json
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qs, urlsplit
+from uuid import UUID
 
 import pytest
 from langflow.services.triggers.constants import MECHANISM_SLACK_SOCKET_MODE
@@ -47,6 +49,160 @@ async def _deliver(client: AsyncClient, name_or_body, *, url: str = URL, headers
     signed = fx.sign(body)
     signed.update(headers or {})
     return await client.post(url, content=body, headers=signed, **extra)
+
+
+# --------------------------------------------------------------------------- #
+# OAuth-attested workspace identity
+# --------------------------------------------------------------------------- #
+
+
+async def _start_oauth_connection(client, headers, *, claimed_team_id=fx.TEAM_ID):
+    created = await client.post(
+        "/api/v1/connections",
+        headers=headers,
+        json={
+            "provider_key": "slack",
+            "name": "workspace",
+            "display_name": "Slack workspace",
+            "executing_identity": {
+                "identity": "bot",
+                "account": {"id": fx.BOT_USER_ID, "tenant_id": claimed_team_id},
+            },
+            "granted_scopes": list(fx.INSTALLATION_SCOPES),
+            "allow_non_interactive": True,
+        },
+    )
+    assert created.status_code == 201, created.text
+    started = await client.post(
+        f"/api/v1/connections/{created.json()['id']}/oauth/start",
+        headers=headers,
+        json={"registration_id": fx.REGISTRATION_ID, "scopes": fx.registration()["scopes"]},
+    )
+    assert started.status_code == 200, started.text
+    return created.json(), started
+
+
+async def _complete_oauth_connection(client, started, monkeypatch, *, team_id):
+    from langflow.services.connection.oauth import providers
+
+    query = parse_qs(urlsplit(started.json()["authorization_url"]).query)
+
+    async def exchange(_url, data, **_kwargs):
+        assert data["grant_type"] == "authorization_code"
+        return {
+            "access_token": "oauth-token-must-not-leak",
+            "token_type": "bot",
+            "scope": ",".join(fx.registration()["scopes"]),
+            "bot_user_id": fx.BOT_USER_ID,
+            "team": {"id": team_id, "name": "Attested workspace"},
+        }
+
+    monkeypatch.setattr(providers, "_request", exchange)
+    completed = await client.get(
+        "/api/v1/connections/oauth/slack/callback",
+        params={"state": query["state"][0], "code": "temporary-code"},
+    )
+    assert completed.status_code == 200, completed.text
+
+
+async def test_slack_workspace_and_scopes_come_from_completed_oauth(
+    client: AsyncClient, logged_in_headers, monkeypatch
+) -> None:
+    row, started = await _start_oauth_connection(client, logged_in_headers)
+
+    assert row["granted_scopes"] == []
+    assert row["executing_identity"]["account"] is None
+
+    await _complete_oauth_connection(client, started, monkeypatch, team_id=fx.OTHER_TEAM_ID)
+
+    from langflow.services.database.models.connection import Connection
+    from langflow.services.deps import session_scope
+
+    async with session_scope() as session:
+        stored = await session.get(Connection, UUID(row["id"]))
+    assert set(stored.granted_scopes) == set(fx.registration()["scopes"])
+    assert stored.executing_identity["account"]["tenant_id"] == fx.OTHER_TEAM_ID
+
+
+async def test_uncompleted_oauth_cannot_claim_a_workspace(
+    client: AsyncClient, active_user, logged_in_headers, flow
+) -> None:
+    row, _started = await _start_oauth_connection(client, logged_in_headers)
+    trigger_id = await fx.arm(flow.id, active_user.id, UUID(row["id"]))
+
+    response = await _deliver(client, "message_channel")
+
+    assert response.status_code == 202, response.text
+    assert await fx.events_for(trigger_id) == []
+
+
+async def test_reconnection_routes_only_to_the_last_completed_grant(
+    client: AsyncClient, active_user, logged_in_headers, flow, monkeypatch
+) -> None:
+    other_registration = "another-app"
+    fx.use_registrations(
+        monkeypatch,
+        {
+            fx.REGISTRATION_ID: fx.registration(),
+            other_registration: fx.registration(client_id="999.1"),
+        },
+    )
+    row, started = await _start_oauth_connection(client, logged_in_headers)
+    await _complete_oauth_connection(client, started, monkeypatch, team_id=fx.TEAM_ID)
+    trigger_id = await fx.arm(flow.id, active_user.id, UUID(row["id"]))
+    restarted = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": other_registration, "scopes": fx.registration()["scopes"]},
+    )
+    assert restarted.status_code == 200, restarted.text
+    other_url = f"api/v1/triggers/ingress/slack/apps/{other_registration}"
+
+    assert (await _deliver(client, "message_channel", url=other_url)).status_code == 202
+    assert await fx.events_for(trigger_id) == []
+    assert (await _deliver(client, "message_channel")).status_code == 202
+    assert len(await fx.events_for(trigger_id)) == 1
+
+    await _complete_oauth_connection(client, restarted, monkeypatch, team_id=fx.OTHER_TEAM_ID)
+
+    assert (await _deliver(client, "message_im")).status_code == 202
+    assert len(await fx.events_for(trigger_id)) == 1
+    assert (await _deliver(client, "message_other_team", url=other_url)).status_code == 202
+    assert len(await fx.events_for(trigger_id)) == 2
+
+
+async def test_failed_reconnection_keeps_prior_completed_grant_active(
+    client: AsyncClient, active_user, logged_in_headers, flow, monkeypatch
+) -> None:
+    other_registration = "another-app"
+    fx.use_registrations(
+        monkeypatch,
+        {
+            fx.REGISTRATION_ID: fx.registration(),
+            other_registration: fx.registration(client_id="999.1"),
+        },
+    )
+    row, started = await _start_oauth_connection(client, logged_in_headers)
+    await _complete_oauth_connection(client, started, monkeypatch, team_id=fx.TEAM_ID)
+    trigger_id = await fx.arm(flow.id, active_user.id, UUID(row["id"]))
+    restarted = await client.post(
+        f"/api/v1/connections/{row['id']}/oauth/start",
+        headers=logged_in_headers,
+        json={"registration_id": other_registration, "scopes": fx.registration()["scopes"]},
+    )
+    assert restarted.status_code == 200, restarted.text
+    query = parse_qs(urlsplit(restarted.json()["authorization_url"]).query)
+    denied = await client.get(
+        "/api/v1/connections/oauth/slack/callback",
+        params={"state": query["state"][0], "error": "access_denied"},
+    )
+    assert denied.status_code == 400, denied.text
+
+    other_url = f"api/v1/triggers/ingress/slack/apps/{other_registration}"
+    assert (await _deliver(client, "message_channel", url=other_url)).status_code == 202
+    assert await fx.events_for(trigger_id) == []
+    assert (await _deliver(client, "message_channel")).status_code == 202
+    assert len(await fx.events_for(trigger_id)) == 1
 
 
 # --------------------------------------------------------------------------- #

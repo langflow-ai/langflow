@@ -21,12 +21,35 @@ assistant's code-generating endpoints.
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import status
+from fastapi import HTTPException, Request, status
 from httpx import AsyncClient
 
 MODULE = "langflow.api.v1.agentic_mcp"
 
 pytestmark = pytest.mark.asyncio
+
+
+@pytest.mark.parametrize("error", [None, HTTPException(403), ValueError("invalid request")])
+async def test_request_client_is_closed_after_dispatch(error):
+    from langflow.api.v1 import agentic_mcp
+
+    request = Request({"type": "http"})
+    client = AsyncMock()
+    manager = AsyncMock()
+    manager.handle_request.side_effect = error
+    with (
+        patch.object(agentic_mcp, "_loopback_client", return_value=client),
+        patch.object(agentic_mcp._streamable_http, "start", new_callable=AsyncMock),
+        patch.object(agentic_mcp._streamable_http, "get_manager", return_value=manager),
+    ):
+        if error is None:
+            await agentic_mcp.handle_agentic_streamable_http(request, AsyncMock(), AsyncMock())
+        else:
+            with pytest.raises(HTTPException):
+                await agentic_mcp.handle_agentic_streamable_http(request, AsyncMock(), AsyncMock())
+
+    client.aclose.assert_awaited_once()
+    assert agentic_mcp.current_loopback_client_ctx.get() is None
 
 
 @pytest.fixture
@@ -108,6 +131,19 @@ class TestRunAssistantIsGatedPerTool:
 
         with pytest.raises(ValueError, match="LANGFLOW_AGENTIC_EXPERIENCE"):
             await agentic_mcp.handle_call_tool("run_assistant", {"instruction": "build a flow"})
+
+    async def test_should_refuse_run_assistant_through_batch(self):
+        from langflow.api.v1 import agentic_mcp
+
+        token = agentic_mcp.current_loopback_client_ctx.set(AsyncMock())
+        try:
+            with pytest.raises(ValueError, match="LANGFLOW_AGENTIC_EXPERIENCE"):
+                await agentic_mcp.handle_call_tool(
+                    "batch",
+                    {"actions": [{"tool": "run_assistant", "args": {"instruction": "build a flow"}}]},
+                )
+        finally:
+            agentic_mcp.current_loopback_client_ctx.reset(token)
 
 
 @pytest.mark.usefixtures("agentic_enabled")
@@ -207,6 +243,22 @@ class TestAgenticMcpToolDelegation:
         with pytest.raises(ValueError, match="not available over HTTP"):
             await agentic_mcp.handle_call_tool("login", {"username": "u", "password": "p"})
 
+    async def test_should_not_expose_login_through_batch(self):
+        from langflow.api.v1 import agentic_mcp
+
+        token = agentic_mcp.current_loopback_client_ctx.set(AsyncMock())
+        try:
+            with (
+                patch("lfx.mcp.server._get_tool_map", return_value={"login": AsyncMock()}),
+                pytest.raises(ValueError, match="not available over HTTP"),
+            ):
+                await agentic_mcp.handle_call_tool(
+                    "batch",
+                    {"actions": [{"tool": "login", "args": {"username": "u", "password": "p"}}]},
+                )
+        finally:
+            agentic_mcp.current_loopback_client_ctx.reset(token)
+
     async def test_should_delegate_with_the_callers_loopback_client_bound(self):
         from langflow.api.v1 import agentic_mcp
         from lfx.mcp import server as lfx_server
@@ -245,8 +297,9 @@ class TestAgenticMcpToolDelegation:
             headers = {"Authorization": "Bearer tok-123", "x-api-key": "key-456"}
             cookies: dict = {}
             query_params: dict = {}
+            scope: dict = {}
 
         client = await _loopback_client(FakeRequest())
         assert client.server_url == "http://localhost:7860"
-        assert client.access_token == "tok-123"  # noqa: S105
+        assert client._headers()["Authorization"] == "Bearer tok-123"
         assert client.api_key is None

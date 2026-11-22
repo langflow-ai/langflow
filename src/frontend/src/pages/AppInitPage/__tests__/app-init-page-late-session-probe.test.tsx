@@ -12,7 +12,7 @@
  * probe rather than a re-derivation of it.
  */
 
-import { act, render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { AuthContext } from "@/contexts/authContext";
 import type { SessionResponse } from "@/controllers/API/queries/auth";
@@ -21,6 +21,8 @@ import useAuthStore from "@/stores/authStore";
 type SessionQueryResult = {
   data: SessionResponse | undefined;
   isFetched: boolean;
+  error?: unknown;
+  isExternalAuthenticationPaused?: boolean;
 };
 
 const mockUseGetAuthSession = jest.fn<SessionQueryResult, []>();
@@ -166,6 +168,57 @@ describe("AppInitPage - session probe vs auto-login", () => {
     deliverProbe(rerender, UNAUTHENTICATED_PROBE);
 
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it("shows maintenance without clearing auth or navigating away, then resumes", () => {
+    useAuthStore.setState({ autoLogin: false, isAuthenticated: true });
+    const { rerender } = renderPage();
+
+    deliverProbe(rerender, {
+      data: undefined,
+      isFetched: true,
+      isExternalAuthenticationPaused: true,
+      error: {
+        isAxiosError: true,
+        response: {
+          status: 503,
+          data: { detail: { code: "external_auth_maintenance" } },
+        },
+      },
+    });
+
+    expect(useAuthStore.getState().isAuthenticated).toBe(true);
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "External SSO sign-in is paused",
+    );
+    expect(screen.queryByTestId("outlet")).not.toBeInTheDocument();
+
+    deliverProbe(rerender, {
+      data: undefined,
+      isFetched: true,
+      error: null,
+      isExternalAuthenticationPaused: true,
+    });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "External SSO sign-in is paused",
+    );
+    expect(screen.queryByTestId("outlet")).not.toBeInTheDocument();
+
+    deliverProbe(rerender, {
+      data: {
+        authenticated: true,
+        user: {
+          id: "user-1",
+          username: "viewer",
+          is_active: true,
+          is_superuser: false,
+        },
+      },
+      isFetched: true,
+    });
+
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+    expect(screen.getByTestId("outlet")).toBeInTheDocument();
   });
 
   it("applies an authenticated probe", () => {

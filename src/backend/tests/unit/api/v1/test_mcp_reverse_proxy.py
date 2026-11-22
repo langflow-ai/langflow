@@ -45,110 +45,91 @@ class TestSseTransportRootPath:
 
 
 class TestForwardedPrefixMiddleware:
-    """Test that the middleware propagates X-Forwarded-Prefix to scope root_path."""
+    """Only URL path prefixes may reach transports through the proxy header."""
 
     async def _captured_downstream_root_path(self, *, configured_root_path, headers=None):
-        # Import the middleware logic inline to test it in isolation
-        from langflow.main import get_settings_service
+        from langflow.main import create_app, get_settings_service
         from starlette.requests import Request
         from starlette.responses import PlainTextResponse
 
-        captured_root_path = {}
-
-        async def next_app(request):
-            captured_root_path["value"] = request.scope.get("root_path", "")
-            return PlainTextResponse("ok")
-
         settings = get_settings_service().settings
         original_root_path = settings.root_path
-
         try:
             settings.root_path = configured_root_path
+            app = create_app()
+            middleware = next(
+                middleware.kwargs["dispatch"]
+                for middleware in app.user_middleware
+                if middleware.kwargs.get("dispatch", lambda: None).__name__ == "forwarded_prefix_middleware"
+            )
+            request = Request(
+                {
+                    "type": "http",
+                    "method": "GET",
+                    "path": "/api/v1/mcp/sse",
+                    "root_path": configured_root_path,
+                    "query_string": b"",
+                    "headers": [(key.lower().encode(), value.encode()) for key, value in (headers or {}).items()],
+                }
+            )
 
-            raw_headers = []
-            for key, value in (headers or {}).items():
-                raw_headers.append((key.lower().encode(), value.encode()))
+            async def next_app(request):
+                return PlainTextResponse(request.scope.get("root_path", ""))
 
-            scope = {
-                "type": "http",
-                "method": "GET",
-                "path": "/api/v1/mcp/sse",
-                "root_path": "",
-                "query_string": b"",
-                "headers": raw_headers,
-            }
-            request = Request(scope)
-
-            prefix = request.headers.get("X-Forwarded-Prefix", "").rstrip("/")
-            if settings.root_path and prefix and prefix.startswith("/") and "://" not in prefix:
-                request.scope["root_path"] = prefix
-
-            await next_app(request)
-            return captured_root_path["value"]
+            response = await middleware(request, next_app)
+            return response.body.decode()
         finally:
             settings.root_path = original_root_path
 
     async def test_no_header_preserves_root_path(self):
-        """Without X-Forwarded-Prefix, downstream code sees the original root_path."""
         root_path = await self._captured_downstream_root_path(configured_root_path="/enabled")
-        assert root_path == ""
+        assert root_path == "/enabled"
 
-    async def test_forwarded_prefix_header_sets_downstream_root_path(self):
-        """With X-Forwarded-Prefix and root_path enabled, downstream code sees the prefix."""
+    @pytest.mark.parametrize("prefix", ["/langflow", "/my-prefix", "/tools/langflow/", "/v1.2/~instance_1"])
+    async def test_forwarded_prefix_header_sets_downstream_root_path(self, prefix):
         root_path = await self._captured_downstream_root_path(
-            configured_root_path="/enabled",
-            headers={"X-Forwarded-Prefix": "/my-prefix"},
+            configured_root_path="/enabled", headers={"X-Forwarded-Prefix": prefix}
         )
-        assert root_path == "/my-prefix"
-
-    async def test_middleware_sets_root_path_when_enabled(self):
-        """Verify the middleware sets root_path visible to downstream code."""
-        root_path = await self._captured_downstream_root_path(
-            configured_root_path="/enabled",
-            headers={"X-Forwarded-Prefix": "/langflow"},
-        )
-
-        assert root_path == "/langflow"
+        assert root_path == prefix.rstrip("/")
 
     async def test_middleware_ignores_header_when_root_path_not_configured(self):
-        """When root_path is not set, X-Forwarded-Prefix is ignored."""
-        from langflow.main import get_settings_service
-        from starlette.requests import Request
+        root_path = await self._captured_downstream_root_path(
+            configured_root_path="", headers={"X-Forwarded-Prefix": "/attacker-prefix"}
+        )
+        assert root_path == ""
 
-        settings = get_settings_service().settings
-        original_root_path = settings.root_path
-
-        try:
-            settings.root_path = ""
-
-            scope = {
-                "type": "http",
-                "method": "GET",
-                "path": "/api/v1/mcp/sse",
-                "root_path": "",
-                "query_string": b"",
-                "headers": [(b"x-forwarded-prefix", b"/attacker-prefix")],
-            }
-            request = Request(scope)
-
-            # Middleware should skip when root_path is not configured
-            # so root_path remains empty
-            assert request.scope["root_path"] == ""
-        finally:
-            settings.root_path = original_root_path
-
-    async def test_middleware_rejects_invalid_prefix(self):
-        """Prefixes with schemes, query strings, or fragments are rejected."""
-        invalid_prefixes = [
-            "https://evil.com",
+    @pytest.mark.parametrize(
+        "prefix",
+        [
+            "https://evil.example",
+            "//evil.example",
+            "///evil.example",
+            r"/\evil.example",
+            r"/path\evil.example",
+            "/%2f%2fevil.example",
+            "/%252f%252fevil.example",
+            "/%5cevil.example",
+            "/.",
+            "/..",
+            "/path/../other",
+            "/path/./other",
+            "/%2e%2e/other",
             "/path?query=1",
             "/path#fragment",
             "not-starting-with-slash",
-        ]
-        for prefix in invalid_prefixes:
-            clean = prefix.rstrip("/")
-            valid = clean.startswith("/") and "://" not in clean and "?" not in clean and "#" not in clean
-            assert not valid, f"Expected {prefix!r} to be rejected by validation"
+            "/path//other",
+            "/path with spaces",
+            "/path\t/other",
+            "/path\n/other",
+            "",
+            "/",
+        ],
+    )
+    async def test_middleware_rejects_invalid_prefix(self, prefix):
+        root_path = await self._captured_downstream_root_path(
+            configured_root_path="/enabled", headers={"X-Forwarded-Prefix": prefix}
+        )
+        assert root_path == "/enabled"
 
 
 # ---------------------------------------------------------------------------

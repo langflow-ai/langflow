@@ -11,6 +11,16 @@ const PAGE_SIZE = 100;
 interface HistoryPage {
   messages: Message[];
   nextOffset?: number;
+  // Ids in the messages store when the read started; a full replace drops
+  // these if the result lacks them.
+  known: string[];
+}
+
+// Lists the ids in the messages store now; messages without an id are skipped.
+function knownIds(): string[] {
+  return useMessagesStore
+    .getState()
+    .messages.flatMap((message) => (message.id ? [message.id] : []));
 }
 
 export function useGetMessageHistory({
@@ -41,9 +51,12 @@ export function useGetMessageHistory({
       if (playground && !shared) {
         // The anonymous playground persists this store as its complete local
         // history. Keep all sessions so saving it cannot discard unloaded rows.
+        // The copy is written from this store after render, so it can be behind
+        // the store but never ahead of it. A message it lacks is not stale.
         const { data } = await getMessages(id, { order: "DESC" });
-        return { messages: data };
+        return { messages: data, known: [] };
       }
+      const known = knownIds();
       const { data } = await getMessages(id, {
         ...(sessionId ? { session_id: sessionId } : {}),
         // One lookahead row detects the last page without a count or an empty-page click.
@@ -54,6 +67,7 @@ export function useGetMessageHistory({
       return {
         messages: data.slice(0, PAGE_SIZE),
         nextOffset: data.length > PAGE_SIZE ? pageParam + PAGE_SIZE : undefined,
+        known,
       };
     },
     getNextPageParam: (page) => page.nextOffset,
@@ -85,11 +99,15 @@ export function useGetMessageHistory({
       seen.add(message.id);
       return true;
     });
-    store.setMessages([
-      ...otherFlows,
-      ...unique,
-      ...(appending ? current : []),
-    ]);
+    // Messages added after the read started (a build's reply) are kept.
+    // A full replace drops the rest.
+    const known = new Set<string | null>(pages[0]?.known);
+    const kept = appending
+      ? current
+      : current.filter(
+          (message) => !seen.has(message.id) && !known.has(message.id),
+        );
+    store.setMessages([...otherFlows, ...unique, ...kept]);
     applied.current = { scope, pages };
   }, [history.data, enabled, id, scope]);
 

@@ -18,6 +18,8 @@ class ConnectionOAuth(SQLModel, table=True):  # type: ignore[call-arg]
     generation: UUID = Field(default_factory=uuid4)
     user_id: UUID = Field(sa_column=sa.Column(sa.Uuid(), sa.ForeignKey("user.id", ondelete="CASCADE"), nullable=False))
     registration_id: str = Field(max_length=120)
+    # The registration of the last completed grant, not a newer pending attempt.
+    completed_registration_id: str | None = Field(default=None, max_length=120, index=True)
     config_digest: str = Field(max_length=64)
     state_digest: str | None = Field(default=None, max_length=64, unique=True)
     browser_digest: str | None = Field(default=None, max_length=64)

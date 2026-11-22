@@ -30,11 +30,14 @@ class Unit:
             Conventions worth knowing:
 
             - Keys starting with ``_`` are reserved for executor-internal flags
-              (e.g. ``_use_arun_legacy`` selects the legacy passthrough in the
+              (e.g. ``_dag_max_concurrency`` is an optional standard in-process legacy hint;
+              unknown reserved hints are ignored by other executors.
+              ``_use_arun_legacy`` selects the legacy passthrough in the
               in-process executor). Other executors MUST ignore unknown keys.
             - Common keys recognized by the in-process executor:
               ``initial_inputs``, ``max_iterations``, ``config``, ``event_manager``,
-              ``reset_output_values``, ``fallback_to_env_vars``. ``session_id`` is
+              ``reset_output_values``, ``fallback_to_env_vars``. The streaming
+              path also forwards the verified caller's ``user_id``. ``session_id`` is
               honored only by the legacy passthrough path; the streaming path drops it.
             - Other executors are free to define their own keys; document them in
               the executor module.

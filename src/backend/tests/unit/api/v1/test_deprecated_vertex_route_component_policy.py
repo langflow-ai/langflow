@@ -113,8 +113,9 @@ async def test_should_build_from_the_sanitized_copy_not_the_stored_bytes(
 
     built_from: dict = {}
 
-    async def fake_build(*, flow_id, chat_service, graph_data, execution_principal=None):  # noqa: ARG001
+    async def fake_build(*, flow_id, chat_service, graph_data, user_id=None, execution_principal=None):  # noqa: ARG001
         built_from["graph_data"] = graph_data
+        built_from["user_id"] = user_id
         # INT-6: this deprecated route re-stamps the caller's family on every
         # request, because its cache is keyed by flow id rather than principal.
         built_from["execution_principal"] = execution_principal
@@ -137,6 +138,7 @@ async def test_should_build_from_the_sanitized_copy_not_the_stored_bytes(
     assert built_from.get("graph_data") is sanitized, "the seam compiled the stored bytes, not the trusted copy"
     principal = built_from.get("execution_principal")
     assert principal is not None, "the rebuilt graph must carry an execution principal, or it resolves no connection"
+    assert built_from.get("user_id") == principal.user_id
     assert principal.family == "interactive_chat"
 
 
@@ -179,11 +181,17 @@ async def test_should_keep_building_normally_under_a_permissive_policy(
     client: AsyncClient,
     added_flow_webhook_test,
     logged_in_headers,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     """The control: with the policy off the seam behaves exactly as before.
 
     A refusal for everyone would be a denial of service, not a fix.
     """
+    from langflow.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
     flow_id = added_flow_webhook_test["id"]
     vertex_id = added_flow_webhook_test["data"]["nodes"][0]["id"]
 

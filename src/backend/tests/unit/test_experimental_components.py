@@ -4,6 +4,7 @@ from lfx.services.deps import get_settings_service
 from lfx.utils.python_repl_security import CodeExecutionDisabledError
 
 
+@pytest.mark.usefixtures("administrator_execution_context")
 def test_python_function_component():
     # Arrange
     python_function_component = prototypes.PythonFunctionComponent()

@@ -37,11 +37,12 @@ from sqlmodel import col, select
 
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.connection.schemas import PersistedConnectionStatus
-from langflow.services.database.models.trigger.model import Trigger, TriggerSubscription
+from langflow.services.database.models.trigger.model import Trigger, TriggerRenewalObservation, TriggerSubscription
 from langflow.services.database.models.trigger.schemas import TriggerState, TriggerSubscriptionState
 from langflow.services.deps import get_settings_service, session_scope
 from langflow.services.triggers import leases
 from langflow.services.triggers.constants import (
+    AUDIT_SUBSCRIPTION_CREATE,
     AUDIT_SUBSCRIPTION_RENEW,
     AUDIT_SUBSCRIPTION_REVOKE,
     SUBSCRIPTION_LEASE_NAME,
@@ -116,9 +117,38 @@ _RENEWERS: dict[str, SubscriptionRenewer] = {}
 _REVOKERS: dict[str, SubscriptionRevoker] = {}
 
 
+class _ProviderUnavailableError(RuntimeError):
+    """A catalog reload removed a renewal handler before it was invoked."""
+
+
+async def _renew_extension(session: AsyncSession, subscription: TriggerSubscription) -> datetime:
+    """Resolve the current trusted hook instead of retaining an old descriptor."""
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(subscription.provider)
+    if extension is None or extension.renew is None:
+        msg = "The trigger provider's subscription renewal handler is unavailable."
+        raise _ProviderUnavailableError(msg)
+    return await extension.renew(session, subscription)
+
+
 def _ensure_source_handlers(provider: str) -> None:
     """Install the built-in source handlers after import cycles have settled."""
+    from langflow.services.triggers.providers.registry import get_provider
+
+    extension = get_provider(provider)
+    if extension is not None:
+        from langflow.services.triggers.source_subscription import revoke_source
+
+        if extension.renew is not None:
+            _RENEWERS.setdefault(provider, _renew_extension)
+        elif _RENEWERS.get(provider) is _renew_extension:
+            _RENEWERS.pop(provider)
+        _REVOKERS.setdefault(provider, revoke_source)
+        return
     if provider not in {"microsoft", "google"}:
+        if _RENEWERS.get(provider) is _renew_extension:
+            _RENEWERS.pop(provider)
         return
     from langflow.services.triggers.source_subscription import renew_source, revoke_source
 
@@ -155,11 +185,9 @@ def registered_revokers() -> set[str]:
 async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> None:
     """Ask the provider to delete the subscription, best effort.
 
-    With no registered revoker - OSS today, before TRG-6 - this is a no-op and
-    the remote object is left to expire on the provider's own schedule. That is
-    a real gap and it is named here rather than hidden: the local row is retired
-    regardless, so Langflow stops acting on the subscription immediately, but
-    the provider may keep delivering until its TTL runs out.
+    When a provider is temporarily unavailable, retain a durable cleanup
+    intent. Local retirement still stops deliveries immediately, and the
+    remote operation can finish after its installed handler is available.
     """
     if row.provider in {"microsoft", "google"}:
         from langflow.services.triggers.source_cleanup import enqueue_cleanup
@@ -169,6 +197,9 @@ async def _revoke_remote(session: AsyncSession, row: TriggerSubscription) -> Non
     _ensure_source_handlers(row.provider)
     revoker = _REVOKERS.get(row.provider)
     if revoker is None:
+        from langflow.services.triggers.source_cleanup import enqueue_cleanup
+
+        await enqueue_cleanup(session, row)
         return
     try:
         await revoker(session, row)
@@ -198,7 +229,7 @@ async def upsert_subscription(
     provider: str,
     provider_subscription_id: str,
     client_state_digest: str | None,
-    expires_at: datetime,
+    expires_at: datetime | None,
     provider_state: dict[str, Any] | None = None,
 ) -> TriggerSubscription:
     """Record (or refresh) the provider-side object backing a push trigger."""
@@ -208,6 +239,7 @@ async def upsert_subscription(
     )
     row = (await session.exec(statement)).first()
     now = _now()
+    created = row is None
     if row is None:
         row = TriggerSubscription(
             trigger_id=trigger_id,
@@ -218,12 +250,14 @@ async def upsert_subscription(
     row.client_state_digest = client_state_digest
     row.provider_state = provider_state or {}
     row.expires_at = expires_at
-    row.renew_after = renew_after_for(created_at=now, expires_at=expires_at)
+    row.renew_after = renew_after_for(created_at=now, expires_at=expires_at) if expires_at is not None else None
     row.state = TriggerSubscriptionState.ACTIVE.value
     row.updated_at = now
     session.add(row)
     await session.flush()
     await session.refresh(row)
+    if created:
+        await audit_subscription_creation(session, trigger_id=trigger_id)
     return row
 
 
@@ -234,6 +268,10 @@ async def _set_trigger_state(session: AsyncSession, *, trigger_id: UUID, state: 
     row.state = state
     row.last_error = reason
     row.updated_at = _now()
+    if state == TriggerState.NEEDS_RECONNECT.value:
+        from langflow.services.triggers.connection_recovery import record_connection_failure
+
+        record_connection_failure(row, failed_at=row.updated_at)
     session.add(row)
     await session.flush()
 
@@ -304,6 +342,29 @@ async def revoke_for_trigger(session: AsyncSession, *, trigger_id: UUID) -> int:
         await session.flush()
         await _audit_subscription(AUDIT_SUBSCRIPTION_REVOKE, trigger_id=trigger_id, count=len(rows), session=session)
     return len(rows)
+
+
+async def revoke_for_connection(session: AsyncSession, *, connection_id: UUID) -> int:
+    """Disarm this connection's receivers in the same transaction as revocation."""
+    from langflow.services.triggers.locking import lock_trigger
+
+    identifiers = (
+        await session.exec(select(Trigger.id).where(Trigger.connection_id == connection_id).order_by(Trigger.id))
+    ).all()
+    retired = 0
+    for identifier in identifiers:
+        row = await lock_trigger(session, identifier)
+        if row is None or row.connection_id != connection_id:
+            continue
+        retired += await revoke_for_trigger(session, trigger_id=identifier)
+        if row.state in {TriggerState.ACTIVE.value, TriggerState.PENDING.value}:
+            await _set_trigger_state(
+                session,
+                trigger_id=identifier,
+                state=TriggerState.NEEDS_RECONNECT.value,
+                reason=_NEEDS_RECONNECT_REASON,
+            )
+    return retired
 
 
 async def revoke_unusable_connections(session: AsyncSession) -> int:
@@ -436,14 +497,22 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
         session.add(row)
         await session.flush()
         return False
+    previous_expires_at = _as_aware(row.expires_at)
     try:
         expires_at = await renewer(session, row)
+    except _ProviderUnavailableError:
+        row.lease_owner = None
+        row.lease_until = None
+        session.add(row)
+        await session.flush()
+        return False
     except Exception as exc:  # noqa: BLE001 - a provider failure is retried, not raised
         with session.no_autoflush:
             if not await _refresh_claim(session, subscription_id=subscription_id, owner=owner):
                 await session.rollback()
                 return False
         await _record_renewal_failure(session, row=row, exc=exc)
+        _record_renewal_observation(session, row=row, previous_expires_at=previous_expires_at, outcome="failed")
         return False
 
     # Provider I/O finishes before taking any write lock. Suppress autoflush
@@ -471,7 +540,27 @@ async def renew_one(session: AsyncSession, *, subscription_id: UUID, owner: str)
     await session.flush()
     await _clear_renewal_error(session, trigger_id=row.trigger_id)
     _defer_audit(session, AUDIT_SUBSCRIPTION_RENEW, trigger_id=row.trigger_id, count=1)
+    _record_renewal_observation(session, row=row, previous_expires_at=previous_expires_at, outcome="renewed")
     return True
+
+
+def _record_renewal_observation(session, *, row, previous_expires_at: datetime | None, outcome: str) -> None:
+    """Stage only a fenced result, in the same commit as its subscription state."""
+    if previous_expires_at is None:
+        # A nonexpiring mechanism has no renewal-coverage boundary to measure.
+        return
+    now = _now()
+    session.add(
+        TriggerRenewalObservation(
+            trigger_id=row.trigger_id,
+            subscription_id=row.id,
+            observed_at=now,
+            previous_expires_at=previous_expires_at,
+            expires_at=row.expires_at if outcome == "renewed" else None,
+            outcome=outcome,
+            gap_seconds=max((now - previous_expires_at).total_seconds(), 0) if outcome == "renewed" else 0,
+        )
+    )
 
 
 async def _record_renewal_failure(session: AsyncSession, *, row: TriggerSubscription, exc: Exception) -> None:
@@ -635,13 +724,47 @@ def _defer_audit(session: AsyncSession, action: str, *, trigger_id: UUID, count:
     session.info.setdefault(_DEFERRED_AUDITS_KEY, []).append((action, trigger_id, count, result))
 
 
+async def audit_subscription_creation(session: AsyncSession, *, trigger_id: UUID) -> None:
+    """Keep best-effort creation evidence inside the subscription transaction."""
+    settings = get_settings_service().auth_settings
+    if not settings.AUTHZ_AUDIT_ENABLED:
+        return
+    if settings.AUTHZ_AUDIT_DURABLE:
+        from langflow.services.authorization.audit import AuditPersistenceError
+
+        try:
+            await _audit_subscription(AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session)
+            await session.flush()
+        except Exception:  # noqa: BLE001 - audit storage errors can contain credentials
+            raise AuditPersistenceError from None
+        return
+    try:
+        # An independent writer could commit a create audit after this transaction
+        # rolls back. The savepoint keeps the row atomic without making an audit
+        # failure abort the subscription in best-effort mode.
+        async with session.begin_nested():
+            await _audit_subscription(
+                AUDIT_SUBSCRIPTION_CREATE, trigger_id=trigger_id, count=1, session=session, required=True
+            )
+            await session.flush()
+    except Exception as exc:  # noqa: BLE001 - best-effort audit failure must not abort subscription creation
+        await logger.awarning("Subscription creation audit failed for trigger %s (%s)", trigger_id, type(exc).__name__)
+
+
 async def _audit_subscription(
-    action: str, *, trigger_id: UUID, count: int, result: str = "allow", session: AsyncSession | None = None
+    action: str,
+    *,
+    trigger_id: UUID,
+    count: int,
+    result: str = "allow",
+    session: AsyncSession | None = None,
+    required: bool = False,
 ) -> None:
     from langflow.services.authorization.audit import audit_decision, stage_audit_decision
 
     if session is not None and stage_audit_decision(
         session=session,
+        required=required,
         user_id=None,
         action=action,
         obj=f"trigger:{trigger_id}",

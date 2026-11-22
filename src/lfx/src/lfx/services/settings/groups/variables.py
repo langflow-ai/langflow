@@ -16,6 +16,10 @@ class VariablesSettings(BaseModel):
     store_environment_variables: bool = True
     """Whether to store environment variables as Global Variables in the database."""
 
+    deployment_typed_variables_enabled: bool = False
+    """Emit v7 deployment variable declarations. Enable only after deployment readers
+    enforce the declared kind and refuse activation when a kind is unresolved."""
+
     # Agentic Experience
     agentic_experience: bool = True
     """Whether the Langflow Assistant is available. On by default: it is the primary way into

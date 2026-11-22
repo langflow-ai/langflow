@@ -1,4 +1,5 @@
 import { UseMutationOptions, useMutation } from "@tanstack/react-query";
+import type { ModelType } from "@/types/models";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import {
@@ -9,6 +10,12 @@ import {
 export interface ValidateProviderRequest extends ProviderScopeParams {
   provider: string;
   variables: Record<string, string>;
+  /**
+   * The kind of model to check the key for. Omitted, the backend picks the
+   * provider's own kind: a decision check for decision-only providers, a chat
+   * check for everything else.
+   */
+  model_type?: ModelType;
 }
 
 export interface ValidateProviderResponse {

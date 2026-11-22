@@ -1,0 +1,22 @@
+[
+  {
+    "policy": "all",
+    "scopes": [
+      "langflow_table_read",
+      "langflow_table_write"
+    ]
+  },
+  {
+    "policy": "read",
+    "scopes": [
+      "langflow_table_read"
+    ]
+  },
+  {
+    "policy": "write",
+    "scopes": [
+      "langflow_table_read",
+      "langflow_table_write"
+    ]
+  }
+]

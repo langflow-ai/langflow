@@ -34,24 +34,30 @@ class GoogleCalendarListComponent(Component):
             display_name="Calendar ID",
             info="Calendar to read. 'primary' is the connected account's own calendar.",
             value="primary",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="time_min",
             display_name="Start Time",
             info="RFC 3339 lower bound on an event's end time, for example 2026-01-01T00:00:00Z.",
+            tool_mode=True,
         ),
         MessageTextInput(
             name="time_max",
             display_name="End Time",
             info="RFC 3339 upper bound on an event's start time.",
+            tool_mode=True,
         ),
-        MessageTextInput(name="query", display_name="Query", info="Free-text search across event fields."),
+        MessageTextInput(
+            name="query", display_name="Query", info="Free-text search across event fields.", tool_mode=True
+        ),
         IntInput(
             name="max_results",
             display_name="Max Results",
             info=f"Events per page, maximum {MAX_RESULTS_CEILING}.",
             value=DEFAULT_MAX_RESULTS,
             advanced=True,
+            tool_mode=True,
         ),
         BoolInput(
             name="single_events",
@@ -59,6 +65,7 @@ class GoogleCalendarListComponent(Component):
             info="Return individual occurrences instead of recurring-event masters.",
             value=True,
             advanced=True,
+            tool_mode=True,
         ),
         DropdownInput(
             name="order_by",
@@ -67,9 +74,14 @@ class GoogleCalendarListComponent(Component):
             info="startTime requires expanded recurring events.",
             value="startTime",
             advanced=True,
+            tool_mode=True,
         ),
         MessageTextInput(
-            name="page_token", display_name="Page Token", info="Continue a previous listing.", advanced=True
+            name="page_token",
+            display_name="Page Token",
+            info="Continue a previous listing.",
+            advanced=True,
+            tool_mode=True,
         ),
     ]
 

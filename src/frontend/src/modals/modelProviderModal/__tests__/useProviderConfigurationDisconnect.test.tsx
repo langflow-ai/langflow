@@ -1228,6 +1228,104 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
     mockRefreshAllModelInputs.mockClear();
   });
 
+  it.each([
+    {
+      view: "decision",
+      hasDecisionModels: true,
+      check: { model_type: "decision" },
+    },
+    // A provider with no decision models keeps its own chat check.
+    { view: "decision", hasDecisionModels: false, check: {} },
+    { view: "all", hasDecisionModels: true, check: {} },
+  ] as const)(
+    "checks a key saved from the $view view once (decision models: $hasDecisionModels)",
+    async ({ view, hasDecisionModels, check }) => {
+      mockProviderVariablesMapping.OpenAI = openAIProviderVariables;
+      const openAI: Provider = {
+        provider: "OpenAI",
+        icon: "OpenAI",
+        is_enabled: false,
+        is_configured: false,
+        models: hasDecisionModels
+          ? [{ model_name: "gpt-6-luna", metadata: { model_type: "decision" } }]
+          : [{ model_name: "gpt-5.6-sol", metadata: { model_type: "llm" } }],
+      };
+      mockModelProviders = [openAI];
+      mockCreateMutateAsync.mockResolvedValue(undefined);
+      const { result } = renderHook(
+        ({ provider }: { provider: Provider }) =>
+          useProviderConfiguration({
+            selectedProvider: provider,
+            modelType: view,
+          }),
+        { initialProps: { provider: openAI } },
+      );
+
+      act(() => {
+        result.current.handleVariableChange("OPENAI_API_KEY", "sk-test");
+      });
+      await act(async () => {
+        await result.current.handleSaveAllVariables();
+      });
+
+      expect(mockValidateMutateAsync).toHaveBeenCalledTimes(1);
+      expect(mockValidateMutateAsync).toHaveBeenCalledWith(
+        "model_type" in check
+          ? expect.objectContaining(check)
+          : expect.not.objectContaining({ model_type: expect.anything() }),
+      );
+    },
+  );
+
+  it.each([
+    // A mixed provider's key is checked again on save, as a chat call; from a
+    // decision picker it was just checked for Decisions, so the save says so.
+    { view: "decision", kinds: ["llm", "decision"], asks: true },
+    // A decision-only provider's key is never checked on save.
+    { view: "decision", kinds: ["decision"], asks: false },
+    { view: "llm", kinds: ["llm", "decision"], asks: false },
+  ] as const)(
+    "saves from the $view view saying it was checked for Decisions: $asks ($kinds)",
+    async ({ view, kinds, asks }) => {
+      mockProviderVariablesMapping.OpenAI = openAIProviderVariables;
+      const openAI: Provider = {
+        provider: "OpenAI",
+        icon: "OpenAI",
+        is_enabled: false,
+        is_configured: false,
+        models: kinds.map((kind) => ({
+          model_name: "gpt-6-luna",
+          metadata: { model_type: kind },
+        })),
+      };
+      mockModelProviders = [openAI];
+      mockCreateMutateAsync.mockResolvedValue(undefined);
+      const { result } = renderHook(
+        ({ provider }: { provider: Provider }) =>
+          useProviderConfiguration({
+            selectedProvider: provider,
+            modelType: view,
+          }),
+        { initialProps: { provider: openAI } },
+      );
+
+      act(() => {
+        result.current.handleVariableChange("OPENAI_API_KEY", "sk-test");
+      });
+      await act(async () => {
+        await result.current.handleSaveAllVariables();
+      });
+
+      expect(mockCreateMutateAsync).toHaveBeenCalledWith(
+        asks
+          ? expect.objectContaining({ checkedModelType: "decision" })
+          : expect.not.objectContaining({
+              checkedModelType: expect.anything(),
+            }),
+      );
+    },
+  );
+
   it("resets a configured optional variable without deleting its identity", async () => {
     const { result } = renderConfiguredOpenAI();
 
@@ -1271,7 +1369,8 @@ describe("useProviderConfiguration.handleSaveAllVariables", () => {
 
       expect(mockValidateMutateAsync).toHaveBeenCalledWith({
         provider: "OpenAI",
-        variables: { OPENAI_API_KEY: replacementApiKey },
+        // The cleared URL is sent as "", so the server's saved one can't stand in for it.
+        variables: { OPENAI_API_KEY: replacementApiKey, OPENAI_BASE_URL: "" },
       });
       expect(mockUpdateMutateAsync).toHaveBeenNthCalledWith(1, {
         id: "var-url",

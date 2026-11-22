@@ -104,7 +104,9 @@ _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 # import its model class on the runner. ``test_provider_fallback_covers_unified_catalog``
 # guards this invariant. Some keys below (Amazon Bedrock, SambaNova, NVIDIA via
 # ``MODEL_PROVIDERS_DICT``) are not unified-selectable but back the dedicated
-# provider components / legacy flows.
+# provider components / legacy flows. Decision-only providers (TypeSafe,
+# Perplexity) need no entry: they can't be picked in those components, and
+# their decision models call the provider over httpx, which lfx depends on.
 _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
     "Amazon Bedrock": {"langchain-aws"},
     "Anthropic": {"langchain-anthropic"},

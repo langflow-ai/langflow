@@ -71,6 +71,9 @@ async def test_cleanup_orphaned_records_with_orphans():
         session.add(message)
         await session.commit()
 
+    storage_service = get_storage_service()
+    await storage_service.save_file(f"flow-{orphaned_flow_id}", "test.json", b"test data")
+
     # Run cleanup
     async with session_scope() as session:
         await cleanup_orphaned_records()
@@ -79,6 +82,33 @@ async def test_cleanup_orphaned_records_with_orphans():
     async with session_scope() as session:
         message = await session.get(MessageTable, message.id)
         assert message is None
+    assert await storage_service.list_files(f"flow-{orphaned_flow_id}") == []
+
+
+@pytest.mark.usefixtures("client")
+@pytest.mark.parametrize("collides_with_user", [False, True])
+async def test_cleanup_removes_only_noncolliding_raw_flow_namespaces(active_user, collides_with_user):
+    orphaned_flow_id = active_user.id if collides_with_user else uuid4()
+    async with session_scope() as session:
+        session.add(
+            MessageTable(
+                id=uuid4(),
+                flow_id=orphaned_flow_id,
+                sender="test_user",
+                sender_name="Test User",
+                timestamp=datetime.datetime.now(timezone.utc),
+                session_id=str(uuid4()),
+            )
+        )
+        await session.commit()
+    storage_service = get_storage_service()
+    await storage_service.save_file(str(orphaned_flow_id), "legacy.json", b"legacy")
+    await storage_service.save_file(f"flow-{orphaned_flow_id}", "typed.json", b"typed")
+
+    await cleanup_orphaned_records()
+
+    assert await storage_service.list_files(f"flow-{orphaned_flow_id}") == []
+    assert (await storage_service.list_files(str(orphaned_flow_id)) == ["legacy.json"]) is collides_with_user
 
 
 @pytest.mark.asyncio

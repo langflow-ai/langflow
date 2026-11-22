@@ -1,0 +1,17 @@
+{
+  "label": "chromium__settings-triggers-row-menu",
+  "description": "KNOWN a11y debt (tracked, not accepted as correct). The open Radix DropdownMenu portals its content to <body>, which sits outside any landmark, so IBM reports aria_content_in_landmark. Same app-wide Radix limitation as chromium__settings-mcp-servers-actions-menu and chromium__assets-files-actions-menu. The menu's real accessibility (named trigger, keyboard open/close, arrow keys reaching refused actions, focus restore) is covered by the keyboard test in tests/a11y/triggers.a11y.spec.ts. Delete this file to resurface the violation in tests/a11y/triggers.a11y.spec.ts ('row menu opens from the keyboard and keeps refused actions reachable').",
+  "results": [
+    {
+      "ruleId": "aria_content_in_landmark",
+      "reasonId": "Fail_1",
+      "level": "violation",
+      "message": "Content is not within a landmark element",
+      "path": {
+        "dom": "/html[1]/body[1]/div[2]/div[1]",
+        "aria": "/document[1]/menu[1]"
+      },
+      "value": ["VIOLATION", "FAIL"]
+    }
+  ]
+}

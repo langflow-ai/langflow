@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from ipaddress import ip_address
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -13,6 +14,17 @@ if TYPE_CHECKING:
     from typing_extensions import Self
 
 _PAGE_SIZE = 200
+
+
+def _is_http_loopback_url(url: httpx.URL) -> bool:
+    if url.scheme != "http":
+        return False
+    if url.host == "localhost":
+        return True
+    try:
+        return ip_address(url.host).is_loopback
+    except ValueError:
+        return False
 
 
 class AdminAPIError(RuntimeError):
@@ -41,11 +53,13 @@ class AdminClient:
             "X-API-Key": api_key,
             "X-Langflow-Operation-ID": operation_id,
         }
+        base_url = httpx.URL(f"{url.rstrip('/')}/api/v1/")
         self._client = httpx.Client(
-            base_url=f"{url.rstrip('/')}/api/v1/",
+            base_url=base_url,
             headers=headers,
             timeout=httpx.Timeout(30.0),
             transport=transport,
+            trust_env=not _is_http_loopback_url(base_url),
         )
 
     def close(self) -> None:
@@ -324,6 +338,23 @@ class AdminClient:
 
     def configure_directory_connection(self, **trust: str) -> dict[str, Any]:
         return self.request("PUT", "authz/directory/connection", json=trust)
+
+    def rotate_directory_connection_token(self) -> dict[str, Any]:
+        target = self._client.base_url
+        if target.scheme != "https" and not _is_http_loopback_url(target):
+            raise AdminAPIError(
+                status_code=httpx.codes.BAD_REQUEST,
+                detail="Directory token creation requires HTTPS or an HTTP loopback address",
+                error_code="insecure_directory_token_transport",
+            )
+        try:
+            return self.request("POST", "authz/directory/connection/token")
+        except AdminAPIError as exc:
+            raise AdminAPIError(
+                status_code=exc.status_code,
+                detail="Directory token creation failed",
+                error_code=exc.error_code,
+            ) from None
 
     def validate_directory_connection(self) -> dict[str, Any]:
         return self.request("POST", "authz/directory/connection/validate")

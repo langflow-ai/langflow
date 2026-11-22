@@ -13,6 +13,7 @@ from lfx.schema.artifact import get_artifact_type, post_process_raw
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
+from lfx.services.variable.exceptions import RuntimeVariableError
 from lfx.utils.env_var_security import safe_getenv
 from lfx.utils.flow_validation import is_protected_tweak_field
 
@@ -56,7 +57,7 @@ def instantiate_class(
         public_execution=str(user_id) == str(PUBLIC_ANONYMOUS_ACTOR_ID),
     )
     class_object: type[CustomComponent | Component] = eval_custom_component_code(
-        code, class_name=_component_class_name(vertex)
+        code, class_name=_component_class_name(vertex), reuse_class=True
     )
     custom_component: CustomComponent | Component = class_object(
         _user_id=user_id,
@@ -110,11 +111,13 @@ async def get_instance_results(
     from lfx.memory.flow_context import (
         coerce_flow_id,
         reset_current_flow_id,
+        reset_current_message_execution_principal,
         reset_current_message_executor_id,
         reset_current_message_owner_id,
         reset_messages_persist,
         resolve_message_owner_id,
         set_current_flow_id,
+        set_current_message_execution_principal,
         set_current_message_executor_id,
         set_current_message_owner_id,
         set_messages_persist,
@@ -130,6 +133,7 @@ async def get_instance_results(
     owner_id = resolve_message_owner_id(graph)
     owner_scope_token = set_current_message_owner_id(owner_id)
     executor_scope_token = set_current_message_executor_id(coerce_flow_id(getattr(graph, "user_id", None)))
+    principal_scope_token = set_current_message_execution_principal(getattr(graph, "execution_principal", None))
     # Bind the run's message-persistence flag here too (defaults True) so
     # astore_message can skip the DB write for an anonymous serving run. Reading it
     # off the graph and binding in the component's own task sidesteps any
@@ -157,6 +161,7 @@ async def get_instance_results(
         reset_current_flow_id(flow_scope_token)
         reset_current_message_owner_id(owner_scope_token)
         reset_current_message_executor_id(executor_scope_token)
+        reset_current_message_execution_principal(principal_scope_token)
         reset_messages_persist(persist_token)
 
 
@@ -314,6 +319,8 @@ async def update_table_params_with_load_from_db_fields(
                             name=variable_name, field=f"{table_field_name}.{column_name}", session=session
                         )
 
+                except RuntimeVariableError:
+                    raise
                 except ValueError as e:
                     if "User id is not set" in str(e):
                         raise
@@ -356,6 +363,7 @@ async def update_params_with_load_from_db_fields(
     load_from_db_fields,
     *,
     fallback_to_env_vars=False,
+    allow_missing: bool = False,
 ):
     async with session_scope() as session:
         settings_service = get_settings_service()
@@ -387,10 +395,12 @@ async def update_params_with_load_from_db_fields(
 
                 try:
                     key = await custom_component.get_variable(name=params[field], field=field, session=session)
+                except RuntimeVariableError:
+                    raise
                 except ValueError as e:
                     if "User id is not set" in str(e):
                         raise
-                    if "variable not found." in str(e) and not fallback_to_env_vars:
+                    if "variable not found." in str(e) and not fallback_to_env_vars and not allow_missing:
                         raise
                     logger.debug(str(e))
                     key = None

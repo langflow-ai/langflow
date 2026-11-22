@@ -138,7 +138,11 @@ export default function UpdateComponentModal({
       size="small-update"
       className="px-4 py-3"
     >
-      <BaseModal.Trigger asChild>{children ?? <span />}</BaseModal.Trigger>
+      {children ? (
+        <BaseModal.Trigger asChild>{children}</BaseModal.Trigger>
+      ) : (
+        <></>
+      )}
       <BaseModal.Header>
         <span className="">
           {isMultiple

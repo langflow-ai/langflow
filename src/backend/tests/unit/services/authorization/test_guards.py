@@ -64,6 +64,7 @@ async def test_connection_owner_and_scoped_api_key_personas(monkeypatch, fake_us
             method=AUTH_METHOD_API_KEY,
             api_key_id=uuid4(),
             api_key_source="db",  # pragma: allowlist secret
+            api_key_restricted=True,
         )
     )
     try:
@@ -395,6 +396,7 @@ async def test_api_key_scope_plugin_sees_owner_resource_instead_of_owner_overrid
             method=AUTH_METHOD_API_KEY,
             api_key_id=uuid4(),
             api_key_source="db",  # pragma: allowlist secret
+            api_key_restricted=True,
         )
     )
 
@@ -845,6 +847,7 @@ async def test_provider_account_owner_and_scoped_api_key_personas(monkeypatch, f
             method=AUTH_METHOD_API_KEY,
             api_key_id=uuid4(),
             api_key_source="db",  # pragma: allowlist secret
+            api_key_restricted=True,
         )
     )
     try:
@@ -884,6 +887,7 @@ async def test_voice_owner_and_scoped_api_key_personas(monkeypatch, fake_user):
             method=AUTH_METHOD_API_KEY,
             api_key_id=uuid4(),
             api_key_source="db",  # pragma: allowlist secret
+            api_key_restricted=True,
         )
     )
     try:

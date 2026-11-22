@@ -79,7 +79,7 @@ actual_main_version=$("$runtime" run --rm --entrypoint python langflowai/langflo
 check_image_authentication langflowai/langflow:latest-dev
 
 "$runtime" build -t langflowai/langflow-backend:latest-dev \
-  --build-arg LANGFLOW_IMAGE=langflowai/langflow:latest-dev \
+  --build-arg "BASE_VERSION=$base_version" \
   -f docker/build_and_push_backend.Dockerfile .
 actual_backend_version=$("$runtime" run --rm --entrypoint python langflowai/langflow-backend:latest-dev \
   -c 'from langflow.utils.version import get_version_info; print(get_version_info()["version"])')
@@ -89,8 +89,8 @@ actual_backend_version=$("$runtime" run --rm --entrypoint python langflowai/lang
 }
 check_image_authentication langflowai/langflow-backend:latest-dev
 
-# The backend build must consume the just-built main image. Once both are
-# verified, release their layers before building the standalone base image.
+# Once both images are verified, release their layers before building the
+# standalone base image.
 cleanup
 
 "$runtime" build -t langflowai/langflow:base-latest-dev \

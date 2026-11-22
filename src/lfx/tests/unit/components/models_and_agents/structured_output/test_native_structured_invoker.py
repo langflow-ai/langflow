@@ -23,7 +23,7 @@ class _StructuredRunnable:
         self._payload = payload
         self.last_input: Any = None
 
-    async def ainvoke(self, messages: Any) -> Any:
+    async def ainvoke(self, messages: Any, **_kwargs) -> Any:
         self.last_input = messages
         return self._payload
 
@@ -38,6 +38,45 @@ class _NativeLLMStub:
     def with_structured_output(self, schema: type[BaseModel]) -> _StructuredRunnable:
         self.requested_schema = schema
         return self._runnable
+
+
+async def test_agent_native_structured_output_keeps_tracing_callbacks(monkeypatch):
+    from langchain_core.callbacks import BaseCallbackHandler
+    from langchain_core.language_models.fake_chat_models import FakeListChatModel
+    from langchain_core.runnables import RunnableLambda
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    class _StructuredChatModel(FakeListChatModel):
+        def with_structured_output(self, schema, **_kwargs):
+            return self | RunnableLambda(lambda message: schema.model_validate_json(message.content))
+
+    class _RecordingCallback(BaseCallbackHandler):
+        def __init__(self):
+            self.model_runs = []
+
+        def on_chat_model_start(self, _serialized, _messages, *, run_id, **_kwargs):
+            self.model_runs.append(run_id)
+
+    llm = _StructuredChatModel(responses=['{"objects": [{"name": "Alice", "age": 30}]}'])
+    callback = _RecordingCallback()
+
+    async def _requirements(_self):
+        return llm, [], []
+
+    monkeypatch.setattr(AgentComponent, "get_agent_requirements", _requirements)
+    monkeypatch.setattr(AgentComponent, "get_langchain_callbacks", lambda _self: [callback])
+    agent = AgentComponent()
+    agent.input_value = "Alice is 30 years old."
+    agent.system_prompt = "Extract people."
+    agent.output_schema = [
+        {"name": "name", "type": "str", "multiple": False},
+        {"name": "age", "type": "int", "multiple": False},
+    ]
+
+    result = await agent.json_response()
+
+    assert result.data == {"name": "Alice", "age": 30}
+    assert len(callback.model_runs) == 1
 
 
 @pytest.mark.unit

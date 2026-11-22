@@ -112,6 +112,40 @@ async def _read_active(session_maker) -> PolicyBundleSnapshot:
         return await policy_store.get_policy_bundle_state(session)
 
 
+async def test_trigger_facet_round_trips_and_rollback_restores_the_original_ceiling(bundle_session_maker):
+    async with bundle_session_maker() as session:
+        first = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=1,
+            approved_provider_ids=(),
+            blocked_component_keys=(),
+            blocked_template_keys=(),
+            approved_trigger_kinds={"Slack.Message", "google.gmail"},
+            actor_user_id=None,
+        )
+    assert first.approved_trigger_kinds == frozenset({"slack.message", "google.gmail"})
+    assert (await _read_active(bundle_session_maker)).approved_trigger_kinds == first.approved_trigger_kinds
+    async with bundle_session_maker() as session:
+        denied = await policy_store.replace_policy_bundle_state(
+            session,
+            expected_revision=2,
+            approved_provider_ids=(),
+            blocked_component_keys=(),
+            blocked_template_keys=(),
+            approved_trigger_kinds=(),
+            actor_user_id=None,
+        )
+        restored = await policy_store.rollback_policy_bundle_state(
+            session,
+            expected_revision=3,
+            target_revision=2,
+            actor_user_id=None,
+        )
+    assert denied.approved_trigger_kinds == frozenset()
+    assert restored.approved_trigger_kinds == first.approved_trigger_kinds
+    assert restored.content_hash == first.content_hash
+
+
 def _bundle_value(snapshot: PolicyBundleSnapshot) -> tuple:
     """Compare persisted semantics without depending on SQLite timezone reflection."""
     timestamp = snapshot.created_at.replace(tzinfo=None) if snapshot.created_at is not None else None
@@ -689,7 +723,7 @@ async def test_replace_without_integration_fields_keeps_legacy_content_hash_shap
             actor_user_id=uuid4(),
         )
 
-    assert committed.approved_integration_provider_ids == frozenset()
+    assert committed.approved_integration_provider_ids is None
     assert committed.blocked_integration_action_keys == frozenset()
     assert committed.content_hash == policy_store.policy_bundle_content_hash(
         approved_provider_ids=_INITIAL_PROVIDERS,
@@ -737,7 +771,7 @@ async def test_malformed_integration_provider_id_rejected_before_any_write(bundl
 
     active = await _read_active(bundle_session_maker)
     assert active.revision == 1
-    assert active.approved_integration_provider_ids == frozenset()
+    assert active.approved_integration_provider_ids is None
 
 
 async def test_rollback_restores_integration_governance(bundle_session_maker):
@@ -761,7 +795,7 @@ async def test_rollback_restores_integration_governance(bundle_session_maker):
             blocked_template_keys=_INITIAL_TEMPLATES,
             actor_user_id=uuid4(),
         )
-    assert revision_three.approved_integration_provider_ids == frozenset()
+    assert revision_three.approved_integration_provider_ids is None
 
     async with bundle_session_maker() as session:
         rolled_back = await policy_store.rollback_policy_bundle_state(

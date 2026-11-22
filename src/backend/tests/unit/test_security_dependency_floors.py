@@ -6,6 +6,8 @@ import runpy
 import sys
 from pathlib import Path
 
+import pytest
+from packaging.markers import Marker
 from packaging.requirements import Requirement
 from packaging.version import Version
 
@@ -23,9 +25,13 @@ def _load_pyproject(relative_path: str) -> dict:
 
 
 def _requirement(requirements: list[str], name: str) -> Requirement:
-    matches = [requirement for spec in requirements if (requirement := Requirement(spec)).name.lower() == name.lower()]
-    assert len(matches) == 1, f"Expected one {name} requirement, found {matches}"
-    assert matches[0].marker is None, f"Security floor for {name} must be unconditional"
+    """Find the unconditional security floor, allowing extra Python-specific constraints."""
+    matches = [
+        requirement
+        for spec in requirements
+        if (requirement := Requirement(spec)).name.lower() == name.lower() and requirement.marker is None
+    ]
+    assert len(matches) == 1, f"Expected one unconditional {name} requirement, found {matches}"
     return matches[0]
 
 
@@ -41,10 +47,11 @@ def _assert_floor(requirement: Requirement, version: str) -> None:
 
 
 def test_workspace_security_overrides_enforce_patched_versions() -> None:
+    """Keep workspace overrides above their patched dependency floors."""
     overrides = _load_pyproject("pyproject.toml")["tool"]["uv"]["override-dependencies"]
 
     gitpython = _requirement(overrides, "GitPython")
-    _assert_floor(gitpython, "3.1.58")
+    _assert_floor(gitpython, "3.2.1")
 
     pypdf = _requirement(overrides, "pypdf")
     _assert_floor(pypdf, "6.19.0")
@@ -105,6 +112,54 @@ def test_published_packages_enforce_patched_pypdf_floor() -> None:
     _assert_specifier(pypdf_extra, "<", "7.0.0")
 
 
+def test_marker_specific_security_floors_match_supported_python() -> None:
+    """Select patched dependencies across the Langflow 1.14 Python range."""
+    envs = {
+        "3.11": {"python_version": "3.11", "python_full_version": "3.11.14", "sys_platform": "linux"},
+        "3.14": {"python_version": "3.14", "python_full_version": "3.14.5", "sys_platform": "linux"},
+        "3.15": {"python_version": "3.15", "python_full_version": "3.15.0", "sys_platform": "linux"},
+    }
+
+    base_project = _load_pyproject("src/backend/base/pyproject.toml")["project"]
+    datasets_requirements = list(map(Requirement, base_project["optional-dependencies"]["datasets"]))
+    loguru_requirements = list(map(Requirement, _load_pyproject("src/lfx/pyproject.toml")["project"]["dependencies"]))
+    loguru_requirements += list(map(Requirement, base_project["dependencies"]))
+
+    for python_version, env in envs.items():
+        datasets = [req for req in datasets_requirements if req.marker and req.marker.evaluate(env)]
+        assert len(datasets) == 1
+        _assert_floor(datasets[0], "5.2.0")
+
+        loguru = [req for req in loguru_requirements if req.name.lower() == "loguru" and req.marker]
+        applicable_loguru = [req for req in loguru if req.marker.evaluate(env)]
+        assert len(applicable_loguru) == 2
+        if python_version in {"3.14", "3.15"}:
+            for req in applicable_loguru:
+                _assert_floor(req, "0.8.0")
+                _assert_specifier(req, "<", "1.0.0")
+        else:
+            legacy_floors = sorted(
+                next(spec.version for spec in req.specifier if spec.operator == ">=") for req in applicable_loguru
+            )
+            assert legacy_floors == ["0.7.1", "0.7.3"]
+            for req in applicable_loguru:
+                _assert_specifier(req, "<", "1.0.0")
+
+    with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
+        packages = tomllib.load(lock_file)["package"]
+    assert [Version(package["version"]) for package in packages if package["name"] == "datasets"] == [Version("5.2.0")]
+
+    loguru_packages = [package for package in packages if package["name"] == "loguru"]
+    for python_version, env in envs.items():
+        applicable = [
+            Version(package["version"])
+            for package in loguru_packages
+            if any(Marker(marker).evaluate(env) for marker in package.get("resolution-markers", []))
+        ]
+        expected = "0.8.0" if python_version in {"3.14", "3.15"} else "0.7.3"
+        assert applicable == [Version(expected)]
+
+
 def test_published_packages_enforce_patched_mcp_floor() -> None:
     for relative_path in ("src/backend/base/pyproject.toml", "src/lfx/pyproject.toml"):
         dependencies = _load_pyproject(relative_path)["project"]["dependencies"]
@@ -117,32 +172,53 @@ def test_published_packages_enforce_patched_mcp_floor() -> None:
 
 
 def test_published_extras_enforce_patched_gitpython_floor() -> None:
+    """Preserve the GitPython fix in both published extras and their generator."""
     base_extras = _load_pyproject("src/backend/base/pyproject.toml")["project"]["optional-dependencies"]
-    _assert_floor(_requirement(base_extras["gitpython"], "GitPython"), "3.1.58")
+    _assert_floor(_requirement(base_extras["gitpython"], "GitPython"), "3.2.1")
 
     bundle_extras = _load_pyproject("src/bundles/lfx-bundles/pyproject.toml")["project"]["optional-dependencies"]
-    _assert_floor(_requirement(bundle_extras["git"], "GitPython"), "3.1.58")
+    _assert_floor(_requirement(bundle_extras["git"], "GitPython"), "3.2.1")
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["git"] == bundle_extras["git"]
 
 
-def test_workspace_constraints_enforce_patched_pymongo_and_tornado() -> None:
+def test_workspace_constraints_enforce_patched_pymongo() -> None:
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
 
     pymongo = _requirement(constraints, "pymongo")
-    _assert_floor(pymongo, "4.18.2")
+    _assert_floor(pymongo, "4.18.3")
     _assert_specifier(pymongo, "<", "5.0.0")
-
-    _assert_floor(_requirement(constraints, "tornado"), "6.5.10")
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
-    for name, minimum in (("pymongo", "4.18.2"), ("tornado", "6.5.10")):
-        matches = [package for package in packages if package["name"] == name]
-        assert matches
-        for package in matches:
-            assert Version(package["version"]) >= Version(minimum)
+    versions = [Version(package["version"]) for package in packages if package["name"] == "pymongo"]
+    assert versions
+    assert min(versions) >= Version("4.18.3")
+
+
+@pytest.mark.parametrize(("python_version", "minimum"), [("3.11", "6.6.1"), ("3.14", "6.6.1"), ("3.15", "6.6.1")])
+def test_tornado_floor_and_lock_match_supported_python(python_version: str, minimum: str) -> None:
+    env = {"python_version": python_version, "python_full_version": python_version + ".0"}
+    constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
+    applicable = [
+        req
+        for req in map(Requirement, constraints)
+        if req.name == "tornado" and (not req.marker or req.marker.evaluate(env))
+    ]
+    assert len(applicable) == 1
+    _assert_floor(applicable[0], minimum)
+
+    with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
+        packages = tomllib.load(lock_file)["package"]
+    versions = [
+        Version(pkg["version"])
+        for pkg in packages
+        if pkg["name"] == "tornado"
+        and (not pkg.get("resolution-markers") or any(Marker(m).evaluate(env) for m in pkg["resolution-markers"]))
+    ]
+    assert len(versions) == 1
+    assert versions[0] >= Version(minimum)
 
 
 def test_published_packages_enforce_patched_pymongo_floor() -> None:
@@ -158,7 +234,7 @@ def test_published_packages_enforce_patched_pymongo_floor() -> None:
         bundle_extras["mongodb"],
     ):
         pymongo = _requirement(requirements, "pymongo")
-        _assert_floor(pymongo, "4.18.2")
+        _assert_floor(pymongo, "4.18.3")
         _assert_specifier(pymongo, "<", "5.0.0")
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
@@ -190,12 +266,13 @@ def test_provider_upgrades_remove_indirect_community_requirements() -> None:
 
 
 def test_workspace_security_overrides_enforce_current_python_floors() -> None:
+    """Preserve current Python security floors and the LiteLLM maintenance cap."""
     project = _load_pyproject("pyproject.toml")
     constraints = project["tool"]["uv"]["constraint-dependencies"]
     overrides = project["tool"]["uv"]["override-dependencies"]
 
     oauthlib = _requirement(constraints, "oauthlib")
-    _assert_floor(oauthlib, "4.0.0")
+    _assert_floor(oauthlib, "4.0.1")
     _assert_specifier(oauthlib, "<", "5.0.0")
 
     pyjwt = _requirement(overrides, "PyJWT")
@@ -210,16 +287,18 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
         _assert_floor(_requirement(overrides, name), minimum)
 
     litellm = _requirement(constraints, "litellm")
-    _assert_floor(litellm, "1.103.1")
+    _assert_floor(litellm, "1.103.10")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
+    _assert_specifier(litellm, "!=", "1.107.0")
+    _assert_specifier(litellm, "<", "1.104.0")
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
     for name, minimum in (
-        ("oauthlib", "4.0.0"),
+        ("oauthlib", "4.0.1"),
         ("pyjwt", "2.15.1"),
         ("urllib3", "2.8.0"),
-        ("litellm", "1.103.1"),
+        ("litellm", "1.103.10"),
         ("a2a-sdk", "1.2.1"),
         ("authlib", "1.8.0"),
         ("virtualenv", "21.14.2"),
@@ -232,17 +311,18 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
 
 
 def test_published_packages_enforce_current_python_floors() -> None:
+    """Publish the security floors required by installs outside this workspace."""
     root_dependencies = _load_pyproject("pyproject.toml")["project"]["dependencies"]
     base_project = _load_pyproject("src/backend/base/pyproject.toml")["project"]
     lfx_dependencies = _load_pyproject("src/lfx/pyproject.toml")["project"]["dependencies"]
     google_dependencies = _load_pyproject("src/bundles/google/pyproject.toml")["project"]["dependencies"]
 
     oauthlib = _requirement(root_dependencies, "oauthlib")
-    _assert_floor(oauthlib, "4.0.0")
+    _assert_floor(oauthlib, "4.0.1")
     _assert_specifier(oauthlib, "<", "5.0.0")
 
     google_oauthlib = _requirement(google_dependencies, "oauthlib")
-    _assert_floor(google_oauthlib, "4.0.0")
+    _assert_floor(google_oauthlib, "4.0.1")
     _assert_specifier(google_oauthlib, "<", "5.0.0")
 
     for requirements in (base_project["dependencies"], lfx_dependencies):
@@ -259,16 +339,28 @@ def test_published_packages_enforce_current_python_floors() -> None:
     _assert_specifier(urllib3, "<", "3.0.0")
 
     litellm = _requirement(base_project["optional-dependencies"]["litellm"], "litellm")
-    _assert_floor(litellm, "1.103.1")
+    _assert_floor(litellm, "1.103.10")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
+    _assert_specifier(litellm, "!=", "1.107.0")
+    _assert_specifier(litellm, "<", "1.104.0")
 
     bundle_extras = _load_pyproject("src/bundles/lfx-bundles/pyproject.toml")["project"]["optional-dependencies"]
     for cuga_requirements in (base_project["optional-dependencies"]["cuga"], bundle_extras["cuga"]):
         cuga_litellm = [Requirement(spec) for spec in cuga_requirements if Requirement(spec).name.lower() == "litellm"]
         assert len(cuga_litellm) == 2
         for requirement in cuga_litellm:
-            _assert_floor(requirement, "1.103.1")
+            _assert_floor(requirement, "1.103.10")
             _assert_specifier(requirement, "!=", "1.104.0rc1")
+            _assert_specifier(requirement, "!=", "1.107.0")
+            _assert_specifier(requirement, "<", "1.104.0")
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["cuga"] == bundle_extras["cuga"]
+
+
+def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None:
+    """Standalone bundle installs must retain the published PyMongo security floor."""
+    extras = _load_pyproject("src/lfx/pyproject.toml")["project"]["optional-dependencies"]
+    legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
+    assert "1.1.40" not in legacy_bundle.specifier
+    assert "1.1.41" in legacy_bundle.specifier

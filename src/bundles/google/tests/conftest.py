@@ -111,6 +111,7 @@ def wire(component, responses: list[tuple[dict[str, str], bytes]], *, connection
                 execution_principal=ExecutionPrincipal(kind="actor", user_id="user-1", interactive=True),
                 flow_id=FLOW_ID,
                 run_id=RUN_ID,
+                authorized_legacy_flow_ids=frozenset({FLOW_ID}),
             )
         )
     )

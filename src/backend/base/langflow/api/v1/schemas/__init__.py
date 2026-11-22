@@ -5,9 +5,11 @@ from uuid import UUID
 
 from lfx.base.knowledge_bases.backends.opensearch import opensearch_env_configured
 from lfx.base.knowledge_bases.backends.postgres import postgres_env_configured, resolve_default_kb_backend
+from lfx.custom.schema import ComponentUpdateWarning
 from lfx.graph.schema import RunOutputs
 from lfx.services.settings.base import Settings
 from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
+from lfx.upgrade.retired import retirement_lookup
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -206,6 +208,7 @@ class CustomComponentRequest(BaseModel):
 class CustomComponentResponse(BaseModel):
     data: dict
     type: str
+    warnings: list[ComponentUpdateWarning] = Field(default_factory=list)
 
 
 class UpdateCustomComponentRequest(CustomComponentRequest):
@@ -332,6 +335,8 @@ class ResultDataResponse(BaseModel):
 class VertexBuildResponse(BaseModel):
     id: str | None = None
     inactivated_vertices: list[str] | None = None
+    branch_skips: dict[str, dict[str, Any]] | None = None
+    """Router that excluded each inactivated vertex and the outputs it took instead."""
     next_vertices_ids: list[str] | None = None
     top_level_vertices: list[str] | None = None
     valid: bool
@@ -464,12 +469,16 @@ class ConfigResponse(BaseConfigResponse):
     """
 
     type: Literal["full"] = "full"
+    retired_components: dict[str, dict] = Field(default_factory=retirement_lookup)
     serialization_max_items_length: int
     serialization_max_text_length: int
     auto_saving: bool
     auto_saving_interval: int
     health_check_max_retries: int
     webhook_polling_interval: int
+    # Milliseconds between trigger-state re-fetches in the triggers UI. There is
+    # no trigger event stream, so this is how fast a badge converges.
+    trigger_polling_interval: int = 5000
     public_flow_cleanup_interval: int
     public_flow_expiration: int
     webhook_auth_enable: bool
@@ -549,13 +558,14 @@ class ConfigResponse(BaseConfigResponse):
             health_check_max_retries=settings.health_check_max_retries,
             max_file_size_upload=settings.max_file_size_upload,
             webhook_polling_interval=settings.webhook_polling_interval,
+            trigger_polling_interval=settings.trigger_polling_interval,
             public_flow_cleanup_interval=settings.public_flow_cleanup_interval,
             public_flow_expiration=settings.public_flow_expiration,
             event_delivery=settings.event_delivery,
             voice_mode_available=settings.voice_mode_available,
             mcp_base_url=settings.mcp_base_url,
             enable_extension_reload=settings.enable_extension_reload,
-            webhook_auth_enable=auth_settings.WEBHOOK_AUTH_ENABLE,
+            webhook_auth_enable=True,
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=settings.hide_getting_started_progress,
             allow_custom_components=settings.allow_custom_components,

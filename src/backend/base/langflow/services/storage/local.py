@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -10,7 +12,7 @@ import aiofiles
 from lfx.services.storage.namespace import remove_namespace_tree
 
 from langflow.logging.logger import logger
-from langflow.services.storage.service import StorageService
+from langflow.services.storage.service import StorageService, _refuse_bad_move
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -193,6 +195,53 @@ class LocalStorageService(StorageService):
             logger.exception(f"Error saving file {file_name} in flow {flow_id}")
             raise
 
+    async def save_upload_stream(self, flow_id: str, file_name: str, chunks: AsyncIterator[bytes]) -> int:
+        """Stream an upload into a file of its own, then rename it into place, and return its size.
+
+        Writing the live file chunk by chunk let two uploads of one name append into the same
+        file, and left half a file where an upload failed. A rename shows a reader the whole old
+        file or the whole new one, as ``move_file`` does: the last upload to finish wins whole,
+        as on S3. The partial file sits outside every namespace, so no listing shows it.
+        """
+        file_path = await self._validated_path(flow_id, file_name)
+        await (self.data_dir / flow_id).mkdir(parents=True, exist_ok=True)
+        partials = self.data_dir / ".uploads"
+        await partials.mkdir(exist_ok=True)
+        partial = partials / f"{uuid.uuid4().hex}.part"
+        written = 0
+        try:
+            async with aiofiles.open(str(partial), "wb") as f:
+                async for chunk in chunks:
+                    await f.write(chunk)
+                    written += len(chunk)
+            await partial.replace(file_path)
+        except BaseException:
+            with contextlib.suppress(OSError):
+                await partial.unlink()
+            raise
+        await logger.ainfo(f"File {file_name} saved successfully in flow {flow_id}.")
+        return written
+
+    async def move_file(self, source_namespace: str, target_namespace: str, file_name: str) -> None:
+        """Move a file between namespaces with a rename.
+
+        See ``StorageService.move_file``. A rename is atomic within a filesystem and both
+        namespaces sit under ``data_dir``, so a reader sees either the whole previous file
+        or the whole new one. ``save_file`` cannot promise that: it opens the final path in
+        ``"wb"`` or ``"ab"`` and writes into the live file.
+        """
+        _refuse_bad_move(source_namespace, target_namespace, file_name)
+        source = await self._validated_path(source_namespace, file_name)
+        target = await self._validated_path(target_namespace, file_name)
+        await (self.data_dir / target_namespace).mkdir(parents=True, exist_ok=True)
+        try:
+            await source.replace(target)
+        except FileNotFoundError:
+            if await self._has_object(target_namespace, file_name):
+                return
+            raise
+        await logger.ainfo(f"File {file_name} moved from {source_namespace} to {target_namespace}")
+
     async def get_file(self, flow_id: str, file_name: str) -> bytes:
         """Retrieve a file from the local storage.
 
@@ -219,7 +268,9 @@ class LocalStorageService(StorageService):
         logger.debug(f"File {file_name} retrieved successfully from flow {flow_id}.")
         return content
 
-    async def get_file_stream(self, flow_id: str, file_name: str, chunk_size: int = 8192) -> AsyncIterator[bytes]:
+    async def get_file_stream(
+        self, flow_id: str, file_name: str, chunk_size: int = 8192, *, offset: int = 0
+    ) -> AsyncIterator[bytes]:
         """Retrieve a file from storage as a stream."""
         file_path = await self._validated_path(flow_id, file_name)
         if not await file_path.exists():
@@ -228,6 +279,7 @@ class LocalStorageService(StorageService):
             raise FileNotFoundError(msg)
 
         async with aiofiles.open(str(file_path), "rb") as f:
+            await f.seek(offset)
             while True:
                 chunk = await f.read(chunk_size)
                 if not chunk:

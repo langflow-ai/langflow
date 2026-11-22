@@ -329,7 +329,7 @@ Now analyze the user input above and respond according to the instructions:"""
         try:
             # Use the LLM to check
             if hasattr(llm, "invoke"):
-                response = llm.invoke(prompt)
+                response = llm.invoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
                 self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
                 # Gemini 3 returns content as a list of blocks. The text accessor joins
                 # only text blocks, so model reasoning never reaches the YES/NO parser.

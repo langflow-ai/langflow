@@ -44,30 +44,35 @@ class SlackListChannelMembersComponent(SlackBaseComponent):
             display_name="Channel ID",
             required=True,
             info="Conversation ID, for example C0SLACKDEMO.",
+            tool_mode=True,
         ),
         BoolInput(
             name="channel_is_private",
             display_name="Private channel",
             value=False,
             info="Requests the groups:read scope. The bot must be a member of the private channel.",
+            tool_mode=True,
         ),
         BoolInput(
             name="resolve_names",
             display_name="Resolve display names",
             value=False,
             info="Calls users.info for each member, which requires the users:read scope.",
+            tool_mode=True,
         ),
         IntInput(
             name="limit",
             display_name="Members per page",
             value=200,
             advanced=True,
+            tool_mode=True,
         ),
         StrInput(
             name="cursor",
             display_name="Cursor",
             info="Cursor from a previous run's Pagination output. Leave empty for the first page.",
             advanced=True,
+            tool_mode=True,
         ),
     ]
 

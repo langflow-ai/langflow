@@ -36,6 +36,11 @@ from langflow.services.triggers.constants import (
     PROVIDER_SLACK,
     SLACK_PROVIDER_STATE_APP_ID,
 )
+from langflow.services.triggers.error_codes import (
+    SLACK_BACKGROUND_RUNS_NOT_ALLOWED_ERROR,
+    SLACK_CONNECTION_UNUSABLE_ERROR,
+    TriggerErrorCode,
+)
 from langflow.services.triggers.ownership import UNUSABLE_CONNECTION_STATUSES
 
 if TYPE_CHECKING:
@@ -60,7 +65,14 @@ _REACTION_SCOPE = "reactions:read"
 
 
 class SlackTriggerArmingError(ValueError):
-    """A Slack trigger that cannot be armed on the connection it names."""
+    """A Slack trigger that cannot be armed on the connection it names.
+
+    ``code`` is set when the UI can show the reason in the reader's language.
+    """
+
+    def __init__(self, message: str, *, code: TriggerErrorCode | None = None) -> None:
+        super().__init__(message)
+        self.code = code.value if code is not None else None
 
 
 @dataclass(frozen=True)
@@ -226,14 +238,11 @@ async def check_ready_to_arm(session: AsyncSession, *, kind: str, config: dict[s
     """
     row = await session.get(Connection, arming.connection_id)
     if row is None or row.status in UNUSABLE_CONNECTION_STATUSES:
-        msg = "The Slack connection this trigger uses is revoked or expired. Reconnect it, then enable the trigger."
-        raise SlackTriggerArmingError(msg)
+        raise SlackTriggerArmingError(SLACK_CONNECTION_UNUSABLE_ERROR, code=TriggerErrorCode.CONNECTION_UNUSABLE)
     if not row.allow_non_interactive:
-        msg = (
-            "Turn on 'Allow background runs' for the Slack connection this trigger uses: a trigger runs its flow "
-            "with no one signed in, and the connection's owner has not allowed that yet."
+        raise SlackTriggerArmingError(
+            SLACK_BACKGROUND_RUNS_NOT_ALLOWED_ERROR, code=TriggerErrorCode.BACKGROUND_RUNS_NOT_ALLOWED
         )
-        raise SlackTriggerArmingError(msg)
     if arming.mechanism_id == MECHANISM_SLACK_EVENTS_API:
         missing = sorted(required_event_scopes(kind, config) - set(row.granted_scopes or []))
         if missing:

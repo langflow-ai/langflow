@@ -65,3 +65,8 @@ class FeatureDisabledError(DataSubjectError):
 class ExportNotFoundError(DataSubjectError):
     code = "export_not_found"
     status_code = HTTPStatus.NOT_FOUND
+
+
+class ReportOwnerAttributionRequiredError(DataSubjectError):
+    code = "report_owner_attribution_required"
+    status_code = HTTPStatus.CONFLICT

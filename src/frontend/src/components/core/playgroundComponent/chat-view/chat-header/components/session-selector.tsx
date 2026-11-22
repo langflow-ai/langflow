@@ -9,6 +9,8 @@ import { SessionRename } from "./session-rename";
 
 export interface SessionSelectorProps {
   session: string;
+  /** Shown instead of the raw id, e.g. what started a trigger run and when. */
+  label?: string;
   currentFlowId: string;
   deleteSession: (session: string) => void;
   toggleVisibility: () => void;
@@ -31,6 +33,7 @@ export interface SessionSelectorProps {
 
 export function SessionSelector({
   session,
+  label,
   currentFlowId,
   deleteSession,
   toggleVisibility,
@@ -147,7 +150,9 @@ export function SessionSelector({
             <ShadTooltip styleClasses="z-50" content={session}>
               <div className="relative w-full overflow-hidden">
                 <span className="w-full truncate bg-transparent text-mmd">
-                  {isDefaultSession ? t("chat.defaultSession") : session}
+                  {isDefaultSession
+                    ? t("chat.defaultSession")
+                    : (label ?? session)}
                 </span>
               </div>
             </ShadTooltip>

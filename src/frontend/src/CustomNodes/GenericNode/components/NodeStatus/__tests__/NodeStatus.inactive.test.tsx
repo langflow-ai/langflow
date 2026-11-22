@@ -164,3 +164,23 @@ describe("BuildStatusDisplay for a blocked node", () => {
     expect(screen.queryByText("Duration:")).not.toBeInTheDocument();
   });
 });
+
+describe("BuildStatusDisplay for a node on a branch that was not taken", () => {
+  it("should_say_which_branch_the_router_took", () => {
+    render(
+      <BuildStatusDisplay
+        buildStatus={BuildStatus.INACTIVE}
+        validationStatus={null}
+        validationString=""
+        lastRunTime={undefined}
+        branchSkip={{ component: "If-Else", outputs: ["True"] }}
+      />,
+    );
+
+    expect(screen.getByText("Branch not taken")).toBeInTheDocument();
+    expect(
+      screen.getByText("If-Else sent the input to True."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Execution blocked")).not.toBeInTheDocument();
+  });
+});

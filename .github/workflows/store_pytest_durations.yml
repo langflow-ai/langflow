@@ -10,7 +10,7 @@ on:
       python-versions:
         description: JSON list of Python versions
         type: string
-        default: '["3.10", "3.14"]'
+        default: '["3.11", "3.14", "3.15"]'
       shards:
         description: Number of independent runners
         type: number
@@ -67,7 +67,7 @@ jobs:
     uses: ./.github/workflows/backend-unit-tests.yml
     with:
       ref: ${{ matrix.ref }}
-      python-versions: ${{ inputs.python-versions || '["3.10", "3.14"]' }}
+      python-versions: ${{ inputs.python-versions || '["3.11", "3.14", "3.15"]' }}
       shards: ${{ fromJSON(format('{0}', inputs.shards || 10)) }}
       workers: ${{ fromJSON(format('{0}', inputs.workers || 2)) }}
       distribution: ${{ inputs.distribution || 'load' }}

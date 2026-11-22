@@ -373,6 +373,72 @@ class TestInstalledBundleWalk:
         assert flat == {}
 
 
+@pytest.mark.parametrize(
+    ("component_name", "constants", "expected"),
+    [
+        (
+            "DecisionModel",
+            {"_TABLE": {"Choice": ("Options", "Choose an option."), "Score": ("Levels", "Ordered levels.")}},
+            {
+                "inputs.candidates.display_name": "Levels",
+                "inputs.candidates.info": "Ordered levels.",
+            },
+        ),
+        (
+            "SmartRouter",
+            {
+                "_ELSE_INFO": {"score": "Score errors reach Else."},
+                "_DECISION_QUESTION_INFO": {"boolean": "Ask yes or no.", "score": "Ask for a level."},
+                "_MINIMUM_PROBABILITY_INFO": {"boolean": "Use the more likely answer."},
+                "_CUSTOM_PROMPT_DECISION_INFO": "Unused in Decision Model mode.",
+            },
+            {
+                "inputs.enable_else_output.info": "Score errors reach Else.",
+                "inputs.decision_question.info": "Ask for a level.",
+                "inputs.minimum_probability.info": "Use the more likely answer.",
+                "inputs.custom_prompt.info": "Unused in Decision Model mode.",
+            },
+        ),
+    ],
+)
+def test_emitting_a_component_keeps_its_dynamic_decision_type_strings(monkeypatch, component_name, constants, expected):
+    import sys
+    import types
+
+    module = types.ModuleType("fixture_decision_component")
+    for name, value in constants.items():
+        setattr(module, name, value)
+    monkeypatch.setitem(sys.modules, module.__name__, module)
+    component = type(
+        "FixtureComponent",
+        (),
+        {
+            "__module__": module.__name__,
+            "code_class_base_inheritance": True,
+            "name": component_name,
+            "display_name": component_name,
+            "inputs": [],
+            "outputs": [],
+        },
+    )
+    helpers = _fake_i18n_key_helpers()
+    flat: dict[str, str] = {}
+
+    extract_mod.emit_component_strings(
+        component,
+        flat,
+        set(),
+        component_field_key=helpers.component_field_key,
+        normalize_component_key=helpers.normalize_component_key,
+    )
+
+    for field, value in expected.items():
+        assert flat[helpers.component_field_key(component_name.lower(), field, value)] == value
+    if component_name == "SmartRouter":
+        value = constants["_DECISION_QUESTION_INFO"]["boolean"]
+        assert flat[helpers.component_field_key("smartrouter", "inputs.decision_question.info", value)] == value
+
+
 class TestCollectStringsWithBundles:
     """End-to-end over collect_strings(), with both component sources faked."""
 
@@ -503,3 +569,39 @@ class TestCollectStringsWithBundles:
         with pytest.raises(SystemExit) as exc_info:
             _run_main("--check")
         assert exc_info.value.code == 1
+
+
+class _FakeDropdown(_FakeInput):
+    def __init__(self, name, options, *, translate_options=None):
+        super().__init__(name, display_name="Pick")
+        self.options = options
+        self.translate_options = translate_options
+
+
+class _OptionsFixtureComponent:
+    code_class_base_inheritance = True
+    name = "OptionsFixture"
+    display_name = "Options Fixture"
+    inputs = (
+        _FakeDropdown("kind", ["Daily", "Weekly"], translate_options=True),
+        _FakeDropdown("model", ["gpt-x"]),
+    )
+
+
+def test_options_are_keyed_only_for_inputs_that_ask_for_translation():
+    helpers = _fake_i18n_key_helpers()
+    flat: dict[str, str] = {}
+
+    extract_mod.emit_component_strings(
+        _OptionsFixtureComponent,
+        flat,
+        set(),
+        component_field_key=helpers.component_field_key,
+        normalize_component_key=helpers.normalize_component_key,
+    )
+
+    options = {key: value for key, value in flat.items() if ".options." in key}
+    assert options == {
+        helpers.component_field_key("optionsfixture", "inputs.kind.options", "Daily"): "Daily",
+        helpers.component_field_key("optionsfixture", "inputs.kind.options", "Weekly"): "Weekly",
+    }

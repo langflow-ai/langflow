@@ -16,7 +16,7 @@ class _StructuredRunnable:
         self._payload = payload
         self.invoke_count = 0
 
-    async def ainvoke(self, _messages: Any) -> Any:
+    async def ainvoke(self, _messages: Any, **_kwargs) -> Any:
         self.invoke_count += 1
         return self._payload
 
@@ -41,7 +41,7 @@ class _NotImplementedRunnable:
     def __init__(self) -> None:
         self.invoke_count = 0
 
-    async def ainvoke(self, _messages: Any) -> Any:
+    async def ainvoke(self, _messages: Any, **_kwargs) -> Any:
         self.invoke_count += 1
         msg = "provider does not support structured output"
         raise NotImplementedError(msg)

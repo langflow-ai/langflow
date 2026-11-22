@@ -22,6 +22,7 @@ from langflow.api.v1.mcp_projects import (
 from langflow.api.v2.mcp import is_mcp_servers_locked
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.api_key.model import ApiKey
+from langflow.services.database.models.api_key.policy import ApiKeyIssuanceDeniedError
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
 from langflow.services.database.models.user.model import User
@@ -510,6 +511,7 @@ async def test_flow_for_update(active_user, user_test_project):
             await session.delete(flow)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_update_project_mcp_settings_success(
     client: AsyncClient, user_test_project, test_flow_for_update, logged_in_headers
 ):
@@ -598,6 +600,7 @@ async def test_update_project_mcp_settings_other_user_project_with_composer(
     assert "API key required" in response.json()["detail"]
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_update_project_mcp_settings_empty_settings(client: AsyncClient, user_test_project, logged_in_headers):
     """Test updating MCP settings with empty settings list."""
     # Use real database objects instead of mocks to avoid the coroutine issue
@@ -721,6 +724,7 @@ async def user_test_flow(active_user, user_test_project):
             await session.delete(flow)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_user_can_update_own_flow_mcp_settings(
     client: AsyncClient, logged_in_headers, user_test_project, user_test_flow
 ):
@@ -1245,8 +1249,13 @@ async def test_should_replace_base_name_entry_without_project_url_on_reinstall(
     assert installed_servers["lf-user_test_project"]["args"][-1].endswith(f"/{user_test_project.id}/streamable")
 
 
-async def test_init_mcp_servers(user_test_project, other_test_project):
+@pytest.mark.usefixtures("administrator_user")
+async def test_init_mcp_servers(user_test_project, other_test_project, other_test_user):
     """Test the initialization of MCP servers for all projects."""
+    async with session_scope() as session:
+        owner = await session.get(User, other_test_user.id)
+        owner.is_superuser = True
+        session.add(owner)
     # Clear existing caches
     project_sse_transports.clear()
     project_mcp_servers.clear()
@@ -1319,6 +1328,7 @@ async def test_init_mcp_servers_error_handling_streamable():
         await init_mcp_servers()
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_back(
     user_test_project,
 ):
@@ -1355,6 +1365,7 @@ async def test_init_mcp_servers_reconciles_project_server_auth_when_oauth_falls_
         assert project.auth_settings["auth_type"] == "apikey"
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config(
     client: AsyncClient,
     user_test_project,
@@ -1410,6 +1421,7 @@ async def test_init_mcp_servers_reconciles_existing_apikey_project_server_config
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_reconciles_stale_config_without_transaction_error(
     client: AsyncClient,
     user_test_project,
@@ -1479,6 +1491,7 @@ async def test_init_mcp_servers_reconciles_stale_config_without_transaction_erro
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_does_not_leak_api_key_when_reconciliation_fails(
     user_test_project,
     monkeypatch,
@@ -1531,6 +1544,7 @@ async def test_init_mcp_servers_does_not_leak_api_key_when_reconciliation_fails(
     assert await count_api_keys() == keys_before, "failed reconciliation leaked an API key"
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_patch_project_mcp_settings_syncs_server_config_for_apikey(
     client: AsyncClient,
     user_test_project,
@@ -1597,6 +1611,7 @@ async def test_patch_project_mcp_settings_syncs_server_config_for_apikey(
         await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=api_headers)
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_init_mcp_servers_rolls_back_auth_update_when_reconciliation_fails(
     user_test_project,
     monkeypatch,
@@ -1636,6 +1651,51 @@ async def test_init_mcp_servers_rolls_back_auth_update_when_reconciliation_fails
         project = await session.get(Folder, user_test_project.id)
         assert project is not None
         assert project.auth_settings is None
+
+
+async def test_init_mcp_servers_logs_denial_reason_not_missing_greenlet(
+    user_test_project,
+    monkeypatch,
+):
+    """A denied API key issuance must be logged as itself, not as MissingGreenlet.
+
+    The savepoint rollback triggered by the denial expires the project's
+    attributes; logging project.id afterward used to lazy-load outside the
+    async greenlet context and raise MissingGreenlet, clobbering the original
+    denial in the log.
+    """
+    project_sse_transports.clear()
+    project_mcp_servers.clear()
+    _set_startup_mcp_settings(
+        monkeypatch,
+        auto_login=False,
+        mcp_composer_enabled=False,
+        add_projects_to_mcp_servers=True,
+    )
+
+    async with session_scope() as session:
+        project = await session.get(Folder, user_test_project.id)
+        assert project is not None
+        project.auth_settings = None
+        session.add(project)
+
+    with (
+        patch("langflow.api.v1.mcp_projects.get_project_sse"),
+        patch("langflow.api.v1.mcp_projects.get_project_mcp_server"),
+        patch("langflow.api.v1.mcp_projects.auto_configure_starter_projects_mcp", new=AsyncMock()),
+        patch(
+            "langflow.api.v1.projects_mcp_helpers.create_api_key",
+            new=AsyncMock(side_effect=ApiKeyIssuanceDeniedError("account requires SSO")),
+        ),
+        patch("langflow.api.v1.mcp_projects.logger.aexception", new=AsyncMock()) as mock_log_exception,
+    ):
+        await init_mcp_servers()
+
+    mock_log_exception.assert_awaited_once()
+    logged_message = mock_log_exception.await_args.args[0]
+    assert str(user_test_project.id) in logged_message
+    assert "account requires SSO" in logged_message
+    assert "MissingGreenlet" not in logged_message
 
 
 async def test_list_project_tools_with_mcp_enabled_filter(
@@ -2138,6 +2198,7 @@ async def test_v2_mcp_servers_unlocked_allows_non_superuser_add_patch_delete(
 ):
     """When is_mcp_servers_locked returns False the gate must not block normal users."""
     monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: False)
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
 
     server_name = f"lf-unlock-test-{uuid4().hex[:8]}"
     server_config = {

@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 import httpx
 from lfx.utils.file_path_security import LocalFileAccessError, enforce_local_file_access
 from lfx.utils.ssrf_httpx import ssrf_safe_httpx_get_bounded
-from lfx.utils.ssrf_protection import SSRFProtectionError
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_connector_hostname_for_ssrf
 
 if TYPE_CHECKING:
     from collections.abc import Iterable
@@ -73,6 +73,7 @@ def validate_hostname(value: object) -> str:
     if ".." in hostname or hostname.startswith((".", "-")) or hostname.endswith("."):
         msg = "Invalid hostname: malformed hostname"
         raise ValueError(msg)
+    validate_connector_hostname_for_ssrf(hostname)
     return hostname
 
 

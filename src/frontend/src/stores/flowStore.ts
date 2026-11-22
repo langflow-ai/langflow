@@ -12,6 +12,7 @@ import { create } from "zustand";
 import {
   blockedStopsExecution,
   checkCodeValidity,
+  connectedFieldsByNode,
 } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
 import {
@@ -24,6 +25,8 @@ import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
 import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import type { GlobalVariable } from "@/types/global_variables";
+import type { Message } from "@/types/messages";
+import { nodeWithGroupValues, walkFlowNodes } from "@/utils/grouped-nodes";
 import { clearLoadRefreshes } from "@/utils/load-refreshes";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
@@ -43,7 +46,10 @@ import type {
   FlowStoreType,
   VertexLayerElementType,
 } from "../types/zustand/flow";
-import { filterPlaceableSelection } from "../utils/componentConstraints";
+import {
+  filterPlaceableSelection,
+  TRIGGER_PLACEMENT_KEY,
+} from "../utils/componentConstraints";
 import {
   buildPositionDictionary,
   cleanEdges,
@@ -118,6 +124,26 @@ export async function waitForNodeUpdates(
   }
 }
 
+// The sentence naming a retired component and its replacement, shared by the run preflight and
+// the missing-fields alert.
+function retiredComponentMessage(component: ComponentsToUpdateType): string {
+  const templates = useTypesStore.getState().templates;
+  const replacements = (component.replacement ?? []).map((ref) => {
+    const type = ref.split(".").pop() ?? ref;
+    return templates[type]?.display_name ?? type;
+  });
+  return i18n.t(
+    replacements.length > 0
+      ? "errors.retiredComponentWithReplacement"
+      : "errors.retiredComponentWithoutReplacement",
+    {
+      component: component.display_name ?? component.id,
+      version: component.retiredIn,
+      replacement: replacements.join(", "),
+    },
+  );
+}
+
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
 const useFlowStore = create<FlowStoreType>((set, get) => ({
   playgroundPage: false,
@@ -162,19 +188,42 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       typeof change === "function" ? change(get().componentsToUpdate) : change;
     set({ componentsToUpdate: newChange });
   },
-  updateComponentsToUpdate: (nodes) => {
+  updateComponentsToUpdate: (nodes, edges = get().edges) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
-    const allowCustomComponents =
-      useUtilityStore.getState().allowCustomComponents;
-    nodes.forEach((node) => {
+    const { allowCustomComponents, retiredComponents } =
+      useUtilityStore.getState();
+    const fieldsByEdges = new Map<
+      EdgeType[],
+      ReturnType<typeof connectedFieldsByNode>
+    >();
+    for (const context of walkFlowNodes(nodes, edges)) {
+      const node = nodeWithGroupValues(context);
+      let connectedFields: ReturnType<typeof connectedFieldsByNode> | undefined;
+      if (context.edges !== undefined) {
+        connectedFields = fieldsByEdges.get(context.edges);
+        if (!connectedFields) {
+          connectedFields = connectedFieldsByNode(context.edges);
+          fieldsByEdges.set(context.edges, connectedFields);
+        }
+      }
       if (node.type === "genericNode") {
+        const fields = connectedFields?.get(node.id);
         const codeValidity = checkCodeValidity(
           node.data,
           templates,
           allowCustomComponents,
+          connectedFields && fields !== null
+            ? (fields ?? new Set())
+            : undefined,
+          retiredComponents?.[node.data.type],
         );
-        if (codeValidity && (codeValidity.outdated || codeValidity.blocked))
+        if (
+          codeValidity &&
+          (codeValidity.outdated ||
+            codeValidity.blocked ||
+            codeValidity.retired)
+        )
           outdatedNodes.push({
             id: node.id,
             type: node.data.type,
@@ -184,9 +233,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
             blocked: codeValidity.blocked,
             breakingChange: codeValidity.breakingChange,
             userEdited: codeValidity.userEdited,
+            retired: codeValidity.retired,
+            retiredIn: codeValidity.retiredIn,
+            replacement: codeValidity.replacement,
           });
       }
-    });
+    }
     set({ componentsToUpdate: outdatedNodes });
   },
   onFlowPage: false,
@@ -363,7 +415,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       });
     }
     const { inputs, outputs } = getInputsAndOutputs(nodes);
-    get().updateComponentsToUpdate(nodes);
+    get().updateComponentsToUpdate(nodes, newEdges);
     set({
       // A freshly loaded flow carries no edits of the user's, whatever hydration
       // does to the nodes on the way in.
@@ -440,8 +492,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
   },
   onEdgesChange: (changes: EdgeChange<EdgeType>[]) => {
+    const newEdges = applyEdgeChanges(changes, get().edges);
+    // Whether an update is breaking depends on the edges into each node. Selecting an edge
+    // changes none of them, so it skips the recompute and the new array it would publish.
+    if (!changes.every((change) => change.type === "select")) {
+      get().updateComponentsToUpdate(get().nodes, newEdges);
+    }
     set({
-      edges: applyEdgeChanges(changes, get().edges),
+      edges: newEdges,
     });
   },
   setNodes: (change, options) => {
@@ -449,7 +507,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       typeof change === "function" ? change(get().nodes) : change;
     const { edges: newEdges } = cleanEdges(newChange, get().edges);
     const { inputs, outputs } = getInputsAndOutputs(newChange);
-    get().updateComponentsToUpdate(newChange);
+    get().updateComponentsToUpdate(newChange, newEdges);
     set({
       edges: newEdges,
       nodes: newChange,
@@ -466,6 +524,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setEdges: (change, options) => {
     const newChange =
       typeof change === "function" ? change(get().edges) : change;
+    // Whether an update is breaking depends on the edges into each node.
+    get().updateComponentsToUpdate(get().nodes, newChange);
     set({
       edges: newChange,
       flowState: undefined,
@@ -480,7 +540,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // split setNodes+setEdges draws loop/dynamic-handle edges only after refresh.
     const { edges: newEdges } = cleanEdges(nodes, edges);
     const { inputs, outputs } = getInputsAndOutputs(nodes);
-    get().updateComponentsToUpdate(nodes);
+    get().updateComponentsToUpdate(nodes, newEdges);
     set({
       nodes,
       edges: newEdges,
@@ -523,6 +583,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     });
 
     const { edges: newEdges, brokenEdges } = cleanEdges(newNodes, get().edges);
+    // Whether an update is breaking depends on the node's saved values.
+    get().updateComponentsToUpdate(newNodes, newEdges);
 
     // An edit that reshapes a node's handles (e.g. disabling Human Input's fallback
     // with a wired branch) strands the downstream node; surface it like resetFlow does.
@@ -627,7 +689,14 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     selection.edges = placeable.edges;
     if (placeable.violations.length > 0) {
       const messages: string[] = [];
-      if (placeable.violations.some((v) => v.reason === "singleton")) {
+      if (placeable.violations.some((v) => v.type === TRIGGER_PLACEMENT_KEY)) {
+        messages.push(i18n.t("triggers.palette.triggerNotPasted"));
+      }
+      if (
+        placeable.violations.some(
+          (v) => v.reason === "singleton" && v.type !== TRIGGER_PLACEMENT_KEY,
+        )
+      ) {
         messages.push(i18n.t("flow.duplicateComponentsNotPasted"));
       }
       if (placeable.violations.some((v) => v.reason === "exclusivity")) {
@@ -855,6 +924,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     session,
     stream = true,
     eventDelivery = EventDeliveryType.STREAMING,
+    onUserMessage,
   }: {
     startNodeId?: string;
     stopNodeId?: string;
@@ -864,6 +934,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     session?: string;
     stream?: boolean;
     eventDelivery?: EventDeliveryType;
+    onUserMessage?: (message: Message) => void;
   }) => {
     // Running a flow whose save was refused executes a graph the server has already
     // moved past, and writes build results back into it — manufacturing new changes
@@ -975,9 +1046,21 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     errors = errors.concat(errorsObjs.flatMap((obj) => obj.errors));
     if (errors.length > 0) {
+      // The run stops here, before the preflight below, so this alert names the retired
+      // components too. componentsToUpdate may be stale, so recompute it as the preflight does.
+      let retiredMessages: string[] = [];
+      if (!get().playgroundPage) {
+        get().updateComponentsToUpdate(get().nodes);
+        const validatedIds = new Set(nodesToValidate.map((node) => node.id));
+        retiredMessages = get()
+          .componentsToUpdate.filter(
+            (component) => component.retired && validatedIds.has(component.id),
+          )
+          .map(retiredComponentMessage);
+      }
       setErrorData({
         title: i18n.t("errors.missedFields"),
-        list: errors,
+        list: [...errors, ...retiredMessages],
       });
       const ids = errorsObjs.flatMap((obj) => obj.id);
       get().updateBuildStatus(ids, BuildStatus.ERROR); // Set only the build status as error without adding info to the flow pool
@@ -990,7 +1073,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // then immediately clicked "Run") before checking outdated state.
     await waitForNodeUpdates();
 
-    // Recalculate from current nodes (setNode does not run updateComponentsToUpdate).
+    // Recalculate from current nodes.
     // Unknown code-bearing types always block in restricted mode; known drift only blocks when
     // the server-side trusted-code substitution policy is disabled.
     get().updateComponentsToUpdate(get().nodes);
@@ -1010,7 +1093,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     // A partial build only executes its own subgraph, so only that subgraph can
     // block it. componentsToUpdate stays whole-flow for the update banner.
-    const validatedNodeIds = new Set(nodesToValidate.map((node) => node.id));
+    const validatedNodeIds = new Set(
+      Array.from(walkFlowNodes(nodesToValidate), ({ node }) => node.id),
+    );
     const componentsToPreflight = get().componentsToUpdate.filter((component) =>
       validatedNodeIds.has(component.id),
     );
@@ -1020,16 +1105,25 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     // for editor runs, where the template registry is loaded and its classification is reliable.
     if (!get().playgroundPage && componentsToPreflight.length > 0) {
       // A missing template blocks the run either way. Outdated components are
-      // only enforced in restricted mode, as before.
+      // only enforced in restricted mode, as before. A retired component fails
+      // when the flow runs in every mode, whether or not its code is current.
       const blockedComponents = componentsToPreflight.filter(
         (component) => component.blocked && stopsExecution(component),
+      );
+      // A retired component has no update to take, so it is named with its replacement.
+      const retiredComponents = componentsToPreflight.filter(
+        (component) => component.retired,
       );
       const outdatedComponents =
         substituteOutdatedComponentCode || allowCustomComponents
           ? []
-          : componentsToPreflight.filter((component) => component.outdated);
+          : componentsToPreflight.filter(
+              (component) => component.outdated && !component.retired,
+            );
       const mustBlockBuild =
-        blockedComponents.length > 0 || outdatedComponents.length > 0;
+        blockedComponents.length > 0 ||
+        outdatedComponents.length > 0 ||
+        retiredComponents.length > 0;
       if (mustBlockBuild) {
         const errorList: string[] = [];
 
@@ -1052,22 +1146,30 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           );
         }
 
+        errorList.push(...retiredComponents.map(retiredComponentMessage));
+
         const blockedTitle = allowCustomComponents
           ? "Components disabled by an administrator must be removed before building"
           : "Custom components are blocked while custom components are disabled";
+        const outdatedTitle = i18n.t(
+          outdatedComponents.length > 0
+            ? "errors.outdatedComponents"
+            : "errors.retiredComponents",
+        );
+        const outdatedBuildTitle = i18n.t(
+          outdatedComponents.length > 0
+            ? "errors.outdatedComponentsBeforeBuilding"
+            : "errors.retiredComponentsBeforeBuilding",
+        );
 
         setErrorData({
           title:
-            blockedComponents.length > 0
-              ? blockedTitle
-              : "Outdated components must be updated before building",
+            blockedComponents.length > 0 ? blockedTitle : outdatedBuildTitle,
           list: errorList,
         });
         get().setIsBuilding(false);
         throw new Error(
-          blockedComponents.length > 0
-            ? blockedTitle
-            : "Outdated components must be updated",
+          blockedComponents.length > 0 ? blockedTitle : outdatedTitle,
         );
       }
     }
@@ -1106,6 +1208,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       files,
       signal: buildController.signal,
       silent,
+      onUserMessage,
     };
     const canSuspend = get().nodes.some((node) => {
       if (node.data?.type === "HumanInput") return true;
@@ -1115,7 +1218,38 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         rows.some((row) => (row?.approval_actions?.length ?? 0) > 0)
       );
     });
-    await (canSuspend ? runFlowHITL(runArgs) : runFlowAGUI(runArgs));
+    if (!canSuspend) {
+      await runFlowAGUI(runArgs);
+    } else if (!get().playgroundPage) {
+      await runFlowHITL(runArgs);
+    } else {
+      // The shareable playground has no public background run. Only the signed-in owner
+      // may use the authenticated one: a visitor's run would land in the owner's history.
+      const refuse = () => {
+        const message = i18n.t("humanInput.sharedPlaygroundUnsupported");
+        get().setBuildInfo({ error: [message], success: false });
+        get().setIsBuilding(false);
+        // Not every playground chat renders buildInfo errors, so alert here too.
+        useAlertStore.getState().setErrorData({ title: message });
+      };
+      const { isAuthenticated, userData } = useAuthStore.getState();
+      const isOwner =
+        isAuthenticated &&
+        !!userData?.id &&
+        userData.id === currentFlow?.user_id;
+      if (!isOwner) {
+        refuse();
+      } else {
+        try {
+          await runFlowHITL({ ...runArgs, messageFlowId: buildingFlowId });
+        } catch (error) {
+          const status = (error as { response?: { status?: number } })?.response
+            ?.status;
+          if (status !== 401 && status !== 403 && status !== 404) throw error;
+          refuse();
+        }
+      }
+    }
 
     // Invalidate KB caches so a KnowledgeIngestion run surfaces updated stats on the
     // next read; cheap when no subscribers are mounted (queries refetch only if read).
@@ -1222,12 +1356,16 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
     });
   },
-  updateBuildStatus: (nodeIdList: string[], status: BuildStatus) => {
+  updateBuildStatus: (
+    nodeIdList: string[],
+    status: BuildStatus,
+    branchSkip?: { skippedBy: string; takenOutputs: string[] },
+  ) => {
     const newFlowBuildStatus = { ...get().flowBuildStatus };
     nodeIdList.forEach((id) => {
-      newFlowBuildStatus[id] = {
-        status,
-      };
+      newFlowBuildStatus[id] = branchSkip
+        ? { status, ...branchSkip }
+        : { status };
       if (status == BuildStatus.BUILT) {
         const timestamp_string = new Date(Date.now()).toLocaleString();
         newFlowBuildStatus[id].timestamp = timestamp_string;
@@ -1458,6 +1596,17 @@ export function syncNodeTranslations(): void {
           };
         }
       }
+      // Option labels are never edited by the user, so they always follow the
+      // language; English sends none, which drops the old language's labels.
+      if (
+        freshField?.option_labels !== undefined ||
+        updatedTemplate[fieldName]?.option_labels !== undefined
+      ) {
+        updatedTemplate[fieldName] = {
+          ...updatedTemplate[fieldName],
+          option_labels: freshField?.option_labels,
+        };
+      }
     }
 
     // Update output display_names and info
@@ -1514,6 +1663,13 @@ export function syncNoteTranslations(
     };
   });
   useFlowStore.setState({ nodes: updatedNodes });
+}
+
+// Playwright helpers flush autosave through this hook. Only dev and the Playwright CI build set it.
+if (import.meta.env.DEV || import.meta.env.PW_FRONTEND_BUILD) {
+  (
+    window as unknown as { __LANGFLOW_FLOW_STORE__?: typeof useFlowStore }
+  ).__LANGFLOW_FLOW_STORE__ = useFlowStore;
 }
 
 export default useFlowStore;

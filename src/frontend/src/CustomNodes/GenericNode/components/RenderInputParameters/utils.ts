@@ -5,6 +5,7 @@ import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 
 export type DisplayHandleTemplate = {
   type?: string;
+  model_type?: string;
   input_types?: string[];
   refresh_button?: boolean;
   tool_mode?: boolean;
@@ -40,9 +41,10 @@ export const computeDisplayHandle = (
     return false;
   }
 
-  // Always show handle for model inputs
+  // Model inputs always get a handle, except decision models, which take no
+  // connections (the backend sends no input types for them).
   if (isModelInput) {
-    return true;
+    return template.model_type !== "decision";
   }
 
   return !!(

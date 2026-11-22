@@ -1,0 +1,13 @@
+{
+  "provider_key": "github",
+  "name": "work",
+  "display_name": "GitHub work",
+  "ownership_mode": "user",
+  "executing_identity": { "identity": "service" },
+  "granted_scopes": [],
+  "allow_non_interactive": true,
+  "credentials": {
+    "access_token": "test-installation",
+    "expires_at": "2030-06-01T12:00:00.000Z"
+  }
+}

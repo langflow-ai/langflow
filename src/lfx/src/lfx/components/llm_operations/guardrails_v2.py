@@ -1776,6 +1776,7 @@ JSON:"""
         return result
 
     def _run_llm(self, findings: dict[str, dict[str, Any]]) -> tuple[dict[str, dict[str, Any]], str | None]:
+        """Return model scores or a reason the optional second opinion could not run."""
         if self._llm_mode == "off":
             return {}, "disabled"
         if not self._should_call_llm(findings):
@@ -1800,7 +1801,7 @@ JSON:"""
         try:
             prompt = self._build_llm_prompt()
             if hasattr(llm, "invoke"):
-                response = llm.invoke(prompt)
+                response = llm.invoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
                 self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
                 # LangChain messages may carry text alongside non-text blocks.
                 # Its text accessor joins only text content, excluding reasoning.

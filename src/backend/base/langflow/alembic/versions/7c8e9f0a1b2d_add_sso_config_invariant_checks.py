@@ -389,7 +389,10 @@ def _create_checks(conn: sa.Connection, table: sa.Table) -> None:
         return
     allow_pending_n_minus_one = "provider" in _column_names(conn)
     if conn.dialect.name == "sqlite":
-        with op.batch_alter_table(_CONFIG_TABLE, recreate="always") as batch_op:
+        with (
+            migration.preserve_sqlite_triggers(conn, _CONFIG_TABLE, "sso_settings"),
+            op.batch_alter_table(_CONFIG_TABLE, recreate="always") as batch_op,
+        ):
             if need_protocol:
                 batch_op.create_check_constraint(
                     op.f(_PROTOCOL_CHECK),

@@ -12,11 +12,14 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from langflow.api.v1.triggers_helpers import present_one
 from langflow.services.database.models.connection.model import Connection
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.trigger.schemas import TriggerState
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_trigger_service, session_scope
 from langflow.services.triggers.constants import SLACK_PROVIDER_STATE_APP_ID
+from langflow.services.triggers.error_codes import refusal_detail
 from langflow.services.triggers.reconciliation import find_trigger_nodes, reconcile_flow_triggers
 from sqlmodel import select
 
@@ -350,6 +353,56 @@ async def test_widening_a_serving_triggers_filters_checks_the_scopes_they_need(t
     assert "missing im:history" in widened.last_error
 
 
+@pytest.mark.parametrize(
+    ("status", "consent", "message", "code"),
+    [
+        (
+            "ready",
+            False,
+            "Turn on 'Allow background runs' for the Slack connection this trigger uses: a trigger runs its flow "
+            "with no one signed in, and the connection's owner has not allowed that yet.",
+            "background_runs_not_allowed",
+        ),
+        (
+            "revoked",
+            True,
+            "The Slack connection this trigger uses is revoked or expired. Reconnect it, then enable the trigger.",
+            "connection_unusable",
+        ),
+        (
+            "expired",
+            True,
+            "The Slack connection this trigger uses is revoked or expired. Reconnect it, then enable the trigger.",
+            "connection_unusable",
+        ),
+    ],
+)
+async def test_saved_slack_readiness_errors_keep_their_translation_codes(
+    trigger_owner, owned_flow, *, status: str, consent: bool, message: str, code: str
+) -> None:
+    connection_id = await fx.make_oauth_connection(trigger_owner, name="workspace")
+    row = await _save(owned_flow, trigger_owner, _node(connection="slack/workspace"))
+    await _update_trigger(row.id, state=TriggerState.ACTIVE.value)
+    async with session_scope() as session:
+        connection = await session.get(Connection, connection_id)
+        connection.status = status
+        connection.allow_non_interactive = consent
+        session.add(connection)
+
+    saved = await _save(owned_flow, trigger_owner, _node(connection="slack/workspace", channels=["C0SUPPORT1"]))
+
+    assert saved.state == TriggerState.ERROR.value
+    assert saved.last_error == message
+    async with session_scope() as session:
+        owner = await session.get(User, trigger_owner)
+        stored = await session.get(Trigger, saved.id)
+        shown = await present_one(session, owner, stored)
+
+    assert shown.state == TriggerState.ERROR.value
+    assert shown.last_error == message
+    assert shown.last_error_code == code
+
+
 # --------------------------------------------------------------------------- #
 # Enabling
 # --------------------------------------------------------------------------- #
@@ -371,16 +424,16 @@ async def test_enabling_arms_a_ready_slack_trigger(trigger_owner, owned_flow) ->
 
 
 @pytest.mark.parametrize(
-    ("setup", "fragment"),
+    ("setup", "fragment", "code"),
     [
-        ("no_consent", "Allow background runs"),
-        ("revoked", "revoked or expired"),
-        ("missing_scope", "missing channels:history"),
-        ("unarmable", "Choose a Slack connection"),
+        ("no_consent", "Allow background runs", "background_runs_not_allowed"),
+        ("revoked", "revoked or expired", "connection_unusable"),
+        ("missing_scope", "missing channels:history", None),
+        ("unarmable", "Choose a Slack connection", None),
     ],
 )
 async def test_enabling_refuses_a_trigger_that_could_not_run(
-    trigger_owner, owned_flow, setup: str, fragment: str
+    trigger_owner, owned_flow, setup: str, fragment: str, code: str | None
 ) -> None:
     connection_id = await fx.make_oauth_connection(trigger_owner)
     node = _node(connection=f"slack/{await _connection_name(connection_id)}")
@@ -397,8 +450,10 @@ async def test_enabling_refuses_a_trigger_that_could_not_run(
             connection.granted_scopes = ["chat:write"]
         session.add(connection)
 
-    with pytest.raises(ValueError, match=fragment):
+    with pytest.raises(ValueError, match=fragment) as refused:
         await _enable(row.id)
+    # The UI shows a coded refusal in the reader's language.
+    assert refusal_detail(refused.value)["code"] == code
     async with session_scope() as session:
         assert (await session.get(Trigger, row.id)).state == TriggerState.PENDING.value
 

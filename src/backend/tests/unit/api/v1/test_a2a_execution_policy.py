@@ -32,9 +32,11 @@ def authenticated_a2a(monkeypatch):
     monkeypatch.setattr("lfx.services.deps.get_settings_service", lambda: SimpleNamespace(settings=settings))
     monkeypatch.setattr("lfx.services.deps.get_catalog_policy_service", lambda: catalog)
     monkeypatch.setattr(
-        fv, "get_component_hash_lookups_for_validation", lambda: {"ChatInput": {fv._compute_code_hash(trusted)}}
+        fv,
+        "get_component_hash_lookups_for_validation",
+        lambda _cache=None: {"ChatInput": {fv._compute_code_hash(trusted)}},
     )
-    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code: trusted)
+    monkeypatch.setattr(fv, "get_trusted_code_for_validation", lambda _code, _cache=None: trusted)
     execute = AsyncMock(return_value=object())
     monkeypatch.setattr(workflow, "execute_sync_workflow_with_timeout", execute)
     return user, flow, settings, catalog, trusted, execute

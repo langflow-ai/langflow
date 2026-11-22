@@ -1,0 +1,1 @@
+"""Installed Jira artifact verification."""

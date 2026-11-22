@@ -1,3 +1,8 @@
+---
+name: frontend-testing
+description: Write, review, and debug Jest and React Testing Library unit and integration tests for Langflow frontend components, hooks, utilities, and Zustand stores.
+---
+
 # Frontend Testing Skill - Langflow
 
 ## When to Apply

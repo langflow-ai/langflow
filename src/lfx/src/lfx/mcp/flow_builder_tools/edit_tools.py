@@ -14,6 +14,7 @@ import uuid
 import jsonpatch
 
 from lfx.custom import Component
+from lfx.graph.flow_builder.component import validate_router_mode_update
 from lfx.io import MessageTextInput, Output
 from lfx.schema import Data
 from lfx.services.model_provider_policy import ModelProviderPolicyError
@@ -140,7 +141,9 @@ class ProposeFieldEdit(Component):
             _require_allowed_model_providers(
                 _model_providers_in_params(flow, self.component_id, {self.field_name: self.new_value})
             )
-        except ModelProviderPolicyError as exc:
+            if node["data"].get("type") == "SmartRouter":
+                validate_router_mode_update(template, {self.field_name: self.new_value})
+        except (ModelProviderPolicyError, ValueError) as exc:
             return Data(data={"error": str(exc)})
 
         # 3. Read old value

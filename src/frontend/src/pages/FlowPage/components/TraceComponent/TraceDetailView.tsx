@@ -360,7 +360,12 @@ export function TraceDetailView({
           />
         </div>
         <div className="flex-1 overflow-hidden">
-          <SpanDetail span={selectedSpan} />
+          <SpanDetail
+            span={selectedSpan}
+            isRunSummary={
+              selectedSpan !== null && selectedSpan.id === summarySpan?.id
+            }
+          />
         </div>
       </div>
 

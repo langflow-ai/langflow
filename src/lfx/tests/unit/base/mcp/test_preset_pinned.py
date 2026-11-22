@@ -247,7 +247,7 @@ async def test_the_guard_rides_on_the_real_tool_the_engine_builds(pinned):
     """
     client = _EngineClient([_server_tool("search_messages")])
     pinned._streamable_http_client = client
-    with patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None):
+    with patch("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", new=lambda _url: None):
         tools, _ = await pinned._load_tools()
 
     tool = tools[0]
@@ -272,7 +272,7 @@ async def test_guard_validates_the_engine_effective_keyword_arguments(pinned, sy
 
     client = _EngineClient([_server_tool("search_messages")])
     pinned._streamable_http_client = client
-    with patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None):
+    with patch("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", new=lambda _url: None):
         tools, _ = await pinned._load_tools()
     tool = tools[0]
     with patch("lfx.base.mcp.preset.validate_pinned_arguments", wraps=validate_pinned_arguments) as validate:
@@ -301,7 +301,7 @@ async def test_extra_tools_are_excluded_before_schema_conversion(pinned):
         return convert(schema)
 
     with (
-        patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None),
+        patch("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", new=lambda _url: None),
         patch("lfx.base.mcp.util.create_input_schema_from_json_schema", side_effect=fail_for_extra),
     ):
         tools, cache = await pinned._load_tools()
@@ -321,7 +321,7 @@ async def test_raw_pinned_schema_drift_fails_before_conversion(pinned):
     client = _EngineClient([drifted, _server_tool("extra")])
     pinned._streamable_http_client = client
     with (
-        patch("lfx.base.mcp.util.validate_connector_url_for_ssrf", new=lambda _url: None),
+        patch("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", new=lambda _url: None),
         patch("lfx.base.mcp.util.create_input_schema_from_json_schema") as convert,
         pytest.raises(IncompatibleToolError) as excinfo,
     ):

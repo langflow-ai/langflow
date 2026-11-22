@@ -27,6 +27,14 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse, Response
 
 
+@pytest.fixture(autouse=True)
+def trust_local_test_server(monkeypatch):
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "ssrf_allowed_hosts", [*settings.ssrf_allowed_hosts, "127.0.0.1"])
+
+
 class LegacySseServer:
     """Real pre-Streamable-HTTP MCP server that records rejected Streamable HTTP probes."""
 

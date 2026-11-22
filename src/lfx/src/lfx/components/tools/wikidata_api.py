@@ -85,9 +85,10 @@ class WikidataAPIComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Search Wikidata with workflow callbacks and return labeled records as data."""
         tool = self.build_tool()
 
-        results = tool.run({"query": self.query})
+        results = tool.run({"query": self.query}, callbacks=self.get_langchain_callbacks())
 
         # Transform the API response into Data objects
         data = [

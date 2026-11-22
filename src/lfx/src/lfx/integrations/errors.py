@@ -372,6 +372,20 @@ class ActionUnsupportedError(IntegrationError):
         )
 
 
+class IntegrationContextUnsupportedError(IntegrationError):
+    """A declared provider action cannot run in this execution environment."""
+
+    code = "action-unsupported"
+
+    def __init__(self, *, provider: str, display_name: str) -> None:
+        super().__init__(
+            f"{display_name} connections are not available in headless lfx. "
+            "Run this flow on a supported Langflow server.",
+            provider=provider,
+            details={"context": "headless"},
+        )
+
+
 class IncompatibleToolError(IntegrationError):
     """A pinned MCP server no longer matches the tool contract a bundle pinned.
 

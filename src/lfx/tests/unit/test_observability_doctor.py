@@ -246,11 +246,12 @@ def test_every_failure_names_the_endpoint_and_protocol(monkeypatch):
 def test_an_unbuildable_exporter_is_reported_with_its_route(monkeypatch):
     """The other failure branch: the exporter cannot even be constructed.
 
-    A malformed OTEL_EXPORTER_OTLP_TIMEOUT is a plausible operator typo and raises inside the
-    constructor, before any probe payload exists. That path must name the endpoint, the
-    protocol and the underlying error rather than reporting a bare exception.
+    The gRPC exporters reject a malformed timeout during construction. HTTP exporters now
+    warn and use their default timeout instead. The failure must name the endpoint, protocol
+    and underlying error before any probe payload exists.
     """
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+    monkeypatch.setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "grpc")
     monkeypatch.setenv("OTEL_EXPORTER_OTLP_TIMEOUT", "abc")
 
     report = run_doctor()
@@ -361,9 +362,9 @@ def test_per_signal_headers_replace_the_generic_ones_rather_than_merging(monkeyp
 
 
 class _RedirectingStub:
-    """A stub that 302s the OTLP POST to a login page, like an auth proxy in front of a collector."""
+    """A stub that redirects the OTLP POST to a login page, like an auth proxy."""
 
-    def __init__(self) -> None:
+    def __init__(self, status: int = 302) -> None:
         self.saw: list[str] = []
         saw = self.saw
 
@@ -371,7 +372,7 @@ class _RedirectingStub:
             def do_POST(self) -> None:
                 self.rfile.read(int(self.headers.get("Content-Length", 0)))
                 saw.append(f"POST {self.path}")
-                self.send_response(302)
+                self.send_response(status)
                 self.send_header("Location", "/login")
                 self.send_header("Content-Length", "0")
                 self.end_headers()
@@ -404,14 +405,14 @@ class _RedirectingStub:
 
 @requires_otel
 @pytest.mark.usefixtures("clean_otel_env")
-def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch):
-    """A 302 turns the POST into a GET and drops the payload, but the exporter still says SUCCESS.
+@pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch, status):
+    """The SDK blocks redirects but still reports a 3xx response as SUCCESS.
 
-    An auth proxy or an ingress redirect rule in front of the collector produces exactly this:
-    the body never arrives, the login page answers 200, and the exporter reports success because
-    it only looks at the status code. Reporting OK here sends the operator away from the problem.
+    An auth proxy or an ingress redirect rule has not accepted the payload. The doctor must
+    report that without following the redirect or sending credentials to its target.
     """
-    with _RedirectingStub() as stub:
+    with _RedirectingStub(status) as stub:
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", stub.endpoint)
         report = run_doctor(timeout=5)
 
@@ -419,34 +420,53 @@ def test_a_redirected_export_is_not_reported_as_delivered(monkeypatch):
         for signal in report.signals:
             assert signal.status == FAILED, signal.detail
             assert "redirected" in signal.detail, signal.detail
-        # The payload really was thrown away: each POST became a GET of the login page.
+            assert str(status) in signal.detail, signal.detail
+        assert set(stub.saw) == {f"POST {path}" for path in OTLP_PATHS}
+
+
+@requires_otel
+def test_a_followed_redirect_is_not_reported_as_delivered():
+    """Keep detecting payload loss when a requests transport follows a redirect."""
+    from lfx.observability_doctor import _delivery_problem, _recording_session
+
+    with _RedirectingStub() as stub, _recording_session() as session:
+        session.post(f"{stub.endpoint}/v1/traces", data=b"probe", timeout=5)
+
+        problem = _delivery_problem(session, "traces")
+
+        assert problem is not None
+        assert "redirected (302)" in problem
         assert "GET /login" in stub.saw
 
 
 @requires_otel
 @pytest.mark.usefixtures("clean_otel_env")
-def test_a_partial_success_response_is_not_reported_as_delivered(monkeypatch):
+@pytest.mark.parametrize(
+    ("signal", "rejected_field"),
+    [("traces", "rejected_spans"), ("metrics", "rejected_data_points"), ("logs", "rejected_log_records")],
+)
+def test_a_partial_success_response_is_not_reported_as_delivered(monkeypatch, signal, rejected_field):
     """A collector can answer 200 and still reject the items, for quota or an unknown tenant.
 
     The count lives in the OTLP response body, which the exporter never reads.
     """
-    from opentelemetry.proto.collector.trace.v1.trace_service_pb2 import ExportTraceServiceResponse
+    from lfx.observability_doctor import _response_class
 
-    rejected = ExportTraceServiceResponse()
-    rejected.partial_success.rejected_spans = 1
+    rejected = _response_class(signal)()
+    setattr(rejected.partial_success, rejected_field, 1)
     rejected.partial_success.error_message = "quota exceeded"
     body = rejected.SerializeToString()
 
     with _CollectorStub(status=200) as collector:
         collector.response_body = body
         collector.response_content_type = "application/x-protobuf"
-        monkeypatch.setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", f"{collector.endpoint}/v1/traces")
+        monkeypatch.setenv(f"OTEL_EXPORTER_OTLP_{signal.upper()}_ENDPOINT", f"{collector.endpoint}/v1/{signal}")
         report = run_doctor(timeout=5)
 
-        traces = _by_signal(report)["traces"]
-        assert traces.status == FAILED, traces.detail
-        assert "rejected 1 item" in traces.detail, traces.detail
-        assert "quota exceeded" in traces.detail, traces.detail
+        result = _by_signal(report)[signal]
+        assert result.status == FAILED, result.detail
+        assert "rejected 1 item" in result.detail, result.detail
+        assert "quota exceeded" in result.detail, result.detail
 
 
 @requires_otel
