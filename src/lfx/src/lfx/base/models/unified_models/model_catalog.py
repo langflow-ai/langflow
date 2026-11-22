@@ -5,7 +5,11 @@ from __future__ import annotations
 import contextlib
 from typing import TYPE_CHECKING, Any
 
-from lfx.base.models.model_metadata import EXPLICIT_ENABLE_ONLY_PROVIDERS, get_provider_param_mapping
+from lfx.base.models.model_metadata import (
+    EXPLICIT_ENABLE_ONLY_PROVIDERS,
+    get_provider_param_mapping,
+    matches_model_metadata,
+)
 from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models, replace_with_live_models
 from lfx.utils.async_helpers import run_until_complete
 
@@ -82,7 +86,7 @@ def get_unified_models_detailed(
         if model_type and md.get("model_type") != model_type:
             continue
         # Match arbitrary metadata key/value pairs
-        if any(md.get(k) != v for k, v in metadata_filters.items()):
+        if not matches_model_metadata(md, metadata_filters):
             continue
 
         filtered_models.append(md)

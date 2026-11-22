@@ -8,10 +8,12 @@ from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
+from langchain_openai import ChatOpenAI
 from lfx.custom.utils import create_component_template
 from lfx.extension.loader import load_extension
 from lfx.extension.manifest import load_manifest
 from lfx.schema.data import Data
+from lfx_acedatacloud import provider as provider_module
 from lfx_acedatacloud.client import AceAPIError, normalize, post_json, scrub
 from lfx_acedatacloud.components.acedatacloud.fish_audio_task import (
     FishAudioRetrieveTaskComponent,
@@ -36,6 +38,18 @@ from lfx_acedatacloud.provider import (
 from lfx_acedatacloud.specs import SERVICES
 
 ROOT = Path(__file__).resolve().parents[1] / "src" / "lfx_acedatacloud"
+
+CHAT_ENDPOINT = {"protocol": "chat_completions", "base_url": API_BASE, "path": "/v1/chat/completions", "auth": "bearer"}
+
+
+@pytest.fixture(autouse=True)
+def public_catalog_fixture(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setitem(
+        provider_module._catalog_state,
+        "rows",
+        {"gpt-4.1-mini": {"id": "gpt-4.1-mini", "type": "chat", "endpoints": [CHAT_ENDPOINT]}},
+    )
+    monkeypatch.setitem(provider_module._catalog_state, "expires", float("inf"))
 
 
 def test_manifest_loads_every_named_service_and_its_task_reader() -> None:
@@ -83,7 +97,7 @@ def test_named_provider_is_available_in_the_native_model_selector() -> None:
             user_id=None,
             api_key="test-only",
         )
-        assert isinstance(model, ChatAceDataCloud)
+        assert isinstance(model, ChatOpenAI)
         assert str(model.openai_api_base).rstrip("/") == API_BASE
         assert model.max_retries == 0
     finally:
@@ -121,26 +135,27 @@ def test_ui_templates_keep_generation_and_retrieval_forms_separate() -> None:
     assert "prompt" not in retrieved["field_order"]
 
 
-def test_branded_chat_model_cannot_change_api_host() -> None:
+def test_custom_chat_host_preserves_user_configuration() -> None:
     model = ChatAceDataCloud(model="gpt-4.1-mini", api_key="test-only", base_url="https://example.org/v1")
-    assert str(model.openai_api_base).rstrip("/") == API_BASE
+    assert str(model.openai_api_base).rstrip("/") == "https://example.org/v1"
     assert model.max_retries == 0
     assert any(item["name"] == "gpt-4.1-mini" for item in load_catalog())
     assert not any(item["tool_calling"] for item in load_catalog())
     assert _is_chat_model({"id": "gpt-4.1-mini", "type": "chat"})
     assert not _is_chat_model({"id": "gpt-image-2", "type": "image"})
-    assert not _is_chat_model({"id": "gpt-4o-image", "type": "chat", "capabilities": ["image_generation"]})
+    assert _is_chat_model({"id": "gpt-4o-image", "type": "chat", "capabilities": ["image_generation"]})
 
 
 def test_live_models_use_current_typed_catalog_and_account_visibility(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setitem(provider_module._catalog_state, "expires", 0)
     calls: list[str] = []
 
     def fake_get(url: str, **kwargs: object) -> httpx.Response:
         calls.append(url)
         if url == PUBLIC_CHAT_CATALOG:
-            assert kwargs["params"] == {"type": "chat", "limit": 200}
+            assert kwargs["params"] == {"type": "chat"}
             assert "headers" not in kwargs
             rows = [
                 {"id": "gpt-4.1-mini", "type": "chat", "capabilities": []},
@@ -161,6 +176,8 @@ def test_live_models_use_current_typed_catalog_and_account_visibility(
                 {"id": "gpt-4o-image"},
                 {"id": "account-only-model"},
             ]
+        if url == PUBLIC_CHAT_CATALOG:
+            rows = [{**row, "endpoints": [CHAT_ENDPOINT]} for row in rows]
         return httpx.Response(200, json={"data": rows}, request=httpx.Request("GET", url))
 
     monkeypatch.setattr(
@@ -169,15 +186,17 @@ def test_live_models_use_current_typed_catalog_and_account_visibility(
     )
     monkeypatch.setattr("lfx_acedatacloud.provider.httpx.get", fake_get)
     models = fetch_live_models("user-1")
-    assert [item["name"] for item in models] == ["gpt-4.1-mini", "new-chat-model"]
-    assert models[1]["reasoning"] is True
-    assert all(item["tool_calling"] is False for item in models)
+    assert [item["name"] for item in models] == ["gpt-4.1-mini", "gpt-4o-image", "new-chat-model"]
+    assert models[2]["reasoning"] is True
+    assert all(item["tool_calling"] is None for item in models)
     assert calls == [f"{API_BASE}/models", PUBLIC_CHAT_CATALOG]
 
 
 def test_live_models_do_not_claim_availability_without_both_catalogs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setitem(provider_module._catalog_state, "rows", {})
+    monkeypatch.setitem(provider_module._catalog_state, "expires", 0)
     monkeypatch.setattr("lfx_acedatacloud.provider.get_provider_variable_value", lambda *_: None)
     assert fetch_live_models("user-1") == []
 

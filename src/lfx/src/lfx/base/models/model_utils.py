@@ -15,6 +15,7 @@ from lfx.base.models.model_metadata import (
     EXPLICIT_ENABLE_ONLY_PROVIDERS,
     LIVE_MODEL_PROVIDERS,
     create_model_metadata,
+    matches_model_metadata,
 )
 from lfx.base.models.watsonx_constants import (
     IBM_WATSONX_URLS,
@@ -1183,7 +1184,7 @@ def apply_metadata_filters(
         kept: list[dict] = []
         for model in models:
             metadata = model.get("metadata") or {}
-            if any(metadata.get(k) != v for k, v in metadata_filters.items()):
+            if not matches_model_metadata(metadata, metadata_filters):
                 if isinstance(provider, str) and isinstance(model.get("model_name"), str):
                     suppressed.setdefault(provider, set()).add(
                         (model["model_name"], metadata.get("model_type") or "llm")
@@ -1256,7 +1257,7 @@ def inject_custom_enabled_models(
             "tool_calling": resolved_type == "llm",
             "default": False,
         }
-        if metadata_filters and any(metadata.get(k) != v for k, v in metadata_filters.items()):
+        if metadata_filters and not matches_model_metadata(metadata, metadata_filters):
             continue
 
         provider_dict = provider_dicts.get(provider)
