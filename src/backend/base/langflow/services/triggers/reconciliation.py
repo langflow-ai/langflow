@@ -51,6 +51,7 @@ from langflow.services.triggers.constants import (
     SLACK_TRIGGER_KINDS,
 )
 from langflow.services.triggers.error_codes import (
+    GROUPED_TRIGGER_ERROR,
     MULTIPLE_TRIGGERS_ERROR,
     NODE_REMOVED_ERROR,
     SOURCE_SETTINGS_CHANGED_ERROR,
@@ -61,6 +62,7 @@ from langflow.services.triggers.locking import lock_trigger
 from langflow.services.triggers.providers.registry import component_kind, get_kind, source_kinds
 from langflow.services.triggers.schedule_config import (
     InvalidScheduleError,
+    schedule_summary,
     schedule_timing_changed,
     validate_schedule_config,
 )
@@ -241,6 +243,10 @@ def apply_config_verdict(row: Trigger, error: str | None) -> bool:
     return (row.state, row.last_error, row.next_fire_at) != before
 
 
+#: Config key carrying an unusable pick's message from the node scan to the verdict.
+SCHEDULE_PICK_ERROR = "schedule_error"
+
+
 def _template_value(node_data: dict[str, Any], field: str, default: Any) -> Any:
     template = node_data.get("node", {}).get("template", {})
     entry = template.get(field)
@@ -270,8 +276,46 @@ def find_trigger_nodes(flow_data: dict[str, Any] | None) -> list[tuple[str, str,
             else _CONFIG_FIELDS.get(kind, ())
         )
         config = {key: _template_value(node_data, field, default) for field, key, default in fields}
+        if kind == "schedule":
+            _apply_schedule_pick(node_data, config)
         found.append((node_id, kind, config))
     return found
+
+
+def schedule_pick_error(row: Trigger, flow_data: dict[str, Any] | None) -> str | None:
+    """The picker's message for ``row``'s node on ``flow_data``, or None when its pick is usable."""
+    nodes = (flow_data or {}).get("nodes") or []
+    node = next((n for n in nodes if isinstance(n, dict) and n.get("id") == row.node_id), None)
+    node_data = node.get("data") if node is not None else None
+    if (
+        not isinstance(node_data, dict)
+        or not isinstance(node_data.get("node"), dict)
+        or not isinstance(node_data["node"].get("template", {}), dict)
+        or _node_kind(node_data.get("type")) != "schedule"
+    ):
+        return None
+    config: dict[str, Any] = {"cron": _template_value(node_data, "cron_expression", "")}
+    _apply_schedule_pick(node_data, config)
+    return config.get(SCHEDULE_PICK_ERROR)
+
+
+def _apply_schedule_pick(node_data: dict[str, Any], config: dict[str, Any]) -> None:
+    """Compile the picked schedule into ``config``.
+
+    An unusable pick blanks the cron so the old schedule stops, and keeps the
+    picker's message: the cron field is hidden, so a cron error would not say what to fix.
+    """
+    # Imported here: ``lfx.base.triggers`` loads Component, and this module is
+    # reached while ``lfx.inputs`` is still importing (lfx.helpers -> langflow).
+    from lfx.base.triggers.schedule import PICKER_FIELDS, ScheduleTriggerError, schedule_timing
+
+    values = {name: _template_value(node_data, name, None) for name in PICKER_FIELDS}
+    stored_cron = config.pop("cron")
+    try:
+        config.update(schedule_timing(values, stored_cron))
+    except ScheduleTriggerError as exc:
+        config["cron"] = ""
+        config[SCHEDULE_PICK_ERROR] = str(exc)
 
 
 def _node_kind(node_type: Any) -> str | None:
@@ -306,9 +350,40 @@ def validate_single_trigger_per_flow(flow_data: dict[str, Any] | None) -> None:
             raise CodedTriggerError(TriggerErrorCode.MULTIPLE_TRIGGERS, MULTIPLE_TRIGGERS_ERROR)
 
 
+def _node_data_of(nodes: Any) -> list[dict[str, Any]]:
+    """The ``data`` dicts of the well-formed entries in a saved node list."""
+    if not isinstance(nodes, list):
+        return []
+    return [n["data"] for n in nodes if isinstance(n, dict) and isinstance(n.get("data"), dict)]
+
+
+def _group_nodes(node_data: dict[str, Any]) -> Any:
+    """The inner nodes of a group node's saved sub-flow, or None for any other node."""
+    component = node_data.get("node")
+    flow = component.get("flow") if isinstance(component, dict) else None
+    data = flow.get("data") if isinstance(flow, dict) else None
+    return data.get("nodes") if isinstance(data, dict) else None
+
+
+def validate_no_grouped_trigger(flow_data: dict[str, Any] | None) -> None:
+    """Reject a trigger inside a group, at any depth: reconciliation reads top-level nodes only."""
+    # Iterative, so a deeply nested payload cannot exhaust the recursion limit.
+    pending = [
+        inner
+        for node_data in _node_data_of((flow_data or {}).get("nodes"))
+        for inner in _node_data_of(_group_nodes(node_data))
+    ]
+    while pending:
+        node_data = pending.pop()
+        if _node_kind(node_data.get("type")) is not None:
+            raise ValueError(GROUPED_TRIGGER_ERROR)
+        pending.extend(_node_data_of(_group_nodes(node_data)))
+
+
 def _display_name(config: dict[str, Any], kind: str) -> str:
-    if kind == "schedule" and config.get("cron"):
-        return f"Schedule {config['cron']}"
+    summary = schedule_summary(config) if kind == "schedule" else None
+    if summary:
+        return f"Schedule {summary}"
     extension = get_kind(kind)
     return extension.display_name if extension else _KIND_DISPLAY_NAMES.get(kind) or kind.replace("_", " ").title()
 
@@ -460,10 +535,11 @@ async def reconcile_flow_triggers(
             except ValueError as exc:
                 error = str(exc)
         elif kind == "schedule":
+            pick_error = config.pop(SCHEDULE_PICK_ERROR, None)
             try:
                 config = validate_schedule_config(config)
             except InvalidScheduleError as exc:
-                error = str(exc)
+                error = pick_error or str(exc)
         elif kind == KIND_INBOUND_WEBHOOK:
             try:
                 config = normalize_webhook_config(config)

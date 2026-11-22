@@ -67,8 +67,12 @@ _READ_METHODS = frozenset({"GET", "HEAD", "OPTIONS"})
 # What the admin still needs: a session, and the migration steps, which include ending the pause.
 _ALLOWED_PATHS = frozenset({"/api/v1/login", "/api/v1/refresh", "/api/v1/logout", "/api/v1/auto_login"})
 _ALLOWED_PREFIX = "/api/v1/migration/"
+# These routes check administrator access before taking their write slot through
+# changes_the_instance. Middleware refusal would hide their authentication errors.
+_REPAIR_PATHS = frozenset({"/api/v1/upgrade-repairs/preview", "/api/v1/upgrade-repairs/apply"})
 # What a change is told while the pause is on.
 REFUSAL = "This instance is being migrated."
+REPAIR_REFUSAL = "The instance migration pause does not permit repairs"
 
 # Which record file was last read, and what it said.
 _seen: tuple[str, int, int, int] | None = None
@@ -436,15 +440,17 @@ class MigrationPauseMiddleware:
 
 
 async def changes_the_instance(request: Request) -> AsyncIterator[None]:
-    """The dependency of a route that changes the instance although it answers a GET.
+    """Guard writes on GET routes and routes that must authenticate before checking the pause.
 
     The middleware lets every GET through as a read. A route that writes on one, such as the
     callback an OAuth provider sends the browser back to, says so with this dependency. Its
     request then holds a place like any other change and is refused while the pause is on.
+    Repair routes place this dependency after administrator authentication for the same guard.
     """
     with writing("request", method=request.method, path=_path(request.scope)) as let_in:
         if not let_in:
-            raise HTTPException(status_code=503, detail=REFUSAL)
+            detail = REPAIR_REFUSAL if _path(request.scope) in _REPAIR_PATHS else REFUSAL
+            raise HTTPException(status_code=503, detail=detail)
         caller_id = None
         paused = await _database_pause_status()
         if paused is not False:
@@ -463,6 +469,8 @@ def _passes_while_paused(scope) -> bool:
     if scope.get("method") in _READ_METHODS:
         return True
     path = _path(scope)
+    if scope.get("method") == "POST" and (path in _REPAIR_PATHS or path == "/api/v1/upgrade-reports"):
+        return True
     return path in _ALLOWED_PATHS or f"{path}/".startswith(_ALLOWED_PREFIX)
 
 

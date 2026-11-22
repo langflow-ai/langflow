@@ -82,7 +82,14 @@ def _service(database: Path, *, uri_mode: str | None = None, mode: str | None = 
         service.database_url += "?" + "&".join(query)
     service.engine = create_async_engine(service.database_url)
     service.script_location = Path(__import__("langflow").__file__).parent / "alembic"
-    service.settings_service = SimpleNamespace(settings=SimpleNamespace(database_connection_retry=False))
+    service.settings_service = SimpleNamespace(
+        settings=SimpleNamespace(
+            database_connection_retry=False,
+            database_url=service.database_url,
+            db_driver_connection_settings=None,
+            db_connect_timeout=30,
+        )
+    )
     return service
 
 
@@ -201,6 +208,44 @@ async def test_ignored_memory_query_does_not_create_a_missing_literal_database(t
         await engine.dispose()
 
 
+@pytest.mark.skipif(sys.platform == "win32", reason="Windows cannot represent this literal colon filename")
+@pytest.mark.parametrize(("url_uri", "driver_uri"), [(True, False), (False, True)])
+async def test_driver_uri_override_keeps_unknown_literal_database_unchanged(tmp_path, monkeypatch, url_uri, driver_uri):
+    from langflow.services.database.service import _is_sqlite_memory_database
+    from lfx.services.settings.base import Settings
+    from sqlalchemy.engine import Engine
+
+    monkeypatch.chdir(tmp_path)
+    database = Path("file:driver-override?mode=memory" if url_uri else "file:driver-override")
+    _record_revision(database, "unknown_future_revision")
+    before = database.read_bytes()
+    url = f"sqlite+aiosqlite:///file:driver-override?mode=memory&uri={str(url_uri).lower()}"
+    driver_options = {"uri": driver_uri}
+    settings = Settings.model_construct(
+        database_url=url,
+        config_dir=str(tmp_path),
+        db_connection_settings={},
+        db_driver_connection_settings=driver_options,
+        alembic_log_to_stdout=True,
+    )
+    service = DatabaseService(SimpleNamespace(settings=settings))
+    connections = []
+    event.listen(service.engine.sync_engine, "connect", lambda *_: connections.append(True))
+    monkeypatch.setattr("langflow.services.deps.get_db_service", lambda: service)
+    try:
+        with pytest.raises(DatabaseRevisionError, match="unknown_future_revision"):
+            await initialize_database()
+        assert connections == []
+        assert database.read_bytes() == before
+        assert {path.name for path in tmp_path.iterdir()} == {database.name}
+        with sqlite3.connect(database.resolve()) as connection:
+            assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "delete"
+        assert not _is_sqlite_memory_database(url, driver_options)
+    finally:
+        await service.teardown()
+        event.remove(Engine, "connect", service.on_connection)
+
+
 @pytest.mark.parametrize("database", [":memory:", "file::memory:", "file:shared-memory?mode=memory"])
 async def test_actual_memory_database_uses_the_existing_engine(tmp_path, monkeypatch, database):
     monkeypatch.chdir(tmp_path)
@@ -264,7 +309,6 @@ async def test_refused_startup_teardown_never_opens_an_application_connection(tm
     service.ensure_postgresql_version = AsyncMock()
     cleanup = AsyncMock(side_effect=AssertionError("refused startup must not change users"))
     monkeypatch.setattr(utils, "teardown_superuser", cleanup)
-    monkeypatch.setattr("langflow.services.database.service.teardown_superuser", cleanup)
     monkeypatch.setattr("langflow.services.deps.get_db_service", lambda: service)
     manager = get_service_manager()
     monkeypatch.setattr(manager, "services", {ServiceType.DATABASE_SERVICE: service})

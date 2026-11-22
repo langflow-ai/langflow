@@ -83,6 +83,13 @@ supply regression evidence, not a passing deployment cell.
 
 ## Trigger policy and Enterprise hooks
 
+The flow owner owns the trigger and its source connection. To run the flow as a
+different account, override `TriggerService.resolve_run_user_id(session, *,
+flow_id, trigger_owner_id)` and return the user ID from the deployment binding.
+OSS returns the trigger owner. Returning `None` refuses the event. If the
+lookup raises an exception, the dispatcher retries up to the trigger's attempt
+limit. Once a job exists, workers use its stored account, including on resume.
+
 The shared policy bundle carries `approved_trigger_kinds`. Kinds are the stable
 provider-qualified identities, such as `google.gmail`, `google.calendar`, and
 `slack.message`; core kinds include `schedule` and `inbound_webhook`. A configured

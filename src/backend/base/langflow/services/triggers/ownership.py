@@ -3,7 +3,7 @@
 A provider trigger turns a connection into a stream of that account's data - a
 Slack workspace's messages, a mailbox, a drive - and writes it into a ledger the
 trigger's flow readers can see. So the connection a trigger names must belong to
-the trigger's owner (who is also the flow owner a triggered run executes as).
+the trigger's owner, who also owns the flow.
 
 Two shapes are refused:
 

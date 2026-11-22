@@ -1,4 +1,6 @@
 import asyncio
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from unittest.mock import patch
 
 import aiofiles
@@ -10,6 +12,29 @@ from langflow.services.event_manager import WebhookEventManager, webhook_event_m
 @pytest.fixture(autouse=True)
 def _check_openai_api_key_in_environment_variables():
     pass
+
+
+@asynccontextmanager
+async def _wait_for_webhook_completion(flow_id: str) -> AsyncIterator[None]:
+    # Subscribe before the request so even a fast background run cannot finish unnoticed.
+    events = await webhook_event_manager.subscribe(flow_id)
+    try:
+        yield
+        with anyio.fail_after(30):
+            started = await events.get()
+            assert started["event"] == "vertices_sorted"
+            run_id = started["data"]["run_id"]
+            while True:
+                event = await events.get()
+                if event["event"] == "error":
+                    pytest.fail(f"Webhook execution failed: {event['data']}")
+                # Graph events also include an end; wait for the task's own completion verdict.
+                if event["event"] == "end" and "success" in event["data"]:
+                    assert event["data"]["run_id"] == run_id
+                    assert event["data"]["success"], event["data"].get("error")
+                    break
+    finally:
+        await webhook_event_manager.unsubscribe(flow_id, events)
 
 
 # =============================================================================
@@ -92,30 +117,11 @@ async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, c
         file_path = anyio.Path(tmp) / "test_file.txt"
         payload = {"path": str(file_path)}
 
-        # Subscribe before the request so even a fast background run cannot finish unnoticed.
-        flow_id = added_webhook_test["id"]
-        events = await webhook_event_manager.subscribe(flow_id)
-        try:
+        async with _wait_for_webhook_completion(added_webhook_test["id"]):
             response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json=payload)
             assert response.status_code == 202
 
-            with anyio.fail_after(30):
-                started = await events.get()
-                assert started["event"] == "vertices_sorted"
-                run_id = started["data"]["run_id"]
-                while True:
-                    event = await events.get()
-                    if event["event"] == "error":
-                        pytest.fail(f"Webhook execution failed: {event['data']}")
-                    # Graph events also include an end; wait for the task's own completion verdict.
-                    if event["event"] == "end" and "success" in event["data"]:
-                        assert event["data"]["run_id"] == run_id
-                        assert event["data"]["success"], event["data"].get("error")
-                        break
-
-            assert await file_path.exists(), f"File {file_path} does not exist"
-        finally:
-            await webhook_event_manager.unsubscribe(flow_id, events)
+        assert await file_path.exists(), f"File {file_path} does not exist"
 
     file_does_not_exist = not await file_path.exists()
     assert file_does_not_exist, f"File {file_path} still exists"
@@ -403,11 +409,9 @@ async def test_webhook_creates_vertex_builds(client, added_webhook_test, created
 
     # Execute the webhook
     payload = {"test": "vertex_build_test"}
-    response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json=payload)
-    assert response.status_code == 202
-
-    # Wait for background task to complete
-    await asyncio.sleep(2)
+    async with _wait_for_webhook_completion(flow_id):
+        response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json=payload)
+        assert response.status_code == 202
 
     # Check vertex builds were created
     builds_endpoint = f"api/v1/monitor/builds?flow_id={flow_id}"

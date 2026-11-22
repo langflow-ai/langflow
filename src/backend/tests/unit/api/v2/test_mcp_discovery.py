@@ -9,6 +9,7 @@ import mcp.client.stdio
 import pytest
 from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
+from langflow.api.utils.mcp import discovery
 from langflow.api.utils.mcp.discovery import MAX_CONCURRENT_CHECKS
 from langflow.api.v2.mcp import get_servers, router
 from langflow.services.auth import utils as auth_utils
@@ -208,18 +209,53 @@ async def test_successful_counts_reap_processes_and_manager_tasks(discovery_db, 
     assert _manager_tasks() <= before
 
 
+@pytest.mark.parametrize("startup_delay", [0, 2.1], ids=["ready", "slow-start"])
 async def test_timeout_limits_real_processes_and_reaps_uninitialized_sessions(
-    discovery_db, server_scripts, processes, monkeypatch
+    discovery_db, server_scripts, processes, monkeypatch, startup_delay
 ):
     user = await _register(discovery_db, server_scripts[1], 12, is_superuser=True)
     settings = get_settings_service()
-    monkeypatch.setattr(settings.settings, "mcp_server_timeout", 2)
+    # Startup may consume the entire discovery deadline on a busy runner. Wait
+    # for real children before timing out so this test always exercises reaping
+    # of interrupted handshakes, not merely cancellation before process creation.
+    monkeypatch.setattr(settings.settings, "mcp_server_timeout", 30)
+    original_wait_for = asyncio.wait_for
+    create_process = mcp.client.stdio._create_platform_compatible_process
+
+    async def delayed_process(*args, **kwargs):
+        await asyncio.sleep(startup_delay)
+        return await create_process(*args, **kwargs)
+
+    monkeypatch.setattr(mcp.client.stdio, "_create_platform_compatible_process", delayed_process)
+
+    async def timeout_after_processes_start(awaitable, timeout):
+        assert timeout == 30
+        try:
+            await original_wait_for(
+                asyncio.gather(*(processes[1].get() for _ in range(MAX_CONCURRENT_CHECKS))),
+                timeout=10,
+            )
+        except asyncio.TimeoutError:
+            pytest.fail("MCP discovery did not start four subprocesses within 10 seconds")
+        return await original_wait_for(awaitable, timeout=0.05)
+
+    class DiscoveryAsyncio:
+        wait_for = staticmethod(timeout_after_processes_start)
+
+        def __getattr__(self, name):
+            return getattr(asyncio, name)
+
+    # Patch only discovery's deadline; SDK connection timers and cleanup are real.
+    monkeypatch.setattr(discovery, "asyncio", DiscoveryAsyncio())
     before = _manager_tasks()
 
     results = await get_servers(user, discovery_db, None, settings, action_count=True)
 
     assert len(results) == 12
-    assert all(result["toolsCount"] is None and "error" in result for result in results)
+    assert all(
+        result["toolsCount"] is None and result.get("error") == "Timeout when checking server tools"
+        for result in results
+    )
     assert len(processes[0]) == MAX_CONCURRENT_CHECKS
     assert all(process.returncode is not None for process in processes[0])
     assert _manager_tasks() <= before

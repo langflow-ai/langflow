@@ -6,7 +6,12 @@ import {
   useExportUpgradeReport,
 } from "@/controllers/API/queries/upgrade-reports";
 import FlowList from "./FlowList";
-import { downloadReport, reportTime } from "./format";
+import {
+  downloadReport,
+  reportAge,
+  reportAssessment,
+  reportTime,
+} from "./format";
 import RepairControls from "./RepairControls";
 
 export default function ReportView({ report }: { report: ReportDetail }) {
@@ -20,20 +25,12 @@ export default function ReportView({ report }: { report: ReportDetail }) {
     document.summary.flows.warn +
     document.summary.flows.fail;
   const incomplete = document.flows.length < total;
-  const assessment =
-    document.errors.length > 0 || incomplete
-      ? "incomplete"
-      : document.summary.flows.fail > 0
-        ? "blocked"
-        : document.summary.flows.warn > 0
-          ? "review"
-          : "clear";
-  const ageHours = Math.floor(
-    (Date.now() - Date.parse(document.generated_at)) / 3600000,
+  const assessment = reportAssessment(
+    document.errors.length > 0 || incomplete,
+    document.summary.flows.fail,
+    document.summary.flows.warn,
   );
-  const age = new Intl.RelativeTimeFormat(i18n.language, {
-    numeric: "auto",
-  }).format(-ageHours, "hour");
+  const age = reportAge(document.generated_at, i18n.language, unknown);
   const source = document.source.identity?.locator;
   const sourceLabel = source
     ? Object.entries(source)
@@ -43,7 +40,10 @@ export default function ReportView({ report }: { report: ReportDetail }) {
         .join(" · ")
     : unknown;
   return (
-    <section aria-labelledby="upgrade-report-title" className="space-y-5">
+    <section
+      aria-labelledby="upgrade-report-title"
+      className="min-w-0 space-y-5 rounded-lg border p-3 sm:p-5"
+    >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <h3 id="upgrade-report-title" className="font-medium">
           {t("settings.upgrade.report")}
@@ -64,15 +64,36 @@ export default function ReportView({ report }: { report: ReportDetail }) {
       {exportReport.isError && (
         <p role="alert">{t("settings.upgrade.exportError")}</p>
       )}
-      <div className="space-y-2 rounded border p-4" role="note">
-        <h4 className="font-medium">
+      <div
+        className={`space-y-1 rounded-md border-l-4 bg-muted/50 px-4 py-3 ${assessment === "blocked" ? "border-destructive" : assessment === "clear" ? "border-primary" : "border-warning"}`}
+        role="note"
+      >
+        <h4 className="text-base font-semibold">
           {t(`settings.upgrade.assessment.${assessment}`)}
         </h4>
         <p className="text-sm">
           {t(`settings.upgrade.nextStep.${assessment}`)}
         </p>
       </div>
-      <dl className="grid min-w-0 grid-cols-1 gap-3 rounded border p-4 text-sm [overflow-wrap:anywhere] sm:grid-cols-2">
+      <dl
+        aria-label={t("settings.upgrade.summary")}
+        className="grid grid-cols-3 gap-2"
+      >
+        {(["fail", "warn", "ok"] as const).map((status) => (
+          <div
+            key={status}
+            className="flex min-w-0 flex-col-reverse gap-1 rounded-md bg-muted/50 p-2 sm:p-3"
+          >
+            <dt className="text-xs text-muted-foreground">
+              {t(`settings.upgrade.status.${status}`)}
+            </dt>
+            <dd className="text-xl font-semibold tabular-nums">
+              {document.summary.flows[status].toLocaleString(i18n.language)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+      <dl className="grid min-w-0 grid-cols-1 gap-3 border-b pb-4 text-sm [overflow-wrap:anywhere] sm:grid-cols-2">
         <div>
           <dt className="text-muted-foreground">
             {t("settings.upgrade.source")}
@@ -100,12 +121,6 @@ export default function ReportView({ report }: { report: ReportDetail }) {
             {t("settings.upgrade.imported")}
           </dt>
           <dd>{reportTime(report.created_at, i18n.language, unknown)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">
-            {t("settings.upgrade.summary")}
-          </dt>
-          <dd>{t("settings.upgrade.counts", document.summary.flows)}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">

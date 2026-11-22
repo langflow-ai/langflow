@@ -47,6 +47,10 @@ export type ComponentUpdateWarning = {
   outputs_unverified?: boolean;
 };
 
+export type ComponentRetirement = Required<
+  Pick<APIClassType, "retired_in" | "replacement">
+>;
+
 export type APIClassType = {
   base_classes?: Array<string>;
   description: string;
@@ -130,6 +134,10 @@ export type InputFieldType = {
   text?: string;
   temp_file?: boolean;
   separator?: string;
+  /** Translated label per option value, sent for fields that ask for it. */
+  option_labels?: Record<string, string>;
+  /** How a text field is entered: a time of day, or a local date and time. */
+  input_format?: "time" | "datetime";
 };
 
 export type OutputFieldProxyType = {
