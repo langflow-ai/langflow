@@ -214,7 +214,7 @@ class TestArmedScopePostgres:
                 # capture the record's info dict while checked out, so the
                 # post-exit assert reads the same dict the finally wrote to
                 info_dict = conn.sync_connection.connection.info
-                assert info_dict.get("autocommit_read_guard") is True
+                assert info_dict.get("autocommit_read_guard")
             assert not info_dict.get("autocommit_read_guard")
         finally:
             await eng.dispose()
@@ -246,7 +246,7 @@ class TestArmedScopePostgres:
             async with control.connect() as c2:
                 assert c2.sync_connection.connection.info is control_info
                 # no listener installed: the orphaned flag survives a checkout
-                assert control_info.get("autocommit_read_guard") is True
+                assert control_info.get("autocommit_read_guard")
         finally:
             await control.dispose()
 
@@ -289,7 +289,7 @@ class TestArmedScopePostgres:
                 # outer flag survived the rejected inner entry
                 conn = await outer.connection()
                 fairy_info = conn.sync_connection.connection.info
-                assert fairy_info.get("autocommit_read_guard") is True
+                assert fairy_info.get("autocommit_read_guard")
                 # outer scope still blocks writes
                 with pytest.raises(AutocommitReadGuardError):
                     await outer.execute(text("CREATE TABLE blocked (id int)"))
@@ -456,3 +456,118 @@ class TestCancellationPoolFate:
     async def test_cancel_readonly_scope_pool_size_1(self, pg_uri, monkeypatch):
         val = await self._cancel_probe(pg_uri, monkeypatch, session_scope_readonly)
         assert val == 1
+
+
+class TestEngineIsolationOptionPostgres:
+    """Engine-level execution_options isolation must win over dialect defaults.
+
+    Regression for CodeRabbit r4655587549: the dialect attributes
+    (_on_connect_isolation_level / default_isolation_level) never reflect an
+    engine configured with execution_options={"isolation_level": ...}, so a
+    SERIALIZABLE-configured engine passed the READ COMMITTED gate and its
+    connection was silently switched to AUTOCOMMIT, contrary to the documented
+    degrade-on-non-default-isolation contract.
+    """
+
+    async def test_serializable_engine_degrades(self, pg_uri, monkeypatch):
+        eng = create_async_engine(pg_uri, execution_options={"isolation_level": "SERIALIZABLE"})
+        try:
+            async with eng.connect():  # warm: cold engines degrade by design
+                pass
+            monkeypatch.setattr(deps, "get_db_service", lambda: _FakeDbService(eng))
+            async with session_scope_autocommit() as session:
+                conn = await session.connection()
+                fairy = conn.sync_connection.connection
+                # degraded: plain transactional session, no guard, no AUTOCOMMIT
+                assert not fairy.info.get("autocommit_read_guard")
+                if eng.dialect.driver != "asyncpg":
+                    assert fairy.driver_connection.autocommit is False
+                # writes are NOT blocked in a degraded scope (plain session)
+                await session.execute(text("CREATE TABLE degraded_ok (id int)"))
+        finally:
+            await eng.dispose()
+
+    async def test_explicit_read_committed_engine_still_optimizes(self, pg_uri, monkeypatch):
+        eng = create_async_engine(pg_uri, execution_options={"isolation_level": "READ COMMITTED"})
+        try:
+            async with eng.connect():
+                pass
+            monkeypatch.setattr(deps, "get_db_service", lambda: _FakeDbService(eng))
+            async with session_scope_autocommit() as session:
+                await session.execute(text("SELECT 1"))
+                conn = await session.connection()
+                fairy = conn.sync_connection.connection
+                assert fairy.info.get("autocommit_read_guard")
+                if eng.dialect.driver != "asyncpg":
+                    assert fairy.driver_connection.autocommit is True
+                with pytest.raises(AutocommitReadGuardError):
+                    await session.execute(text("CREATE TABLE blocked (id int)"))
+        finally:
+            await eng.dispose()
+
+
+class TestCrossScopeFlagOwnershipPostgres:
+    """A scope's finally must not clear another scope's flag on a reused record.
+
+    Regression for CodeRabbit r4655587560: after a mid-scope invalidation the
+    pooled record can be re-checked-out and re-armed by a second scope while the
+    first scope is still suspended; the first scope's unconditional finally pop
+    then disarmed the second scope, letting its writes run unguarded in
+    AUTOCOMMIT. Uses the supported invalidation path: the server terminates the
+    backend, the next statement fails, and SQLAlchemy invalidates the connection.
+    """
+
+    async def test_finally_skips_foreign_flag_after_invalidation(self, pg_uri, monkeypatch):
+        eng = create_async_engine(pg_uri, pool_size=1, max_overflow=0)
+        admin = create_async_engine(pg_uri)
+        try:
+            async with eng.connect():  # warm
+                pass
+            monkeypatch.setattr(deps, "get_db_service", lambda: _FakeDbService(eng))
+            b_may_enter = asyncio.Event()
+            b_armed = asyncio.Event()
+            a_scope_exited = asyncio.Event()
+            outcome = {}
+
+            async def scope_a():
+                async with session_scope_autocommit() as session_a:
+                    pid = (await session_a.execute(text("SELECT pg_backend_pid()"))).scalar()
+                    async with admin.connect() as adm:
+                        await adm.execute(text("SELECT pg_terminate_backend(:pid)"), {"pid": pid})
+                    # next statement fails; SQLAlchemy invalidates the connection
+                    # and returns the record to the pool (supported error path)
+                    from sqlalchemy.exc import DBAPIError
+
+                    with pytest.raises(DBAPIError):
+                        await session_a.execute(text("SELECT 1"))
+                    b_may_enter.set()
+                    # supported: caller code may catch the failure and await
+                    # other work before leaving the scope. Hold the scope open
+                    # until B has re-checked-out the record and armed its flag.
+                    await asyncio.wait_for(b_armed.wait(), timeout=10)
+                # A's scope-exit finally runs here, while B holds the record
+                a_scope_exited.set()
+
+            async def scope_b():
+                await b_may_enter.wait()
+                async with session_scope_autocommit() as session_b:
+                    conn_b = await session_b.connection()
+                    record_info = conn_b.sync_connection.connection.info
+                    assert record_info.get("autocommit_read_guard")  # B armed
+                    b_armed.set()
+                    await asyncio.wait_for(a_scope_exited.wait(), timeout=10)
+                    # A's finally ran while B holds the reused record: B's flag
+                    # must survive, and B's writes must stay blocked
+                    outcome["flag_after_a_exit"] = bool(record_info.get("autocommit_read_guard"))
+                    with pytest.raises(AutocommitReadGuardError):
+                        await session_b.execute(text("CREATE TABLE must_stay_blocked (id int)"))
+                    outcome["write"] = "blocked"
+
+            task_a = asyncio.create_task(scope_a())
+            task_b = asyncio.create_task(scope_b())
+            await asyncio.wait_for(asyncio.gather(task_a, task_b), timeout=20)
+            assert outcome.get("flag_after_a_exit") is True, outcome
+            assert outcome.get("write") == "blocked", outcome
+        finally:
+            await admin.dispose()
+            await eng.dispose()

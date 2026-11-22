@@ -550,8 +550,19 @@ async def session_scope_autocommit() -> AsyncGenerator[AsyncSession, None]:
             return
         bind = session.get_bind()
         dialect = bind.dialect
-        effective = getattr(dialect, "_on_connect_isolation_level", None) or getattr(
-            dialect, "default_isolation_level", None
+        # Engine-level execution_options isolation is NOT reflected in dialect
+        # attributes (it is applied per checkout). Resolve it first so a
+        # SERIALIZABLE-configured engine degrades instead of being silently
+        # switched to AUTOCOMMIT. Bind may be an AsyncEngine (options live on
+        # .sync_engine), an AsyncConnection (via .engine), or a sync Engine.
+        sync_engine = getattr(bind, "sync_engine", None) or getattr(getattr(bind, "engine", None), "sync_engine", None)
+        engine_options = (
+            getattr(bind, "_execution_options", None) or getattr(sync_engine, "_execution_options", None) or {}
+        )
+        effective = (
+            engine_options.get("isolation_level")
+            or getattr(dialect, "_on_connect_isolation_level", None)
+            or getattr(dialect, "default_isolation_level", None)
         )
         if effective != "READ COMMITTED":
             yield session
@@ -570,14 +581,20 @@ async def session_scope_autocommit() -> AsyncGenerator[AsyncSession, None]:
             return
         conn = await session.connection(execution_options={"isolation_level": "AUTOCOMMIT"})
         fairy = conn.sync_connection.connection
-        fairy.info[_AUTOCOMMIT_GUARD_FLAG] = True
+        # Ownership token: only this scope may clear its flag. After a
+        # mid-scope invalidation the pooled record can be re-checked-out and
+        # re-armed by another scope; an unconditional pop would disarm that
+        # scope while its statements still run in AUTOCOMMIT.
+        token = object()
+        fairy.info[_AUTOCOMMIT_GUARD_FLAG] = token
         try:
             yield session
         finally:
-            # Pure dict pop on the captured fairy: cannot raise, even after
+            # Pure dict get/pop on the captured fairy: cannot raise, even after
             # mid-statement cancellation (conn.info would revalidate an invalidated
             # connection and raise, masking the propagating CancelledError).
-            fairy.info.pop(_AUTOCOMMIT_GUARD_FLAG, None)
+            if fairy.info.get(_AUTOCOMMIT_GUARD_FLAG) is token:
+                fairy.info.pop(_AUTOCOMMIT_GUARD_FLAG, None)
 
 
 async def injectable_session_scope_autocommit():
