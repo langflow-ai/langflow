@@ -57,10 +57,14 @@ jobs:
         if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
 
       - name: Run Biome on PR-changed files
+        env:
+          # The branch this PR targets. `github.base_ref` is set for
+          # pull_request; merge_group gives `refs/heads/<branch>` instead.
+          # Falls back to `main` for workflow_dispatch / other contexts.
+          # Passed through env so the shell does not expand the branch name.
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
         run: |
-          # Determine the branch this PR targets (falls back to `main` for
-          # workflow_dispatch / non-PR contexts).
-          BASE_REF="${{ github.base_ref || 'main' }}"
+          BASE_REF="${BASE_REF#refs/heads/}"
           echo "=== Debug ==="
           echo "HEAD:          $(git rev-parse HEAD)"
           echo "BASE_REF:      $BASE_REF"

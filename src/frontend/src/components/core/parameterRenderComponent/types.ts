@@ -151,6 +151,7 @@ export type DropDownComponentType = {
   toggle?: boolean;
   toggleValue?: boolean;
   toggleDisable?: boolean;
+  optionLabels?: Record<string, string>;
 };
 
 export type TextAreaComponentType = {
@@ -173,6 +174,7 @@ export type MultiselectComponentType = {
   options: string[];
   combobox?: boolean;
   hideOnSelection?: boolean;
+  optionLabels?: Record<string, string>;
 };
 
 export type TabComponentType = {

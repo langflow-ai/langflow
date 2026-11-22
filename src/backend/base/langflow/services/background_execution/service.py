@@ -39,6 +39,7 @@ from langflow.services.database.models.jobs.model import JobStatus, JobType, Sig
 from langflow.services.deps import get_job_service
 from langflow.services.jobs.exceptions import DuplicateJobError
 from langflow.services.telemetry.context import get_current_telemetry_user_id
+from langflow.services.triggers.constants import PINNED_TRIGGER_CANVAS
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable
@@ -76,7 +77,7 @@ _REQUEST_OVERRIDES_FORMAT_KEY = "request_overrides_format"
 _REQUEST_OVERRIDES_KEY = "request_overrides"
 _REQUEST_OVERRIDES_FORMAT = "fernet-json-v1"
 _REQUEST_OVERRIDES_VERSION = 1
-_REQUEST_OVERRIDE_FIELDS = frozenset({"globals", "tweaks"})
+_REQUEST_OVERRIDE_FIELDS = frozenset({"globals", "tweaks", PINNED_TRIGGER_CANVAS})
 _REQUEST_OVERRIDES_CONTAINER_FIELD = "overrides"
 _REQUEST_OVERRIDES_ERROR = {"type": "request_overrides_unavailable"}
 _MAX_OVERRIDE_JSON_DEPTH = 64
@@ -457,15 +458,10 @@ class BackgroundExecutionService(Service):
         """Return a copy of ``request`` with secret-bearing overrides removed.
 
         Returns a shallow copy so the caller's dict (used for the live run) is not
-        mutated. ``globals`` and ``tweaks`` are dropped from this plaintext blob;
+        mutated. Secret-bearing fields are dropped from this plaintext blob;
         an authenticated encrypted envelope carries them for durable replay.
         """
-        if "globals" not in request and "tweaks" not in request:
-            return request
-        redacted = dict(request)
-        redacted.pop("globals", None)
-        redacted.pop("tweaks", None)
-        return redacted
+        return {key: value for key, value in request.items() if key not in _REQUEST_OVERRIDE_FIELDS}
 
     @classmethod
     def _validate_json_value(
@@ -523,7 +519,7 @@ class BackgroundExecutionService(Service):
 
     @classmethod
     def _validated_overrides(cls, value: Any) -> dict[str, dict[str, Any]]:
-        """Return validated globals/tweaks only, rejecting all other envelope shapes."""
+        """Return only the supported encrypted request fields."""
         if not isinstance(value, dict) or not set(value).issubset(_REQUEST_OVERRIDE_FIELDS):
             raise InvalidRequestOverridesError(_REQUEST_OVERRIDES_CONTAINER_FIELD)
         overrides: dict[str, dict[str, Any]] = {}
@@ -541,7 +537,7 @@ class BackgroundExecutionService(Service):
         )
         # The API models default both fields to {}, so treat empty mappings as no
         # override rather than encrypting an envelope for every ordinary run.
-        overrides = {key: value for key, value in supplied_overrides.items() if value}
+        overrides = {key: value for key, value in supplied_overrides.items() if value or key == PINNED_TRIGGER_CANVAS}
         metadata: dict[str, Any] = {"request": self._redact_request(request)}
         if overrides:
             from langflow.services.auth.utils import get_fernet
@@ -1056,8 +1052,8 @@ class BackgroundExecutionService(Service):
     def _user_stub(user_id: UUID | None) -> UserRead | None:
         """A minimal UserRead carrying only ``id``.
 
-        The default frame source only reads ``user.id`` (to fetch the flow), so
-        a partial object is sufficient. Returns None for legacy ownerless jobs.
+        The default frame source reloads the user by ``id`` before checking
+        current privileges and fetching the flow. Returns None for legacy ownerless jobs.
         """
         if user_id is None:
             return None

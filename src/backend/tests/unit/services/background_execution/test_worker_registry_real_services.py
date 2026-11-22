@@ -113,25 +113,27 @@ async def test_real_worker_registers_runs_and_deregisters():
         }
 
         async def _busy_with_submitted_job():
-            rows = await _registry_rows()
-            if len(rows) != 1 or rows[0].state != WorkerState.BUSY:
-                return None
-            return rows[0] if rows[0].current_job_id in job_ids else None
+            async with session_scope() as session:
+                # Hold the observed state until the collector has counted the same row.
+                rows = (await session.exec(select(WorkerRegistry).with_for_update(read=True, skip_locked=True))).all()
+                if len(rows) != 1 or rows[0].state != WorkerState.BUSY or rows[0].current_job_id not in job_ids:
+                    return None
+                return await count_workers_by_state(
+                    session, now=datetime.now(timezone.utc), online_window=_ONLINE_WINDOW
+                )
 
-        busy = await _wait_until(_busy_with_submitted_job, timeout=60.0, interval=0.2)
-        assert busy is not None, f"worker did not flip to BUSY with a submitted job; rows={await _registry_rows()}"
-        busy_counts = await _counts()
-        assert busy_counts == {"online": 1, "busy": 1, "idle": 0}, busy_counts
+        busy_counts = await _wait_until(_busy_with_submitted_job, timeout=60.0, interval=0.2)
+        assert busy_counts == {"online": 1, "busy": 1, "idle": 0}, f"{busy_counts=}; rows={await _registry_rows()}"
 
         # 3. IDLE: once the whole backlog drains, the worker returns to IDLE.
         async def _all_done():
             async with session_scope() as session:
-                done = (
-                    await session.exec(
-                        select(Job.job_id).where(col(Job.job_id).in_(job_ids)).where(Job.status == JobStatus.COMPLETED)
-                    )
-                ).all()
-            return True if len(done) == len(job_ids) else None
+                statuses = (await session.exec(select(Job.status).where(col(Job.job_id).in_(job_ids)))).all()
+            if any(status in {JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT} for status in statuses):
+                pytest.fail(
+                    f"Worker backlog ended with {statuses}. Worker output follows.\n{harness.drain_worker_output()}"
+                )
+            return True if statuses.count(JobStatus.COMPLETED) == len(job_ids) else None
 
         assert await _wait_until(_all_done, timeout=180.0) is not None, "the submitted backlog did not all complete"
 

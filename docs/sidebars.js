@@ -386,11 +386,6 @@ module.exports = {
           id: "Deployment/security",
           label: "Security",
         },
-        {
-          type: "doc",
-          id: "administration/secret-key-rotation",
-          label: "Offline secret-key audit and rotation",
-        },
       ],
     },
     {
@@ -412,6 +407,11 @@ module.exports = {
           type: "doc",
           id: "Lfx/lfx-run",
           label: "Run flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-dependency-ready",
+          label: "Dependency-ready Python graphs"
         },
         {
           type: "doc",
@@ -591,6 +591,7 @@ module.exports = {
             "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
+            "Components/bundles-github",
             "Components/bundles-gitlab",
             "Components/bundles-google",
             "Components/bundles-groq",
@@ -625,6 +626,7 @@ module.exports = {
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
             "Components/bundles-plivo",
+            "Components/bundles-popnow",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-salesforce",
@@ -635,6 +637,7 @@ module.exports = {
             "Components/bundles-serply",
             "Components/bundles-servicenow",
             "Components/bundles-slack",
+            "Components/bundles-socialscrape",
             "Components/bundles-supabase",
             "Components/bundles-telegram",
             "Components/bundles-upstash",
@@ -684,7 +687,7 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Developer API (Beta)",
+          label: "Developer API",
           items: [
             "API-Reference/workflow-api-quickstart",
             "API-Reference/workflows-api",
