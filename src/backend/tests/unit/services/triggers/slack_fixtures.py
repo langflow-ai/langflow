@@ -6,10 +6,14 @@ the cross-track contract test all read the same files the same way.
 
 from __future__ import annotations
 
+import asyncio
 import copy
 import json
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from uuid import UUID
 
 FIXTURES = Path(__file__).parent / "fixtures" / "slack"
 
@@ -250,6 +254,38 @@ async def arm(
         session.add(row)
         await session.flush()
         return row.id
+
+
+async def wait_for_socket_app_ids(*trigger_ids: UUID, timeout: float = 5.0) -> None:
+    """Allow each SQLite writer time to commit while the previous socket stays live."""
+    from langflow.services.database.models.trigger.model import Trigger
+    from langflow.services.triggers.providers.slack.socket_mode import PROVIDER_STATE_APP_ID
+    from lfx.services.deps import session_scope_readonly
+    from sqlmodel import col, select
+
+    expected = set(trigger_ids)
+    most_recorded = 0
+    loop = asyncio.get_running_loop()
+    deadline = loop.time() + timeout
+    while True:
+        async with session_scope_readonly() as session:
+            recorded = (
+                await session.exec(
+                    select(Trigger.id).where(
+                        col(Trigger.id).in_(expected),
+                        col(Trigger.provider_state)[PROVIDER_STATE_APP_ID].as_string() == APP_ID,
+                    )
+                )
+            ).all()
+        if len(recorded) == len(expected):
+            return
+        if len(recorded) > most_recorded:
+            most_recorded = len(recorded)
+            deadline = loop.time() + timeout
+        elif loop.time() >= deadline:
+            msg = f"Slack app identity was not recorded for triggers {expected.difference(recorded)}"
+            raise AssertionError(msg)
+        await asyncio.sleep(0.02)
 
 
 async def events_for(trigger_id):

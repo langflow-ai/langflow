@@ -226,7 +226,7 @@ def get_client(
         from langflow_sdk import get_client
 
         client = get_client("staging")
-        flows  = client.list_flows()
+        flows  = client.list_flows(get_all=True)
     """
     from langflow_sdk.client import Client
 
@@ -247,7 +247,7 @@ def get_async_client(
         from langflow_sdk import get_async_client
 
         async with get_async_client("staging") as client:
-            flows = await client.list_flows()
+            flows = await client.list_flows(get_all=True)
     """
     from langflow_sdk.client import AsyncClient
 

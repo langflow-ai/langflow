@@ -21,16 +21,19 @@ export type FlowData = {
   [key: string]: unknown;
 };
 
-type BrowserFlowStoreModule = {
-  default: {
-    getState: () => {
-      autoSaveFlow?: {
-        cancel: () => void;
-        flush: () => Promise<void> | void;
+// The app exposes its flow store here in dev and in the Playwright CI build.
+declare global {
+  interface Window {
+    __LANGFLOW_FLOW_STORE__?: {
+      getState: () => {
+        autoSaveFlow?: {
+          cancel: () => void;
+          flush: () => Promise<void> | void;
+        };
       };
     };
-  };
-};
+  }
+}
 
 function requestBody(request: Request): unknown {
   try {
@@ -72,11 +75,8 @@ async function assertFinishedResponse(
  */
 export async function flushPendingFlowAutosave(page: Page): Promise<void> {
   const didFlush = await page.evaluate(async () => {
-    const storeModulePath = "/src/stores/flowStore.ts";
-    const flowStoreModule = (await import(
-      /* @vite-ignore */ storeModulePath
-    )) as BrowserFlowStoreModule;
-    const autoSaveFlow = flowStoreModule.default.getState().autoSaveFlow;
+    const autoSaveFlow =
+      window.__LANGFLOW_FLOW_STORE__?.getState().autoSaveFlow;
     if (!autoSaveFlow?.flush) return false;
     await autoSaveFlow.flush();
     return true;
@@ -91,11 +91,8 @@ export async function flushPendingFlowAutosave(page: Page): Promise<void> {
 
 async function cancelPendingFlowAutosave(page: Page): Promise<void> {
   const didCancel = await page.evaluate(async () => {
-    const storeModulePath = "/src/stores/flowStore.ts";
-    const flowStoreModule = (await import(
-      /* @vite-ignore */ storeModulePath
-    )) as BrowserFlowStoreModule;
-    const autoSaveFlow = flowStoreModule.default.getState().autoSaveFlow;
+    const autoSaveFlow =
+      window.__LANGFLOW_FLOW_STORE__?.getState().autoSaveFlow;
     if (!autoSaveFlow?.cancel) return false;
     autoSaveFlow.cancel();
     return true;

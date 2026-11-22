@@ -21,9 +21,8 @@ if TYPE_CHECKING:
 
     from ag_ui.core import BaseEvent
 
-# Durable AG-UI milestones. ``TEXT_MESSAGE_CONTENT`` is the per-token delta and
-# is ephemeral; the START/END lifecycle frames around it are durable so a
-# reattaching client knows a message happened even without the token stream.
+# Persist text deltas with their lifecycle so replay can reconstruct messages
+# and each content event gets its own durable cursor for Last-Event-ID.
 _AGUI_DURABLE_EVENTS: frozenset[str] = frozenset(
     {
         "RUN_STARTED",
@@ -32,10 +31,12 @@ _AGUI_DURABLE_EVENTS: frozenset[str] = frozenset(
         "STEP_STARTED",
         "STEP_FINISHED",
         "TEXT_MESSAGE_START",
+        "TEXT_MESSAGE_CONTENT",
         "TEXT_MESSAGE_END",
         "TOOL_CALL_START",
         "TOOL_CALL_ARGS",
         "TOOL_CALL_END",
+        "TOOL_CALL_RESULT",
         "STATE_SNAPSHOT",
         "STATE_DELTA",
         "CUSTOM",
@@ -85,7 +86,8 @@ class AGUIAdapter:
     def cancel_events(self, reason: str) -> Iterable[StreamEvent]:
         # AG-UI has no cancel primitive: close any open text lifecycle, emit a
         # CUSTOM cancel marker, then RUN_FINISHED. A user-stop must not replay as
-        # RUN_ERROR, which clients read as a genuine failure.
+        # RUN_ERROR, which clients read as a genuine failure. After RUN_ERROR the
+        # run is already closed, so this emits nothing.
         return [_to_stream_event(e) for e in self._translator.cancel(reason)]
 
     @property

@@ -136,7 +136,7 @@ def test_upgrade_reports_retired_with_replacement_and_leaves_it(flow_file, capsy
     assert exc_info.value.exit_code == 1
     out = capsys.readouterr().out
     assert "[RETIRED] My Component (MyComp)" in out
-    assert "retired in 1.13.0, replace with: models_and_agents.Agent" in out
+    assert "retired in 1.13.0, replace with: Agent" in out
     assert flow_file.read_text() == before
 
 
@@ -329,3 +329,25 @@ def test_help_says_safe_refuses_customized_components_when_custom_components_are
     # FORCE_COLOR), so drop the ANSI codes, borders and line breaks before matching.
     text = " ".join(typer.unstyle(result.output).replace("│", " ").split())
     assert "and on customized components when custom components are blocked" in text
+
+
+@pytest.mark.parametrize(
+    ("type_name", "label"),
+    [
+        ("Chroma", "Knowledge"),
+        ("ext:chroma:ChromaVectorStoreComponent@official", "Knowledge"),
+        ("MrscraperAiScraper", "MrScraper Scraper API"),
+    ],
+)
+def test_upgrade_reports_missing_retired_bundle(flow_file, capsys, type_name, label):
+    flow = json.loads(flow_file.read_text())
+    flow["nodes"][0]["data"]["type"] = type_name
+    original = json.dumps(flow)
+    flow_file.write_text(original)
+    with pytest.raises(typer.Exit) as error:
+        upgrade_command(flow_file, write=True, registry={})
+    assert error.value.exit_code == 1
+    output = capsys.readouterr().out
+    assert "[RETIRED]" in output
+    assert f"retired in 1.13.0, replace with: {label}" in output
+    assert flow_file.read_text() == original

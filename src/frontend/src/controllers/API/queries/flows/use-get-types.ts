@@ -102,6 +102,7 @@ export const useGetTypes: useQueryFunctionType<
   });
 
   useLayoutEffect(() => {
+    if (queryOptions.enabled === false) return;
     activateScope(scopeKey);
     if (isScoped && queryResult.data === undefined) {
       if (clearScopedTypes(scopeKey)) {
@@ -125,6 +126,7 @@ export const useGetTypes: useQueryFunctionType<
     activateScope,
     clearScopedTypes,
     isScoped,
+    queryOptions.enabled,
     queryResult.data,
     queryResult.dataUpdatedAt,
     scopeKey,
