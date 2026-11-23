@@ -87,6 +87,7 @@ from langflow.services.auth.context import (
     AUTH_METHOD_AUTO_LOGIN,
     AuthCredentialContext,
     clear_current_auth_context,
+    get_current_auth_context,
     set_current_auth_context,
 )
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
@@ -107,6 +108,13 @@ ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 _PROJECT_URL_ID_PATTERN = re.compile(r"/api/v1/mcp/project/([0-9a-fA-F-]{36})")
 
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
+
+
+def _transport_auth_type(project: Folder) -> str | None:
+    auth_type = stored_project_auth_type(project.auth_settings)
+    if auth_type not in {None, "none", "apikey", "oauth"}:
+        raise HTTPException(status_code=403, detail="Unsupported project authentication mode")
+    return auth_type
 
 
 async def verify_project_auth(
@@ -137,10 +145,8 @@ async def verify_project_auth(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         project_user_id = project.user_id
-        project_auth_type = stored_project_auth_type(project.auth_settings)
+        project_auth_type = _transport_auth_type(project)
 
-    if project_auth_type not in {None, "none", "apikey", "oauth"}:
-        raise HTTPException(status_code=403, detail="Unsupported project authentication mode")
     if project_auth_type == "oauth" and composer_backend_token:
         mcp_composer_service: MCPComposerService = cast(
             MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
@@ -282,11 +288,13 @@ async def verify_project_auth_conditional(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         project_user_id = project.user_id
+        project_auth_type = _transport_auth_type(project)
 
     # For all other cases, use standard MCP authentication (allows JWT + API keys).
     # This session has not executed a query before API-key authentication.
     from langflow.services.auth.utils import get_current_user_mcp
 
+    clear_current_auth_context()
     async with session_scope() as session:
         user = await get_current_user_mcp(
             request=request,
@@ -298,6 +306,11 @@ async def verify_project_auth_conditional(
 
     if project_user_id != user.id:
         raise HTTPException(status_code=404, detail="Project not found")
+
+    if project_auth_type == "apikey":
+        credential = get_current_auth_context()
+        if credential is None or credential.method == AUTH_METHOD_AUTO_LOGIN:
+            raise HTTPException(status_code=401, detail="Credentials required for this project")
 
     authenticated_caller_ctx.set(user.id)
     return user
