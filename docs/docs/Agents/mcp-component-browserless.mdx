@@ -8,7 +8,7 @@ import McpIcon from '@site/static/logos/mcp-icon.svg';
 
 This guide demonstrates how to [use Langflow as an MCP client](/mcp-client) by using the **MCP Tools** component to connect to the [Browserless MCP server](https://docs.browserless.io/mcp/overview) in an agent flow.
 
-[Browserless](https://browserless.io) is a hosted browser-as-an-MCP server. The remote MCP endpoint exposes tools for smart scraping, web/news/image search, sitemap mapping, full-site crawling, Lighthouse audits, custom Puppeteer execution, file downloads, native exports, and a persistent agentic-browsing loop with captcha solving and residential proxies. No local install is required.
+[Browserless](https://browserless.io) is a hosted browser-as-an-MCP server. The remote MCP endpoint exposes tools for smart scraping, web/news/image search, sitemap mapping, full-site crawling, Lighthouse audits, custom Puppeteer execution, native exports, and a multi-step browser agent with captcha solving and residential proxies. No local install is required.
 
 1. Create a [Browserless account](https://browserless.io/account/) and copy your API token.
 
@@ -40,7 +40,10 @@ Use the following values:
         | `Authorization` | `Bearer YOUR_BROWSERLESS_TOKEN` |
 
         :::tip
-        For security, store your token as a [global variable](/configuration-global-variables) named `BROWSERLESS_TOKEN`, and then reference it in the header value field. Avoid pasting the raw token into the UI when possible.
+        To avoid pasting the raw token into the server configuration, create a **Credential** [global variable](/configuration-global-variables) named `BROWSERLESS_TOKEN`.
+        Its value must include the `Bearer` prefix and a space, such as `Bearer YOUR_BROWSERLESS_TOKEN`.
+        Then, in the `Authorization` header's value field, enter only the variable name `BROWSERLESS_TOKEN`.
+        For more information, see [Use global variables in MCP server headers](/mcp-client#use-global-variables-in-mcp-server-headers).
         :::
 
     5. Click **Add Server**.
@@ -55,12 +58,10 @@ Use the following values:
     Since Langflow is connected to Browserless through the MCP server, the agent chooses the correct tool (`browserless_smartscraper`) and returns the page content. For example:
 
     ```text
-    # Example Domain
+    Example Domain
 
-    This domain is for use in illustrative examples in documents. You may use this
-    domain in literature without prior coordination or asking for permission.
-
-    [More information...](https://www.iana.org/domains/example)
+    This domain is for use in documentation examples without needing permission.
+    This is not a service; avoid relying on it for testing and monitoring purposes.
     ```
 
     Try other prompts to exercise different tools provided by the Browserless MCP server:
