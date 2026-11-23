@@ -7,7 +7,13 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
-from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, replace_with_live_models
+from lfx.base.models.model_utils import (
+    _to_str,
+    ensure_foundry_credential_endpoint_allowed,
+    ensure_watsonx_credential_endpoint_allowed,
+    inject_custom_enabled_models,
+    replace_with_live_models,
+)
 from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.log.logger import logger
 from lfx.services.variable.request_scope import is_env_fallback_disabled
@@ -509,6 +515,19 @@ def get_llm(
             default_url=model_provider_metadata.get(provider, {}).get("base_url") or "https://api.openai.com/v1",
             sdk_env_fallback="OPENAI_API_KEY",
         )
+    elif model_class_name == "AzureAIOpenAIApiChatModel":
+        endpoint = kwargs.get("endpoint")
+        if not endpoint or kwargs.get("project_endpoint"):
+            msg = "Azure AI Foundry requires a direct model endpoint"
+            raise ValueError(msg)
+        if any(kwargs.get(alias) not in (None, endpoint) for alias in ("base_url", "openai_api_base")):
+            msg = "Azure AI Foundry endpoint and base URL must agree"
+            raise ValueError(msg)
+        ensure_foundry_credential_endpoint_allowed(
+            kwargs.get("credential") or kwargs.get("api_key", kwargs.get("openai_api_key")), endpoint
+        )
+    elif model_class_name == "ChatWatsonx" and kwargs.get("url"):
+        ensure_watsonx_credential_endpoint_allowed(kwargs.get("api_key", kwargs.get("apikey")), kwargs["url"])
 
     _protect_model_connection(
         kwargs,
@@ -859,6 +878,11 @@ def _compose_embedding_kwargs(
             return None
         connection_url_param = param_mapping["api_base"]
         kwargs[connection_url_param] = normalize_azure_ai_foundry_endpoint(endpoint_value)
+
+    if provider == "Azure AI Foundry":
+        ensure_foundry_credential_endpoint_allowed(kwargs.get("api_key"), kwargs["base_url"])
+    elif embedding_class_name == "WatsonxEmbeddings" and kwargs.get("url"):
+        ensure_watsonx_credential_endpoint_allowed(kwargs.get("api_key", kwargs.get("apikey")), kwargs["url"])
 
     _protect_model_connection(
         kwargs,

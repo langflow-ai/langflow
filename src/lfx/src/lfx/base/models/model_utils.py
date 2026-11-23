@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import os
 import re
 import time
 from typing import Any
@@ -16,6 +17,7 @@ from lfx.base.models.model_metadata import (
     LIVE_MODEL_PROVIDERS,
     create_model_metadata,
 )
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.base.models.watsonx_constants import (
     IBM_WATSONX_URLS,
 )
@@ -578,6 +580,34 @@ def normalize_azure_ai_foundry_endpoint(endpoint: str) -> str:
     return normalized
 
 
+def ensure_foundry_credential_endpoint_allowed(api_key: Any, endpoint: str) -> None:
+    """Trust the operator's configured Foundry resource, or an explicitly allowed host."""
+    configured = os.environ.get("AZURE_AI_FOUNDRY_ENDPOINT")
+    ensure_credential_endpoint_allowed(
+        api_key,
+        normalize_azure_ai_foundry_endpoint(endpoint),
+        default_url=normalize_azure_ai_foundry_endpoint(configured) if configured else None,
+        sdk_env_fallback="OPENAI_API_KEY",
+    )
+
+
+def ensure_watsonx_credential_endpoint_allowed(api_key: Any, url: str) -> None:
+    """Authorize the effective Watsonx SDK credentials before opening a connection."""
+    if url.rstrip("/") in IBM_WATSONX_URLS:
+        return
+    configured = os.environ.get("WATSONX_URL")
+    ensure_credential_endpoint_allowed(
+        api_key, url, default_url=configured, sdk_env_fallback=("WATSONX_API_KEY", "WATSONX_APIKEY")
+    )
+    # The SDK can use a token or password independently of the explicit API key.
+    ensure_credential_endpoint_allowed(
+        None,
+        url,
+        default_url=configured,
+        sdk_env_fallback=("WATSONX_TOKEN", "WATSONX_PASSWORD", "USER_ACCESS_TOKEN", "RUNTIME_ENV_ACCESS_TOKEN_FILE"),
+    )
+
+
 def _azure_ai_foundry_models_probe_url(endpoint: str, api_version: str | None = None) -> str:
     """Build the Foundry ``/models`` probe URL from any configured endpoint form.
 
@@ -627,6 +657,7 @@ def request_azure_ai_foundry_model_entries(endpoint: str, api_key: str, api_vers
     credential save. Connection errors and timeouts still propagate: an
     unreachable endpoint is a real misconfiguration the save should surface.
     """
+    ensure_foundry_credential_endpoint_allowed(api_key, endpoint)
     endpoint = normalize_azure_ai_foundry_endpoint(endpoint)
     probe_url = _azure_ai_foundry_models_probe_url(endpoint, api_version)
     response = ssrf_safe_httpx_get(
@@ -906,6 +937,10 @@ def fetch_live_azure_ai_foundry_models(user_id: UUID | str | None, model_type: s
         )
         return []
 
+    try:
+        ensure_foundry_credential_endpoint_allowed(api_key, endpoint)
+    except ValueError:
+        return []
     entries = _fetch_azure_ai_foundry_deployment_entries(deployments_url, api_key)
     if entries is None:
         return []
