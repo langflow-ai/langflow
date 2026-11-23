@@ -79,7 +79,11 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
     "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
     "milvus": ["langchain-milvus~=0.3.2"],
-    "mongodb": ["pymongo>=4.18.3,<5.0.0", "langchain-mongodb>=0.11.0"],
+    "mongodb": [
+        "pymongo>=4.18.3,<5.0.0; python_version < '3.11'",
+        "pymongo>=4.20.1,<5.0.0; python_version >= '3.11'",
+        "langchain-mongodb>=0.11.0",
+    ],
     "pgvector": ["pgvector>=0.4.2", _LC_COMMUNITY],
     # Marker preserved from langflow-base: no py3.14 wheel yet; on 3.14 the
     # component degrades exactly as it does in today's published images.
