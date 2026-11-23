@@ -579,7 +579,7 @@ def _cell_loads_from_db(row_metadata: object, column: str) -> bool | None:
     Mirrors ``cell_load_from_db`` in ``lfx.interface.initialize.loading``: a row
     may override its schema column per cell, so the two must agree on which
     cells resolve to a variable and which hold a literal. ``None`` means the row
-    records no choice, which the runtime resolves from the database.
+    records no choice, so the runtime keeps the literal if the lookup misses.
     """
     if isinstance(row_metadata, dict):
         return bool(row_metadata[column]) if column in row_metadata else None
@@ -623,10 +623,6 @@ def _strip_table_rows_in_place(
         preserved: dict[str, str | None] = {}
         for column in reference_columns & row.keys():
             cell = row[column]
-            # Only a cell the runtime resolves from the database holds a
-            # variable *name*. A cell the row marks as not loading from the
-            # database holds the literal value itself, so it is scrubbed like
-            # any other secret rather than published as a required variable.
             bound = _cell_loads_from_db(row_metadata, column)
             # A legacy row without an override may also hold a literal.
             required_cell = (
@@ -634,11 +630,13 @@ def _strip_table_rows_in_place(
                 if required_field is not None and bound
                 else None
             )
-            if bound is False or not _check_variable_reference(cell, known_variable_names, required_cell):
+            # During packaging, leave unmarked literals to the row scrub below.
+            # It keeps an Accept header and clears a literal Authorization header.
+            if bound is not False and _check_variable_reference(cell, known_variable_names, required_cell):
+                variable_references.add(cell)
+                preserved[column] = cell
+            elif required_field is None or bound is not None or not _is_variable_reference(cell):
                 preserved[column] = None
-                continue
-            variable_references.add(cell)
-            preserved[column] = cell
         _strip_structured_secret_values_in_place(row)
         row.update(preserved)
         if row_metadata is not None:
@@ -1029,7 +1027,9 @@ def strip_secret_field_values_in_place(
     an ordinary name. Callers that can list the owner's global variables pass
     ``known_variable_names`` to close it: only values naming one of those
     variables are then preserved. Deployment archives set ``reject_unknown_bindings``
-    to refuse a reference that would otherwise be silently cleared.
+    to refuse a reference that would otherwise be silently cleared. In table
+    cells without a row override, archives also keep ordinary literals
+    after scrubbing the row for secrets.
 
     An MCP server field is always reduced to its ``name`` (or nulled if it has
     none) regardless of ``variable_references`` - a deploy target does not need

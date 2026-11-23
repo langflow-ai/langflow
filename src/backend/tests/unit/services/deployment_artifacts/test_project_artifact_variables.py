@@ -251,6 +251,8 @@ async def test_artifact_identifies_unresolved_table_binding_in_grouped_flow():
             {"key": "X-Plain", "value": "Literal label", "__load_from_db_fields": {"value": False}},
             {"key": "X-Private", "value": "EDITOR_LABEL", "__load_from_db_fields": {"value": True}},
             {"key": "X-Legacy", "value": "OWNER_LABEL"},
+            {"key": "Authorization", "value": "Bearer private"},
+            {"key": "X-Other", "value": "sk-abcdefgh"},  # pragma: allowlist secret
         ],
     }
     nested = {"id": "APIRequest-42", "data": {"node": {"template": {"headers": table}}}}
@@ -264,7 +266,16 @@ async def test_artifact_identifies_unresolved_table_binding_in_grouped_flow():
     assert "Literal label" not in str(raised.value)
     assert "X-Private" not in str(raised.value)
     artifact = await _typed_export(project, [flow], {"EDITOR_LABEL": "plain", "OWNER_LABEL": "plain"})
-    assert _manifest(artifact)["required_variables"] == ["EDITOR_LABEL", "OWNER_LABEL"]
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        exported = json.loads(archive.read(f"flows/{flow.id}.json"))
+    assert manifest["required_variables"] == ["EDITOR_LABEL", "OWNER_LABEL"]
+    group = exported["data"]["nodes"][0]["data"]["node"]["flow"]
+    rows = group["data"]["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+    headers = {row["key"]: row["value"] for row in rows}
+    assert headers["Accept"] == "application/json"
+    assert headers["Authorization"] is None
+    assert headers["X-Other"] is None
 
 
 @pytest.mark.asyncio
