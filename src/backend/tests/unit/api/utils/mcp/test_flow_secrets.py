@@ -649,6 +649,27 @@ class TestTheComponentsOwnHeadersBox:
 
         assert self._headers(flow_data) == {"Authorization": None}
 
+    @pytest.mark.parametrize("as_rows", [False, True])
+    def test_strict_scrub_requires_the_selected_servers_header_alias(self, as_rows):
+        from langflow.utils.flow_secrets import UnresolvedVariableBindingError, strip_secret_field_values_in_place
+
+        alias = variable_name_for(mcp_header_scope("ui_svc"), "Authorization")
+        headers = {"Accept": "application/json", "Authorization": alias}
+        stored = [{"key": "Incomplete"}, *self._rows(headers)] if as_rows else headers
+        flow_data = self._flow(deepcopy(stored), server={"name": "new_server"})
+        refs = set()
+        with pytest.raises(UnresolvedVariableBindingError) as raised:
+            strip_secret_field_values_in_place(
+                flow_data, variable_references=refs, known_variable_names={alias}, reject_unknown_bindings=True
+            )
+        assert str(raised.value) == ("'headers', row 3, column 'value'" if as_rows else "'headers', header 2")
+        flow_data["nodes"][0]["data"]["node"]["template"]["mcp_server"]["value"]["name"] = "ui_svc"
+        strip_secret_field_values_in_place(
+            flow_data, variable_references=refs, known_variable_names={alias}, reject_unknown_bindings=True
+        )
+        assert refs == {alias}
+        assert self._headers(flow_data) == stored
+
     def test_should_null_it_for_a_reader_with_no_variable_manifest(self):
         """A public share resolves nothing, so it gets the name as little as the secret."""
         from langflow.utils.flow_secrets import strip_secret_field_values_in_place
