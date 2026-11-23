@@ -2,7 +2,7 @@
 # Keep this syntax directive! It's used to enable Docker BuildKit
 
 ARG UV_VERSION=0.10.4
-ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal:10.3-1795022290
+ARG PYTHON_IMAGE=registry.access.redhat.com/ubi10/python-314-minimal:10.3-1795234906
 ARG NODE_VERSION=24.22.2
 
 ################################
