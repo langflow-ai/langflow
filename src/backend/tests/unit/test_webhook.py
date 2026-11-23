@@ -356,7 +356,7 @@ async def test_webhook_runs_only_flows_with_a_webhook_component(
     from lfx.graph import Graph
 
     monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", webhook_auth_enable)
-    headers = {"x-api-key": created_api_key.api_key} if webhook_auth_enable else {}
+    headers = {"x-api-key": created_api_key.api_key}
     trigger = InboundWebhookTriggerComponent()
     trigger_flow = FlowCreate(**Graph(start=trigger, end=trigger).dump(name="Inbound Webhook trigger"))
     response = await client.post("api/v1/flows/", json=trigger_flow.model_dump(), headers=logged_in_headers)
