@@ -8,6 +8,10 @@ the token display instead of raising.
 
 from __future__ import annotations
 
+from collections import UserDict
+
+import pytest
+from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage
 from lfx.base.models.model import LCModelComponent
 
@@ -18,14 +22,15 @@ class _MinimalModelComponent(LCModelComponent):
 
 
 class TestBuildStatusMessage:
-    def test_full_openai_metadata_keeps_token_counts(self):
+    @pytest.mark.parametrize("mapping", [dict, UserDict])
+    def test_full_openai_metadata_keeps_token_counts(self, mapping):
         component = _MinimalModelComponent()
         message = AIMessage(
             content="hello",
             response_metadata={
                 "model_name": "gpt-4o",
                 "finish_reason": "stop",
-                "token_usage": {"prompt_tokens": 10, "completion_tokens": 5, "total_tokens": 15},
+                "token_usage": mapping(prompt_tokens=10, completion_tokens=5, total_tokens=15),
             },
         )
 
@@ -98,3 +103,26 @@ class TestBuildStatusMessage:
         status = component.build_status_message(message)
 
         assert status == "Response: hello"
+
+
+@pytest.mark.asyncio
+async def test_chat_result_keeps_text_and_clears_previous_usage():
+    component = _MinimalModelComponent()
+    metadata = {"model_name": "agent/sample", "finish_reason": "stop"}
+    counts = {"prompt_tokens": 2, "completion_tokens": 1, "total_tokens": 3}
+    model = FakeMessagesListChatModel(
+        responses=[
+            AIMessage(content="first", response_metadata={**metadata, "token_usage": counts}),
+            AIMessage(content="second", response_metadata={**metadata, "token_usage": None}),
+        ]
+    )
+
+    first = await component.get_chat_result(runnable=model, stream=False, input_value="hi")
+    assert first.properties.usage.total_tokens == 3
+    assert component._token_usage == first.properties.usage
+
+    second = await component.get_chat_result(runnable=model, stream=False, input_value="hi")
+    assert second.text == "second"
+    assert component.status == "Response: second"
+    assert second.properties.usage is None
+    assert component._token_usage is None

@@ -2,7 +2,8 @@
 
 from types import SimpleNamespace
 
-from langchain_core.messages import AIMessage
+import pytest
+from langchain_core.messages import AIMessage, AIMessageChunk
 from lfx.schema.properties import Usage
 from lfx.schema.token_usage import (
     _normalize_usage_metadata,
@@ -352,6 +353,12 @@ class TestExtractUsageFromLlmResult:
 
 class TestExtractUsageFromChunk:
     """Tests for extract_usage_from_chunk()."""
+
+    @pytest.mark.parametrize("key", ["token_usage", "usage"])
+    def test_returns_none_for_null_usage(self, key):
+        chunk = AIMessageChunk(content="hi", response_metadata={key: None})
+
+        assert extract_usage_from_chunk(chunk) is None
 
     def test_extracts_from_usage_metadata_dict(self):
         chunk = SimpleNamespace(
