@@ -15,7 +15,7 @@ uv run pytest src/backend/tests/unit/services/database/test_startup_retention.py
 The new tests use real application models and cleanup functions. For the negative
 control, replace only services/utils.py with the baseline version, run the startup
 retention tests, then restore the patched file. Raw pytest output is in before.txt
-and after.txt. Baseline: 12 failed, 9 passed, 1 skipped. Patched: 30 passed, 1 skipped
+and after.txt. Baseline: 13 failed, 10 passed, 1 skipped. Patched: 32 passed, 1 skipped
 (includes 9 existing runtime build-retention checks). Wall times are test-runner
 output, not a performance benchmark. Both cleanup functions still execute one
 DELETE statement per invocation; transaction framing belongs to the caller.
@@ -25,8 +25,10 @@ the existing global N-record budget and now delete by build_id, with timestamp/I
 tie-breaking. Runtime's additional per-vertex pruning remains in log_vertex_build;
 startup does not introduce a new per-vertex deletion policy. Limits 0, 1, 3, and 6
 cover empty retention and below/above-budget histories. These count settings have
-no documented disable sentinel; 0 continues to retain zero records. Negative
-limits are not assigned a new meaning by this change.
+no documented disable sentinel; 0 continues to retain zero records. A negative transaction
+limit is invalid: startup skips transaction cleanup to avoid deleting history
+(the old PostgreSQL OFFSET failed safely in this case). Runtime limit handling
+is unchanged.
 
 The caller initialize_services still owns the cleanup transaction. The tests
 verify rollback, two committed cleanups, exact survivors, mixed/tied timestamps,

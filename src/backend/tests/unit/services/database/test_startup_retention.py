@@ -45,7 +45,7 @@ async def retention_session(request, tmp_path):
         await engine.dispose()
 
 
-@pytest.mark.parametrize("limit", [0, 1, 3, 6])
+@pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
 async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
     """A busy flow must not evict another flow's transaction history."""
     async_session = retention_session
@@ -64,7 +64,8 @@ async def test_startup_transaction_retention_is_per_flow_and_repeatable(retentio
             for index in range(count)
         ]
         async_session.add_all(rows)
-        ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+        sorted_ids = sorted((row.id for row in rows), reverse=True)
+        ids.append(sorted_ids if limit < 0 else sorted_ids[:limit])
     await async_session.commit()
     settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
     for _ in range(2):

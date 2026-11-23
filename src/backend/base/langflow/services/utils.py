@@ -579,6 +579,10 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         session: The database session to use for the deletion
     """
     try:
+        max_entries = settings_service.settings.max_transactions_to_keep
+        if max_entries < 0:
+            logger.warning("Skipping transaction cleanup: max_transactions_to_keep must not be negative")
+            return
         ranked = select(
             TransactionTable.id,
             func.row_number()
@@ -589,9 +593,7 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
             .label("position"),
         ).subquery()
         delete_stmt = delete(TransactionTable).where(
-            col(TransactionTable.id).in_(
-                select(ranked.c.id).where(ranked.c.position > settings_service.settings.max_transactions_to_keep)
-            )
+            col(TransactionTable.id).in_(select(ranked.c.id).where(ranked.c.position > max_entries))
         )
 
         await session.exec(delete_stmt)

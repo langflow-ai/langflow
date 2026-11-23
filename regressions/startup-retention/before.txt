@@ -1,34 +1,84 @@
 
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-0] PASSED [  4%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-1] FAILED [  9%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-3] FAILED [ 13%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-6] FAILED [ 18%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-0] PASSED [ 22%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-1] FAILED [ 27%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-3] FAILED [ 31%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-6] FAILED [ 36%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-0] PASSED [ 40%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-1] FAILED [ 45%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-3] FAILED [ 50%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-6] PASSED [ 54%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-0] PASSED [ 59%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-1] FAILED [ 63%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-3] FAILED [ 68%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-6] PASSED [ 72%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_can_be_rolled_back[sqlite] PASSED [ 77%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_can_be_rolled_back[postgresql] PASSED [ 81%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[sqlite] FAILED [ 86%]
-src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[postgresql] FAILED [ 90%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite--1] FAILED [  4%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-0] PASSED [  8%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-1] FAILED [ 12%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-3] FAILED [ 16%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-6] FAILED [ 20%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql--1] PASSED [ 25%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-0] PASSED [ 29%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-1] FAILED [ 33%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-3] FAILED [ 37%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-6] FAILED [ 41%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-0] PASSED [ 45%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-1] FAILED [ 50%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-3] FAILED [ 54%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-6] PASSED [ 58%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-0] PASSED [ 62%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-1] FAILED [ 66%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-3] FAILED [ 70%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-6] PASSED [ 75%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_can_be_rolled_back[sqlite] PASSED [ 79%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_can_be_rolled_back[postgresql] PASSED [ 83%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[sqlite] FAILED [ 87%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[postgresql] FAILED [ 91%]
 src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_preserves_concurrent_new_flow[sqlite] SKIPPED [ 95%]
 src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_preserves_concurrent_new_flow[postgresql] PASSED [100%]
 
 =================================== FAILURES ===================================
+___ test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite--1] ___
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14c22dd30>
+limit = -1
+
+    @pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
+    async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
+        """A busy flow must not evict another flow's transaction history."""
+        async_session = retention_session
+        flow_ids = [uuid4(), uuid4()]
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        ids = []
+        for flow_id, count in zip(flow_ids, [5, 2], strict=True):
+            rows = [
+                TransactionTable(
+                    id=UUID(int=index + 1 + len(ids) * 10),
+                    flow_id=flow_id,
+                    timestamp=timestamp,
+                    vertex_id="reused",
+                    status="success",
+                )
+                for index in range(count)
+            ]
+            async_session.add_all(rows)
+            sorted_ids = sorted((row.id for row in rows), reverse=True)
+            ids.append(sorted_ids if limit < 0 else sorted_ids[:limit])
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
+        for _ in range(2):
+            await clean_transactions(settings, async_session)
+            await async_session.commit()
+            for flow_id, expected in zip(flow_ids, ids, strict=True):
+                remaining = (
+                    await async_session.exec(select(TransactionTable.id).where(TransactionTable.flow_id == flow_id))
+                ).all()
+>               assert set(remaining) == set(expected)
+E               AssertionError: assert set() == {UUID('000000...00000000005')}
+E                 
+E                 Extra items in the right set:
+E                 UUID('00000000-0000-0000-0000-000000000001')
+E                 UUID('00000000-0000-0000-0000-000000000002')
+E                 UUID('00000000-0000-0000-0000-000000000003')
+E                 UUID('00000000-0000-0000-0000-000000000004')
+E                 UUID('00000000-0000-0000-0000-000000000005')...
+E                 
+E                 ...Full output truncated, use '-vv' to show
+
+src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
 ___ test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-1] ____
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x1694f3610>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14d692850>
 limit = 1
 
-    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    @pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
     async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
         """A busy flow must not evict another flow's transaction history."""
         async_session = retention_session
@@ -47,7 +97,8 @@ limit = 1
                 for index in range(count)
             ]
             async_session.add_all(rows)
-            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+            sorted_ids = sorted((row.id for row in rows), reverse=True)
+            ids.append(sorted_ids if limit < 0 else sorted_ids[:limit])
         await async_session.commit()
         settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
         for _ in range(2):
@@ -69,13 +120,13 @@ E                 Full diff: (-: missing in left side, +: extra in left side)...
 E                 
 E                 ...Full output truncated, use '-vv' to show
 
-src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
 ___ test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-3] ____
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16a882d50>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14eda0640>
 limit = 3
 
-    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    @pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
     async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
         """A busy flow must not evict another flow's transaction history."""
         async_session = retention_session
@@ -94,7 +145,8 @@ limit = 3
                 for index in range(count)
             ]
             async_session.add_all(rows)
-            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+            sorted_ids = sorted((row.id for row in rows), reverse=True)
+            ids.append(sorted_ids if limit < 0 else sorted_ids[:limit])
         await async_session.commit()
         settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
         for _ in range(2):
@@ -116,13 +168,13 @@ E                 UUID('00000000-0000-0000-0000-000000000005')...
 E                 
 E                 ...Full output truncated, use '-vv' to show
 
-src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
 ___ test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-6] ____
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16a905cd0>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14eda1a70>
 limit = 6
 
-    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    @pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
     async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
         """A busy flow must not evict another flow's transaction history."""
         async_session = retention_session
@@ -141,7 +193,8 @@ limit = 6
                 for index in range(count)
             ]
             async_session.add_all(rows)
-            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+            sorted_ids = sorted((row.id for row in rows), reverse=True)
+            ids.append(sorted_ids if limit < 0 else sorted_ids[:limit])
         await async_session.commit()
         settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
         for _ in range(2):
@@ -163,13 +216,13 @@ E                       UUID('00000000-0000-0000-0000-00000000000b'),
 E                 -     UUID('00000000-0000-0000-0000-00000000000c'),
 E                   }
 
-src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
 _ test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-1] __
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b2ca8d0>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f1b68b0>
 limit = 1
 
-    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    @pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
     async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
         """A busy flow must not evict another flow's transaction history."""
         async_session = retention_session
@@ -188,7 +241,8 @@ limit = 1
                 for index in range(count)
             ]
             async_session.add_all(rows)
-            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+            sorted_ids = sorted((row.id for row in rows), reverse=True)
+            ids.append(sorted_ids if limit < 0 else sorted_ids[:limit])
         await async_session.commit()
         settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
         for _ in range(2):
@@ -210,13 +264,13 @@ E                 Full diff: (-: missing in left side, +: extra in left side)...
 E                 
 E                 ...Full output truncated, use '-vv' to show
 
-src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
 _ test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-3] __
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b29a9c0>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f432750>
 limit = 3
 
-    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    @pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
     async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
         """A busy flow must not evict another flow's transaction history."""
         async_session = retention_session
@@ -235,7 +289,8 @@ limit = 3
                 for index in range(count)
             ]
             async_session.add_all(rows)
-            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+            sorted_ids = sorted((row.id for row in rows), reverse=True)
+            ids.append(sorted_ids if limit < 0 else sorted_ids[:limit])
         await async_session.commit()
         settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
         for _ in range(2):
@@ -257,13 +312,13 @@ E                 UUID('00000000-0000-0000-0000-000000000005')...
 E                 
 E                 ...Full output truncated, use '-vv' to show
 
-src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
 _ test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-6] __
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b29b680>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f433c50>
 limit = 6
 
-    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    @pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
     async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
         """A busy flow must not evict another flow's transaction history."""
         async_session = retention_session
@@ -282,7 +337,8 @@ limit = 6
                 for index in range(count)
             ]
             async_session.add_all(rows)
-            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+            sorted_ids = sorted((row.id for row in rows), reverse=True)
+            ids.append(sorted_ids if limit < 0 else sorted_ids[:limit])
         await async_session.commit()
         settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
         for _ in range(2):
@@ -304,10 +360,10 @@ E                       UUID('00000000-0000-0000-0000-00000000000b'),
 E                 -     UUID('00000000-0000-0000-0000-00000000000c'),
 E                   }
 
-src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
 _____________ test_startup_build_retention_uses_build_id[sqlite-1] _____________
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b6f0150>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f436b70>
 limit = 1
 
     @pytest.mark.parametrize("limit", [0, 1, 3, 6])
@@ -339,10 +395,10 @@ E             - {
 E             -     UUID('00000000-0000-0000-0000-000000000005'),
 E             - }
 
-src/backend/tests/unit/services/database/test_startup_retention.py:96: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:98: AssertionError
 _____________ test_startup_build_retention_uses_build_id[sqlite-3] _____________
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b70ed50>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f4da190>
 limit = 3
 
     @pytest.mark.parametrize("limit", [0, 1, 3, 6])
@@ -374,10 +430,10 @@ E             Full diff: (-: missing in left side, +: extra in left side)...
 E             
 E             ...Full output truncated, use '-vv' to show
 
-src/backend/tests/unit/services/database/test_startup_retention.py:96: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:98: AssertionError
 ___________ test_startup_build_retention_uses_build_id[postgresql-1] ___________
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b7666d0>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f18f890>
 limit = 1
 
     @pytest.mark.parametrize("limit", [0, 1, 3, 6])
@@ -409,10 +465,10 @@ E             - {
 E             -     UUID('00000000-0000-0000-0000-000000000005'),
 E             - }
 
-src/backend/tests/unit/services/database/test_startup_retention.py:96: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:98: AssertionError
 ___________ test_startup_build_retention_uses_build_id[postgresql-3] ___________
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b78dbf0>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f18f110>
 limit = 3
 
     @pytest.mark.parametrize("limit", [0, 1, 3, 6])
@@ -444,10 +500,10 @@ E             Full diff: (-: missing in left side, +: extra in left side)...
 E             
 E             ...Full output truncated, use '-vv' to show
 
-src/backend/tests/unit/services/database/test_startup_retention.py:96: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:98: AssertionError
 __________ test_startup_retention_orders_timestamp_before_id[sqlite] ___________
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b818b50>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f50dbd0>
 
     async def test_startup_retention_orders_timestamp_before_id(retention_session):
         """A larger ID cannot displace a newer record in either history table."""
@@ -481,10 +537,10 @@ E         - [
 E         -     UUID('00000000-0000-0000-0000-000000000001'),
 E         - ]
 
-src/backend/tests/unit/services/database/test_startup_retention.py:133: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:135: AssertionError
 ________ test_startup_retention_orders_timestamp_before_id[postgresql] _________
 
-retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b2d28f0>
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f57f920>
 
     async def test_startup_retention_orders_timestamp_before_id(retention_session):
         """A larger ID cannot displace a newer record in either history table."""
@@ -518,8 +574,9 @@ E         - [
 E         -     UUID('00000000-0000-0000-0000-000000000001'),
 E         - ]
 
-src/backend/tests/unit/services/database/test_startup_retention.py:133: AssertionError
+src/backend/tests/unit/services/database/test_startup_retention.py:135: AssertionError
 =========================== short test summary info ============================
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite--1]
 FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-1]
 FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-3]
 FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-6]
@@ -532,4 +589,4 @@ FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_
 FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-3]
 FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[sqlite]
 FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[postgresql]
-=================== 12 failed, 9 passed, 1 skipped in 1.69s ====================
+=================== 13 failed, 10 passed, 1 skipped in 3.00s ===================
