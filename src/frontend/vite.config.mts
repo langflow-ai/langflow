@@ -61,6 +61,10 @@ export default defineConfig(({ command, mode }) => {
         envLangflow.BACKEND_URL ?? "http://localhost:7860",
       ),
       "import.meta.env.CI": JSON.stringify(envLangflow.CI ?? false),
+      // The Playwright CI build turns on the e2e test hooks.
+      "import.meta.env.PW_FRONTEND_BUILD": JSON.stringify(
+        process.env.PW_FRONTEND_BUILD === "1",
+      ),
       __LANGFLOW_AUTO_LOGIN__: JSON.stringify(
         envLangflow.LANGFLOW_AUTO_LOGIN ?? true,
       ),
@@ -102,6 +106,8 @@ export default defineConfig(({ command, mode }) => {
         include: "src/**/*",
         extension: [".ts", ".tsx", ".js", ".jsx"],
         requireEnv: false,
+        // The Playwright CI build sets this so the built bundle still reports coverage. Normal builds stay uninstrumented.
+        forceBuildInstrument: process.env.PW_FRONTEND_BUILD === "1",
       }),
     ],
     server: {

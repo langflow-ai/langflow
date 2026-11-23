@@ -647,18 +647,19 @@ def test_static_providers_only_validate_catalogued_decision_models(monkeypatch, 
     assert sent == []
 
 
-def test_decision_models_start_on():
-    """Decision models start on by the language-model rule, each provider's first five, OpenAI's too."""
+@pytest.mark.parametrize("model_type", [None, "decision"])
+def test_decision_models_start_off(model_type):
+    """Decision models require explicit selection, including providers that also offer language models."""
     from lfx.base.models.unified_models import get_unified_models_detailed
 
     defaults = {
         (group["provider"], row["model_name"]): row["metadata"]["default"]
-        for group in get_unified_models_detailed(model_type="decision")
+        for group in get_unified_models_detailed(model_type=model_type)
         for row in group["models"]
+        if row["metadata"]["model_type"] == "decision"
     }
-    assert defaults[("TypeSafe", "jev-latest")] is True
-    assert defaults[("Perplexity", "pplx-decider-latest")] is True
-    assert defaults[("OpenAI", "gpt-6-luna")] is True
+    assert defaults
+    assert not any(defaults.values())
 
 
 def test_a_key_httpx_cant_send_is_refused_without_naming_its_characters(monkeypatch):

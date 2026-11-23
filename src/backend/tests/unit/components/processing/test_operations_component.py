@@ -8,6 +8,7 @@ Values" operation.
 """
 
 import copy
+import json
 
 import pandas as pd
 import pytest
@@ -62,6 +63,74 @@ class TestOperationsComponent(ComponentTestBaseWithoutClient):
 )
 def test_legacy_operations_components_point_to_unified_replacement(legacy_component):
     assert legacy_component.replacement == ["processing.Operations"]
+
+
+def _path_selection(component_class, payload: dict):
+    kwargs = (
+        {"input_type": "JSON", "operation": [{"name": "Path Selection"}]}
+        if component_class is OperationsComponent
+        else {"operations": [{"name": "Path Selection"}]}
+    )
+    component = component_class(data=Data(data=payload), **kwargs)
+    config = component.update_build_config(
+        dotdict({"selected_key": {"options": [], "show": False}}), json.dumps(payload), "mapped_json_display"
+    )
+    return component, config["selected_key"]["options"]
+
+
+@pytest.mark.parametrize("component_class", [OperationsComponent, DataOperationsComponent])
+class TestPathSelectionLiteralKeys:
+    """Every path the picker offers must select the key it names, through the real jq binding."""
+
+    @pytest.mark.parametrize(
+        "key",
+        ["document.id", "full name", 'say "hi"', "back\\slash", "0id", "", "名前", "\\(1 + 1)", "dash-key", "a\nb"],
+    )
+    def test_should_select_the_literal_key_when_it_is_not_an_identifier(self, component_class, key):
+        payload = {key: [{"value": 42}], "document": {"id": [{"value": -1}]}}
+        component, options = _path_selection(component_class, payload)
+
+        selected = options[2]
+        component.set(selected_key=selected)
+
+        assert component.as_data().data == {"result": 42}
+
+    def test_should_quote_a_dotted_key_instead_of_reading_the_nested_field(self, component_class):
+        payload = {"document.id": [{"value": 42}], "document": {"id": [{"value": -1}]}}
+
+        _, options = _path_selection(component_class, payload)
+
+        assert options[:3] == ['."document.id"', '."document.id"[0]', '."document.id"[0].value']
+        assert ".document.id[0].value" in options
+
+    def test_should_keep_the_saved_path_when_the_picker_refreshes(self, component_class):
+        component, _ = _path_selection(component_class, {})
+        build_config = dotdict({"selected_key": {"options": [".items[0]"], "value": ".items[0]", "show": True}})
+
+        options = component.update_build_config(build_config, '{"items[0]": 42}', "mapped_json_display")[
+            "selected_key"
+        ]["options"]
+
+        assert options == ['."items[0]"', ".items[0]"]
+        component.set(data=Data(data={"items": [42]}), selected_key=".items[0]")
+        assert component.as_data().data == {"result": 42}
+
+    def test_should_drop_the_saved_path_when_an_edit_removes_it(self, component_class):
+        component, _ = _path_selection(component_class, {})
+        build_config = dotdict({"selected_key": {"options": [".a"], "value": ".a", "show": True}})
+
+        options = component.update_build_config(build_config, '{"b": 2}', "mapped_json_display")["selected_key"][
+            "options"
+        ]
+
+        assert options == [".b"]
+
+    def test_should_keep_the_dot_form_when_keys_are_identifiers(self, component_class):
+        payload = {"user": {"tags": [{"_id2": 1}]}, "if": True}
+
+        _, options = _path_selection(component_class, payload)
+
+        assert options == [".user", ".user.tags", ".user.tags[0]", ".user.tags[0]._id2", ".if"]
 
 
 class TestOperationCatalog:
@@ -1110,6 +1179,39 @@ class TestUpdateFrontendNodeRestoresVisibility:
         assert template["selected_key"]["show"] is True
         assert template["selected_key"]["value"] == ".a.b"
         assert ".a.b" in template["selected_key"]["options"]
+
+    async def test_path_selection_keeps_a_saved_path_the_rebuilt_options_no_longer_offer(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Path Selection"}]
+        saved["template"]["mapped_json_display"]["value"] = '{"items[0]": 42}'
+        saved["template"]["selected_key"]["options"] = [".items[0]"]
+        saved["template"]["selected_key"]["value"] = ".items[0]"
+
+        template = (await OperationsComponent().update_frontend_node(fresh, saved))["template"]
+
+        assert template["selected_key"]["value"] == ".items[0]"
+        assert template["selected_key"]["options"] == ['."items[0]"', ".items[0]"]
+        component = OperationsComponent(
+            data=Data(data={"items": [42]}),
+            input_type="JSON",
+            operation=[{"name": "Path Selection"}],
+            selected_key=template["selected_key"]["value"],
+        )
+        assert component.as_data().data == {"result": 42}
+
+    async def test_path_selection_drops_a_saved_path_the_saved_json_no_longer_has(self):
+        saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")
+        fresh = copy.deepcopy(saved)
+        saved["template"]["input_type"]["value"] = "JSON"
+        saved["template"]["operation"]["value"] = [{"name": "Path Selection"}]
+        saved["template"]["mapped_json_display"]["value"] = '{"b": 2}'
+        saved["template"]["selected_key"]["value"] = ".a"
+
+        template = (await OperationsComponent().update_frontend_node(fresh, saved))["template"]
+
+        assert template["selected_key"]["options"] == [".b"]
 
     async def test_path_selection_with_invalid_saved_json_hides_selected_key(self):
         saved, _ = build_custom_component_template(OperationsComponent(), user_id="test-user")

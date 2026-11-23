@@ -59,15 +59,16 @@ def saved_settings(monkeypatch):
 
 
 @pytest.mark.usefixtures("saved_settings")
-def test_decision_options_apply_enabled_typed_status_and_policy(monkeypatch):
+@pytest.mark.parametrize("enabled", [set(), {"TypeSafe::decision::jev-latest"}])
+def test_decision_options_apply_enabled_typed_status_and_policy(monkeypatch, enabled):
     monkeypatch.setattr(
-        model_catalog, "_get_model_status", AsyncMock(return_value=({"OpenAI::decision::gpt-6-luna"}, set()))
+        model_catalog, "_get_model_status", AsyncMock(return_value=({"OpenAI::decision::gpt-6-luna"}, enabled))
     )
     monkeypatch.setattr(
         model_catalog, "_fetch_enabled_providers_for_user", AsyncMock(return_value={"OpenAI", "TypeSafe"})
     )
     options = get_decision_model_options("user", provider_policy=policy())
-    assert [(item["provider"], item["name"]) for item in options] == [("TypeSafe", "jev-latest")]
+    assert [(item["provider"], item["name"]) for item in options] == ([("TypeSafe", "jev-latest")] if enabled else [])
     assert get_decision_model_options("user", provider_policy=policy(allowed=())) == []
 
 
@@ -115,8 +116,13 @@ def test_decision_model_input_has_no_connection_handle_or_implicit_default(monke
 
 @pytest.mark.usefixtures("saved_settings")
 def test_component_credentials_still_honor_model_disable(monkeypatch):
+    enabled = {
+        "OpenAI::decision::gpt-6-luna",
+        "TypeSafe::decision::jev-latest",
+        "Perplexity::decision::pplx-decider-latest",
+    }
     monkeypatch.setattr(
-        model_catalog, "_get_model_status", AsyncMock(return_value=({"OpenAI::decision::gpt-6-luna"}, set()))
+        model_catalog, "_get_model_status", AsyncMock(return_value=({"OpenAI::decision::gpt-6-luna"}, enabled))
     )
     configured = AsyncMock(side_effect=AssertionError("runtime must not require a saved API key"))
     monkeypatch.setattr(model_catalog, "_fetch_enabled_providers_for_user", configured)

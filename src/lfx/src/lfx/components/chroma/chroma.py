@@ -5,6 +5,7 @@ from langchain_core.vectorstores import VectorStore
 from lfx.base.knowledge_bases.backends.chroma import ChromaMigrationRequiredError
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
+from lfx.upgrade.retired import CHROMA_REPLACEMENT, CHROMA_RETIRED_IN
 
 
 class ChromaVectorStoreComponent(LCVectorStoreComponent):
@@ -13,8 +14,8 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
     display_name: str = "Chroma DB"
     description: str = "Retired in 1.13. Migrate this store to a Knowledge Base before running this flow."
     legacy = True
-    retired_in = "1.13.0"
-    replacement = ["files_and_knowledge.Knowledge"]
+    retired_in = CHROMA_RETIRED_IN
+    replacement = list(CHROMA_REPLACEMENT)
     name = "Chroma"
     icon = "Chroma"
 

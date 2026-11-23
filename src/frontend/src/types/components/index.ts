@@ -97,6 +97,8 @@ export type DropDownComponent = {
   // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
   externalOptions?: any;
   toggle?: boolean;
+  /** Translated label per option value; the value saved stays the option. */
+  optionLabels?: Record<string, string>;
 };
 export type ParameterComponentType = {
   selected?: boolean;

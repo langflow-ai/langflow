@@ -33,9 +33,9 @@ class TestExceptionTelemetry:
         data = payload.model_dump(by_alias=True, exclude_none=True)
 
         expected_fields = {
-            "exceptionType": "ValueError",
+            "objectType": "ValueError",
             "exceptionMessage": "Test error message",
-            "exceptionContext": "handler",
+            "category": "handler",
             "stackTraceHash": "abc123def456",  # pragma: allowlist secret
         }
 
@@ -128,9 +128,9 @@ class TestExceptionTelemetry:
         assert body["userId"] == user_id
         assert body["event"] == "Ended Process"
         assert body["messageId"]
-        assert body["properties"]["exceptionType"] == "ValueError"
+        assert body["properties"]["objectType"] == "ValueError"
         assert "exceptionMessage" not in body["properties"]
-        assert body["properties"]["exceptionContext"] == "handler"
+        assert body["properties"]["category"] == "handler"
         assert body["properties"]["stackTraceHash"] == "abc123"
         assert body["properties"]["subProductTitle"] == "oss"
         assert body["properties"]["productVersion"] == "1.0.0"
@@ -227,7 +227,7 @@ class TestExceptionTelemetry:
                 ),
                 "exception",
                 "exceptionMessage",
-                "exceptionType",
+                "objectType",
             ),
         ],
     )

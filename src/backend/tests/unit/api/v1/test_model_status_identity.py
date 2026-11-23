@@ -1129,9 +1129,9 @@ async def test_unreadable_saved_endpoint_returns_validation_error(monkeypatch):
 async def test_openrouter_discovery_and_custom_decision_enablement(client, logged_in_headers, monkeypatch):
     from unittest.mock import Mock
 
+    import httpx
     import requests
     from lfx.base.models import model_utils, unified_models
-    from lfx.base.models.decision_constants import decision_model_metadata
     from lfx.base.models.decisions import openrouter
 
     monkeypatch.setattr(
@@ -1143,18 +1143,44 @@ async def test_openrouter_discovery_and_custom_decision_enablement(client, logge
             }
         ),
     )
+    # Exercise the adapter's default flags without sharing its process-wide cache.
+    monkeypatch.setattr(openrouter, "_catalog", openrouter._catalog.__wrapped__)
     monkeypatch.setattr(
         openrouter,
-        "get_models",
-        lambda: [decision_model_metadata("OpenRouter", "author/discovered", "OpenRouter", default=True)],
+        "ssrf_safe_httpx_get",
+        lambda *_args, **_kwargs: httpx.Response(
+            200,
+            json={
+                "data": [
+                    {
+                        "id": name,
+                        "architecture": {"output_modalities": ["decisions"]},
+                        "endpoints": ["/api/alpha/decisions"],
+                    }
+                    for name in ("author/discovered", "author/other")
+                ]
+            },
+            request=httpx.Request("GET", "https://openrouter.ai/api/v1/models"),
+        ),
     )
     monkeypatch.setattr(model_utils, "get_provider_variable_value", lambda *_: None)
+    # pragma: allowlist nextline secret
     monkeypatch.setattr(unified_models, "get_all_variables_for_provider", lambda *_: {"OPENROUTER_API_KEY": "test-key"})
     monkeypatch.setattr(requests, "get", Mock(return_value=Mock(status_code=200)))
     response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
     assert response.status_code == 200
     rows = _decision_rows(response)
     assert ("OpenRouter", "author/discovered") in rows
+    provider = next(group for group in response.json() if group["provider"] == "OpenRouter")
+    assert provider["is_configured"] is True
+    assert provider["is_enabled"] is False
+    assert all(row["metadata"]["default"] is False for row in provider["models"])
+    response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["enabled_models_by_type"]["OpenRouter"]["decision"] == {
+        "author/discovered": False,
+        "author/other": False,
+    }
 
     response = await client.post(
         "api/v1/models/enabled_models",
@@ -1162,10 +1188,16 @@ async def test_openrouter_discovery_and_custom_decision_enablement(client, logge
         json=[
             {
                 "provider": "OpenRouter",
+                "model_id": "author/discovered",
+                "model_type": "decision",
+                "enabled": True,
+            },
+            {
+                "provider": "OpenRouter",
                 "model_id": "author/new:exacto",
                 "model_type": "decision",
                 "enabled": True,
-            }
+            },
         ],
     )
     assert response.status_code == 200, response.text
@@ -1174,6 +1206,13 @@ async def test_openrouter_discovery_and_custom_decision_enablement(client, logge
     rows = _decision_rows(response)
     assert ("OpenRouter", "author/new:exacto") in rows
     assert rows[("OpenRouter", "author/new:exacto")]["capabilities"] == ["choice", "boolean", "score"]
+    response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["enabled_models_by_type"]["OpenRouter"]["decision"] == {
+        "author/discovered": True,
+        "author/other": False,
+        "author/new:exacto": True,
+    }
     response = await client.get(
         "api/v1/models",
         params={"model_type": "decision", "model_name": "author/discovered"},
@@ -1184,7 +1223,8 @@ async def test_openrouter_discovery_and_custom_decision_enablement(client, logge
 
 @pytest.mark.usefixtures("active_user")
 async def test_typesafe_models_are_discovered_as_decisions_only(client, logged_in_headers, monkeypatch):
-    from lfx.base.models.decisions import typesafe
+    import httpx
+    from lfx.base.models.decisions import providers, typesafe
 
     monkeypatch.setattr(
         models_api,
@@ -1197,25 +1237,46 @@ async def test_typesafe_models_are_discovered_as_decisions_only(client, logged_i
     )
     monkeypatch.setattr("lfx.base.models.model_utils.get_provider_variable_value", lambda *_: "account-key")
 
-    def discover(key):
-        assert key == "account-key"
-        return [
-            {
-                "provider": "TypeSafe",
-                "name": "jev-preview",
-                "model_type": "decision",
-                "default": True,
-                "capabilities": ["choice", "boolean", "score"],
-                "icon": "Bot",
-            }
-        ]
+    def discover(request):
+        assert request.headers["Authorization"] == "Bearer account-key"
+        return httpx.Response(200, json={"models": [{"name": "jev-preview"}, {"name": "jev-other"}]})
 
-    monkeypatch.setattr(typesafe, "get_models", discover)
+    monkeypatch.setattr(typesafe, "_catalog", typesafe._catalog.__wrapped__)
+    monkeypatch.setattr(
+        typesafe, "provider_httpx_client_kwargs", lambda _url: ({"transport": httpx.MockTransport(discover)}, {})
+    )
+    monkeypatch.setattr(
+        "lfx.base.models.unified_models.get_all_variables_for_provider",
+        lambda *_: {"TYPESAFE_API_KEY": "account-key"},  # pragma: allowlist secret
+    )
+    monkeypatch.setattr(providers, "validate_decision_provider_key", lambda *_args, **_kwargs: None)
     response = await client.get("api/v1/models", params={"model_type": "decision"}, headers=logged_in_headers)
     assert response.status_code == 200
     rows = _decision_rows(response)
     assert ("TypeSafe", "jev-preview") in rows
     assert ("TypeSafe", "jev-latest") not in rows
+    provider = next(group for group in response.json() if group["provider"] == "TypeSafe")
+    assert provider["is_configured"] is True
+    assert provider["is_enabled"] is False
+    assert all(row["metadata"]["default"] is False for row in provider["models"])
+    response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["enabled_models_by_type"]["TypeSafe"]["decision"] == {
+        "jev-preview": False,
+        "jev-other": False,
+    }
+    response = await client.post(
+        "api/v1/models/enabled_models",
+        headers=logged_in_headers,
+        json=[{"provider": "TypeSafe", "model_id": "jev-preview", "model_type": "decision", "enabled": True}],
+    )
+    assert response.status_code == 200, response.text
+    response = await client.get("api/v1/models/enabled_models", headers=logged_in_headers)
+    assert response.status_code == 200
+    assert response.json()["enabled_models_by_type"]["TypeSafe"]["decision"] == {
+        "jev-preview": True,
+        "jev-other": False,
+    }
     response = await client.get("api/v1/models", params={"model_type": "llm"}, headers=logged_in_headers)
     assert response.status_code == 200
     assert all(group["provider"] != "TypeSafe" for group in response.json())

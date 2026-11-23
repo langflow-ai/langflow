@@ -54,7 +54,6 @@ from lfx.workflow.converters import (
     run_response_to_workflow_response,
 )
 
-from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
 from langflow.api.utils.execution_principal import (
     FAMILY_WORKFLOW_V2,
@@ -103,6 +102,9 @@ def _resolve_execution_timeout() -> int:
 # so a slow consumer applies backpressure to the build loop instead of
 # letting frames accumulate without bound when the network is slow.
 _EVENT_QUEUE_MAX_SIZE = 256
+# Synchronous custom callbacks have no await point. Give their bursts a bounded
+# reserve while the background runner commits the preceding events.
+_BACKGROUND_BURST_BYTES = 4 * 1024 * 1024
 
 
 class _CeilingFromSettings:
@@ -123,20 +125,6 @@ async def generate_flow_events(*args, **kwargs) -> None:
     from langflow.api.build import generate_flow_events as _generate_flow_events
 
     await _generate_flow_events(*args, **kwargs)
-
-
-def _resolve_request_variables(body_globals: dict[str, str], http_request: Request | None) -> dict[str, str]:
-    """Merge request-level global variables for a v2 workflow execution.
-
-    v2 workflows take globals from the JSON request body (``globals``). The
-    ``X-LANGFLOW-GLOBAL-VAR-*`` headers remain a supported transport (the
-    OpenAI-compatible Responses API passes globals that way); body globals win
-    on conflict.
-    """
-    header_globals: dict[str, str] = {}
-    if http_request is not None:
-        header_globals = extract_global_variables_from_headers(http_request.headers)
-    return {**header_globals, **dict(body_globals or {})}
 
 
 def _build_run_inputs(parsed: ParsedWorkflowRun) -> list[InputValueRequest] | None:
@@ -176,8 +164,11 @@ _QueueItem = tuple[str | None, bytes | None, float]
 class _WorkflowEventQueue:
     """Bounded EventManager handoff that fails explicitly instead of dropping events."""
 
-    def __init__(self, maxsize: int) -> None:
-        self._queue: asyncio.Queue[_QueueItem] = asyncio.Queue(maxsize=maxsize)
+    def __init__(self, maxsize: int, *, background_bursts: bool = False) -> None:
+        self._maxsize = maxsize
+        self._space = asyncio.Event() if background_bursts else None
+        self._queued_bytes = 0
+        self._queue: asyncio.Queue[_QueueItem] = asyncio.Queue(maxsize=0 if background_bursts else maxsize)
         self._overflowed = False
         self._closed = False
         self._loop = asyncio.get_running_loop()
@@ -185,23 +176,47 @@ class _WorkflowEventQueue:
 
     @property
     def maxsize(self) -> int:
-        return self._queue.maxsize
+        return self._maxsize
 
     async def get(self) -> _QueueItem:
-        return await self._queue.get()
+        item = await self._queue.get()
+        if self._space is not None and not self._overflowed:
+            self._queued_bytes -= self._item_size(item)
+            if self._queue.qsize() < self.maxsize:
+                self._space.set()
+        return item
+
+    @staticmethod
+    def _item_size(item: _QueueItem) -> int:
+        # Charge small events for the queue entry and event ID as well as the payload.
+        return 128 + len(item[1] or b"")
 
     async def put(self, item: _QueueItem) -> None:
         if self._overflowed or self._closed:
             return
+        if self._space is not None:
+            while self._queue.qsize() >= self.maxsize:
+                self._space.clear()
+                await self._space.wait()
+                if self._overflowed or self._closed:
+                    return
+            self._queued_bytes += self._item_size(item)
         await self._queue.put(item)
 
     def put_nowait(self, item: _QueueItem) -> None:
         if self._overflowed or self._closed:
             return
         try:
+            if self._space is not None:
+                size = self._item_size(item)
+                if self._queue.qsize() >= self.maxsize and self._queued_bytes + size > _BACKGROUND_BURST_BYTES:
+                    raise asyncio.QueueFull
+                self._queued_bytes += size
             self._queue.put_nowait(item)
         except asyncio.QueueFull:
             self._overflowed = True
+            if self._space is not None:
+                self._space.set()
             self._overflow_task = self._loop.create_task(self._emit_overflow_error())
 
     async def _emit_overflow_error(self) -> None:
@@ -221,6 +236,8 @@ class _WorkflowEventQueue:
         ``put`` on a full queue would otherwise block forever and pin the run task.
         """
         self._closed = True
+        if self._space is not None:
+            self._space.set()
         while not self._queue.empty():
             self._queue.get_nowait()
 
@@ -275,7 +292,7 @@ async def _stream_event_frames(
     execution_family: str,
     emit_output_capture: bool = False,
     expose_error_details: bool = False,
-    execution_timeout: float | None | _CeilingFromSettings = _CEILING_FROM_SETTINGS,
+    execution_timeout: float | _CeilingFromSettings | None = _CEILING_FROM_SETTINGS,
 ) -> AsyncGenerator[tuple[bytes, str], None]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -302,11 +319,11 @@ async def _stream_event_frames(
     always wins, which made the documented ``background_job_timeout=None``
     ("no timeout") silently cap at the sync ceiling instead.
     """
-    # EventManager uses put_nowait(), so a plain bounded asyncio.Queue would
-    # silently drop frames via QueueFull. This adapter keeps memory bounded and
-    # converts overflow into an explicit stream error + sentinel.
-    queue = _WorkflowEventQueue(maxsize=_EVENT_QUEUE_MAX_SIZE)
-    event_manager = create_default_event_manager(queue)
+    # Background AG-UI persists each token before publishing it. Let component
+    # and agent iterators wait for that writer and allow bounded callback bursts.
+    background_agui = parsed.mode == "background" and adapter.name == "agui"
+    queue = _WorkflowEventQueue(maxsize=_EVENT_QUEUE_MAX_SIZE, background_bursts=background_agui)
+    event_manager = create_default_event_manager(queue, await_token_capacity=background_agui)
     input_request = _single_input_value_request(parsed)
     # Ceiling for the modes whose caller is waiting on a socket (stream, public).
     # Sync uses its own asyncio.wait_for upstream; background passes None and is
@@ -479,7 +496,9 @@ async def _stream_event_frames(
             payload = json.loads(value.decode("utf-8"))
             event_type = payload.get("event", "")
             event_data = payload.get("data") or {}
-            if emit_side_channel and event_type in side_channel_events:
+            # Nothing may follow the terminal error on the wire, so the build
+            # loop's trailing ``end`` is not mirrored after RUN_ERROR.
+            if emit_side_channel and event_type in side_channel_events and not terminal_error_seen:
                 # The mirror forwards EventManager payloads verbatim, and a message
                 # names the component that produced it (an LLM's ``source.source``
                 # is the model name). A run without graph state must not leak that
@@ -774,7 +793,7 @@ async def execute_sync_workflow(
     job_id: UUID,
     current_user: UserRead,
     background_tasks: BackgroundTasks,  # noqa: ARG001
-    http_request: Request,
+    http_request: Request,  # noqa: ARG001
     checkpoint_store: CheckpointStore | None = None,
     *,
     expose_error_details: bool | None = None,
@@ -792,7 +811,7 @@ async def execute_sync_workflow(
     Execution Flow:
         1. Apply tweaks and chat input from the parsed AG-UI request
         2. Validate flow data exists
-        3. Extract context from HTTP headers
+        3. Resolve request-level variables from the body ``globals``
         4. Build graph from flow data with tweaks applied
         5. Identify terminal nodes for execution
         6. Execute graph and collect results
@@ -804,7 +823,8 @@ async def execute_sync_workflow(
         job_id: Generated job ID for tracking this execution
         current_user: Authenticated user for permission checks
         background_tasks: FastAPI background tasks (unused in sync mode)
-        http_request: The HTTP request object for extracting headers
+        http_request: The HTTP request object (kept for signature parity; v2 no longer
+            reads request-level variables from headers — the router rejects them)
         checkpoint_store: When provided, enables HITL checkpointing so a pausing flow
             returns a ``suspended`` response (carrying the human-input request) instead of
             running through. Off by default, so non-HITL callers are unchanged.
@@ -837,18 +857,18 @@ async def execute_sync_workflow(
         client_error = error_for_client(validation_error, expose_details=False)
         raise WorkflowValidationError(str(client_error)) from validation_error
 
-    # Resolve request-level variables: body ``globals`` plus the legacy
-    # X-LANGFLOW-GLOBAL-VAR-* headers (still used by the Responses API).
-    # Body globals win on conflict.
-    request_variables = _resolve_request_variables(parsed.globals, http_request)
+    # Request-level variables come only from the body ``globals`` for v2 (GA):
+    # the legacy X-LANGFLOW-GLOBAL-VAR-* header transport is rejected at the
+    # router before dispatch (reject_legacy_global_var_headers), so nothing is
+    # merged from headers here.
+    request_variables = dict(parsed.globals or {})
     if (
         request_variables
         and not caller_owns_flow(flow, current_user)
         and strip_secret_field_values(flow.data) != flow.data
     ):
-        # Headers are resolved only in the sync execution path, after the
-        # request admission gate. A bound URL override could redirect an
-        # owner's hidden credential despite an unchanged stored graph.
+        # Body globals could redirect an owner's hidden credential on a shared
+        # flow despite an unchanged stored graph; reject before the graph build.
         raise HTTPException(
             status_code=400,
             detail="Cannot override variables in a shared flow using its owner's hidden credentials.",
