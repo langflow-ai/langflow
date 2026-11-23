@@ -165,6 +165,8 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("os", "environb", "os.environb is forbidden. Use Langflow's variable/secret service"),
     ("gc", "garbage", "gc.garbage is forbidden in components (server object recovery)"),
     ("logging", "config", "logging.config is forbidden in components — use logging.getLogger() for logging"),
+    ("unittest.mock", "_get_target", "unittest.mock._get_target is forbidden in components"),
+    ("unittest.mock", "_dot_lookup", "unittest.mock._dot_lookup is forbidden in components"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
     ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
@@ -522,6 +524,7 @@ RESTRICTED_IMPORT_NAMES: dict[str, set[str]] = {
     # Filesystem openers behind stdlib modules that otherwise stay importable.
     "io": {"open", "open_code", "FileIO"},
     "codecs": {"open"},
+    "operator": {"attrgetter", "methodcaller"},
     # `from yaml import UnsafeLoader` style imports: same deserialization RCE
     # as the dotted attribute reads blocked above.
     "yaml": {
