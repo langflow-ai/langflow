@@ -286,6 +286,11 @@ class TestScanCodeSecurityDangerousAttrCalls:
         result = scan_code_security(code)
         assert result.is_safe is False
 
+    @pytest.mark.parametrize("name", ["link", "symlink", "rename", "renames", "replace"])
+    def test_should_restrict_filesystem_mutation_imports(self, name):
+        result = scan_code_security(f"from os import {name}")
+        assert f"Import of 'os.{name}' is forbidden in components" in result.violations
+
     def test_should_detect_subprocess_run(self):
         """subprocess.run() should be detected."""
         code = 'import subprocess\nsubprocess.run(["ls"])'

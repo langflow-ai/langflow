@@ -9,6 +9,7 @@ from langflow.agentic.helpers.validation import validate_component_runtime
 
 _CODE_LOADING_MODULES = (
     "runpy",
+    "pkgutil",
     "_frozen_importlib",
     "_frozen_importlib_external",
     "zipimport",
@@ -32,6 +33,19 @@ def test_rejects_process_and_code_loader_imports(module: str, statement: str) ->
     result = scan_code_security(statement.format(module=module))
     assert not result.is_safe
     assert any(module in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize(
+    "code",
+    [
+        "from unittest.mock import pkgutil as loader",
+        "import unittest.mock as mocking\nloader = mocking.pkgutil",
+    ],
+)
+def test_rejects_reexported_module_loader_reference(code: str) -> None:
+    result = scan_code_security(code)
+    assert not result.is_safe
+    assert any("pkgutil" in violation for violation in result.violations)
 
 
 @pytest.mark.parametrize(
@@ -108,7 +122,7 @@ def test_preserves_safe_async_threads_and_tensor_operations(code: str) -> None:
     assert scan_code_security(code).is_safe
 
 
-@pytest.mark.parametrize("module", ["runpy", "_posixsubprocess", "_frozen_importlib_external", "zipimport"])
+@pytest.mark.parametrize("module", ["runpy", "pkgutil", "_posixsubprocess", "_frozen_importlib_external", "zipimport"])
 async def test_runtime_validation_rejects_loader_before_component_construction(module: str, monkeypatch) -> None:
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",

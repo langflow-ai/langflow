@@ -259,6 +259,11 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("os", "remove", "os.remove() is forbidden in components"),
     ("os", "rmdir", "os.rmdir() is forbidden in components"),
     ("os", "unlink", "os.unlink() is forbidden in components"),
+    ("os", "link", "os.link() is forbidden in components"),
+    ("os", "symlink", "os.symlink() is forbidden in components"),
+    ("os", "rename", "os.rename() is forbidden in components"),
+    ("os", "renames", "os.renames() is forbidden in components"),
+    ("os", "replace", "os.replace() is forbidden in components"),
     ("subprocess", "run", "subprocess.run() is forbidden"),
     ("subprocess", "call", "subprocess.call() is forbidden"),
     ("subprocess", "Popen", "subprocess.Popen() is forbidden"),
@@ -383,6 +388,7 @@ DANGEROUS_IMPORTS: set[str] = {
     "codeop",
     "compileall",
     "importlib",
+    "pkgutil",
     # Frozen importlib aliases and ZIP loaders execute code outside this AST.
     "_frozen_importlib",
     "_frozen_importlib_external",
@@ -445,6 +451,9 @@ DANGEROUS_IMPORTS: set[str] = {
     # SQL can write files, load extensions, and issue network requests.
     "duckdb",
     "_duckdb",
+    # SQLite connections can load native extensions.
+    "sqlite3",
+    "_sqlite3",
 }
 
 # Dangerous *submodules* of packages that also expose safe siblings. Block the
@@ -929,6 +938,7 @@ _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
     "pathlib": {"os": "os", "sys": "sys"},
     "platform": {"os": "os", "sys": "sys"},
     "tempfile": {"_os": "os", "_sys": "sys"},
+    "unittest.mock": {"pkgutil": "pkgutil"},
 }
 
 # Stdlib reexports retain the original module's restrictions. For example,

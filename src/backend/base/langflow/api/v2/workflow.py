@@ -632,8 +632,13 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
             current_user = UserRead.model_validate(owner, from_attributes=True)
         flow = await resolve_flow_for_execution(str(flow_id), current_user)
+        # The build treats an empty override as absent. Validate the saved canvas
+        # in the same case so graph construction cannot pick a different revision.
+        execution_request = replace(parsed, data=None) if resume is None and parsed.data == {} else parsed
+        if resume is None and execution_request.data is None and not flow.data:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Flow has no saved graph data.")
         execution_parsed = _validate_flow_data_for_execution(
-            parsed, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
+            execution_request, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
         )
         if parsed.component_substitution_warning and not execution_parsed.component_substitution_warning:
             execution_parsed = replace(
@@ -1141,7 +1146,10 @@ async def stop_workflow(
             await get_background_execution_service().stop_job(job_id, current_user)
         except Exception:  # noqa: BLE001
             await logger.aexception("Failed to signal stop for workflow job %s; cancelling row anyway", job_id)
-        await job_service.update_job_status(job_id, JobStatus.CANCELLED)
+        # Stamp the terminal time with the status: retention ages a job from
+        # finished_timestamp, so a cancel that left it null would be dated from
+        # creation and purged early.
+        await job_service.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
 
         message = f"Job {job_id} cancelled successfully." if revoked else f"Job {job_id} is already cancelled."
         return WorkflowStopResponse(job_id=str(job_id), message=message)
