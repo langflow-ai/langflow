@@ -48,6 +48,34 @@ def test_rejects_reexported_module_loader_reference(code: str) -> None:
     assert any("pkgutil" in violation for violation in result.violations)
 
 
+@pytest.mark.parametrize("resolver", ["_get_target", "_dot_lookup"])
+@pytest.mark.parametrize(
+    "code",
+    [
+        "import unittest.mock as mocking\nmocking.{resolver}('os.system')",
+        "from unittest import mock as mocking\nmocking.{resolver}('os.system')",
+        "from unittest.mock import {resolver} as resolve\nresolve('os.system')",
+        "import unittest.mock as mocking\nresolve = mocking.{resolver}",
+        "import unittest.mock as mocking\nresolve = getattr(mocking, '{resolver}')",
+    ],
+)
+def test_rejects_mock_string_resolvers(resolver: str, code: str) -> None:
+    result = scan_code_security(code.format(resolver=resolver))
+    assert not result.is_safe
+    assert any(resolver in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize("member", ["attrgetter", "methodcaller"])
+def test_rejects_imported_operator_attribute_resolvers(member: str) -> None:
+    result = scan_code_security(f"from operator import {member} as resolve\nresolve('system')")
+    assert not result.is_safe
+    assert any(member in violation for violation in result.violations)
+
+
+def test_preserves_safe_mock_construction() -> None:
+    assert scan_code_security("from unittest.mock import Mock\nvalue = Mock()").is_safe
+
+
 @pytest.mark.parametrize(
     "code",
     [
@@ -132,6 +160,24 @@ async def test_runtime_validation_rejects_loader_before_component_construction(m
     monkeypatch.setattr("lfx.custom.utils.build_custom_component_template", builder)
 
     result = await validate_component_runtime(f"import {module}", user_id="test-user")
+
+    assert result is not None
+    assert "failed security validation" in result
+    builder.assert_not_called()
+
+
+async def test_runtime_validation_rejects_mock_resolver_before_component_construction(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "lfx.services.deps.get_settings_service",
+        lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
+    )
+    builder = MagicMock(side_effect=AssertionError("unsafe code reached component construction"))
+    monkeypatch.setattr("lfx.custom.utils.build_custom_component_template", builder)
+
+    result = await validate_component_runtime(
+        "import unittest.mock as mocking\nmocking._get_target('os.system')",
+        user_id="test-user",
+    )
 
     assert result is not None
     assert "failed security validation" in result
