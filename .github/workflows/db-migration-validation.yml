@@ -243,7 +243,7 @@ jobs:
             exit 1
           fi
 
-          # The report parses, the stream ends with it, and it names only the retired node.
+          # Live starter components can be outdated, but the nightly must still recognize them.
           python - <<'PY'
           import json
 
@@ -255,6 +255,8 @@ jobs:
           assert witness["ok_nodes"] + len(witness["nodes"]) > 1, witness
           retired = [node["type"] for node in witness["nodes"] if node["status"] == "retired"]
           assert retired == ["Chroma"], witness["nodes"]
+          blocked = [node["type"] for node in witness["nodes"] if node["status"] == "blocked"]
+          assert not blocked, f"Blocked witness components: {blocked}"
           print(json.dumps(report["summary"]))
           PY
 
