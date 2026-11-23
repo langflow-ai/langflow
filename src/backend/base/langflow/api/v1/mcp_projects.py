@@ -74,6 +74,7 @@ from langflow.api.v1.schemas import (
     MCPProjectUpdateRequest,
     MCPSettings,
 )
+from langflow.schema.project_auth import stored_project_auth_type
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.operations import (
     audited_permission,
@@ -136,9 +137,10 @@ async def verify_project_auth(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
         project_user_id = project.user_id
-        auth_settings = AuthSettings(**project.auth_settings) if project.auth_settings else None
+        project_auth_type = stored_project_auth_type(project.auth_settings)
 
-    project_auth_type = auth_settings.auth_type if auth_settings else None
+    if project_auth_type not in {None, "none", "apikey", "oauth"}:
+        raise HTTPException(status_code=403, detail="Unsupported project authentication mode")
     if project_auth_type == "oauth" and composer_backend_token:
         mcp_composer_service: MCPComposerService = cast(
             MCPComposerService, get_service(ServiceType.MCP_COMPOSER_SERVICE)
@@ -168,7 +170,7 @@ async def verify_project_auth(
     # Composer subprocess from another loopback peer behind a reverse proxy or sidecar. The
     # composer-to-Langflow hop should be authenticated explicitly once mcp-composer can forward
     # a project-scoped backend credential; until then, direct backend access requires a key.
-    requires_api_key = (not auth_settings and not settings_service.auth_settings.AUTO_LOGIN) or (
+    requires_api_key = (project_auth_type is None and not settings_service.auth_settings.AUTO_LOGIN) or (
         project_auth_type in {"apikey", "oauth"}
     )
 
@@ -385,12 +387,13 @@ async def _build_project_tools_response(
 
             # Get project-level auth settings but mask sensitive fields for security
             auth_settings = None
-            if project.auth_settings:
+            if project.auth_settings is not None:
                 # Decrypt to get the settings structure
                 decrypted_settings = decrypt_auth_settings(project.auth_settings)
-                if decrypted_settings:
+                if decrypted_settings is not None:
                     # Mask sensitive fields before sending to frontend
                     masked_settings = decrypted_settings.copy()
+                    masked_settings["auth_type"] = stored_project_auth_type(decrypted_settings)
                     if masked_settings.get("oauth_client_secret"):
                         masked_settings["oauth_client_secret"] = "*******"  # noqa: S105
                     if masked_settings.get("api_key"):
@@ -920,25 +923,13 @@ async def install_mcp_config(
         # Check if project requires API key authentication and generate if needed
         generated_api_key = None
 
-        # Determine if we need to generate an API key
-        should_generate_api_key = False
-        if not get_settings_service().settings.mcp_composer_enabled:
-            # When MCP_COMPOSER is disabled, check auth settings or fallback to auto_login setting
-            settings_service = get_settings_service()
-            if project.auth_settings:
-                # Project has auth settings - check if it requires API key
-                if project.auth_settings.get("auth_type") == "apikey":
-                    should_generate_api_key = True
-            elif not settings_service.auth_settings.AUTO_LOGIN:
-                # No project auth settings but auto_login is disabled - generate API key
-                should_generate_api_key = True
-        elif project.auth_settings:
-            # When MCP_COMPOSER is enabled, only generate if auth_type is "apikey"
-            if project.auth_settings.get("auth_type") == "apikey":
-                should_generate_api_key = True
-
-        # Get settings service to build the SSE URL
         settings_service = get_settings_service()
+        project_auth_type = stored_project_auth_type(project.auth_settings)
+        should_generate_api_key = project_auth_type == "apikey" or (
+            project_auth_type is None
+            and not settings_service.settings.mcp_composer_enabled
+            and not settings_service.auth_settings.AUTO_LOGIN
+        )
         if settings_service.auth_settings.AUTO_LOGIN and not (
             settings_service.auth_settings.skip_auth_auto_login and settings_service.auth_settings.SUPERUSER
         ):
@@ -1691,12 +1682,12 @@ def _get_startup_project_auth_settings(
         - target auth settings used for MCP reconciliation and optional persistence
         - a reason string when the project auth settings should be persisted
     """
-    auth_type = project.auth_settings.get("auth_type") if project.auth_settings else None
+    auth_type = stored_project_auth_type(project.auth_settings)
 
     if not auto_login and auth_type in {None, "none"}:
         return {"auth_type": "apikey"}, "auto_enable_apikey"
 
-    if not project.auth_settings:
+    if project.auth_settings is None:
         return default_auth, "auto_enable_apikey" if default_auth["auth_type"] == "apikey" else None
 
     if not mcp_composer_enabled and auth_type == "oauth":

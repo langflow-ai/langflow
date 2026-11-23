@@ -44,6 +44,21 @@ def _session_scope_yielding(project, *, user=None) -> object:
     return _scope
 
 
+@pytest.mark.parametrize(
+    ("auth_settings", "expected_status"),
+    [({}, 401), ({"oauth_port": "8000"}, 401), ({"auth_type": "unknown"}, 403)],
+)
+async def test_verify_project_auth_rejects_incomplete_policy(auth_settings, expected_status):
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=auth_settings)
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=True)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await verify_project_auth(project.id, query_param=None, header_param=None)
+    assert exc.value.status_code == expected_status
+
+
 @pytest.mark.anyio
 async def test_verify_project_auth_auto_login_alone_rejects_credential_less_caller():
     """Default config (AUTO_LOGIN on, skip_auth_auto_login off) must not resolve to the superuser."""
