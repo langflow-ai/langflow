@@ -8,6 +8,7 @@ from sqlmodel import SQLModel
 
 from langflow.services.database.models.flow.model import FlowCreate, FlowRead
 from langflow.services.database.models.folder.model import FolderRead
+from langflow.utils.flow_secrets import strip_secret_field_values
 
 
 class ReplacementFlowCreate(FlowCreate):
@@ -62,3 +63,9 @@ class ProjectReplacementResult(SQLModel):
     flows: list[FlowRead]
     # Optional for receipts written before dependency snapshots were introduced.
     dependencies: dict[str, Any] | None = None
+
+    @field_validator("flows")
+    @classmethod
+    def redact_flow_graphs(cls, flows: list[FlowRead]) -> list[FlowRead]:
+        """Keep persisted secrets out of new receipts and responses from older receipts."""
+        return [flow.model_copy(update={"data": strip_secret_field_values(flow.data)}) for flow in flows]
