@@ -44,6 +44,21 @@ def _session_scope_yielding(project, *, user=None) -> object:
     return _scope
 
 
+@pytest.mark.parametrize(
+    ("auth_settings", "expected_status"),
+    [({}, 401), ({"oauth_port": "8000"}, 401), ({"auth_type": "unknown"}, 403)],
+)
+async def test_verify_project_auth_rejects_incomplete_policy(auth_settings, expected_status):
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=auth_settings)
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=True)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await verify_project_auth(project.id, query_param=None, header_param=None)
+    assert exc.value.status_code == expected_status
+
+
 @pytest.mark.anyio
 async def test_verify_project_auth_auto_login_alone_rejects_credential_less_caller():
     """Default config (AUTO_LOGIN on, skip_auth_auto_login off) must not resolve to the superuser."""
@@ -225,6 +240,36 @@ async def test_verify_project_auth_records_auto_login_caller_and_resets_stale_co
 
 
 @pytest.mark.anyio
+@pytest.mark.parametrize("auth_settings", [{}, {"oauth_port": "8000"}, {"auth_type": "apikey"}])
+async def test_verify_project_auth_without_composer_requires_credentials(auth_settings, tmp_path):
+    from fastapi import Request
+    from langflow.api.v1.mcp_projects import verify_project_auth_conditional
+    from langflow.services.auth.context import clear_current_auth_context
+    from langflow.services.auth.service import AuthService
+    from lfx.services.settings.auth import AuthSettings
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path), AUTO_LOGIN=True, skip_auth_auto_login=True)
+    settings_service = SimpleNamespace(auth_settings=settings, settings=SimpleNamespace(mcp_composer_enabled=False))
+    service = AuthService(settings_service)
+    owner = SimpleNamespace(id=uuid4())
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings=auth_settings)
+    request = Request({"type": "http", "headers": [], "query_string": b""})
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=settings_service),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+            patch("langflow.services.auth.utils._auth_service", return_value=service),
+            patch("langflow.services.auth.utils.get_settings_service", return_value=settings_service),
+            patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=owner)),
+            pytest.raises(HTTPException) as exc,
+        ):
+            await verify_project_auth_conditional(project.id, request)
+    finally:
+        clear_current_auth_context()
+    assert exc.value.status_code == 401
+
+
+@pytest.mark.anyio
 async def test_verify_project_auth_conditional_accepts_external_only_credential(tmp_path):
     from fastapi import Request
     from langflow.api.v1.mcp_projects import verify_project_auth_conditional
@@ -248,7 +293,7 @@ async def test_verify_project_auth_conditional_accepts_external_only_credential(
     )
     service = AuthService(settings_service)
     owner = User(id=uuid4(), username="owner", password="hashed", is_active=True, is_superuser=False)  # noqa: S106
-    project = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={})
     credential = "external-project-credential"  # pragma: allowlist secret
     request = Request(
         {
@@ -309,7 +354,7 @@ async def test_verify_project_auth_conditional_falls_back_to_api_key_after_exter
     )
     service = AuthService(settings_service)
     owner = User(id=uuid4(), username="owner", password="hashed", is_active=True, is_superuser=False)  # noqa: S106
-    project = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={})
     credential = "rejected-external-credential"  # pragma: allowlist secret
     request = Request(
         {
