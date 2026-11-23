@@ -15,7 +15,7 @@ dependencies = [
     # Previously satisfied only transitively via docling-slim; declared here so the
     # xlsx path survives torch/docling becoming opt-in.
     "openpyxl>=3.1.5,<4.0.0",
-    "pydantic>=2.0.0,<2.14",
+    "pydantic>=2.14.2,<3.0.0",
     # Pillow 13 dropped Python 3.10 support.
     "pillow>=12.3.0,<13.0.0; python_version < '3.11'",
     "pillow>=13.0.0,<14.0.0; python_version >= '3.11'",
