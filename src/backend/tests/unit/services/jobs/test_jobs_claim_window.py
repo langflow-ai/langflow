@@ -11,6 +11,7 @@ disagree about timezone awareness on the way back out.
 
 from __future__ import annotations
 
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
@@ -76,6 +77,17 @@ async def _queue_a_job(service: JobService) -> UUID:
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
     return job_id
+
+
+@pytest.mark.usefixtures("job_database")
+async def test_concurrent_metadata_appends_use_separate_database_connections():
+    service = JobService()
+    job_id = await _queue_a_job(service)
+
+    await asyncio.gather(*(JobService().append_job_metadata_item(job_id, "decisions", {"n": n}) for n in range(5)))
+
+    stored = await service.get_job_by_job_id(job_id)
+    assert sorted(item["n"] for item in stored.job_metadata["decisions"]) == list(range(5))
 
 
 @pytest.mark.usefixtures("job_database")

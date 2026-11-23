@@ -763,6 +763,23 @@ def test_process_file_field_preserves_s3_references(
     assert params["file_field"] == "flow-test-flow-id/uploaded.txt"
 
 
+@pytest.mark.usefixtures("restricted_file_access")
+def test_process_file_field_s3_alias_extra_scope(parameter_handler, mock_storage_service):
+    """A server-stamped extra scope lets a run address the stamped owner's namespace, and only that."""
+    mock_storage_service.settings_service = Mock()
+    mock_storage_service.settings_service.settings.storage_type = "s3"
+    mock_storage_service.resolve_component_path.side_effect = lambda value: value
+    field = {"type": "file", "file_path": "owner-id/report.txt"}
+
+    with pytest.raises(LocalFileAccessError, match="must stay within"):
+        parameter_handler.process_file_field("file_field", field, {})
+
+    parameter_handler.vertex.graph.authorized_extra_file_scopes = frozenset({"user-owner-id"})
+    assert parameter_handler.process_file_field("file_field", field, {})["file_field"] == "owner-id/report.txt"
+    with pytest.raises(LocalFileAccessError, match="must stay within"):
+        parameter_handler.process_file_field("file_field", {"type": "file", "file_path": "other-id/a.txt"}, {})
+
+
 @pytest.mark.parametrize(
     ("path", "authorized_legacy", "allowed"),
     [
