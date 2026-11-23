@@ -10,6 +10,7 @@ from uuid import uuid4
 import jwt
 import pytest
 from fastapi import HTTPException
+from langflow.services.auth.exceptions import InvalidTokenError as AuthInvalidTokenError
 from langflow.services.auth.refresh_tokens import revoke_refresh_token
 from langflow.services.auth.service import AuthService
 from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
@@ -69,6 +70,100 @@ async def test_revocation_survives_new_service_and_database_session(token_store)
         assert rows[0].user_id == user.id
         assert first["refresh_token"] not in str(rows[0].model_dump())
         assert (await restarted.create_refresh_token(second["refresh_token"], db))["access_token"]
+
+
+@pytest.mark.parametrize("legacy", [False, True])
+async def test_password_changes_revoke_native_sessions_after_restart(token_store, legacy):
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    async with AsyncSession(engine) as db:
+        old = await service.create_user_tokens(user.id, db)
+        if legacy:
+            for kind in ("access_token", "refresh_token"):
+                claims = jwt.decode(old[kind], options={"verify_signature": False})
+                claims.pop("session_version", None)
+                old[kind] = service.create_token(claims, timedelta(minutes=5))
+        assert (await service.get_current_user_from_access_token(old["access_token"], db)).id == user.id
+        assert (await service.create_refresh_token(old["refresh_token"], db))["access_token"]
+        await db.commit()
+    async with AsyncSession(engine) as db:
+        changed = await db.get(User, user.id)
+        changed.password = uuid4().hex
+        await db.commit()
+
+    await engine.dispose()
+    restarted = AuthService(settings)
+    async with AsyncSession(engine) as db:
+        with pytest.raises(AuthInvalidTokenError):
+            await restarted.get_current_user_from_access_token(old["access_token"], db)
+        with pytest.raises(HTTPException) as exc:
+            await restarted.create_refresh_token(old["refresh_token"], db)
+        assert exc.value.status_code == 401
+        fresh = await restarted.create_user_tokens(user.id, db)
+        assert (await restarted.get_current_user_from_access_token(fresh["access_token"], db)).id == user.id
+        assert (await restarted.create_refresh_token(fresh["refresh_token"], db))["access_token"]
+
+
+@pytest.mark.parametrize("change", ["profile", "same-hash", "rolled-back-password"])
+async def test_non_password_changes_preserve_native_sessions(token_store, change):
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    async with AsyncSession(engine) as db:
+        tokens = await service.create_user_tokens(user.id, db)
+        await db.commit()
+    async with AsyncSession(engine) as db:
+        changed = await db.get(User, user.id)
+        if change == "profile":
+            changed.profile_image = "profile.png"
+        elif change == "same-hash":
+            changed.password = changed.password
+        else:
+            changed.password = uuid4().hex
+        await db.flush()
+        if change == "rolled-back-password":
+            await db.rollback()
+        else:
+            await db.commit()
+    async with AsyncSession(engine) as db:
+        assert (await service.get_current_user_from_access_token(tokens["access_token"], db)).id == user.id
+        assert (await service.create_refresh_token(tokens["refresh_token"], db))["access_token"]
+
+
+async def test_overlapping_password_changes_have_distinct_session_versions(token_store):
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    async with AsyncSession(engine) as first, AsyncSession(engine) as second:
+        first_user = await first.get(User, user.id)
+        second_user = await second.get(User, user.id)
+        first_user.password = uuid4().hex
+        await first.commit()
+        async with AsyncSession(engine) as login_db:
+            between = await service.create_user_tokens(user.id, login_db)
+            await login_db.commit()
+        second_user.password = uuid4().hex
+        await second.commit()
+    async with AsyncSession(engine) as db:
+        with pytest.raises(AuthInvalidTokenError):
+            await service.get_current_user_from_access_token(between["access_token"], db)
+        with pytest.raises(HTTPException) as exc:
+            await service.create_refresh_token(between["refresh_token"], db)
+        assert exc.value.status_code == 401
+
+
+async def test_login_cannot_issue_a_session_from_stale_password_state(token_store):
+    engine, settings, user = token_store
+    service = AuthService(settings)
+    async with AsyncSession(engine) as login_db:
+        authenticated_user = await login_db.get(User, user.id)
+        async with AsyncSession(engine) as reset_db:
+            changed = await reset_db.get(User, user.id)
+            changed.password = uuid4().hex
+            await reset_db.commit()
+        assert authenticated_user.session_version is None
+        with pytest.raises(HTTPException) as exc:
+            await service.create_user_tokens(user.id, login_db)
+        assert exc.value.status_code == 401
+        assert not (await login_db.exec(select(RefreshTokenSession))).all()
 
 
 @pytest.mark.parametrize("has_jti", [False, True])

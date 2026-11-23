@@ -313,7 +313,7 @@ class TestTokenVerification:
             mock_auth_service = AuthService(mock_settings_service)
 
             # Create a mock user
-            mock_user = MagicMock()
+            mock_user = MagicMock(session_version=None)
             mock_user.id = "9cd4172c-0190-4124-a749-671d23e3c6dd"
             mock_user.is_active = True
 
@@ -345,7 +345,7 @@ class TestTokenVerification:
             mock_settings_service = self._create_mock_settings_service("RS256", tmpdir)
             mock_auth_service = AuthService(mock_settings_service)
 
-            mock_user = MagicMock()
+            mock_user = MagicMock(session_version=None)
             mock_user.id = "user-456"
             mock_user.is_active = True
 
@@ -377,7 +377,7 @@ class TestTokenVerification:
             mock_settings_service = self._create_mock_settings_service("RS512", tmpdir)
             mock_auth_service = AuthService(mock_settings_service)
 
-            mock_user = MagicMock()
+            mock_user = MagicMock(session_version=None)
             mock_user.id = "user-789"
             mock_user.is_active = True
 
@@ -636,7 +636,7 @@ class TestAuthenticationFailures:
             # Use a valid UUID format
             user_id = str(uuid4())
 
-            mock_user = MagicMock()
+            mock_user = MagicMock(session_version=None)
             mock_user.id = user_id
             mock_user.is_active = False
 
@@ -856,7 +856,7 @@ class TestEdgeCases:
             mock_settings_service.auth_settings = settings
             mock_auth_service = AuthService(mock_settings_service)
 
-            mock_user = MagicMock()
+            mock_user = MagicMock(session_version=None)
             mock_user.id = "9cd4172c-0190-4124-a749-671d23e3c6dd"
             mock_user.is_active = True
 

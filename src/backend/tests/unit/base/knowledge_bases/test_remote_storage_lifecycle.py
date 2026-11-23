@@ -52,7 +52,11 @@ async def test_cancelled_remote_purge_keeps_concurrent_writer_out_until_native_c
 
     backend = OpenSearchBackend(kb_name=row.name, backend_config={}, user_id=row.user_id)
     backend.ensure_ready = AsyncMock()
-    backend._os_client = SimpleNamespace(delete_by_query=native_delete)
+    # delete_by reads the index's mapping first, to match the key on a field that holds it whole.
+    backend._os_client = SimpleNamespace(
+        delete_by_query=native_delete,
+        indices=SimpleNamespace(get_field_mapping=lambda **_kwargs: {}),
+    )
     backend._os_index = "test-index"
     guarded = runtime._GuardedMethods(backend, row)
     purge = asyncio.create_task(guarded.delete_by({"session_id": "session"}))

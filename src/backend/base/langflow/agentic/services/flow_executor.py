@@ -60,6 +60,7 @@ async def _run_graph_with_events(
         flow_id = (global_variables or {}).get("FLOW_ID")
         if flow_id:
             graph.flow_id = flow_id
+            graph.runs_stored_flow = False
         graph.flow_name = graph.flow_name or "Assistant Flow"
 
         graph.prepare()
@@ -144,6 +145,7 @@ async def execute_flow_file(
         flow_id = (global_variables or {}).get("FLOW_ID")
         if flow_id:
             graph.flow_id = flow_id
+            graph.runs_stored_flow = False
         graph.flow_name = graph.flow_name or flow_filename
 
         graph.prepare()

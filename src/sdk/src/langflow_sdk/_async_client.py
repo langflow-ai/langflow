@@ -5,7 +5,7 @@ Preferred usage via the short alias::
     from langflow_sdk import AsyncClient
 
     async with AsyncClient("https://langflow.example.com", api_key="...") as client:
-        flows = await client.list_flows()
+        flows = await client.list_flows(get_all=True)
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ class AsyncLangflowClient(_ClientCommon):
         from langflow_sdk import AsyncClient
 
         async with AsyncClient("https://langflow.example.com", api_key="...") as client:
-            flows = await client.list_flows()
+            flows = await client.list_flows(get_all=True)
     """
 
     def __init__(
@@ -128,6 +128,17 @@ class AsyncLangflowClient(_ClientCommon):
         page: int = 1,
         size: int = 50,
     ) -> list[Flow]:
+        """Return one page of flows, or all flows when ``get_all=True``.
+
+        Unlike the server default, the SDK defaults to paginated requests with
+        page size 50. Set ``page`` and ``size`` subject to server limits.
+        Folder selection follows the server, normally its default folder when
+        ``folder_id`` is omitted. In all-mode the current server ignores
+        ``folder_id``, ``page``, and ``size`` for selection.
+
+        Return only the flow records, without pagination metadata. This method
+        makes one request and does not fetch subsequent pages automatically.
+        """
         resp = await self._request(
             "GET",
             "/api/v1/flows/",
@@ -141,7 +152,7 @@ class AsyncLangflowClient(_ClientCommon):
                 size=size,
             ),
         )
-        return self._validate_model_list(Flow, resp.json())
+        return self._validate_flow_list(Flow, resp.json())
 
     async def get_flow(self, flow_id: UUID | str) -> Flow:
         resp = await self._request("GET", f"/api/v1/flows/{flow_id}")
@@ -419,5 +430,5 @@ class AsyncLangflowClient(_ClientCommon):
 #:
 #:     from langflow_sdk import AsyncClient
 #:     async with AsyncClient("https://langflow.example.com", api_key="...") as c:
-#:         flows = await c.list_flows()
+#:         flows = await c.list_flows(get_all=True)
 AsyncClient = AsyncLangflowClient

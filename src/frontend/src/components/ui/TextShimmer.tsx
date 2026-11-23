@@ -11,6 +11,7 @@ interface TextShimmerProps {
   spread?: number;
 }
 
+// Shows text with a moving shimmer. Keeps one motion element across re-renders.
 export function TextShimmer({
   children,
   as: Component = "p",
@@ -18,8 +19,10 @@ export function TextShimmer({
   duration = 2,
   spread = 2,
 }: TextShimmerProps) {
-  const MotionComponent = motion.create(
-    Component as keyof JSX.IntrinsicElements,
+  // Do not create this during render. A new type remounts the element and restarts the animation.
+  const MotionComponent = useMemo(
+    () => motion.create(Component as keyof JSX.IntrinsicElements),
+    [Component],
   );
 
   const dynamicSpread = useMemo(() => {

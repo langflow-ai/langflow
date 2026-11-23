@@ -68,6 +68,16 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
         return True
 
     auth_settings = SimpleNamespace(AUTO_LOGIN=False, ENABLE_SIGNUP=True, NEW_USER_IS_ACTIVE=True)
+    seen_contexts = []
+
+    async def capture_lock(_authorization_service, _session, **kwargs):
+        events.append("lock")
+        service.lock_requests.append(kwargs)
+
+    async def capture_hooks(context):
+        events.append("hook")
+        seen_contexts.append(context)
+
     monkeypatch.setattr(users, "get_settings_service", lambda: SimpleNamespace(auth_settings=auth_settings))
     monkeypatch.setattr(
         users,
@@ -77,6 +87,8 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
     monkeypatch.setattr(users, "get_or_create_default_folder", create_default_folder)
     monkeypatch.setattr(users, "get_authorization_service", lambda: service)
     monkeypatch.setattr(users, "stage_audit_decision", stage_audit)
+    monkeypatch.setattr("langflow.services.auth.user_admission.acquire_identity_mutation_lock", capture_lock)
+    monkeypatch.setattr("langflow.services.auth.user_admission.run_pre_creation_hooks", capture_hooks)
 
     created = await users.add_user(
         user=UserCreate(username="new-user", password="not-a-real-password"),  # noqa: S106
@@ -85,8 +97,10 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
         response=Response(),
     )
 
-    assert events == ["lock", "mutate", "flush", "folder", "stage", "audit", "commit", "committed"]
+    assert events == ["lock", "hook", "mutate", "flush", "folder", "stage", "audit", "commit", "committed"]
     assert service.staged == service.committed
+    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_CREATED
+    assert service.lock_requests[0]["entity_id"] == created.id
     mutation = service.staged[0]
     assert mutation.kind is AuthorizationMutationKind.USER_CREATED
     assert mutation.entity_id == created.id
@@ -94,6 +108,7 @@ async def test_user_create_stages_default_folder_and_identity_in_one_transaction
     assert mutation.user_before is None
     assert mutation.user_after.is_active is True
     assert mutation.user_after.is_superuser is False
+    assert seen_contexts[0].extra == {"is_active": True}
 
 
 @pytest.mark.asyncio
@@ -170,7 +185,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=True,
@@ -178,6 +193,7 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -233,6 +249,485 @@ async def test_user_disable_validates_and_stages_in_transaction_order(monkeypatc
             },
         }
     ]
+
+
+@pytest.mark.asyncio
+async def test_user_activation_validates_and_stages_in_transaction_order(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.database.models.user.model import UserUpdate
+
+    events: list[str] = []
+    service = _LifecycleService(events)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
+    target = SimpleNamespace(
+        id=uuid4(),
+        is_active=False,
+        is_superuser=False,
+        password="hashed",  # noqa: S106  # pragma: allowlist secret
+    )
+    session = AsyncMock()
+    session.get.return_value = actor
+
+    async def update_user(_target, _update, _session):
+        events.append("mutate")
+        target.is_active = True
+        return target
+
+    async def get_user_by_id(_session, _user_id):
+        events.append("read")
+        return target
+
+    audit_calls = []
+
+    def stage_audit(**kwargs):
+        events.append("audit")
+        audit_calls.append(kwargs)
+        return True
+
+    session.commit.side_effect = lambda: events.append("commit")
+    monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+    monkeypatch.setattr(users, "update_user", update_user)
+    monkeypatch.setattr(users, "get_authorization_service", lambda: service)
+    monkeypatch.setattr(users, "stage_audit_decision", stage_audit)
+
+    result = await users.patch_user(
+        user_id=target.id,
+        user_update=UserUpdate(is_active=True),
+        user=actor,
+        session=session,
+    )
+
+    assert result is target
+    assert events == ["lock", "read", "validate", "mutate", "stage", "audit", "commit", "committed"]
+    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_ACTIVATED
+    mutation = service.staged[0]
+    assert mutation.kind is AuthorizationMutationKind.USER_ACTIVATED
+    assert mutation.user_before.is_active is False
+    assert mutation.user_after.is_active is True
+    assert audit_calls[0]["details"]["lifecycle_kind"] == AuthorizationMutationKind.USER_ACTIVATED.value
+
+
+@pytest.mark.asyncio
+async def test_inactive_native_token_cannot_reactivate_itself_after_lock_refresh(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.database.models.user.model import UserUpdate
+
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
+    target = SimpleNamespace(
+        id=actor.id,
+        is_active=True,
+        is_superuser=True,
+    )
+    session = AsyncMock()
+    session.get.return_value = actor
+
+    async def refresh(row):
+        row.is_active = False
+
+    session.refresh.side_effect = refresh
+    monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
+    monkeypatch.setattr(users, "audit_decision", AsyncMock())
+
+    with pytest.raises(HTTPException, match="User account is inactive") as exc_info:
+        await users.patch_user(
+            user_id=actor.id,
+            user_update=UserUpdate(is_active=True),
+            user=actor,
+            session=session,
+        )
+
+    assert exc_info.value.status_code == 403
+    session.refresh.assert_awaited_once_with(target)
+    session.commit.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("target_is_caller", [True, False])
+@pytest.mark.parametrize("demote_before_refresh", [False, True])
+async def test_user_promotion_rechecks_refreshed_caller_permission(
+    monkeypatch,
+    *,
+    target_is_caller: bool,
+    demote_before_refresh: bool,
+    tmp_path,
+):
+    """A promotion rechecks the caller after the target lifecycle lock refresh."""
+    from langflow.api.v1 import users
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User, UserUpdate
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'authz-race.db'}")
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.create_all)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            actor = User(
+                username="self-promotion",
+                password=get_password_hash(f"fixture-{uuid4().hex}"),
+                is_active=True,
+                is_superuser=True,
+            )
+            session.add(actor)
+            await session.commit()
+            await session.refresh(actor)
+            target = actor
+            if not target_is_caller:
+                target = User(
+                    username="promotion-target",
+                    password=get_password_hash(f"fixture-{uuid4().hex}"),
+                    is_active=True,
+                    is_superuser=False,
+                )
+                session.add(target)
+                await session.commit()
+                await session.refresh(target)
+
+            lock_calls = 0
+            lock_requests = []
+
+            async def demote_during_lock(*_args, **kwargs):
+                nonlocal lock_calls
+                lock_calls += 1
+                lock_requests.append(kwargs)
+                if not demote_before_refresh:
+                    return
+                async with AsyncSession(engine, expire_on_commit=False) as concurrent_session:
+                    concurrent_actor = await concurrent_session.get(User, actor.id)
+                    assert concurrent_actor is not None
+                    concurrent_actor.is_superuser = False
+                    await concurrent_session.commit()
+
+            authorization_service = SimpleNamespace()
+            target_rows = []
+            original_get_user_by_id = users.get_user_by_id
+
+            async def get_user_by_id(_session, user_id):
+                target = await original_get_user_by_id(_session, user_id)
+                target_rows.append(target)
+                return target
+
+            monkeypatch.setattr(users, "acquire_identity_mutation_lock", demote_during_lock)
+            monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+            monkeypatch.setattr(users, "get_authorization_service", lambda: authorization_service)
+            monkeypatch.setattr(users, "is_administrator", AsyncMock(return_value=True))
+            monkeypatch.setattr(users, "validate_identity_mutation", AsyncMock())
+            monkeypatch.setattr(users, "stage_identity_mutation", AsyncMock())
+            monkeypatch.setattr(users, "safe_identity_mutation_committed", AsyncMock())
+            monkeypatch.setattr(users, "audit_decision", AsyncMock())
+            monkeypatch.setattr(users, "stage_audit_decision", Mock(return_value=True))
+
+            if demote_before_refresh:
+                with pytest.raises(HTTPException, match="Only a superuser may promote") as exc_info:
+                    await users.patch_user(
+                        user_id=target.id,
+                        user_update=UserUpdate(is_active=True, is_superuser=True),
+                        user=actor,
+                        session=session,
+                    )
+                assert exc_info.value.status_code == 403
+                assert lock_calls == 1
+                assert lock_requests[0]["affected_user_ids"] == tuple(dict.fromkeys((target.id, actor.id)))
+                assert target_rows == [target]
+                assert target is actor if target_is_caller else target is not actor
+                assert actor.is_superuser is False
+                assert target.is_superuser is False
+                await session.rollback()
+            else:
+                updated = await users.patch_user(
+                    user_id=target.id,
+                    user_update=UserUpdate(is_active=True, is_superuser=True),
+                    user=actor,
+                    session=session,
+                )
+                assert updated is target
+                assert lock_calls == 1
+                assert lock_requests[0]["affected_user_ids"] == tuple(dict.fromkeys((target.id, actor.id)))
+                assert target_rows == [target]
+                assert target is actor if target_is_caller else target is not actor
+                assert actor.is_superuser is True
+                assert updated.is_superuser is True
+    finally:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.drop_all)
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("caller_mutation", "externally_managed", "expected_status"),
+    [
+        ("demoted", False, 400),
+        ("unchanged", False, None),
+        ("unchanged", True, 409),
+    ],
+)
+async def test_self_password_update_rechecks_current_administration_before_hashing(
+    monkeypatch,
+    *,
+    caller_mutation: str,
+    externally_managed: bool,
+    expected_status: int | None,
+    tmp_path,
+):
+    """Self password updates use current administration and credential state."""
+    from langflow.api.v1 import users
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User, UserUpdate
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'authz-self-password-race.db'}")
+    admin_calls = []
+    credential_checks = []
+    hash_calls = []
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.create_all)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            original_password = get_password_hash(f"fixture-{uuid4().hex}")
+            new_password = f"fixture-new-{uuid4().hex}"
+            actor = User(
+                username="self-password-actor",
+                password=original_password,
+                is_active=True,
+                is_superuser=True,
+            )
+            session.add(actor)
+            await session.commit()
+            await session.refresh(actor)
+            actor_id = actor.id
+
+            async def can_administer(*, user_id, resource):
+                admin_calls.append((user_id, resource))
+                return False
+
+            async def is_user_credentials_managed_externally(*, session, user_id):  # noqa: ARG001
+                credential_checks.append(user_id)
+                return externally_managed
+
+            async def mutate_caller_during_lock(*_args, **_kwargs):
+                if caller_mutation == "demoted":
+                    async with AsyncSession(engine, expire_on_commit=False) as concurrent_session:
+                        concurrent_actor = await concurrent_session.get(User, actor_id)
+                        assert concurrent_actor is not None
+                        concurrent_actor.is_superuser = False
+                        await concurrent_session.commit()
+
+            authorization_service = SimpleNamespace(
+                can_administer=can_administer,
+                is_user_credentials_managed_externally=is_user_credentials_managed_externally,
+            )
+            target_rows = []
+            original_get_user_by_id = users.get_user_by_id
+
+            async def get_user_by_id(_session, user_id):
+                row = await original_get_user_by_id(_session, user_id)
+                target_rows.append(row)
+                return row
+
+            def get_password_hash_for_test(password):
+                hash_calls.append(password)
+                return f"hashed:{password}"
+
+            monkeypatch.setattr(users, "acquire_identity_mutation_lock", mutate_caller_during_lock)
+            monkeypatch.setattr(users, "get_authorization_service", lambda: authorization_service)
+            monkeypatch.setattr(users, "current_auth_is_restricted_api_key", lambda: False)
+            monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+            monkeypatch.setattr(
+                users,
+                "get_auth_service",
+                lambda: SimpleNamespace(get_password_hash=get_password_hash_for_test),
+            )
+            monkeypatch.setattr(users, "validate_identity_mutation", AsyncMock())
+            monkeypatch.setattr(users, "stage_identity_mutation", AsyncMock())
+            monkeypatch.setattr(users, "safe_identity_mutation_committed", AsyncMock())
+            audit_decision = AsyncMock()
+            monkeypatch.setattr(users, "audit_decision", audit_decision)
+            monkeypatch.setattr(users, "stage_audit_decision", Mock(return_value=True))
+
+            if expected_status is None:
+                updated = await users.patch_user(
+                    user_id=actor_id,
+                    user_update=UserUpdate(is_active=True, password=new_password),
+                    user=actor,
+                    session=session,
+                )
+                assert updated is actor
+            else:
+                with pytest.raises(HTTPException) as exc_info:
+                    await users.patch_user(
+                        user_id=actor_id,
+                        user_update=UserUpdate(is_active=True, password=new_password),
+                        user=actor,
+                        session=session,
+                    )
+                assert exc_info.value.status_code == expected_status
+                await session.rollback()
+
+            assert target_rows == [actor]
+            assert hash_calls == ([] if expected_status is not None else [new_password])
+            assert credential_checks == ([] if caller_mutation == "demoted" else [actor_id])
+            expected_admin_calls = [] if caller_mutation == "unchanged" else [(actor_id, "user")]
+            assert admin_calls == expected_admin_calls
+            audit_reasons = [call.kwargs["details"]["reason"] for call in audit_decision.await_args_list]
+            if caller_mutation == "demoted":
+                assert audit_reasons == ["password_update_forbidden"]
+            elif externally_managed:
+                assert audit_reasons == ["external_credentials_managed"]
+            else:
+                assert audit_reasons == []
+            async with AsyncSession(engine, expire_on_commit=False) as verification_session:
+                persisted_actor = await verification_session.get(User, actor_id)
+                assert persisted_actor is not None
+                assert persisted_actor.is_superuser is (caller_mutation == "unchanged")
+                expected_password = f"hashed:{new_password}" if expected_status is None else original_password
+                assert persisted_actor.password == expected_password
+    finally:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.drop_all)
+        await engine.dispose()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("caller_mutation", "should_deny"),
+    [
+        ("inactive", True),
+        ("demoted", True),
+        ("delegated_revoked", True),
+        ("delegated_unchanged", False),
+    ],
+)
+async def test_cross_user_update_rechecks_refreshed_caller_state_and_permission(
+    monkeypatch,
+    *,
+    caller_mutation: str,
+    should_deny: bool,
+    tmp_path,
+):
+    """Cross-user updates require an active caller with current administration rights."""
+    from langflow.api.v1 import users
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User, UserUpdate
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'authz-cross-user-race.db'}")
+    delegated_allowed = caller_mutation in {"delegated_revoked", "delegated_unchanged"}
+    admin_calls = []
+    try:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.create_all)
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            actor = User(
+                username="cross-user-actor",
+                password=get_password_hash(f"fixture-{uuid4().hex}"),
+                is_active=True,
+                is_superuser=caller_mutation in {"inactive", "demoted"},
+            )
+            target = User(
+                username="cross-user-target",
+                password=get_password_hash(f"fixture-{uuid4().hex}"),
+                is_active=True,
+                is_superuser=False,
+            )
+            session.add(actor)
+            session.add(target)
+            await session.commit()
+            await session.refresh(actor)
+            await session.refresh(target)
+            actor_id = actor.id
+            target_id = target.id
+
+            lock_requests = []
+
+            async def can_administer(*, user_id, resource):
+                admin_calls.append((user_id, resource))
+                return delegated_allowed
+
+            async def mutate_caller_during_lock(*_args, **kwargs):
+                nonlocal delegated_allowed
+                lock_requests.append(kwargs)
+                if caller_mutation == "delegated_revoked":
+                    delegated_allowed = False
+                    return
+                async with AsyncSession(engine, expire_on_commit=False) as concurrent_session:
+                    concurrent_actor = await concurrent_session.get(User, actor_id)
+                    assert concurrent_actor is not None
+                    if caller_mutation == "inactive":
+                        concurrent_actor.is_active = False
+                    elif caller_mutation == "demoted":
+                        concurrent_actor.is_superuser = False
+                    await concurrent_session.commit()
+
+            authorization_service = SimpleNamespace(can_administer=can_administer)
+            target_rows = []
+            original_get_user_by_id = users.get_user_by_id
+
+            async def get_user_by_id(_session, user_id):
+                row = await original_get_user_by_id(_session, user_id)
+                target_rows.append(row)
+                return row
+
+            monkeypatch.setattr(users, "acquire_identity_mutation_lock", mutate_caller_during_lock)
+            monkeypatch.setattr(users, "get_authorization_service", lambda: authorization_service)
+            monkeypatch.setattr(users, "current_auth_is_restricted_api_key", lambda: False)
+            monkeypatch.setattr(users, "get_user_by_id", get_user_by_id)
+            monkeypatch.setattr(users, "validate_identity_mutation", AsyncMock())
+            monkeypatch.setattr(users, "stage_identity_mutation", AsyncMock())
+            monkeypatch.setattr(users, "safe_identity_mutation_committed", AsyncMock())
+            monkeypatch.setattr(users, "audit_decision", AsyncMock())
+            monkeypatch.setattr(users, "stage_audit_decision", Mock(return_value=True))
+
+            if should_deny:
+                with pytest.raises(HTTPException, match=r"User account is inactive|Permission denied") as exc_info:
+                    await users.patch_user(
+                        user_id=target_id,
+                        user_update=UserUpdate(is_active=False),
+                        user=actor,
+                        session=session,
+                    )
+                assert exc_info.value.status_code == 403
+                assert target.is_active is True
+                await session.rollback()
+            else:
+                updated = await users.patch_user(
+                    user_id=target_id,
+                    user_update=UserUpdate(is_active=False),
+                    user=actor,
+                    session=session,
+                )
+                assert updated is target
+                assert target.is_active is False
+
+            assert lock_requests[0]["affected_user_ids"] == tuple(dict.fromkeys((target_id, actor_id)))
+            assert target_rows == [target]
+            expected_admin_calls = {
+                "inactive": [],
+                "demoted": [(actor_id, "user")],
+                "delegated_revoked": [(actor_id, "user"), (actor_id, "user")],
+                "delegated_unchanged": [(actor_id, "user"), (actor_id, "user")],
+            }[caller_mutation]
+            assert admin_calls == expected_admin_calls
+            async with AsyncSession(engine, expire_on_commit=False) as verification_session:
+                persisted_actor = await verification_session.get(User, actor_id)
+                persisted_target = await verification_session.get(User, target_id)
+                assert persisted_actor is not None
+                assert persisted_target is not None
+                assert persisted_actor.is_active is (caller_mutation != "inactive")
+                assert persisted_actor.is_superuser is (
+                    caller_mutation not in {"demoted", "delegated_revoked", "delegated_unchanged"}
+                )
+                assert persisted_target.is_active is should_deny
+    finally:
+        async with engine.begin() as connection:
+            await connection.run_sync(SQLModel.metadata.drop_all)
+        await engine.dispose()
 
 
 @pytest.mark.asyncio
@@ -355,8 +850,9 @@ async def test_user_patch_business_denial_emits_access_audit(monkeypatch):
     from langflow.services.authorization.audit import AUDIT_EVENT_ACCESS
     from langflow.services.database.models.user.model import UserUpdate
 
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     session = AsyncMock()
+    session.get.return_value = actor
     audit_calls = []
 
     async def audit(**kwargs):
@@ -433,7 +929,7 @@ async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=False,
@@ -441,6 +937,7 @@ async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -462,15 +959,80 @@ async def test_user_patch_lock_kind_is_advisory_before_state_read(monkeypatch):
 
     result = await users.patch_user(
         user_id=target.id,
-        user_update=UserUpdate(is_active=False, is_superuser=False),
+        user_update=UserUpdate(is_active=True, is_superuser=False),
         user=actor,
         session=session,
     )
 
     assert result is target
-    assert events == ["lock", "read", "validate", "mutate", "stage", "commit", "committed"]
-    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_DISABLED
-    assert service.staged[0].kind is AuthorizationMutationKind.USER_SUPERUSER_DEMOTED
+    assert events == [
+        "lock",
+        "read",
+        "validate",
+        "validate",
+        "mutate",
+        "stage",
+        "stage",
+        "commit",
+        "committed",
+        "committed",
+    ]
+    assert service.lock_requests[0]["kind"] is AuthorizationMutationKind.USER_ACTIVATED
+    assert [mutation.kind for mutation in service.staged] == [
+        AuthorizationMutationKind.USER_ACTIVATED,
+        AuthorizationMutationKind.USER_SUPERUSER_DEMOTED,
+    ]
+    assert service.staged == service.committed
+
+
+@pytest.mark.asyncio
+async def test_combined_activation_and_demotion_rejection_prevents_mutation(monkeypatch):
+    from langflow.api.v1 import users
+    from langflow.services.database.models.user.model import UserUpdate
+
+    events: list[str] = []
+    service = _LifecycleService(events)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
+    target = SimpleNamespace(
+        id=uuid4(),
+        is_active=False,
+        is_superuser=True,
+        password="hashed",  # noqa: S106  # pragma: allowlist secret
+    )
+    session = AsyncMock()
+    session.get.return_value = actor
+    update_user = AsyncMock()
+
+    async def reject_demotion(*, session, mutation):  # noqa: ARG001
+        events.append("validate")
+        service.validated.append(mutation)
+        if mutation.kind is AuthorizationMutationKind.USER_SUPERUSER_DEMOTED:
+            raise AuthorizationMutationRejected(_RECOVERY_DETAIL)
+
+    service.validate_identity_mutation = reject_demotion
+    monkeypatch.setattr(users, "get_user_by_id", AsyncMock(return_value=target))
+    monkeypatch.setattr(users, "update_user", update_user)
+    monkeypatch.setattr(users, "get_authorization_service", lambda: service)
+    monkeypatch.setattr(users, "audit_decision", AsyncMock())
+
+    with pytest.raises(HTTPException) as exc_info:
+        await users.patch_user(
+            user_id=target.id,
+            user_update=UserUpdate(is_active=True, is_superuser=False),
+            user=actor,
+            session=session,
+        )
+
+    assert exc_info.value.status_code == 409
+    assert exc_info.value.detail == _RECOVERY_DETAIL
+    assert [mutation.kind for mutation in service.validated] == [
+        AuthorizationMutationKind.USER_ACTIVATED,
+        AuthorizationMutationKind.USER_SUPERUSER_DEMOTED,
+    ]
+    update_user.assert_not_awaited()
+    session.commit.assert_not_awaited()
+    assert target.is_active is False
+    assert target.is_superuser is True
 
 
 @pytest.mark.asyncio
@@ -480,7 +1042,7 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
 
     events: list[str] = []
     service = _LifecycleService(events, fail_stage=True)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
         is_active=True,
@@ -488,6 +1050,7 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
 
     async def update_user(_target, _update, _session):
         events.append("mutate")
@@ -507,29 +1070,42 @@ async def test_user_lifecycle_stage_failure_prevents_commit(monkeypatch):
 
     assert events == ["lock", "validate", "mutate", "stage"]
     session.commit.assert_not_awaited()
+    session.rollback.assert_awaited_once()
     assert service.committed == []
 
 
+@pytest.mark.parametrize(
+    ("initial_active", "initial_superuser", "update_kwargs", "rejected_kind"),
+    [
+        (True, True, {"is_active": False}, AuthorizationMutationKind.USER_DISABLED),
+        (False, False, {"is_active": True}, AuthorizationMutationKind.USER_ACTIVATED),
+        (True, True, {"is_superuser": False}, AuthorizationMutationKind.USER_SUPERUSER_DEMOTED),
+    ],
+)
 @pytest.mark.asyncio
-async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypatch):
+async def test_user_lifecycle_policy_rejection_is_409_without_mutation(
+    monkeypatch, initial_active, initial_superuser, update_kwargs, rejected_kind
+):
     from langflow.api.v1 import users
     from langflow.services.database.models.user.model import UserUpdate
 
     events: list[str] = []
     service = _LifecycleService(events)
-    actor = SimpleNamespace(id=uuid4(), is_superuser=True)
+    actor = SimpleNamespace(id=uuid4(), is_active=True, is_superuser=True)
     target = SimpleNamespace(
         id=uuid4(),
-        is_active=True,
-        is_superuser=True,
+        is_active=initial_active,
+        is_superuser=initial_superuser,
         password="hashed",  # noqa: S106  # pragma: allowlist secret
     )
     session = AsyncMock()
+    session.get.return_value = actor
     update = AsyncMock()
     audit = AsyncMock()
 
     async def reject(*, session, mutation):  # noqa: ARG001
         events.append("validate")
+        service.validated.append(mutation)
         raise AuthorizationMutationRejected(_RECOVERY_DETAIL)
 
     service.validate_identity_mutation = reject
@@ -541,7 +1117,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     with pytest.raises(HTTPException) as exc_info:
         await users.patch_user(
             user_id=target.id,
-            user_update=UserUpdate(is_active=False),
+            user_update=UserUpdate(**update_kwargs),
             user=actor,
             session=session,
         )
@@ -549,6 +1125,7 @@ async def test_user_lifecycle_policy_rejection_is_409_without_mutation(monkeypat
     assert exc_info.value.status_code == 409
     assert exc_info.value.detail == _RECOVERY_DETAIL
     assert events == ["lock", "validate"]
+    assert service.validated[0].kind is rejected_kind
     update.assert_not_awaited()
     session.commit.assert_not_awaited()
     audit.assert_awaited_once()

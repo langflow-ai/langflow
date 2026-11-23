@@ -14,9 +14,10 @@ from langflow.services.database.models.flow_version.model import FlowVersion
 from langflow.services.database.models.maintenance import MaintenanceState
 from langflow.services.database.models.upgrade_report import UpgradeReport, UpgradeReportRepair
 from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_settings_service
 from langflow.services.flow_repair import service
 from langflow.services.flow_repair.models import RepairApplyRequest, RepairPreviewRequest, RepairSelection
-from langflow.services.upgrade_reports.history import store_report
+from langflow.services.upgrade_reports.history import list_reports, store_report
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -55,6 +56,8 @@ async def postgres_repairs(client, monkeypatch):  # noqa: ARG001
     async def load_registry():
         return registry()
 
+    # The transaction fixture uses a synthetic component owned by a regular user.
+    monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
     monkeypatch.setattr(service, "session_scope", scope)
     monkeypatch.setattr(service, "target_registry", load_registry)
     try:
@@ -165,3 +168,13 @@ async def test_postgres_outcome_failure_rolls_back_graph_token_and_recovery(post
     assert versions == []
     assert [row["status"] for row in outcomes] == ["failed"]
     assert exported.encode() == REPORT.read_bytes()
+
+
+async def test_history_projects_the_source_and_assessment_on_postgres(postgres_repairs):
+    scope, _, _, report_id = postgres_repairs
+    async with scope() as session:
+        rows, total = await list_reports(session, offset=0, limit=1)
+    assert total == 1
+    assert rows[0].id == report_id
+    assert rows[0].source_database == json.loads(REPORT.read_bytes())["source"]["identity"]["locator"]["path"]
+    assert rows[0].incomplete is True

@@ -31,7 +31,7 @@ def _catalog(api_key: str) -> list[dict]:
         for row in rows:
             if not isinstance(row, dict) or not isinstance(row.get("name"), str) or not row["name"].strip():
                 raise ValueError
-            models[row["name"]] = decision_model_metadata("TypeSafe", row["name"], "Bot", default=True)
+            models[row["name"]] = decision_model_metadata("TypeSafe", row["name"], "Bot")
         return list(models.values())
     except (httpx.HTTPError, SSRFProtectionError, ValueError, TypeError):
         msg = "Could not load TypeSafe decision models. Check the TypeSafe API key and try refreshing again."

@@ -83,6 +83,13 @@ supply regression evidence, not a passing deployment cell.
 
 ## Trigger policy and Enterprise hooks
 
+The flow owner owns the trigger and its source connection. To run the flow as a
+different account, override `TriggerService.resolve_run_user_id(session, *,
+flow_id, trigger_owner_id)` and return the user ID from the deployment binding.
+OSS returns the trigger owner. Returning `None` refuses the event. If the
+lookup raises an exception, the dispatcher retries up to the trigger's attempt
+limit. Once a job exists, workers use its stored account, including on resume.
+
 The shared policy bundle carries `approved_trigger_kinds`. Kinds are the stable
 provider-qualified identities, such as `google.gmail`, `google.calendar`, and
 `slack.message`; core kinds include `schedule` and `inbound_webhook`. A configured
@@ -131,7 +138,7 @@ selection remain separate from the implementation; no GA result is claimed.
 | Measure | Definition | Existing evidence and limitation |
 |---|---|---|
 | Accepted-event completion | Distinct canonical source events accepted in the collection window, by ledger outcome. The completion fraction excludes filtered (`skipped`) rows. | `langflow_trigger_events` separates `source`, `replay`, and `test`. Provider reconciliation hints are excluded. Pending, claimed, dispatched, failed, and dead outcomes remain visible. An external source cohort and run-level acceptance evidence are still required to detect loss before intake and additional executions; ledger uniqueness alone does not prove either. |
-| Accept-to-run dispatch latency | Durable event `created_at` to the minimum retained `run_started` job-event timestamp; report p50/p95, sample count, missing first-start evidence, and oldest pending age. | `langflow_trigger_dispatch_latency_p50_seconds`, `...p95_seconds`, `...samples`, `langflow_trigger_missing_first_starts`, and `langflow_trigger_oldest_pending_seconds`. Retries use the first start. Missing or purged job-event history is counted as unknown, never as zero latency. Provider-to-accept lag is separate. |
+| Accept-to-run dispatch latency | Durable event `created_at` to the minimum retained start job-event timestamp (`build_start` for Langflow, `RUN_STARTED` for AG-UI). Report p50/p95, sample count, missing first-start evidence, and oldest pending age. | `langflow_trigger_dispatch_latency_p50_seconds`, `...p95_seconds`, `...samples`, `langflow_trigger_missing_first_starts`, and `langflow_trigger_oldest_pending_seconds`. Retries use the first start. Missing or purged job-event history is counted as unknown, never as zero latency. Provider-to-accept lag is separate. |
 | Subscription renewal continuity | Fenced renewal outcomes with their previous expiry, returned expiry, completion time, and observed recovery gap. | `langflow_trigger_renewals`, `...renewals_with_gap`, `...renewal_gap_seconds`, and `...expired_subscriptions`. Renewal observations commit with subscription state, are retained for the trigger-event retention period, and exclude nonexpiring mechanisms. Intentional retirement is excluded from current-expiry counts. Live deliveries across renewal and provider outages still require acceptance testing. |
 
 Canonical ledger completions that have no submitted job are classified as
