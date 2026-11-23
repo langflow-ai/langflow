@@ -451,6 +451,9 @@ DANGEROUS_IMPORTS: set[str] = {
     # SQL can write files, load extensions, and issue network requests.
     "duckdb",
     "_duckdb",
+    # SQLite connections can load native extensions.
+    "sqlite3",
+    "_sqlite3",
 }
 
 # Dangerous *submodules* of packages that also expose safe siblings. Block the
