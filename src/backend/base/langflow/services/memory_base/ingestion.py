@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import uuid
 from contextlib import AsyncExitStack, asynccontextmanager, nullcontext
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
@@ -606,7 +607,12 @@ async def cancel_active_jobs(*, memory_base_id: uuid.UUID, db: AsyncSession) -> 
             # would contend with this transaction's own write lock under SQLite
             # (the caller is mid flow-deletion transaction), timing out and
             # aborting this loop before later jobs are cancelled.
-            await crud_update_job_status(db, job.job_id, JobStatus.CANCELLED)
+            # Stamp the finish time with the status: retention dates an
+            # unstamped terminal row from its creation, which deletes a
+            # long-running job the moment it is cancelled.
+            await crud_update_job_status(
+                db, job.job_id, JobStatus.CANCELLED, finished_timestamp=datetime.now(timezone.utc)
+            )
             await logger.ainfo("Cancelled job %s for memory_base %s", job.job_id, memory_base_id)
         except (RuntimeError, ValueError, OSError):
             await logger.awarning(
