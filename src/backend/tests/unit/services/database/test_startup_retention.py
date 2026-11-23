@@ -9,7 +9,7 @@ import pytest
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.utils import clean_transactions, clean_vertex_builds
-from sqlalchemy import schema
+from sqlalchemy import make_url, schema
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -23,6 +23,7 @@ async def retention_session(request, tmp_path):
         url = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
         if not url:
             pytest.skip("LANGFLOW_TEST_DATABASE_URI is required for PostgreSQL")
+        url = make_url(url).set(drivername="postgresql+asyncpg")
         engine = create_async_engine(url, connect_args={"server_settings": {"search_path": namespace}})
         async with engine.begin() as connection:
             await connection.execute(schema.CreateSchema(namespace))
