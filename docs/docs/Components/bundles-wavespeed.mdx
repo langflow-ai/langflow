@@ -1,0 +1,78 @@
+---
+title: WaveSpeed
+slug: /bundles-wavespeed
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **WaveSpeed** bundle.
+
+[WaveSpeed](https://wavespeed.ai) provides image and video generation models through one REST API.
+
+All components need a WaveSpeed API key.
+[Create one](https://wavespeed.ai/accesskey), then enter it in the **WaveSpeed API Key** field, or store it in a [global variable](/configuration-global-variables) named `WAVESPEED_API_KEY`.
+
+Each component submits one run to `api.wavespeed.ai`, then checks the result every two seconds until the run finishes or the **Timeout** passes.
+A submission is never repeated, so each component run starts at most one model run.
+
+Both components accept the id of any model from the [WaveSpeed model catalog](https://wavespeed.ai/models) in the **Model** field.
+Inputs that a model does not have can be left at `auto`, and inputs that the components do not show can be passed in **Extra Input** as a JSON object.
+
+If a request fails, for example because the API key is missing or invalid or the model rejects the input, the output contains an `error` key that describes the problem.
+
+For more information, see the [WaveSpeed documentation](https://wavespeed.ai/docs).
+
+## WaveSpeed Image Generation
+
+This component generates images from a text prompt, or edits input images.
+
+With the default model, `bytedance/seedream-v5.5`, entering one or more **Image URLs** switches the run to `bytedance/seedream-v5.5/edit`, which accepts up to 10 images.
+With any other model, the image URLs are sent as the model's `images` input.
+
+It outputs a [`Data`](/data-types#json) object.
+The `text` and `image_url` are the URL of the first image, `image_urls` lists every image, and the data also has the `model` and `prediction_id`.
+
+### WaveSpeed Image Generation parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| WaveSpeed API Key (`api_key`) | SecretString | Input parameter. Your WaveSpeed API key. |
+| Prompt (`prompt`) | String | Input parameter. Describes the image to generate, or the change to make to the input images. |
+| Image URLs (`image_urls`) | List | Input parameter. Optional `http://` or `https://` URLs of images to edit. |
+| Model (`model`) | String | Input parameter. The WaveSpeed model id. Default: `bytedance/seedream-v5.5`. |
+| Aspect Ratio (`aspect_ratio`) | Dropdown | Input parameter. The aspect ratio of the image, such as `16:9`. `auto` leaves it to the model's default. Default: `auto`. |
+| Resolution (`resolution`) | Dropdown | Input parameter. The output resolution: `1k`, `1.5k`, or `2k`. `auto` leaves it to the model's default. Default: `auto`. |
+| Extra Input (`extra_input`) | String | Input parameter. Optional JSON object of additional model inputs, such as `{"output_format": "jpeg"}`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for the image. Default: `300`. |
+
+## WaveSpeed Video Generation
+
+This component generates a video from a text prompt, or from a first-frame image.
+
+With the default model, `alibaba/wan-3.0/text-to-video`, entering an **Image URL** switches the run to `alibaba/wan-3.0/image-to-video`.
+With any other model, the image URL is sent as the model's `image` input.
+
+It outputs a [`Data`](/data-types#json) object.
+The `text` and `video_url` are the URL of the first video, `video_urls` lists every video, and the data also has the `model` and `prediction_id`.
+
+### WaveSpeed Video Generation parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| WaveSpeed API Key (`api_key`) | SecretString | Input parameter. Your WaveSpeed API key. |
+| Prompt (`prompt`) | String | Input parameter. Describes the video to generate. |
+| Image URL (`image_url`) | String | Input parameter. Optional `http://` or `https://` URL of the first frame. |
+| Model (`model`) | String | Input parameter. The WaveSpeed model id. Default: `alibaba/wan-3.0/text-to-video`. |
+| Aspect Ratio (`aspect_ratio`) | Dropdown | Input parameter. The aspect ratio of the video, such as `16:9`. `auto` leaves it to the model's default. Default: `auto`. |
+| Resolution (`resolution`) | Dropdown | Input parameter. The output resolution: `480p`, `720p`, or `1080p`. `auto` leaves it to the model's default. Default: `auto`. |
+| Duration (seconds) (`duration`) | Integer | Input parameter. The length of the video. `0` leaves it to the model's default. Default: `5`. |
+| Extra Input (`extra_input`) | String | Input parameter. Optional JSON object of additional model inputs, such as `{"seed": 42}`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for the video. Default: `900`. |
