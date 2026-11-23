@@ -411,7 +411,7 @@ module.exports = {
         {
           type: "doc",
           id: "Lfx/lfx-dependency-ready",
-          label: "Dependency-ready Python graphs"
+          label: "Start components when their inputs are ready"
         },
         {
           type: "doc",
