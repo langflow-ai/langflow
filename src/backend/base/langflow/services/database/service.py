@@ -293,7 +293,13 @@ def _configure_idle_pre_ping(engine: AsyncEngine, idle_seconds: float) -> None:
         last_checkin = connection_record.info.get("last_checkin")
         if last_checkin is None or (time.monotonic() - last_checkin) < idle_seconds:
             return
-        if not sync_engine.dialect.do_ping(dbapi_conn):
+        try:
+            ping_ok = sync_engine.dialect.do_ping(dbapi_conn)
+        except Exception as err:
+            if sync_engine.dialect.is_disconnect(err, dbapi_conn, None):
+                raise sa.exc.DisconnectionError from err
+            raise
+        if not ping_ok:
             raise sa.exc.DisconnectionError
 
 

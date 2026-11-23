@@ -87,3 +87,51 @@ async def test_idle_pre_ping_invalidates_stale_connection_on_failed_probe(tmp_pa
             assert ping_calls == [False]
     finally:
         await engine.dispose()
+
+
+@pytest.mark.asyncio
+async def test_idle_pre_ping_reconnects_on_disconnect_exception_and_propagates_other_errors(tmp_path):
+    db_file = tmp_path / "idle_exc.db"
+    engine = create_async_engine(f"sqlite+aiosqlite:///{db_file}", pool_pre_ping=False)
+    clock = _FakeClock()
+    disconnect_err = RuntimeError("server closed the connection unexpectedly")
+    other_err = ValueError("unexpected driver error")
+    calls = 0
+
+    def _raise_disconnect(_conn) -> bool:
+        nonlocal calls
+        calls += 1
+        raise disconnect_err
+
+    try:
+        with (
+            patch("langflow.services.database.service.time.monotonic", side_effect=clock),
+            patch.object(engine.sync_engine.dialect, "do_ping", side_effect=_raise_disconnect),
+            patch.object(
+                engine.sync_engine.dialect,
+                "is_disconnect",
+                side_effect=lambda err, _conn, _cur: err is disconnect_err,
+            ),
+        ):
+            _configure_idle_pre_ping(engine, idle_seconds=5.0)
+
+            async with engine.connect() as conn:
+                await conn.execute(sa.text("SELECT 1"))
+
+            clock.now += 6.0
+            async with engine.connect() as conn:
+                res = await conn.execute(sa.text("SELECT 1"))
+                assert res.scalar_one() == 1
+            assert calls == 1
+
+        with (
+            patch("langflow.services.database.service.time.monotonic", side_effect=clock),
+            patch.object(engine.sync_engine.dialect, "do_ping", side_effect=other_err),
+            patch.object(engine.sync_engine.dialect, "is_disconnect", return_value=False),
+        ):
+            clock.now += 6.0
+            with pytest.raises(ValueError, match="unexpected driver error"):
+                async with engine.connect():
+                    pass
+    finally:
+        await engine.dispose()
