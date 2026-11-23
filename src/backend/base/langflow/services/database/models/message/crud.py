@@ -65,11 +65,15 @@ async def delete_messages_for_user(session: AsyncSession, user_id: UUID, message
         # No owned targets: keep delete endpoint behavior as idempotent no-op.
         return
 
-    await session.exec(
-        delete(MessageTable)
-        .where(col(MessageTable.id).in_(owned_message_ids))
-        .execution_options(synchronize_session="fetch")
-    )
+    # Drop summary state that already folded these messages (same transaction).
+    from langflow.memory import reset_folded_session_memory
+
+    async with reset_folded_session_memory(session, col(MessageTable.id).in_(owned_message_ids)):
+        await session.exec(
+            delete(MessageTable)
+            .where(col(MessageTable.id).in_(owned_message_ids))
+            .execution_options(synchronize_session="fetch")
+        )
 
 
 async def delete_messages_for_user_by_session(session: AsyncSession, user_id: UUID, session_id: str) -> None:

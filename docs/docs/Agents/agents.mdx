@@ -135,6 +135,30 @@ Langflow sends events to the Playground during each agent run: the input message
 Langflow writes the completed message to chat history when the run finishes.
 When using the **Structured Response** output, Langflow does not send events to the Playground and does not write to chat history.
 
+#### Summarize older messages
+
+When **Summarize Older Messages** (`summarize_older_messages`) is enabled, the **Agent** component keeps a short summary of the messages that are older than the chat history window.
+The agent sends the summary and the latest messages, so early facts survive when **Number of Chat History Messages** is small.
+This option is disabled by default.
+
+Use it for long chats where users refer back to early messages.
+
+When 20 or more older messages are not yet summarized, Langflow makes one extra call to the agent's model in the background.
+It starts at most one call for each run, and the call runs at the same time as the answer.
+On runs that summarize, the run can end a few seconds after the answer.
+Langflow stores the summary with the chat session.
+Agents in the same flow and session share one summary, so give them the same **Number of Chat History Messages**.
+When a message that the summary covers is edited or deleted, Langflow rebuilds the summary over the next runs.
+
+The agent uses only the latest messages, as before, in these cases:
+
+* The flow runs without a Langflow database, for example with standalone `lfx`.
+* The run doesn't store messages in chat history.
+
+When **Number of Chat History Messages** is `0`, the agent sends no chat history and no summary.
+
+When a summary call fails or times out, the agent keeps the existing summary and makes no new summary call for that chat for ten minutes. Each Langflow server process keeps this pause on its own.
+
 For more information, see [Store chat memory](/memory#store-chat-memory) and [**Message History** component](/message-history).
 
 ### Additional parameters

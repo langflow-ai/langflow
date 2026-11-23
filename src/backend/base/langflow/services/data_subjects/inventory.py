@@ -67,6 +67,7 @@ TABLE_POLICY: dict[str, str] = {
     "project_replacement_operation": BUILDER_ROWS,
     "refresh_token_session": BUILDER_ROWS,
     "secret_rotation": NOT_PERSONAL,
+    "session_memory_state": "end-user rows matched by derived id or session prefix; builder rows deleted by user id",
     "span": ERASED_WITH_FLOW,
     "sso_config": REFERENCE_CLEARED,
     "sso_settings": NOT_PERSONAL,
