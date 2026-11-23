@@ -1,6 +1,5 @@
 import asyncio
 import hashlib
-import os
 import re
 import time
 from typing import Any
@@ -582,7 +581,9 @@ def normalize_azure_ai_foundry_endpoint(endpoint: str) -> str:
 
 def ensure_foundry_credential_endpoint_allowed(api_key: Any, endpoint: str) -> None:
     """Trust the operator's configured Foundry resource, or an explicitly allowed host."""
-    configured = os.environ.get("AZURE_AI_FOUNDRY_ENDPOINT")
+    from lfx.base.models.unified_models import provider_variable_from_env
+
+    configured = provider_variable_from_env("AZURE_AI_FOUNDRY_ENDPOINT")
     ensure_credential_endpoint_allowed(
         api_key,
         normalize_azure_ai_foundry_endpoint(endpoint),
@@ -593,9 +594,11 @@ def ensure_foundry_credential_endpoint_allowed(api_key: Any, endpoint: str) -> N
 
 def ensure_watsonx_credential_endpoint_allowed(api_key: Any, url: str) -> None:
     """Authorize the effective Watsonx SDK credentials before opening a connection."""
+    from lfx.base.models.unified_models import provider_variable_from_env
+
     if url.rstrip("/") in IBM_WATSONX_URLS:
         return
-    configured = os.environ.get("WATSONX_URL")
+    configured = provider_variable_from_env("WATSONX_URL")
     ensure_credential_endpoint_allowed(
         api_key, url, default_url=configured, sdk_env_fallback=("WATSONX_API_KEY", "WATSONX_APIKEY")
     )

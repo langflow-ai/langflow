@@ -929,32 +929,32 @@ def _build_available_embedding_models(
             if not provider_policy.allows_model(provider, model_name, model_type="embeddings"):
                 continue
 
-            composed = _compose_embedding_kwargs(
-                provider,
-                model_name,
-                user_id,
-                unified_models_module,
-                selected_provider=selected_provider,
-                metadata=provider_metadata,
-                component_api_key=component_api_key,
-                api_base=api_base,
-                dimensions=dimensions,
-                chunk_size=chunk_size,
-                request_timeout=request_timeout,
-                max_retries=max_retries,
-                show_progress_bar=show_progress_bar,
-                model_kwargs=model_kwargs,
-                watsonx_url=watsonx_url,
-                watsonx_project_id=watsonx_project_id,
-                watsonx_truncate_input_tokens=watsonx_truncate_input_tokens,
-                watsonx_input_text=watsonx_input_text,
-                ollama_base_url=ollama_base_url,
-            )
-            if composed is None:
-                continue
-
-            embedding_class, model_kwargs_dict = composed
             try:
+                composed = _compose_embedding_kwargs(
+                    provider,
+                    model_name,
+                    user_id,
+                    unified_models_module,
+                    selected_provider=selected_provider,
+                    metadata=provider_metadata,
+                    component_api_key=component_api_key,
+                    api_base=api_base,
+                    dimensions=dimensions,
+                    chunk_size=chunk_size,
+                    request_timeout=request_timeout,
+                    max_retries=max_retries,
+                    show_progress_bar=show_progress_bar,
+                    model_kwargs=model_kwargs,
+                    watsonx_url=watsonx_url,
+                    watsonx_project_id=watsonx_project_id,
+                    watsonx_truncate_input_tokens=watsonx_truncate_input_tokens,
+                    watsonx_input_text=watsonx_input_text,
+                    ollama_base_url=ollama_base_url,
+                )
+                if composed is None:
+                    continue
+
+                embedding_class, model_kwargs_dict = composed
                 available_models[model_name] = embedding_class(**model_kwargs_dict)
             except Exception:  # noqa: BLE001
                 logger.debug(
