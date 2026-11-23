@@ -8,6 +8,8 @@ import zipfile
 from pathlib import Path
 from typing import Any, TypeVar
 
+from pydantic import ValidationError
+
 from langflow_sdk._http import _HTTP_201_CREATED, _logger
 from langflow_sdk.models import FlowCreate, RunRequest, StreamChunk
 from langflow_sdk.serialization import flow_to_json, normalize_flow
@@ -125,9 +127,8 @@ class _ClientCommon:
     def _parse_stream_chunk(raw: str) -> StreamChunk | None:
         """Parse one NDJSON/SSE chunk, skipping malformed lines."""
         try:
-            obj = json.loads(raw)
-            return StreamChunk(event=obj["event"], data=obj.get("data", {}))
-        except (json.JSONDecodeError, KeyError):
+            return StreamChunk.model_validate(json.loads(raw))
+        except (json.JSONDecodeError, ValidationError):
             _logger.debug("Skipping malformed SSE chunk", exc_info=True)
             return None
 
