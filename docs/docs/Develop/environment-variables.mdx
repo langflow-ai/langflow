@@ -379,6 +379,8 @@ To modify the Windows user environment variables, do the following:
 export LANGFLOW_DEPLOYMENT_TYPED_VARIABLES_ENABLED=true
 ```
 
+Deployment packages resolve saved field bindings against the project owner's variables. If only a collaborator owns the referenced variable, packaging stops and identifies the flow and field to rebind. This check also applies when typed declarations are disabled.
+
 Enable typed declarations only when the destination supports version 7 deployment artifacts.
 This setting requires `LANGFLOW_VARIABLE_STORE=db` and defaults to `false`.
 Packages declare each referenced variable as `secret` or `plain` without including its value.
