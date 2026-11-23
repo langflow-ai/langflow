@@ -7,7 +7,7 @@ const Datacircle = (props) => (
     viewBox="0 0 32 32"
     {...props}
   >
-    <rect width="32" height="32" rx="7" fill="#0063F4" />
+    <rect width="32" height="32" rx="7" fill="#185C37" />
     <g fill="#fff" stroke="#fff" strokeLinecap="round">
       <circle cx="16.00" cy="3.00" r="1.05" />
       <path d="M16.00 4.40L16.00 6.60" strokeWidth="1.6" />
