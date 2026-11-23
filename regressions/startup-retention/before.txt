@@ -62,14 +62,14 @@ limit = -1
                 ).all()
 >               assert set(remaining) == set(expected)
 E               AssertionError: assert set() == {UUID('000000...00000000005')}
-E                 
+E
 E                 Extra items in the right set:
 E                 UUID('00000000-0000-0000-0000-000000000001')
 E                 UUID('00000000-0000-0000-0000-000000000002')
 E                 UUID('00000000-0000-0000-0000-000000000003')
 E                 UUID('00000000-0000-0000-0000-000000000004')
 E                 UUID('00000000-0000-0000-0000-000000000005')...
-E                 
+E
 E                 ...Full output truncated, use '-vv' to show
 
 src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
@@ -110,14 +110,14 @@ limit = 1
                 ).all()
 >               assert set(remaining) == set(expected)
 E               AssertionError: assert {UUID('000000...00000000001')} == {UUID('000000...00000000005')}
-E                 
+E
 E                 Extra items in the left set:
 E                 UUID('00000000-0000-0000-0000-000000000001')
 E                 Extra items in the right set:
 E                 UUID('00000000-0000-0000-0000-000000000005')
-E                 
+E
 E                 Full diff: (-: missing in left side, +: extra in left side)...
-E                 
+E
 E                 ...Full output truncated, use '-vv' to show
 
 src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
@@ -158,14 +158,14 @@ limit = 3
                 ).all()
 >               assert set(remaining) == set(expected)
 E               AssertionError: assert {UUID('000000...00000000003')} == {UUID('000000...00000000005')}
-E                 
+E
 E                 Extra items in the left set:
 E                 UUID('00000000-0000-0000-0000-000000000001')
 E                 UUID('00000000-0000-0000-0000-000000000002')
 E                 Extra items in the right set:
 E                 UUID('00000000-0000-0000-0000-000000000004')
 E                 UUID('00000000-0000-0000-0000-000000000005')...
-E                 
+E
 E                 ...Full output truncated, use '-vv' to show
 
 src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
@@ -206,10 +206,10 @@ limit = 6
                 ).all()
 >               assert set(remaining) == set(expected)
 E               AssertionError: assert {UUID('000000...0000000000b')} == {UUID('000000...0000000000c')}
-E                 
+E
 E                 Extra items in the right set:
 E                 UUID('00000000-0000-0000-0000-00000000000c')
-E                 
+E
 E                 Full diff: (-: missing in left side, +: extra in left side)
 E                   {
 E                       UUID('00000000-0000-0000-0000-00000000000b'),
@@ -254,14 +254,14 @@ limit = 1
                 ).all()
 >               assert set(remaining) == set(expected)
 E               AssertionError: assert {UUID('000000...00000000001')} == {UUID('000000...00000000005')}
-E                 
+E
 E                 Extra items in the left set:
 E                 UUID('00000000-0000-0000-0000-000000000001')
 E                 Extra items in the right set:
 E                 UUID('00000000-0000-0000-0000-000000000005')
-E                 
+E
 E                 Full diff: (-: missing in left side, +: extra in left side)...
-E                 
+E
 E                 ...Full output truncated, use '-vv' to show
 
 src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
@@ -302,14 +302,14 @@ limit = 3
                 ).all()
 >               assert set(remaining) == set(expected)
 E               AssertionError: assert {UUID('000000...00000000003')} == {UUID('000000...00000000005')}
-E                 
+E
 E                 Extra items in the left set:
 E                 UUID('00000000-0000-0000-0000-000000000001')
 E                 UUID('00000000-0000-0000-0000-000000000002')
 E                 Extra items in the right set:
 E                 UUID('00000000-0000-0000-0000-000000000004')
 E                 UUID('00000000-0000-0000-0000-000000000005')...
-E                 
+E
 E                 ...Full output truncated, use '-vv' to show
 
 src/backend/tests/unit/services/database/test_startup_retention.py:78: AssertionError
@@ -350,10 +350,10 @@ limit = 6
                 ).all()
 >               assert set(remaining) == set(expected)
 E               AssertionError: assert {UUID('000000...0000000000b')} == {UUID('000000...0000000000c')}
-E                 
+E
 E                 Extra items in the right set:
 E                 UUID('00000000-0000-0000-0000-00000000000c')
-E                 
+E
 E                 Full diff: (-: missing in left side, +: extra in left side)
 E                   {
 E                       UUID('00000000-0000-0000-0000-00000000000b'),
@@ -385,10 +385,10 @@ limit = 1
             remaining = (await async_session.exec(select(VertexBuildTable.build_id))).all()
 >           assert set(remaining) == expected
 E           AssertionError: assert set() == {UUID('000000...00000000005')}
-E             
+E
 E             Extra items in the right set:
 E             UUID('00000000-0000-0000-0000-000000000005')
-E             
+E
 E             Full diff: (-: missing in left side, +: extra in left side)
 E             + set()
 E             - {
@@ -420,14 +420,14 @@ limit = 3
             remaining = (await async_session.exec(select(VertexBuildTable.build_id))).all()
 >           assert set(remaining) == expected
 E           AssertionError: assert set() == {UUID('000000...00000000005')}
-E             
+E
 E             Extra items in the right set:
 E             UUID('00000000-0000-0000-0000-000000000003')
 E             UUID('00000000-0000-0000-0000-000000000004')
 E             UUID('00000000-0000-0000-0000-000000000005')
-E             
+E
 E             Full diff: (-: missing in left side, +: extra in left side)...
-E             
+E
 E             ...Full output truncated, use '-vv' to show
 
 src/backend/tests/unit/services/database/test_startup_retention.py:98: AssertionError
@@ -455,10 +455,10 @@ limit = 1
             remaining = (await async_session.exec(select(VertexBuildTable.build_id))).all()
 >           assert set(remaining) == expected
 E           AssertionError: assert set() == {UUID('000000...00000000005')}
-E             
+E
 E             Extra items in the right set:
 E             UUID('00000000-0000-0000-0000-000000000005')
-E             
+E
 E             Full diff: (-: missing in left side, +: extra in left side)
 E             + set()
 E             - {
@@ -490,14 +490,14 @@ limit = 3
             remaining = (await async_session.exec(select(VertexBuildTable.build_id))).all()
 >           assert set(remaining) == expected
 E           AssertionError: assert set() == {UUID('000000...00000000005')}
-E             
+E
 E             Extra items in the right set:
 E             UUID('00000000-0000-0000-0000-000000000003')
 E             UUID('00000000-0000-0000-0000-000000000004')
 E             UUID('00000000-0000-0000-0000-000000000005')
-E             
+E
 E             Full diff: (-: missing in left side, +: extra in left side)...
-E             
+E
 E             ...Full output truncated, use '-vv' to show
 
 src/backend/tests/unit/services/database/test_startup_retention.py:98: AssertionError
@@ -528,9 +528,9 @@ retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f50
         assert (await session.exec(select(TransactionTable.id))).all() == [UUID(int=1)]
 >       assert (await session.exec(select(VertexBuildTable.build_id))).all() == [UUID(int=1)]
 E       AssertionError: assert [] == [UUID('000000...00000000001')]
-E         
+E
 E         Right contains one more item: UUID('00000000-0000-0000-0000-000000000001')
-E         
+E
 E         Full diff: (-: missing in left side, +: extra in left side)
 E         + []
 E         - [
@@ -565,9 +565,9 @@ retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x14f57
         assert (await session.exec(select(TransactionTable.id))).all() == [UUID(int=1)]
 >       assert (await session.exec(select(VertexBuildTable.build_id))).all() == [UUID(int=1)]
 E       AssertionError: assert [] == [UUID('000000...00000000001')]
-E         
+E
 E         Right contains one more item: UUID('00000000-0000-0000-0000-000000000001')
-E         
+E
 E         Full diff: (-: missing in left side, +: extra in left side)
 E         + []
 E         - [
