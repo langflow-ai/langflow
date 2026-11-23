@@ -6,9 +6,8 @@ from unittest.mock import patch
 
 import pytest
 import sqlalchemy as sa
-from sqlalchemy.ext.asyncio import create_async_engine
-
 from langflow.services.database.service import _configure_idle_pre_ping
+from sqlalchemy.ext.asyncio import create_async_engine
 
 
 class _FakeClock:

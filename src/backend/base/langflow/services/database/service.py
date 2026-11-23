@@ -294,7 +294,7 @@ def _configure_idle_pre_ping(engine: AsyncEngine, idle_seconds: float) -> None:
         if last_checkin is None or (time.monotonic() - last_checkin) < idle_seconds:
             return
         if not sync_engine.dialect.do_ping(dbapi_conn):
-            raise sa.exc.DisconnectionError("Connection failed idle pre-ping probe.")
+            raise sa.exc.DisconnectionError
 
 
 class DatabaseService(Service):
@@ -462,7 +462,9 @@ class DatabaseService(Service):
                 kwargs.pop("poolclass", None)
 
         idle_seconds = float(getattr(self.settings_service.settings, "pool_pre_ping_idle_seconds", 0.0) or 0.0)
-        use_idle_probe = bool(kwargs.get("pool_pre_ping")) and idle_seconds > 0 and not self.database_url.startswith("sqlite")
+        use_idle_probe = (
+            bool(kwargs.get("pool_pre_ping")) and idle_seconds > 0 and not self.database_url.startswith("sqlite")
+        )
         if use_idle_probe:
             kwargs["pool_pre_ping"] = False
 
