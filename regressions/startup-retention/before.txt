@@ -1,0 +1,535 @@
+
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-0] PASSED [  4%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-1] FAILED [  9%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-3] FAILED [ 13%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-6] FAILED [ 18%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-0] PASSED [ 22%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-1] FAILED [ 27%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-3] FAILED [ 31%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-6] FAILED [ 36%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-0] PASSED [ 40%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-1] FAILED [ 45%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-3] FAILED [ 50%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-6] PASSED [ 54%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-0] PASSED [ 59%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-1] FAILED [ 63%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-3] FAILED [ 68%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-6] PASSED [ 72%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_can_be_rolled_back[sqlite] PASSED [ 77%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_can_be_rolled_back[postgresql] PASSED [ 81%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[sqlite] FAILED [ 86%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[postgresql] FAILED [ 90%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_preserves_concurrent_new_flow[sqlite] SKIPPED [ 95%]
+src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_cleanup_preserves_concurrent_new_flow[postgresql] PASSED [100%]
+
+=================================== FAILURES ===================================
+___ test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-1] ____
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x1694f3610>
+limit = 1
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
+        """A busy flow must not evict another flow's transaction history."""
+        async_session = retention_session
+        flow_ids = [uuid4(), uuid4()]
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        ids = []
+        for flow_id, count in zip(flow_ids, [5, 2], strict=True):
+            rows = [
+                TransactionTable(
+                    id=UUID(int=index + 1 + len(ids) * 10),
+                    flow_id=flow_id,
+                    timestamp=timestamp,
+                    vertex_id="reused",
+                    status="success",
+                )
+                for index in range(count)
+            ]
+            async_session.add_all(rows)
+            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
+        for _ in range(2):
+            await clean_transactions(settings, async_session)
+            await async_session.commit()
+            for flow_id, expected in zip(flow_ids, ids, strict=True):
+                remaining = (
+                    await async_session.exec(select(TransactionTable.id).where(TransactionTable.flow_id == flow_id))
+                ).all()
+>               assert set(remaining) == set(expected)
+E               AssertionError: assert {UUID('000000...00000000001')} == {UUID('000000...00000000005')}
+E                 
+E                 Extra items in the left set:
+E                 UUID('00000000-0000-0000-0000-000000000001')
+E                 Extra items in the right set:
+E                 UUID('00000000-0000-0000-0000-000000000005')
+E                 
+E                 Full diff: (-: missing in left side, +: extra in left side)...
+E                 
+E                 ...Full output truncated, use '-vv' to show
+
+src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+___ test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-3] ____
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16a882d50>
+limit = 3
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
+        """A busy flow must not evict another flow's transaction history."""
+        async_session = retention_session
+        flow_ids = [uuid4(), uuid4()]
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        ids = []
+        for flow_id, count in zip(flow_ids, [5, 2], strict=True):
+            rows = [
+                TransactionTable(
+                    id=UUID(int=index + 1 + len(ids) * 10),
+                    flow_id=flow_id,
+                    timestamp=timestamp,
+                    vertex_id="reused",
+                    status="success",
+                )
+                for index in range(count)
+            ]
+            async_session.add_all(rows)
+            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
+        for _ in range(2):
+            await clean_transactions(settings, async_session)
+            await async_session.commit()
+            for flow_id, expected in zip(flow_ids, ids, strict=True):
+                remaining = (
+                    await async_session.exec(select(TransactionTable.id).where(TransactionTable.flow_id == flow_id))
+                ).all()
+>               assert set(remaining) == set(expected)
+E               AssertionError: assert {UUID('000000...00000000003')} == {UUID('000000...00000000005')}
+E                 
+E                 Extra items in the left set:
+E                 UUID('00000000-0000-0000-0000-000000000001')
+E                 UUID('00000000-0000-0000-0000-000000000002')
+E                 Extra items in the right set:
+E                 UUID('00000000-0000-0000-0000-000000000004')
+E                 UUID('00000000-0000-0000-0000-000000000005')...
+E                 
+E                 ...Full output truncated, use '-vv' to show
+
+src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+___ test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-6] ____
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16a905cd0>
+limit = 6
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
+        """A busy flow must not evict another flow's transaction history."""
+        async_session = retention_session
+        flow_ids = [uuid4(), uuid4()]
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        ids = []
+        for flow_id, count in zip(flow_ids, [5, 2], strict=True):
+            rows = [
+                TransactionTable(
+                    id=UUID(int=index + 1 + len(ids) * 10),
+                    flow_id=flow_id,
+                    timestamp=timestamp,
+                    vertex_id="reused",
+                    status="success",
+                )
+                for index in range(count)
+            ]
+            async_session.add_all(rows)
+            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
+        for _ in range(2):
+            await clean_transactions(settings, async_session)
+            await async_session.commit()
+            for flow_id, expected in zip(flow_ids, ids, strict=True):
+                remaining = (
+                    await async_session.exec(select(TransactionTable.id).where(TransactionTable.flow_id == flow_id))
+                ).all()
+>               assert set(remaining) == set(expected)
+E               AssertionError: assert {UUID('000000...0000000000b')} == {UUID('000000...0000000000c')}
+E                 
+E                 Extra items in the right set:
+E                 UUID('00000000-0000-0000-0000-00000000000c')
+E                 
+E                 Full diff: (-: missing in left side, +: extra in left side)
+E                   {
+E                       UUID('00000000-0000-0000-0000-00000000000b'),
+E                 -     UUID('00000000-0000-0000-0000-00000000000c'),
+E                   }
+
+src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+_ test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-1] __
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b2ca8d0>
+limit = 1
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
+        """A busy flow must not evict another flow's transaction history."""
+        async_session = retention_session
+        flow_ids = [uuid4(), uuid4()]
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        ids = []
+        for flow_id, count in zip(flow_ids, [5, 2], strict=True):
+            rows = [
+                TransactionTable(
+                    id=UUID(int=index + 1 + len(ids) * 10),
+                    flow_id=flow_id,
+                    timestamp=timestamp,
+                    vertex_id="reused",
+                    status="success",
+                )
+                for index in range(count)
+            ]
+            async_session.add_all(rows)
+            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
+        for _ in range(2):
+            await clean_transactions(settings, async_session)
+            await async_session.commit()
+            for flow_id, expected in zip(flow_ids, ids, strict=True):
+                remaining = (
+                    await async_session.exec(select(TransactionTable.id).where(TransactionTable.flow_id == flow_id))
+                ).all()
+>               assert set(remaining) == set(expected)
+E               AssertionError: assert {UUID('000000...00000000001')} == {UUID('000000...00000000005')}
+E                 
+E                 Extra items in the left set:
+E                 UUID('00000000-0000-0000-0000-000000000001')
+E                 Extra items in the right set:
+E                 UUID('00000000-0000-0000-0000-000000000005')
+E                 
+E                 Full diff: (-: missing in left side, +: extra in left side)...
+E                 
+E                 ...Full output truncated, use '-vv' to show
+
+src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+_ test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-3] __
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b29a9c0>
+limit = 3
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
+        """A busy flow must not evict another flow's transaction history."""
+        async_session = retention_session
+        flow_ids = [uuid4(), uuid4()]
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        ids = []
+        for flow_id, count in zip(flow_ids, [5, 2], strict=True):
+            rows = [
+                TransactionTable(
+                    id=UUID(int=index + 1 + len(ids) * 10),
+                    flow_id=flow_id,
+                    timestamp=timestamp,
+                    vertex_id="reused",
+                    status="success",
+                )
+                for index in range(count)
+            ]
+            async_session.add_all(rows)
+            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
+        for _ in range(2):
+            await clean_transactions(settings, async_session)
+            await async_session.commit()
+            for flow_id, expected in zip(flow_ids, ids, strict=True):
+                remaining = (
+                    await async_session.exec(select(TransactionTable.id).where(TransactionTable.flow_id == flow_id))
+                ).all()
+>               assert set(remaining) == set(expected)
+E               AssertionError: assert {UUID('000000...00000000003')} == {UUID('000000...00000000005')}
+E                 
+E                 Extra items in the left set:
+E                 UUID('00000000-0000-0000-0000-000000000001')
+E                 UUID('00000000-0000-0000-0000-000000000002')
+E                 Extra items in the right set:
+E                 UUID('00000000-0000-0000-0000-000000000004')
+E                 UUID('00000000-0000-0000-0000-000000000005')...
+E                 
+E                 ...Full output truncated, use '-vv' to show
+
+src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+_ test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-6] __
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b29b680>
+limit = 6
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_transaction_retention_is_per_flow_and_repeatable(retention_session, limit):
+        """A busy flow must not evict another flow's transaction history."""
+        async_session = retention_session
+        flow_ids = [uuid4(), uuid4()]
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        ids = []
+        for flow_id, count in zip(flow_ids, [5, 2], strict=True):
+            rows = [
+                TransactionTable(
+                    id=UUID(int=index + 1 + len(ids) * 10),
+                    flow_id=flow_id,
+                    timestamp=timestamp,
+                    vertex_id="reused",
+                    status="success",
+                )
+                for index in range(count)
+            ]
+            async_session.add_all(rows)
+            ids.append(sorted((row.id for row in rows), reverse=True)[:limit])
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
+        for _ in range(2):
+            await clean_transactions(settings, async_session)
+            await async_session.commit()
+            for flow_id, expected in zip(flow_ids, ids, strict=True):
+                remaining = (
+                    await async_session.exec(select(TransactionTable.id).where(TransactionTable.flow_id == flow_id))
+                ).all()
+>               assert set(remaining) == set(expected)
+E               AssertionError: assert {UUID('000000...0000000000b')} == {UUID('000000...0000000000c')}
+E                 
+E                 Extra items in the right set:
+E                 UUID('00000000-0000-0000-0000-00000000000c')
+E                 
+E                 Full diff: (-: missing in left side, +: extra in left side)
+E                   {
+E                       UUID('00000000-0000-0000-0000-00000000000b'),
+E                 -     UUID('00000000-0000-0000-0000-00000000000c'),
+E                   }
+
+src/backend/tests/unit/services/database/test_startup_retention.py:76: AssertionError
+_____________ test_startup_build_retention_uses_build_id[sqlite-1] _____________
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b6f0150>
+limit = 1
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_build_retention_uses_build_id(retention_session, limit):
+        """Deleting an old build must not delete newer builds of the same component."""
+        async_session = retention_session
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        rows = [
+            VertexBuildTable(build_id=UUID(int=i + 1), id="same-vertex", flow_id=uuid4(), valid=True, timestamp=timestamp)
+            for i in range(5)
+        ]
+        async_session.add_all(rows)
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_vertex_builds_to_keep=limit))
+        expected = {row.build_id for row in rows[-limit:]} if limit else set()
+        for _ in range(2):
+            await clean_vertex_builds(settings, async_session)
+            await async_session.commit()
+            remaining = (await async_session.exec(select(VertexBuildTable.build_id))).all()
+>           assert set(remaining) == expected
+E           AssertionError: assert set() == {UUID('000000...00000000005')}
+E             
+E             Extra items in the right set:
+E             UUID('00000000-0000-0000-0000-000000000005')
+E             
+E             Full diff: (-: missing in left side, +: extra in left side)
+E             + set()
+E             - {
+E             -     UUID('00000000-0000-0000-0000-000000000005'),
+E             - }
+
+src/backend/tests/unit/services/database/test_startup_retention.py:96: AssertionError
+_____________ test_startup_build_retention_uses_build_id[sqlite-3] _____________
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b70ed50>
+limit = 3
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_build_retention_uses_build_id(retention_session, limit):
+        """Deleting an old build must not delete newer builds of the same component."""
+        async_session = retention_session
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        rows = [
+            VertexBuildTable(build_id=UUID(int=i + 1), id="same-vertex", flow_id=uuid4(), valid=True, timestamp=timestamp)
+            for i in range(5)
+        ]
+        async_session.add_all(rows)
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_vertex_builds_to_keep=limit))
+        expected = {row.build_id for row in rows[-limit:]} if limit else set()
+        for _ in range(2):
+            await clean_vertex_builds(settings, async_session)
+            await async_session.commit()
+            remaining = (await async_session.exec(select(VertexBuildTable.build_id))).all()
+>           assert set(remaining) == expected
+E           AssertionError: assert set() == {UUID('000000...00000000005')}
+E             
+E             Extra items in the right set:
+E             UUID('00000000-0000-0000-0000-000000000003')
+E             UUID('00000000-0000-0000-0000-000000000004')
+E             UUID('00000000-0000-0000-0000-000000000005')
+E             
+E             Full diff: (-: missing in left side, +: extra in left side)...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+src/backend/tests/unit/services/database/test_startup_retention.py:96: AssertionError
+___________ test_startup_build_retention_uses_build_id[postgresql-1] ___________
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b7666d0>
+limit = 1
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_build_retention_uses_build_id(retention_session, limit):
+        """Deleting an old build must not delete newer builds of the same component."""
+        async_session = retention_session
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        rows = [
+            VertexBuildTable(build_id=UUID(int=i + 1), id="same-vertex", flow_id=uuid4(), valid=True, timestamp=timestamp)
+            for i in range(5)
+        ]
+        async_session.add_all(rows)
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_vertex_builds_to_keep=limit))
+        expected = {row.build_id for row in rows[-limit:]} if limit else set()
+        for _ in range(2):
+            await clean_vertex_builds(settings, async_session)
+            await async_session.commit()
+            remaining = (await async_session.exec(select(VertexBuildTable.build_id))).all()
+>           assert set(remaining) == expected
+E           AssertionError: assert set() == {UUID('000000...00000000005')}
+E             
+E             Extra items in the right set:
+E             UUID('00000000-0000-0000-0000-000000000005')
+E             
+E             Full diff: (-: missing in left side, +: extra in left side)
+E             + set()
+E             - {
+E             -     UUID('00000000-0000-0000-0000-000000000005'),
+E             - }
+
+src/backend/tests/unit/services/database/test_startup_retention.py:96: AssertionError
+___________ test_startup_build_retention_uses_build_id[postgresql-3] ___________
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b78dbf0>
+limit = 3
+
+    @pytest.mark.parametrize("limit", [0, 1, 3, 6])
+    async def test_startup_build_retention_uses_build_id(retention_session, limit):
+        """Deleting an old build must not delete newer builds of the same component."""
+        async_session = retention_session
+        timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        rows = [
+            VertexBuildTable(build_id=UUID(int=i + 1), id="same-vertex", flow_id=uuid4(), valid=True, timestamp=timestamp)
+            for i in range(5)
+        ]
+        async_session.add_all(rows)
+        await async_session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_vertex_builds_to_keep=limit))
+        expected = {row.build_id for row in rows[-limit:]} if limit else set()
+        for _ in range(2):
+            await clean_vertex_builds(settings, async_session)
+            await async_session.commit()
+            remaining = (await async_session.exec(select(VertexBuildTable.build_id))).all()
+>           assert set(remaining) == expected
+E           AssertionError: assert set() == {UUID('000000...00000000005')}
+E             
+E             Extra items in the right set:
+E             UUID('00000000-0000-0000-0000-000000000003')
+E             UUID('00000000-0000-0000-0000-000000000004')
+E             UUID('00000000-0000-0000-0000-000000000005')
+E             
+E             Full diff: (-: missing in left side, +: extra in left side)...
+E             
+E             ...Full output truncated, use '-vv' to show
+
+src/backend/tests/unit/services/database/test_startup_retention.py:96: AssertionError
+__________ test_startup_retention_orders_timestamp_before_id[sqlite] ___________
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b818b50>
+
+    async def test_startup_retention_orders_timestamp_before_id(retention_session):
+        """A larger ID cannot displace a newer record in either history table."""
+        session = retention_session
+        now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        flow_id = uuid4()
+        for index in range(3):
+            timestamp = now + timedelta(seconds=index)
+            session.add(
+                TransactionTable(
+                    id=UUID(int=3 - index), flow_id=flow_id, vertex_id="v", timestamp=timestamp, status="success"
+                )
+            )
+            session.add(
+                VertexBuildTable(build_id=UUID(int=3 - index), id="v", flow_id=flow_id, timestamp=timestamp, valid=True)
+            )
+        await session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=1, max_vertex_builds_to_keep=1))
+        await clean_transactions(settings, session)
+        await clean_vertex_builds(settings, session)
+        await session.commit()
+        assert (await session.exec(select(TransactionTable.id))).all() == [UUID(int=1)]
+>       assert (await session.exec(select(VertexBuildTable.build_id))).all() == [UUID(int=1)]
+E       AssertionError: assert [] == [UUID('000000...00000000001')]
+E         
+E         Right contains one more item: UUID('00000000-0000-0000-0000-000000000001')
+E         
+E         Full diff: (-: missing in left side, +: extra in left side)
+E         + []
+E         - [
+E         -     UUID('00000000-0000-0000-0000-000000000001'),
+E         - ]
+
+src/backend/tests/unit/services/database/test_startup_retention.py:133: AssertionError
+________ test_startup_retention_orders_timestamp_before_id[postgresql] _________
+
+retention_session = <sqlmodel.ext.asyncio.session.AsyncSession object at 0x16b2d28f0>
+
+    async def test_startup_retention_orders_timestamp_before_id(retention_session):
+        """A larger ID cannot displace a newer record in either history table."""
+        session = retention_session
+        now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        flow_id = uuid4()
+        for index in range(3):
+            timestamp = now + timedelta(seconds=index)
+            session.add(
+                TransactionTable(
+                    id=UUID(int=3 - index), flow_id=flow_id, vertex_id="v", timestamp=timestamp, status="success"
+                )
+            )
+            session.add(
+                VertexBuildTable(build_id=UUID(int=3 - index), id="v", flow_id=flow_id, timestamp=timestamp, valid=True)
+            )
+        await session.commit()
+        settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=1, max_vertex_builds_to_keep=1))
+        await clean_transactions(settings, session)
+        await clean_vertex_builds(settings, session)
+        await session.commit()
+        assert (await session.exec(select(TransactionTable.id))).all() == [UUID(int=1)]
+>       assert (await session.exec(select(VertexBuildTable.build_id))).all() == [UUID(int=1)]
+E       AssertionError: assert [] == [UUID('000000...00000000001')]
+E         
+E         Right contains one more item: UUID('00000000-0000-0000-0000-000000000001')
+E         
+E         Full diff: (-: missing in left side, +: extra in left side)
+E         + []
+E         - [
+E         -     UUID('00000000-0000-0000-0000-000000000001'),
+E         - ]
+
+src/backend/tests/unit/services/database/test_startup_retention.py:133: AssertionError
+=========================== short test summary info ============================
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-1]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-3]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[sqlite-6]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-1]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-3]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_transaction_retention_is_per_flow_and_repeatable[postgresql-6]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-1]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[sqlite-3]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-1]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_build_retention_uses_build_id[postgresql-3]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[sqlite]
+FAILED src/backend/tests/unit/services/database/test_startup_retention.py::test_startup_retention_orders_timestamp_before_id[postgresql]
+=================== 12 failed, 9 passed, 1 skipped in 1.69s ====================
