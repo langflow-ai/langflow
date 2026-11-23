@@ -74,6 +74,10 @@ class DatabaseSettings(BaseModel):
     - echo: Enable SQL query logging (development only)
     """
 
+    pool_pre_ping_idle_seconds: float = 10.0
+    """Seconds a pooled connection must sit idle before pre-ping probes it on checkout.
+    Set to 0 to probe on every checkout."""
+
     use_noop_database: bool = False
     """If True, disables all database operations and uses a no-op session.
     Controlled by LANGFLOW_USE_NOOP_DATABASE env variable."""

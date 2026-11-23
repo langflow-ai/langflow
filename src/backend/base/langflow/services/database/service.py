@@ -280,6 +280,23 @@ def _is_sqlite_memory_database(database_url: str, connect_args: Mapping[str, obj
     return target is not None and target.in_memory
 
 
+def _configure_idle_pre_ping(engine: AsyncEngine, idle_seconds: float) -> None:
+    """Probe pooled connections only after they have been idle for ``idle_seconds``."""
+    sync_engine = engine.sync_engine
+
+    @event.listens_for(sync_engine, "checkin")
+    def _record_checkin(_dbapi_conn, connection_record) -> None:
+        connection_record.info["last_checkin"] = time.monotonic()
+
+    @event.listens_for(sync_engine, "checkout")
+    def _probe_if_idle(dbapi_conn, connection_record, _connection_proxy) -> None:
+        last_checkin = connection_record.info.get("last_checkin")
+        if last_checkin is None or (time.monotonic() - last_checkin) < idle_seconds:
+            return
+        if not sync_engine.dialect.do_ping(dbapi_conn):
+            raise sa.exc.DisconnectionError("Connection failed idle pre-ping probe.")
+
+
 class DatabaseService(Service):
     name = "database_service"
 
@@ -444,11 +461,19 @@ class DatabaseService(Service):
                 logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
                 kwargs.pop("poolclass", None)
 
-        return create_async_engine(
+        idle_seconds = float(getattr(self.settings_service.settings, "pool_pre_ping_idle_seconds", 0.0) or 0.0)
+        use_idle_probe = bool(kwargs.get("pool_pre_ping")) and idle_seconds > 0 and not self.database_url.startswith("sqlite")
+        if use_idle_probe:
+            kwargs["pool_pre_ping"] = False
+
+        engine = create_async_engine(
             self.database_url,
             connect_args=self._get_connect_args(),
             **kwargs,
         )
+        if use_idle_probe:
+            _configure_idle_pre_ping(engine, idle_seconds)
+        return engine
 
     @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
     def _create_engine_with_retry(self) -> AsyncEngine:
@@ -547,9 +572,19 @@ class DatabaseService(Service):
         Reuses the main engine's ``connect_args`` so the driver behaves identically.
         """
         kwargs: dict = {}
+        idle_seconds = float(getattr(self.settings_service.settings, "pool_pre_ping_idle_seconds", 0.0) or 0.0)
+        use_idle_probe = idle_seconds > 0 and not self.database_url.startswith("sqlite")
         if not self.database_url.startswith("sqlite"):
-            kwargs = {"pool_size": 3, "max_overflow": 7, "pool_timeout": 5, "pool_pre_ping": True}
-        return create_async_engine(self.database_url, connect_args=self._get_connect_args(), **kwargs)
+            kwargs = {
+                "pool_size": 3,
+                "max_overflow": 7,
+                "pool_timeout": 5,
+                "pool_pre_ping": not use_idle_probe,
+            }
+        engine = create_async_engine(self.database_url, connect_args=self._get_connect_args(), **kwargs)
+        if use_idle_probe:
+            _configure_idle_pre_ping(engine, idle_seconds)
+        return engine
 
     async def _heartbeat_maker(self) -> async_sessionmaker:
         """Lazily build (once) the session maker bound to the dedicated heartbeat engine."""
