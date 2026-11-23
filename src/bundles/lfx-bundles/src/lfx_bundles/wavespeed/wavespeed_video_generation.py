@@ -14,6 +14,7 @@ from lfx_bundles.wavespeed.wavespeed_common import (
     DOCUMENTATION_URL,
     WaveSpeedAPIError,
     clean_model_id,
+    error_data,
     http_url,
     parse_extra_input,
     run_prediction,
@@ -148,7 +149,7 @@ class WaveSpeedVideoGenerationComponent(Component):
         except WaveSpeedAPIError as exc:
             await logger.aerror(str(exc))
             self.status = str(exc)
-            return Data(text=str(exc), data={"error": str(exc)})
+            return Data(text=str(exc), data=error_data(exc))
 
         result = Data(
             text=outputs[0],

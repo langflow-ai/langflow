@@ -18,13 +18,15 @@ This page describes the components that are available in the **WaveSpeed** bundl
 All components need a WaveSpeed API key.
 [Create one](https://wavespeed.ai/accesskey), then enter it in the **WaveSpeed API Key** field, or store it in a [global variable](/configuration-global-variables) named `WAVESPEED_API_KEY`.
 
-Each component submits one run to `api.wavespeed.ai`, then checks the result every two seconds until the run finishes or the **Timeout** passes.
-A submission is never repeated, so each component run starts at most one model run.
+Each component submits one run to `api.wavespeed.ai`, then checks the result every two seconds until the run finishes or the **Timeout** passes. The **Timeout** includes the submission.
+If a check is rate limited (429) or hits a server error, the component waits longer before the next check, following `Retry-After` when the API sends it.
+A submission is never repeated, so each component run starts at most one model run. If the submission's outcome is unknown, for example because it timed out, the error asks you to check your WaveSpeed history before running the component again.
 
 Both components accept the id of any model from the [WaveSpeed model catalog](https://wavespeed.ai/models) in the **Model** field.
 Inputs that a model does not have can be left at `auto`, and inputs that the components do not show can be passed in **Extra Input** as a JSON object.
 
 If a request fails, for example because the API key is missing or invalid or the model rejects the input, the output contains an `error` key that describes the problem.
+If the run was already accepted, for example when it is still going after the **Timeout**, the output also contains its `prediction_id` and `result_url`, so you can read the result later instead of paying for a new run.
 
 For more information, see the [WaveSpeed documentation](https://wavespeed.ai/docs).
 

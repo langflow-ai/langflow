@@ -232,7 +232,88 @@ class TestImageGeneration:
         with post_patch, patch("httpx.AsyncClient.get", get):
             result = await _image(timeout=0.05).generate_image()
         post.assert_awaited_once()
-        assert result.data["error"] == f"WaveSpeed run {PREDICTION_ID} did not finish within 0.05 seconds."
+        assert result.data["error"].startswith(f"WaveSpeed run {PREDICTION_ID} did not finish within 0.05 seconds.")
+        assert result.data["prediction_id"] == PREDICTION_ID
+        assert result.data["result_url"] == RESULT_URL
+
+
+# The same retry and timeout cases are covered for the crewAI WaveSpeed tools:
+# outputs that are not a list, 429/5xx while polling, and a timeout once a run id exists.
+@pytest.mark.unit
+class TestRetriesAndTimeouts:
+    @pytest.mark.parametrize("outputs", [IMAGE_OUT, {"url": IMAGE_OUT}, None])
+    async def test_outputs_that_are_not_a_list_are_an_error(self, outputs) -> None:
+        completed = _envelope({"id": PREDICTION_ID, "status": "completed", "outputs": outputs})
+        result, post, _get = await _run_image(_image(), _submitted(), [completed])
+        post.assert_awaited_once()
+        assert "outputs are not a list" in result.data["error"]
+        assert result.data["prediction_id"] == PREDICTION_ID
+
+    async def test_poll_429_and_5xx_back_off_and_honour_retry_after(self, monkeypatch) -> None:
+        monkeypatch.setattr(wavespeed_common, "POLL_INTERVAL_SECONDS", 1.0)
+        sleeps: list[float] = []
+
+        async def fake_sleep(seconds: float) -> None:
+            sleeps.append(seconds)
+
+        throttled = httpx.Response(429, headers={"Retry-After": "7"}, request=httpx.Request("GET", RESULT_URL))
+        gets = [
+            throttled,
+            _response(502, text="bad gateway"),
+            _response(503, text="busy"),
+            _status("completed", [IMAGE_OUT]),
+        ]
+        with patch.object(wavespeed_common.asyncio, "sleep", fake_sleep):
+            result, post, get = await _run_image(_image(), _submitted(), gets)
+        post.assert_awaited_once()
+        assert get.await_count == 4
+        assert result.data["image_url"] == IMAGE_OUT
+        # first poll waits the interval, then Retry-After, then doubling backoff
+        assert sleeps == [1.0, 7.0, 14.0, 28.0]
+
+    async def test_backoff_is_capped(self, monkeypatch) -> None:
+        monkeypatch.setattr(wavespeed_common, "POLL_INTERVAL_SECONDS", 20.0)
+        sleeps: list[float] = []
+
+        async def fake_sleep(seconds: float) -> None:
+            sleeps.append(seconds)
+
+        gets = [_response(500, text="err"), _response(500, text="err"), _status("completed", [IMAGE_OUT])]
+        with patch.object(wavespeed_common.asyncio, "sleep", fake_sleep):
+            await _run_image(_image(), _submitted(), gets)
+        assert sleeps == [20.0, wavespeed_common.MAX_BACKOFF_SECONDS, wavespeed_common.MAX_BACKOFF_SECONDS]
+
+    async def test_poll_401_is_not_retried_and_keeps_the_run_id(self) -> None:
+        result, _post, get = await _run_image(
+            _image(), _submitted(), [_response(401, json_body={"message": "unauthorized"})]
+        )
+        assert get.await_count == 1
+        assert result.data["prediction_id"] == PREDICTION_ID
+
+    async def test_failed_run_keeps_the_run_id(self) -> None:
+        result, _post, _get = await _run_image(_image(), _submitted(), [_status("failed", error="boom")])
+        assert result.data["prediction_id"] == PREDICTION_ID
+
+    async def test_submit_5xx_is_not_retried_and_says_the_outcome_is_unknown(self) -> None:
+        result, post, get = await _run_image(_image(), _response(502, text="bad gateway"), [])
+        post.assert_awaited_once()
+        get.assert_not_awaited()
+        assert "may still have been accepted" in result.data["error"]
+        assert "prediction_id" not in result.data
+
+    async def test_submit_connection_lost_after_sending_is_unknown(self) -> None:
+        result, post, _get = await _run_image(_image(), httpx.RemoteProtocolError("closed"), [])
+        post.assert_awaited_once()
+        assert "may still have been accepted" in result.data["error"]
+
+    async def test_submit_that_never_connected_is_reported_as_unreachable(self) -> None:
+        result, post, _get = await _run_image(_image(), httpx.ConnectError("refused"), [])
+        post.assert_awaited_once()
+        assert result.data["error"].startswith("Could not reach the WaveSpeed API")
+
+    async def test_overall_timeout_also_limits_the_submission(self) -> None:
+        _result, post, _get = await _run_image(_image(timeout=5), _submitted(), [_status("completed", [IMAGE_OUT])])
+        assert 0 < post.call_args.kwargs["timeout"] <= 5
 
 
 @pytest.mark.unit
