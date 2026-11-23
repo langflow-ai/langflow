@@ -78,6 +78,8 @@
     "svgo": "^3.3.5",
     "postcss": "^8.5.26",
     "postcss-selector-parser": "^7.1.6",
+    "hast-util-raw": "^9.2.1",
+    "parse5": "^8.1.1",
     "browserslist": "^4.28.7",
     "image-size": "^2.0.3",
     "joi": "^17.13.7",
@@ -117,6 +119,7 @@
       ".": "^6.1.7"
     },
     "follow-redirects": "^1.16.3",
+    "open@^8": "^11.0.4",
     "open@^10": "^11.0.4",
     "glob": "^14.0.6"
   }
