@@ -1794,8 +1794,10 @@ async def _watch_flows_pass(flows_path: str, applied: dict[str, _AppliedFlowFile
             )
             del applied[name]
 
+        # Any mtime change counts, not only a newer one: restoring an older copy with a tool that
+        # keeps timestamps (rsync -a, cp -p, a backup) moves the mtime backwards.
         changed = [
-            name for name, mtime in sorted(current.items()) if name not in applied or mtime > applied[name].mtime
+            name for name, mtime in sorted(current.items()) if name not in applied or mtime != applied[name].mtime
         ]
         if not changed:
             return

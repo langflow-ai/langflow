@@ -94,6 +94,25 @@ async def test_changed_file_updates_flow(async_session, tmp_path):
 
 
 @pytest.mark.usefixtures("superuser")
+async def test_restored_file_with_older_mtime_is_applied(async_session, tmp_path):
+    flow_id = uuid4()
+    path = _write_flow(tmp_path, "flow.json", {"id": str(flow_id), "name": "Flow", "description": "v2", "data": {}})
+    applied: dict = {}
+    await _run_pass(tmp_path, applied)
+
+    # Roll back to v1 the way rsync -a or cp -p would: the restored file keeps its older timestamp.
+    earlier = path.stat().st_mtime - 3600
+    _write_flow(
+        tmp_path, "flow.json", {"id": str(flow_id), "name": "Flow", "description": "v1", "data": {}}, mtime=earlier
+    )
+    await _run_pass(tmp_path, applied)
+
+    flow = await async_session.get(Flow, flow_id)
+    await async_session.refresh(flow)
+    assert flow.description == "v1"
+
+
+@pytest.mark.usefixtures("superuser")
 async def test_unchanged_file_is_not_reapplied(tmp_path, monkeypatch):
     flow_id = uuid4()
     _write_flow(tmp_path, "flow.json", {"id": str(flow_id), "name": "Flow", "data": {}})

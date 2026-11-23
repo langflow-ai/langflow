@@ -25,8 +25,9 @@ The setting is off by default, so existing deployments behave the same.
 
 - **What is watched.** Only top-level `*.json` files in the directory.
   Subdirectories are ignored, as they are at startup.
-- **New or changed file.** A file is reapplied when its modification time is
-  newer than the last time it was applied. It goes through
+- **New or changed file.** A file is reapplied when its modification time
+  differs from the one recorded when it was last applied. An older time counts
+  too, so restoring a backup with `rsync -a` or `cp -p` is picked up. It goes through
   `upsert_flow_from_file`, the same function startup loading uses, and is owned
   by the same superuser.
 - **Unchanged file.** Skipped. No database write.
