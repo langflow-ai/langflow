@@ -146,42 +146,73 @@ def test_catalog_is_dynamic_typed_public_and_retains_last_good(monkeypatch: pyte
 @pytest.mark.parametrize(
     ("metadata", "filters", "expected"),
     [
-        ({"tool_calling": None}, {"tool_calling": True}, True),
+        ({"tool_calling": None}, {"tool_calling": True}, False),
         ({"tool_calling": False}, {"tool_calling": True}, False),
         ({"tool_calling": True}, {"tool_calling": True}, True),
         ({}, {"tool_calling": True}, False),
         ({"tool_calling": None}, {"tool_calling": False}, False),
+        ({"tool_calling": False}, {"tool_calling": False}, True),
+        ({"tool_calling": True}, {"tool_calling": False}, False),
+        ({}, {"tool_calling": False}, False),
+        ({"tool_calling": None}, {}, True),
+        ({"tool_calling": False}, {}, True),
+        ({"tool_calling": True}, {}, True),
+        ({}, {}, True),
         ({"tool_calling": None, "reasoning": None}, {"reasoning": True}, False),
         ({"tool_calling": None, "reasoning": False}, {"tool_calling": True, "reasoning": True}, False),
     ],
 )
-def test_unknown_tool_filter_does_not_rewrite_capabilities(metadata, filters, expected) -> None:
+def test_tool_filters_match_declared_values_without_rewriting_capabilities(metadata, filters, expected) -> None:
     original = dict(metadata)
     assert matches_model_metadata(metadata, filters) is expected
     assert metadata == original
 
 
-def test_unknown_tools_survive_static_and_live_filters_without_claiming_support(
+@pytest.mark.parametrize(
+    ("filters", "expected_names"),
+    [
+        ({}, ["unknown", "supported", "unsupported", "missing"]),
+        ({"tool_calling": True}, ["supported"]),
+        ({"tool_calling": False}, ["unsupported"]),
+    ],
+)
+def test_static_and_live_catalogs_only_filter_when_requested(
     monkeypatch: pytest.MonkeyPatch,
+    filters: dict,
+    expected_names: list[str],
 ) -> None:
-    from lfx.base.models.model_utils import apply_metadata_filters
+    from lfx.base.models.model_utils import apply_metadata_filters, inject_custom_enabled_models
     from lfx.base.models.unified_models import model_catalog
 
     models = [
         {"provider": "Ace Data Cloud", "name": name, "model_type": "llm", "tool_calling": value}
         for name, value in [("unknown", None), ("supported", True), ("unsupported", False)]
     ]
+    models.append({"provider": "Ace Data Cloud", "name": "missing", "model_type": "llm"})
     monkeypatch.setattr(model_catalog, "get_models_detailed", lambda: [models])
-    static = model_catalog.get_unified_models_detailed(tool_calling=True)
-    assert [model["model_name"] for model in static[0]["models"]] == ["unknown", "supported"]
-    assert static[0]["models"][0]["metadata"]["tool_calling"] is None
+    static = model_catalog.get_unified_models_detailed(**filters)
+    assert [model["model_name"] for model in static[0]["models"]] == expected_names
     live = [
         {
             "provider": "Ace Data Cloud",
             "models": [{"model_name": model["name"], "metadata": dict(model)} for model in models],
         }
     ]
-    suppressed = apply_metadata_filters(live, {"tool_calling": True})
-    assert [model["model_name"] for model in live[0]["models"]] == ["unknown", "supported"]
-    assert live[0]["models"][0]["metadata"]["tool_calling"] is None
-    assert suppressed == {"Ace Data Cloud": {("unsupported", "llm")}}
+    suppressed = apply_metadata_filters(live, filters)
+    assert [model["model_name"] for model in live[0]["models"]] == expected_names
+    removed = {(model["name"], "llm") for model in models if model["name"] not in expected_names}
+    assert suppressed == ({"Ace Data Cloud": removed} if removed else {})
+    inject_custom_enabled_models(
+        live,
+        {f"Ace Data Cloud::llm::{model['name']}" for model in models},
+        metadata_filters=filters,
+        suppressed=suppressed,
+    )
+    assert [model["model_name"] for model in live[0]["models"]] == expected_names
+    assert models[0]["tool_calling"] is None
+    assert "tool_calling" not in models[-1]
+    if not filters:
+        assert static[0]["models"][0]["metadata"]["tool_calling"] is None
+        assert live[0]["models"][0]["metadata"]["tool_calling"] is None
+        assert "tool_calling" not in static[0]["models"][-1]["metadata"]
+        assert "tool_calling" not in live[0]["models"][-1]["metadata"]

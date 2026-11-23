@@ -57,12 +57,8 @@ def create_model_metadata(
 
 
 def matches_model_metadata(metadata: dict[str, Any], filters: dict[str, Any]) -> bool:
-    """Allow tool attempts for explicitly unknown capabilities without marking them supported."""
-    return all(
-        metadata.get(key) == expected
-        or (key == "tool_calling" and expected is True and key in metadata and metadata[key] is None)
-        for key, expected in filters.items()
-    )
+    """Match requested metadata values; unknown capabilities do not imply support."""
+    return all(metadata.get(key) == expected for key, expected in filters.items())
 
 
 LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
