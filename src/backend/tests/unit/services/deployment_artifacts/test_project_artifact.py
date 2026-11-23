@@ -622,12 +622,6 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
                             },
                             "password": {"name": "password", "password": True, "value": "raw-password"},
                             "endpoint": {"name": "endpoint", "load_from_db": True, "value": "MY_INTERNAL_API_URL"},
-                            "mislabeled": {
-                                "name": "token",
-                                "password": True,
-                                "load_from_db": True,
-                                "value": "raw-mislabeled-secret\nwith-newline",
-                            },
                         }
                     }
                 }
@@ -646,7 +640,6 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
     )
 
     assert b"raw-password" not in artifact.content
-    assert b"raw-mislabeled-secret" not in artifact.content
     assert artifact.flows[0].required_variables == ("MY_INTERNAL_API_URL", "OPENAI_API_KEY")
     with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
         exported = json.loads(archive.read(f"flows/{flow.id}.json"))
@@ -656,7 +649,6 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
     assert template["api_key"]["load_from_db"] is True
     assert template["password"]["value"] is None
     assert template["endpoint"]["value"] == "MY_INTERNAL_API_URL"
-    assert template["mislabeled"]["value"] is None
     assert manifest["required_variables"] == ["MY_INTERNAL_API_URL", "OPENAI_API_KEY"]
     assert manifest["flows"][0]["required_variables"] == ["MY_INTERNAL_API_URL", "OPENAI_API_KEY"]
 

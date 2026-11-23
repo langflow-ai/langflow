@@ -245,20 +245,26 @@ async def test_artifact_identifies_unresolved_table_binding_in_grouped_flow():
     flow = _bound_flow(owner_id, project.id, [])
     table = {
         "type": "table",
-        "table_schema": [{"name": "label", "load_from_db": True}],
+        "table_schema": [{"name": "key"}, {"name": "value", "load_from_db": True}],
         "value": [
-            {"label": "Literal label", "__load_from_db_fields": {"label": False}},
-            {"label": "EDITOR_LABEL", "__load_from_db_fields": {"label": True}},
+            {"key": "Accept", "value": "application/json"},
+            {"key": "X-Plain", "value": "Literal label", "__load_from_db_fields": {"value": False}},
+            {"key": "X-Private", "value": "EDITOR_LABEL", "__load_from_db_fields": {"value": True}},
+            {"key": "X-Legacy", "value": "OWNER_LABEL"},
         ],
     }
-    nested = {"data": {"node": {"template": {"labels": table}}}}
+    nested = {"id": "APIRequest-42", "data": {"node": {"template": {"headers": table}}}}
     flow.data["nodes"][0]["data"]["node"]["flow"] = {"data": {"nodes": [nested]}}
-    with pytest.raises(builder.ProjectArtifactVariableBindingError, match="Rebind field 'labels'") as raised:
-        await _typed_export(project, [flow], {})
+    with pytest.raises(
+        builder.ProjectArtifactVariableBindingError,
+        match="Rebind field 'headers' on node 'APIRequest-42', row 3, column 'value'",
+    ) as raised:
+        await _typed_export(project, [flow], {"OWNER_LABEL": "plain"})
     assert "EDITOR_LABEL" not in str(raised.value)
     assert "Literal label" not in str(raised.value)
-    artifact = await _typed_export(project, [flow], {"EDITOR_LABEL": "plain"})
-    assert _manifest(artifact)["required_variables"] == ["EDITOR_LABEL"]
+    assert "X-Private" not in str(raised.value)
+    artifact = await _typed_export(project, [flow], {"EDITOR_LABEL": "plain", "OWNER_LABEL": "plain"})
+    assert _manifest(artifact)["required_variables"] == ["EDITOR_LABEL", "OWNER_LABEL"]
 
 
 @pytest.mark.asyncio

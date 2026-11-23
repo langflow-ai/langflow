@@ -1124,7 +1124,7 @@ def _normalized_flow_data(
         )
     except UnresolvedVariableBindingError as exc:
         msg = (
-            f"Rebind field '{exc}' in flow '{snapshot.name}' ({snapshot.flow_id}) "
+            f"Rebind field {exc} in flow '{snapshot.name}' ({snapshot.flow_id}) "
             "to a variable owned by the project owner."
         )
         raise ProjectArtifactVariableBindingError(msg) from exc
