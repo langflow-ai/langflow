@@ -51,9 +51,8 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
     "sqlmodel~=0.0.46",
-    # pydantic-core ships cp315 wheels from 2.48 on, which only pydantic 2.14 pins.
-    "pydantic>=2.13.0,<2.14; python_version < '3.15'",
-    "pydantic>=2.14.1,<2.15; python_version >= '3.15'",
+    # CVE-2026-133276 family is fixed from pydantic 2.14.2 onward.
+    "pydantic>=2.14.2,<2.15",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
     "typer>=0.19.0,<1.0.0",
