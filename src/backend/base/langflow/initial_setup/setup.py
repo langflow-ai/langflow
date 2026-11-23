@@ -1,6 +1,7 @@
 import asyncio
 import contextlib
 import copy
+import hashlib
 import io
 import json
 import re
@@ -8,6 +9,7 @@ import shutil
 import zipfile
 from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -1697,3 +1699,181 @@ async def sync_flows_from_fs():
             await asyncio.sleep(fs_flows_polling_interval)
     except asyncio.CancelledError:
         await logger.adebug("Flow sync task cancelled")
+
+
+# One ``trigger_lease`` row elects the process that applies each pass, so every worker and
+# replica can run the watcher while each change is still applied once.
+_WATCH_FLOWS_LEASE_NAME = "load-flows-path-watch"
+
+
+@dataclass
+class _AppliedFlowFile:
+    """What the watcher last applied from one file in ``load_flows_path``."""
+
+    mtime: float
+    # Fingerprint of the flow row right after the file was applied, or None when unknown.
+    # A content hash rather than ``updated_at``: writers store that column in different
+    # timezones, so comparing timestamps would report edits that did not happen.
+    fingerprint: str | None = None
+
+
+def _scan_flow_files(flows_path: str) -> dict[str, float]:
+    """Return ``{file name: mtime}`` for the files the startup loader reads: top-level ``*.json`` files."""
+    found: dict[str, float] = {}
+    for file_path in Path(flows_path).iterdir():
+        if file_path.suffix != ".json" or not file_path.is_file():
+            continue
+        try:
+            found[file_path.name] = file_path.stat().st_mtime
+        except OSError:
+            # Removed between the listing and the stat; the next pass reports it as removed.
+            continue
+    return found
+
+
+def _flow_fingerprint(flow: Flow) -> str:
+    """Hash the fields a person edits in the UI, to tell whether a loaded flow changed since it was applied."""
+    fields = {"name": flow.name, "description": flow.description, "data": flow.data}
+    return hashlib.sha256(orjson.dumps(fields, option=orjson.OPT_SORT_KEYS)).hexdigest()
+
+
+async def _find_flow_for_file(session: AsyncSession, flow: dict, filename: str, user_id: UUID) -> Flow | None:
+    """Find the row a flow file maps to, with the same keys ``upsert_flow_from_file`` uses."""
+    flow_id = filename if _is_valid_uuid(filename) else flow.get("id")
+    try:
+        flow_id = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+    except ValueError:
+        # upsert_flow_from_file reports the invalid id.
+        return None
+    return await find_existing_flow(session, flow_id, flow.get("endpoint_name"), user_id=user_id, name=flow.get("name"))
+
+
+async def _prime_applied_flow_files(flows_path: str) -> dict[str, _AppliedFlowFile]:
+    """Record the files as the startup load left them, so only later changes are applied."""
+    applied = {
+        name: _AppliedFlowFile(mtime=mtime)
+        for name, mtime in (await asyncio.to_thread(_scan_flow_files, flows_path)).items()
+    }
+    try:
+        async with session_scope() as session:
+            user = await _get_flow_import_superuser(session)
+            for name, record in applied.items():
+                file_path = Path(flows_path) / name
+                try:
+                    flow = orjson.loads(await anyio.Path(file_path).read_bytes())
+                except (OSError, orjson.JSONDecodeError):
+                    continue
+                row = await _find_flow_for_file(session, flow, file_path.stem, user.id)
+                if row is not None:
+                    record.fingerprint = _flow_fingerprint(row)
+    except Exception:  # noqa: BLE001
+        # Without fingerprints the watcher still applies changes; it only cannot warn about
+        # UI edits to a file's flow until that file has been applied once.
+        await logger.aexception("Couldn't fingerprint flows loaded from LANGFLOW_LOAD_FLOWS_PATH")
+    return applied
+
+
+async def _watch_flows_pass(flows_path: str, applied: dict[str, _AppliedFlowFile], *, owner: str, ttl_s: float) -> None:
+    """Apply the files in ``flows_path`` that are new or changed since ``applied`` was recorded.
+
+    ``applied`` is updated in place. A pass that does not hold the lease changes nothing.
+    """
+    from langflow.services.triggers import leases
+
+    async with async_writing(name="flow_watch") as allowed:
+        if not allowed:
+            return
+        async with session_scope() as session:
+            if not await leases.acquire(session, name=_WATCH_FLOWS_LEASE_NAME, owner=owner, ttl_s=ttl_s):
+                return
+
+        current = await asyncio.to_thread(_scan_flow_files, flows_path)
+        for name in sorted(applied.keys() - current.keys()):
+            await logger.awarning(
+                f"Flow file {name} was removed from LANGFLOW_LOAD_FLOWS_PATH; its flow was left in place."
+            )
+            del applied[name]
+
+        changed = [
+            name for name, mtime in sorted(current.items()) if name not in applied or mtime > applied[name].mtime
+        ]
+        if not changed:
+            return
+
+        async with session_scope() as session:
+            user = await _get_flow_import_superuser(session)
+            _ = await get_or_create_default_folder(session, user.id)
+
+        for name in changed:
+            file_path = Path(flows_path) / name
+            fingerprint = None
+            try:
+                # One transaction per file, so one bad file cannot roll back the others.
+                async with session_scope() as session:
+                    content = await anyio.Path(file_path).read_text(encoding="utf-8")
+                    flow = orjson.loads(content)
+                    previous = applied.get(name)
+                    existing = await _find_flow_for_file(session, flow, file_path.stem, user.id)
+                    if (
+                        previous is not None
+                        and previous.fingerprint is not None
+                        and existing is not None
+                        and _flow_fingerprint(existing) != previous.fingerprint
+                    ):
+                        await logger.awarning(
+                            f"Flow {existing.name!r} was edited since {name} was last applied; "
+                            "the file overwrites those edits (LANGFLOW_WATCH_FLOWS_PATH)."
+                        )
+                    await logger.ainfo(f"Reloading flow from file: {name}")
+                    await upsert_flow_from_file(content, file_path.stem, session, user.id)
+                    if (row := await _find_flow_for_file(session, flow, file_path.stem, user.id)) is not None:
+                        fingerprint = _flow_fingerprint(row)
+            except orjson.JSONDecodeError:
+                # Usually a file caught mid-write. Its mtime is recorded below, so it is retried as
+                # soon as the writer finishes and the mtime advances, without a warning every pass.
+                await logger.awarning(f"Skipping flow file {name}: not valid JSON")
+            except FileNotFoundError:
+                continue
+            except Exception:  # noqa: BLE001
+                await logger.aexception(f"Couldn't reload flow from file {name}")
+            applied[name] = _AppliedFlowFile(mtime=current[name], fingerprint=fingerprint)
+
+
+async def watch_flows_from_directory() -> None:
+    """Apply changes in ``load_flows_path`` while Langflow runs (``watch_flows_path``).
+
+    Starts from the files as the startup load left them and polls every ``fs_flows_polling_interval``
+    milliseconds. New and changed files go through ``upsert_flow_from_file``, exactly as at startup.
+    The sync is one-way and never deletes a flow.
+    """
+    from langflow.services.triggers import leases
+
+    settings = get_settings_service().settings
+    flows_path = settings.load_flows_path
+    if not flows_path:
+        await logger.awarning("LANGFLOW_WATCH_FLOWS_PATH is enabled but LANGFLOW_LOAD_FLOWS_PATH is not set")
+        return
+    if not await anyio.Path(flows_path).is_dir():
+        await logger.awarning(f"LANGFLOW_WATCH_FLOWS_PATH is enabled but {flows_path} is not a directory")
+        return
+
+    interval_s = settings.fs_flows_polling_interval / 1000
+    # Outlive a few missed passes, so a slow pass does not hand the lease to another process.
+    ttl_s = max(30.0, 3 * interval_s)
+    owner = leases.new_owner_token("flows-watch")
+    try:
+        applied = await _prime_applied_flow_files(flows_path)
+        while True:
+            await asyncio.sleep(interval_s)
+            try:
+                await _watch_flows_pass(flows_path, applied, owner=owner, ttl_s=ttl_s)
+            except asyncio.CancelledError:
+                raise
+            except Exception:  # noqa: BLE001
+                await logger.aexception("Error while watching LANGFLOW_LOAD_FLOWS_PATH")
+    except asyncio.CancelledError:
+        # Hand the lease back so another process takes over without waiting out the TTL.
+        with contextlib.suppress(Exception):
+            async with session_scope() as session:
+                await leases.release(session, name=_WATCH_FLOWS_LEASE_NAME, owner=owner)
+        await logger.adebug("Flow watch task cancelled")

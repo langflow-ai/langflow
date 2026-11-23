@@ -51,6 +51,7 @@ from langflow.initial_setup.setup import (
     load_bundles_from_urls,
     load_flows_from_directory,
     sync_flows_from_fs,
+    watch_flows_from_directory,
 )
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
@@ -242,6 +243,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             await logger.adebug("Starting Langflow...")
 
         sync_flows_from_fs_task = None
+        watch_flows_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
         # Same reason as ``temp_dirs`` below: the shutdown path stops this, so it must exist
@@ -620,6 +622,10 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Per-worker setup: sync_flows_from_fs and queue service
             # (MUST be started per-worker: they create asyncio tasks bound to this event loop)
             sync_flows_from_fs_task = asyncio.create_task(sync_flows_from_fs())
+            # Hot reload of LANGFLOW_LOAD_FLOWS_PATH. Every worker runs it; a trigger_lease row
+            # lets only one process apply each pass.
+            if get_settings_service().settings.watch_flows_path:
+                watch_flows_task = asyncio.create_task(watch_flows_from_directory())
             queue_service = get_queue_service()
             if not queue_service.is_started():
                 queue_service.start()
@@ -918,6 +924,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if sync_flows_from_fs_task:
                         sync_flows_from_fs_task.cancel()
                         tasks_to_cancel.append(sync_flows_from_fs_task)
+                    if watch_flows_task and not watch_flows_task.done():
+                        watch_flows_task.cancel()
+                        tasks_to_cancel.append(watch_flows_task)
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)

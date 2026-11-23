@@ -41,6 +41,15 @@ class ComponentsSettings(BaseModel):
     The flow file remains authoritative for the rest of the flow structure and for bindings it
     explicitly defines. Set this to ``False`` to restore blind ``data`` replacement on restart.
     """
+    watch_flows_path: bool = False
+    """Keep flows loaded from ``load_flows_path`` in sync with the directory while Langflow runs.
+
+    When ``True``, Langflow polls the directory every ``fs_flows_polling_interval`` milliseconds and
+    applies new and changed ``.json`` files with the same rules as the startup load, so a deploy does
+    not need a restart. The sync is one-way: removing a file leaves its flow in place, and a UI edit
+    to a loaded flow is overwritten the next time its file changes. One process applies each pass,
+    even with several workers or replicas. Requires ``load_flows_path``.
+    """
     bundle_urls: list[str] = []
 
     lazy_load_components: bool = False
