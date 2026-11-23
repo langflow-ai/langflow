@@ -43,7 +43,7 @@ from langflow.services.deps import get_settings_service, get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.utils.canonical_json import canonical_json_bytes
 from langflow.utils.flow_files import FileKeyCollisionError, rewrite_flow_file_keys_in_place
-from langflow.utils.flow_secrets import strip_secret_field_values_in_place
+from langflow.utils.flow_secrets import UnresolvedVariableBindingError, strip_secret_field_values_in_place
 from langflow.utils.mcp_config_secrets import (
     MCP_SECRET_CONFIG_MAPS,
     NON_SECRET_HEADERS,
@@ -93,6 +93,12 @@ class EmptyProjectArtifactError(ProjectArtifactError):
 
 class ProjectArtifactMcpError(ProjectArtifactError):
     """Raised when an MCP connection cannot safely be provisioned at deploy."""
+
+
+class ProjectArtifactVariableBindingError(ProjectArtifactError):
+    """A saved variable binding cannot be resolved against the project owner's variables."""
+
+    code = "unresolved_variable_binding"
 
 
 class ProjectArtifactNotFoundError(ProjectArtifactError):
@@ -1065,6 +1071,7 @@ def _normalized_flow_data(
     *,
     strict_secret_safety: bool = False,
     keep_mcp_config: bool = False,
+    reject_unknown_bindings: bool = False,
     known_variable_names: Collection[str] | None = None,
     registered_mcp_servers: Mapping[str, dict[str, Any]] | None = None,
     rewrite_file_keys: bool = False,
@@ -1107,12 +1114,20 @@ def _normalized_flow_data(
     required_connections = _collect_required_connections(scrubbed.get("data"))
     model_requirements = _collect_model_requirements(scrubbed.get("data"))
     mcp_requirements = _collect_mcp_requirements(scrubbed.get("data"), registered_mcp_servers)
-    scrubbed["data"] = strip_secret_field_values_in_place(
-        scrubbed.get("data"),
-        variable_references=variable_references,
-        known_variable_names=known_variable_names,
-        keep_mcp_config=keep_mcp_config,
-    )
+    try:
+        scrubbed["data"] = strip_secret_field_values_in_place(
+            scrubbed.get("data"),
+            variable_references=variable_references,
+            known_variable_names=known_variable_names,
+            keep_mcp_config=keep_mcp_config,
+            reject_unknown_bindings=reject_unknown_bindings,
+        )
+    except UnresolvedVariableBindingError as exc:
+        msg = (
+            f"Rebind field {exc} in flow '{snapshot.name}' ({snapshot.flow_id}) "
+            "to a variable owned by the project owner."
+        )
+        raise ProjectArtifactVariableBindingError(msg) from exc
     if strict_secret_safety and scrubbed.get("data") != snapshot.payload.get("data"):
         msg = f"flow file {snapshot.flow_id} contains values that cannot be safely captured"
         raise ProjectArtifactError(msg)
@@ -1162,6 +1177,7 @@ def _normalized_flow_bytes(
     scrubbed, variable_references, required_connections, model_requirements, mcp_requirements = _normalized_flow_data(
         snapshot,
         strict_secret_safety=strict_secret_safety,
+        reject_unknown_bindings=True,
         known_variable_names=known_variable_names,
         registered_mcp_servers=registered_mcp_servers,
         rewrite_file_keys=rewrite_file_keys,
@@ -1355,14 +1371,6 @@ def _build_archive(
     )
     for snapshot in snapshots:
         path = f"flows/{snapshot.flow_id}.json"
-        if variable_kinds is not None:
-            referenced_names: set[str] = set()
-            strip_secret_field_values_in_place(
-                deepcopy(snapshot.payload.get("data")), variable_references=referenced_names
-            )
-            if referenced_names - variable_kinds.keys():
-                msg = f"Cannot resolve a deployment variable kind in flow {snapshot.flow_id}"
-                raise ProjectArtifactError(msg)
         # Read from the payload as saved, before scrubbing: the packaged graph below
         # keeps only the server's name, so this is the one place the configuration is
         # still here to be handed on.
@@ -1377,7 +1385,7 @@ def _build_archive(
         ) = _normalized_flow_bytes(
             snapshot,
             strict_secret_safety=strict_secret_safety,
-            known_variable_names=known_variable_names,
+            known_variable_names=variable_kinds.keys() if variable_kinds is not None else known_variable_names,
             registered_mcp_servers=registered_mcp_servers,
             rewrite_file_keys=rewrite_file_keys,
         )
@@ -1645,6 +1653,7 @@ def _collect_dependency_refs(payload: dict[str, Any]) -> tuple[set[str], set[str
     data = payload.get("data")
     if not isinstance(data, dict):
         return mb_names, kb_names
+    # A partial workflow run can select any node, including one without edges.
     for node in data.get("nodes") or []:
         if not isinstance(node, dict):
             continue
