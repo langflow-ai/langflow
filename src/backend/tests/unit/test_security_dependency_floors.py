@@ -35,23 +35,6 @@ def _requirement(requirements: list[str], name: str) -> Requirement:
     return matches[0]
 
 
-def _requirement_for_python(requirements: list[str], name: str, python_version: str) -> Requirement:
-    env = {
-        "python_version": python_version,
-        "python_full_version": f"{python_version}.0",
-        "sys_platform": "linux",
-    }
-    matches = [
-        requirement
-        for spec in requirements
-        if (requirement := Requirement(spec)).name.lower() == name.lower()
-        and requirement.marker
-        and requirement.marker.evaluate(env)
-    ]
-    assert len(matches) == 1, f"Expected one applicable {name} requirement for Python {python_version}, found {matches}"
-    return matches[0]
-
-
 def _assert_specifier(requirement: Requirement, operator: str, version: str) -> None:
     assert any(spec.operator == operator and spec.version == version for spec in requirement.specifier), requirement
 
@@ -203,10 +186,9 @@ def test_published_extras_enforce_patched_gitpython_floor() -> None:
 def test_workspace_constraints_enforce_patched_pymongo() -> None:
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
 
-    for python_version, minimum in (("3.10", "4.18.3"), ("3.11", "4.20.1")):
-        pymongo = _requirement_for_python(constraints, "pymongo", python_version)
-        _assert_floor(pymongo, minimum)
-        _assert_specifier(pymongo, "<", "5.0.0")
+    pymongo = _requirement(constraints, "pymongo")
+    _assert_floor(pymongo, "4.20.1")
+    _assert_specifier(pymongo, "<", "5.0.0")
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
@@ -251,7 +233,7 @@ def test_published_packages_enforce_patched_pymongo_floor() -> None:
         base_project["optional-dependencies"]["mongodb"],
         bundle_extras["mongodb"],
     ):
-        pymongo = _requirement_for_python(requirements, "pymongo", "3.11")
+        pymongo = _requirement(requirements, "pymongo")
         _assert_floor(pymongo, "4.20.1")
         _assert_specifier(pymongo, "<", "5.0.0")
 
@@ -380,5 +362,5 @@ def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None
     """Standalone bundle installs must retain the published PyMongo security floor."""
     extras = _load_pyproject("src/lfx/pyproject.toml")["project"]["optional-dependencies"]
     legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
-    assert "1.1.40" not in legacy_bundle.specifier
-    assert "1.1.41" in legacy_bundle.specifier
+    assert "1.3.9" not in legacy_bundle.specifier
+    assert "1.3.10" in legacy_bundle.specifier
