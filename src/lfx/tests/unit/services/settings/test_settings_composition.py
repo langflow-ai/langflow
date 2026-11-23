@@ -108,6 +108,7 @@ EXPECTED_FIELDS = {
     "sqlite_pragmas",
     "db_driver_connection_settings",
     "db_connection_settings",
+    "pool_pre_ping_idle_seconds",
     "use_noop_database",
     # CacheSettings
     "cache_type",
