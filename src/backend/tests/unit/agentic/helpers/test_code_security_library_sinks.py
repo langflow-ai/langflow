@@ -51,10 +51,10 @@ def test_rejects_library_execution_apis(module, member, source):
     assert any(member in violation for violation in result.violations)
 
 
-@pytest.mark.parametrize("module", ["duckdb", "_duckdb"])
+@pytest.mark.parametrize("module", ["duckdb", "_duckdb", "sqlite3", "_sqlite3"])
 @pytest.mark.parametrize("source", ["import {module}", "import {module} as sql", "from {module} import connect"])
 def test_rejects_embedded_sql_execution_modules(module, source):
-    """Both DuckDB module names expose execution capabilities and are rejected."""
+    """Reject both the public database modules and their native backends."""
     result = scan_code_security(source.format(module=module))
     assert not result.is_safe
     assert any(module in violation for violation in result.violations)
@@ -128,6 +128,7 @@ def test_rejects_mutable_sandbox_before_rendering_external_template(constructor,
         "from jinja2.sandbox import ImmutableSandboxedEnvironment\nenv = ImmutableSandboxedEnvironment()",
         "import sympy\nresult = sympy.sympify(source)",
         "import duckdb\nresult = duckdb.sql(source)",
+        "import sqlite3",
         "import logging.config",
     ],
 )
