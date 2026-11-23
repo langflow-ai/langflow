@@ -12,12 +12,16 @@ if TYPE_CHECKING:
     from .mrscraper_fetch_html import MrscraperFetchHtml
     from .mrscraper_get_result import MrscraperGetResult
     from .mrscraper_get_results import MrscraperGetResults
+    from .mrscraper_get_screenshot import MrscraperGetScreenshot
     from .mrscraper_run_ai_scraper import MrscraperRunAiScraper
     from .mrscraper_run_manual_scraper import MrscraperRunManualScraper
+    from .mrscraper_scrape_brand import MrscraperScrapeBrand
+    from .mrscraper_scrape_json import MrscraperScrapeJson
+    from .mrscraper_scrape_markdown import MrscraperScrapeMarkdown
     from .mrscraper_web_search import MrscraperWebSearch
 
-# The AI, crawl, batch, rerun and result components were retired in 1.13.0. They stay
-# importable so saved nodes report their replacement instead of failing to load.
+# The seven services, plus the placeholders that keep components retired in
+# 1.13.0 discoverable so their saved nodes still load.
 _dynamic_imports = {
     "MrscraperAccount": "mrscraper_account",
     "MrscraperAiScraper": "mrscraper_ai_scraper",
@@ -26,8 +30,12 @@ _dynamic_imports = {
     "MrscraperFetchHtml": "mrscraper_fetch_html",
     "MrscraperGetResult": "mrscraper_get_result",
     "MrscraperGetResults": "mrscraper_get_results",
+    "MrscraperGetScreenshot": "mrscraper_get_screenshot",
     "MrscraperRunAiScraper": "mrscraper_run_ai_scraper",
     "MrscraperRunManualScraper": "mrscraper_run_manual_scraper",
+    "MrscraperScrapeBrand": "mrscraper_scrape_brand",
+    "MrscraperScrapeJson": "mrscraper_scrape_json",
+    "MrscraperScrapeMarkdown": "mrscraper_scrape_markdown",
     "MrscraperWebSearch": "mrscraper_web_search",
 }
 
@@ -39,8 +47,12 @@ __all__ = [
     "MrscraperFetchHtml",
     "MrscraperGetResult",
     "MrscraperGetResults",
+    "MrscraperGetScreenshot",
     "MrscraperRunAiScraper",
     "MrscraperRunManualScraper",
+    "MrscraperScrapeBrand",
+    "MrscraperScrapeJson",
+    "MrscraperScrapeMarkdown",
     "MrscraperWebSearch",
 ]
 

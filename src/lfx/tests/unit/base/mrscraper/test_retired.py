@@ -75,7 +75,7 @@ def test_lfx_upgrade_reports_the_saved_node_as_retired(tmp_path, capsys, fingerp
     display_name = getattr(retired, name).display_name
     assert (
         f"[RETIRED] {display_name} (ext:mrscraper:{name}@official) - id: {name}-saved"
-        " - retired in 1.13.0, replace with: MrScraper Scraper API"
+        " - retired in 1.13.0, replace with: MrScraper Scrape HTML"
     ) in capsys.readouterr().out
     assert flow_file.read_text() == before
 
@@ -91,6 +91,6 @@ async def test_saved_node_fails_with_the_retired_message_when_built(fingerprint)
 
     display_name = getattr(retired, fixture["class_name"]).display_name
     assert (
-        f"{display_name} was retired in Langflow 1.13.0. Replace this node with MrScraper Scraper API "
+        f"{display_name} was retired in Langflow 1.13.0. Replace this node with MrScraper Scrape HTML "
         "and update the components that read its output."
     ) in str(exc_info.value)

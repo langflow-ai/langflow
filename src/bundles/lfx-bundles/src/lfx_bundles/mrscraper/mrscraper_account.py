@@ -1,41 +1,29 @@
-"""MrScraper component: account identity, subscription, and usage."""
+"""MrScraper Status, retaining the existing MrscraperAccount identifier."""
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import FloatInput, Output, SecretStrInput
+from lfx.io import Output
 from lfx.schema.data import Data
 
-from lfx_bundles.mrscraper.mrscraper_common import call_sdk, payload
+from lfx_bundles.mrscraper.mrscraper_common import api_token_input, call_sdk, payload
 
 
 class MrscraperAccount(Component):
-    """Return the SDK's account summary without credentials or billing identifiers."""
+    """Return the raw account status API response through the SDK."""
 
-    display_name: str = "MrScraper Account"
-    description: str = "Check account identity, subscription status, token quota, and rate limits."
+    display_name: str = "MrScraper Status"
+    description: str = (
+        "Return the raw account status API response without summarizing, redacting body fields, "
+        "or adding calculated fields."
+    )
     name = "MrscraperAccount"
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"
 
-    inputs = [
-        SecretStrInput(
-            name="api_token",
-            display_name="MrScraper API Token",
-            required=True,
-            password=True,
-            info="Your MrScraper API token from https://app.mrscraper.com.",
-        ),
-        FloatInput(
-            name="timeout",
-            display_name="Timeout (seconds)",
-            value=30.0,
-            advanced=True,
-            info="Positive HTTP request timeout in seconds.",
-        ),
-    ]
+    inputs = [api_token_input()]
 
-    outputs = [Output(display_name="Account", name="data", method="get_account")]
+    outputs = [Output(display_name="Account Status", name="data", method="get_account")]
 
     async def get_account(self) -> Data:
-        """Fetch a safe summary of this token's account."""
-        result = await call_sdk(self.api_token, "account", timeout=self.timeout)
+        """Fetch the account record for this token as the API sends it."""
+        result = await call_sdk(self.api_token, "status")
         return Data(data=payload(result))

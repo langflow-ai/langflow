@@ -1,75 +1,58 @@
-"""MrScraper component: Google search results from query text or a URL."""
-
-import math
+"""MrScraper Web Search."""
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import BoolInput, DropdownInput, FloatInput, MultilineInput, Output, SecretStrInput, StrInput
+from lfx.field_typing.range_spec import RangeSpec
+from lfx.io import IntInput, MultilineInput, Output, StrInput
 from lfx.schema.data import Data
 
-from lfx_bundles.mrscraper.mrscraper_common import call_sdk, optional_integer, payload
+from lfx_bundles.mrscraper.mrscraper_common import api_token_input, call_sdk, optional_text, payload
 
 
 class MrscraperWebSearch(Component):
-    """Search Google through the MrScraper v2 synchronous SERP API."""
+    """Search the web through the SDK."""
 
     display_name: str = "MrScraper Web Search"
-    description: str = "Search Google using query text or a Google search URL; return JSON results or HTML."
+    description: str = "Search the web and return ranked results with titles, URLs, descriptions, and sources."
     name = "MrscraperWebSearch"
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"
 
     inputs = [
-        SecretStrInput(
-            name="api_token",
-            display_name="MrScraper API Token",
-            required=True,
-            password=True,
-            info="Your MrScraper API token from https://app.mrscraper.com.",
-        ),
+        api_token_input(),
         MultilineInput(
-            name="url",
-            display_name="Query or Google URL",
+            name="query",
+            display_name="Search Query",
             required=True,
             tool_mode=True,
-            info="Search text or a Google URL containing q, gl, hl, and start parameters.",
+            info="Search query text, trimmed before sending, containing 1 to 1000 characters.",
         ),
-        BoolInput(
-            name="raw",
-            display_name="Raw HTML",
-            value=True,
-            info="Return HTML regardless of Format. Disable this to request JSON results.",
-        ),
-        DropdownInput(name="format", display_name="Format", options=["json", "html"], value="json"),
-        StrInput(name="region", display_name="Region", advanced=True, info="Overrides gl from the Google URL."),
-        StrInput(name="language", display_name="Language", advanced=True, info="Overrides hl from the Google URL."),
         StrInput(
-            name="page",
-            display_name="Page",
+            name="country",
+            display_name="Country",
             value="",
-            advanced=True,
-            info="Optional one-based page. Leave empty to use start from a Google URL or the API default.",
+            info=(
+                "Two-letter country code to search from, sent in lowercase. "
+                "Leave blank to use the API default (United States)."
+            ),
         ),
-        BoolInput(name="render_js", display_name="Render JavaScript", value=False, advanced=True),
-        FloatInput(name="timeout", display_name="Timeout (seconds)", value=600.0, advanced=True),
+        IntInput(
+            name="num_results",
+            display_name="Number of Results",
+            value=10,
+            range_spec=RangeSpec(step_type="int", min=10, max=100, step=1),
+            info="Number of search results to request, as an integer from 10 to 100. Fewer results may be returned.",
+        ),
     ]
 
     outputs = [Output(display_name="Search Results", name="data", method="search")]
 
     async def search(self) -> Data:
-        """Normalize search input through the SDK and return its response payload."""
-        if not math.isfinite(self.timeout) or self.timeout <= 0:
-            msg = "timeout must be greater than 0 seconds"
-            raise ValueError(msg)
+        """Run a web search through the SDK and return its response payload."""
         result = await call_sdk(
             self.api_token,
             "web_search",
-            url=self.url,
-            raw=self.raw,
-            format=self.format,
-            region=self.region or None,
-            language=self.language or None,
-            page=optional_integer(self.page, name="page"),
-            render_js=self.render_js,
-            timeout=self.timeout,
+            query=self.query,
+            country=optional_text(self.country),
+            num_results=self.num_results,
         )
-        return Data(data=payload(result, scalar_key="result"))
+        return Data(data=payload(result))

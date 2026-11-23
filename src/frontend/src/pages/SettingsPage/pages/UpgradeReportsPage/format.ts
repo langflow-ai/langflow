@@ -60,7 +60,7 @@ export function downloadReport(id: string, blob: Blob): void {
 const archivedReplacements: Record<string, string> = {
   "files_and_knowledge.Knowledge": "Knowledge",
   "models_and_agents.Agent": "Agent",
-  "mrscraper.MrscraperFetchHtml": "MrScraper Scraper API",
+  "mrscraper.MrscraperFetchHtml": "MrScraper Scrape HTML",
 };
 
 export function reportReason({

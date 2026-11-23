@@ -336,7 +336,7 @@ def test_help_says_safe_refuses_customized_components_when_custom_components_are
     [
         ("Chroma", "Knowledge"),
         ("ext:chroma:ChromaVectorStoreComponent@official", "Knowledge"),
-        ("MrscraperAiScraper", "MrScraper Scraper API"),
+        ("MrscraperAiScraper", "MrScraper Scrape HTML"),
     ],
 )
 def test_upgrade_reports_missing_retired_bundle(flow_file, capsys, type_name, label):

@@ -5325,6 +5325,26 @@
       "bare_class_name": "SocialScrapeTranscriptComponent",
       "target": "ext:socialscrape:SocialScrapeTranscriptComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "MrscraperScrapeMarkdown",
+      "target": "ext:mrscraper:MrscraperScrapeMarkdown@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "MrscraperGetScreenshot",
+      "target": "ext:mrscraper:MrscraperGetScreenshot@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "MrscraperScrapeBrand",
+      "target": "ext:mrscraper:MrscraperScrapeBrand@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "MrscraperScrapeJson",
+      "target": "ext:mrscraper:MrscraperScrapeJson@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
