@@ -10034,7 +10034,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.3.9"
+version = "1.3.10"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10087,6 +10087,7 @@ all = [
     { name = "litellm", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "markdown" },
     { name = "mem0ai" },
+    { name = "mnemoverse" },
     { name = "mrscraper-sdk" },
     { name = "needle-python" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
@@ -10152,6 +10153,7 @@ all-no-torch = [
     { name = "langchain-weaviate" },
     { name = "markdown" },
     { name = "mem0ai" },
+    { name = "mnemoverse" },
     { name = "mrscraper-sdk" },
     { name = "needle-python" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12'" },
@@ -10289,6 +10291,9 @@ milvus = [
 ]
 mistral = [
     { name = "langchain-mistralai" },
+]
+mnemoverse = [
+    { name = "mnemoverse" },
 ]
 mongodb = [
     { name = "langchain-mongodb" },
@@ -10554,6 +10559,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["milvus"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mistral"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mistral"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["mnemoverse"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["mnemoverse"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mongodb"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mongodb"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["mrscraper"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10638,6 +10645,7 @@ requires-dist = [
     { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.18,<3.0.0" },
+    { name = "mnemoverse", marker = "extra == 'mnemoverse'", specifier = ">=0.5.2,<0.6.0" },
     { name = "mrscraper-sdk", marker = "extra == 'mrscraper'", specifier = ">=0.6.0,<0.7.0" },
     { name = "needle-python", marker = "extra == 'needle'", specifier = ">=0.4.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nvidia'", specifier = ">=26.1.0,<26.3.0" },
@@ -10674,7 +10682,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "olostep", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "popnow", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "socialscrape", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mnemoverse", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "olostep", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "popnow", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "socialscrape", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"
@@ -12930,6 +12938,20 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/3b/93/ce57c57a62c97c4bceaafb4df29e5bfdc827f3cea08b27444dcf3f55ecb6/mmh3-5.3.1-cp315-cp315t-win32.whl", hash = "sha256:2d76a78ab3af4be19d31840ca4f69b429e602e719d0b351f20d96304dbfb155e", size = 41534, upload-time = "2026-09-30T17:38:05.901Z" },
     { url = "https://files.pythonhosted.org/packages/63/ea/fee223d57ef44e743e71216805b873fd452b1de034a5a6bf78011deb7e9d/mmh3-5.3.1-cp315-cp315t-win_amd64.whl", hash = "sha256:4c061c1072dc2f32ef7e6a57a92da3de217dc47114b2857da31b34bc79ac795b", size = 43019, upload-time = "2026-09-30T17:38:07.154Z" },
     { url = "https://files.pythonhosted.org/packages/c2/6f/727d4255c2ca4957f87400852449f22f148b4278529701c67c6c65dadafb/mmh3-5.3.1-cp315-cp315t-win_arm64.whl", hash = "sha256:c90b3503675892e7496bec63e2e18e413798a062e5d54e6cf220c2bf0bb7fe69", size = 41323, upload-time = "2026-09-30T17:38:08.405Z" },
+]
+
+[[package]]
+name = "mnemoverse"
+version = "0.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic", version = "2.13.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
+    { name = "pydantic", version = "2.14.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/7e/f4/7573dde0d20481b24931d221db4c78dad4938b18177302357961443f48fc/mnemoverse-0.5.2.tar.gz", hash = "sha256:64d2f3095b783c5737035202f90168e6161367732697e1bf48768057f8c03ca9", size = 91247, upload-time = "2026-11-13T23:32:06.536Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/07/41/7b22968cd9c4c1a32496cd13ed539feba83cf5a69fc664cc262c68582244/mnemoverse-0.5.2-py3-none-any.whl", hash = "sha256:a68cf0a7c5926d4a8c3d32cbe21bc6d0d7e3b067f3718cdb676b2225773b795c", size = 23510, upload-time = "2026-11-13T23:32:05.38Z" },
 ]
 
 [[package]]
