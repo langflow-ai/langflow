@@ -6,6 +6,20 @@ import { PORT } from "./src/customization/config-constants";
 dotenv.config();
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
+// Ports for the test stack. Set them to run a second stack beside another checkout.
+const BACKEND_PORT = Number(process.env.LANGFLOW_TEST_BACKEND_PORT ?? 7860);
+const FRONTEND_PORT = Number(
+  process.env.LANGFLOW_TEST_FRONTEND_PORT ?? (PORT || 3000),
+);
+const OPENAI_PORT = Number(process.env.LANGFLOW_TEST_OPENAI_PORT ?? 8787);
+
+// Reuse running servers unless PW_REUSE_SERVER=0.
+const REUSE_SERVER = process.env.PW_REUSE_SERVER !== "0";
+
+// CI builds the frontend once and serves it with `vite preview`. The dev
+// server makes each navigation load thousands of modules.
+const USE_FRONTEND_BUILD = process.env.PW_FRONTEND_BUILD === "1";
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -46,13 +60,15 @@ export default defineConfig({
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
-    baseURL: `http://localhost:${PORT || 3000}/`,
+    baseURL: `http://localhost:${FRONTEND_PORT}/`,
 
     // Also the default for page.waitForResponse/waitForSelector calls that
     // pass no explicit timeout. Windows CI needs the extra headroom.
     actionTimeout: process.platform === "win32" ? 40_000 : 20_000,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
+    screenshot: "only-on-failure",
+    video: process.env.CI ? "off" : "retain-on-failure",
     contextOptions: {
       javaScriptEnabled: true,
     },
@@ -123,13 +139,15 @@ export default defineConfig({
   webServer: [
     {
       command: "node tests/fixtures/openai-compatible-server.mjs",
-      url: "http://127.0.0.1:8787/health",
-      reuseExistingServer: true,
+      url: `http://127.0.0.1:${OPENAI_PORT}/health`,
+      env: {
+        LANGFLOW_TEST_OPENAI_PORT: String(OPENAI_PORT),
+      },
+      reuseExistingServer: REUSE_SERVER,
     },
     {
-      command:
-        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio --log-level error --no-access-log",
-      port: 7860,
+      command: `uv run uvicorn --factory langflow.main:create_app --host localhost --port ${BACKEND_PORT} --loop asyncio --log-level error --no-access-log`,
+      port: BACKEND_PORT,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
         LANGFLOW_AUTO_LOGIN: "true",
@@ -138,7 +156,7 @@ export default defineConfig({
         LANGFLOW_DEACTIVATE_TRACING: "true",
         LANGFLOW_LOG_LEVEL: "ERROR",
         OPENAI_API_KEY: "langflow-loopback-test-key", // pragma: allowlist secret
-        OPENAI_BASE_URL: "http://127.0.0.1:8787/v1",
+        OPENAI_BASE_URL: `http://127.0.0.1:${OPENAI_PORT}/v1`,
         // The E2E harness intentionally routes provider calls to its local OpenAI stub.
         LANGFLOW_SSRF_ALLOWED_HOSTS: "127.0.0.1",
         // The stub's key is also the backend's OPENAI_API_KEY, so the
@@ -157,19 +175,22 @@ export default defineConfig({
         process.env.CI && process.platform === "win32" ? "pipe" : "ignore",
       stderr: "pipe",
 
-      reuseExistingServer: true,
+      reuseExistingServer: REUSE_SERVER,
       // Windows CI runners can spend 60s+ on imports plus the Alembic
       // migration chain against the fresh SQLite DB before the port opens;
       // 90s boots are routinely lost there.
       timeout: process.platform === "win32" ? 240_000 : 90_000,
     },
     {
-      command: "npm start",
-      port: PORT || 3000,
+      command: USE_FRONTEND_BUILD
+        ? `npx vite preview --port ${FRONTEND_PORT} --strictPort`
+        : "npm start",
+      port: FRONTEND_PORT,
       env: {
-        VITE_PROXY_TARGET: "http://localhost:7860",
+        VITE_PORT: String(FRONTEND_PORT),
+        VITE_PROXY_TARGET: `http://localhost:${BACKEND_PORT}`,
       },
-      reuseExistingServer: true,
+      reuseExistingServer: REUSE_SERVER,
     },
   ],
 });

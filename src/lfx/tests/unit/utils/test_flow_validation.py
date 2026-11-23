@@ -1034,6 +1034,31 @@ def test_substitute_trusted_node_code_recurses_into_inlined_subflows():
     assert fv._substitute_trusted_node_code(nodes, {"ChatInput": "# trusted"}) == ["Evil (inner)"]
 
 
+def test_substitute_trusted_node_code_blocks_authored_custom_component():
+    """A user-authored Custom Component must be blocked, not swapped for the template's code.
+
+    The editor saves every user-authored component as type ``CustomComponent``, the type of the
+    sample template. Substituting the template's code would run a different component whose
+    output methods do not exist, instead of refusing the custom code.
+    """
+    from lfx.utils import flow_validation as fv
+
+    node = _node("cc", "CustomComponent", "class FormatAnswer(Component): ...", display_name="Format Answer")
+    blocked = fv._substitute_trusted_node_code([node], {"CustomComponent": "# trusted template"})
+
+    assert blocked == ["Format Answer (cc)"]
+    assert node["data"]["node"]["template"]["code"]["value"] == "class FormatAnswer(Component): ..."
+
+
+def test_substitute_trusted_node_code_keeps_unmodified_custom_component_template():
+    """The shipped Custom Component template is server code and still runs on public builds."""
+    from lfx.utils import flow_validation as fv
+
+    node = _node("cc", "CustomComponent", "# trusted template")
+    assert fv._substitute_trusted_node_code([node], {"CustomComponent": "# trusted template"}) == []
+    assert node["data"]["node"]["template"]["code"]["value"] == "# trusted template"
+
+
 def test_substitute_trusted_node_code_leaves_codeless_nodes_untouched():
     from lfx.utils import flow_validation as fv
 

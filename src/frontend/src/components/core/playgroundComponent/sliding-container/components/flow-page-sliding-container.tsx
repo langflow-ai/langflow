@@ -74,12 +74,39 @@ export function FlowPageSlidingContainerContent({
   const { chatHistory } = useChatHistory(
     activeSessionId ?? currentFlowId ?? null,
   );
+  const draftContext = useRef<{
+    flowId?: string;
+    sessionId?: string;
+    inputValue: typeof chatInputValue;
+  } | null>(null);
 
   useEffect(() => {
-    if (chatHistory.length === 0 && !isBuilding && chatInputValue !== null) {
+    const contextChanged =
+      draftContext.current === null ||
+      draftContext.current.flowId !== currentFlowId ||
+      draftContext.current.sessionId !== activeSessionId ||
+      draftContext.current.inputValue !== chatInputValue;
+    draftContext.current = {
+      flowId: currentFlowId,
+      sessionId: activeSessionId,
+      inputValue: chatInputValue,
+    };
+    if (
+      chatHistory.length === 0 &&
+      !isBuilding &&
+      chatInputValue !== null &&
+      (contextChanged || useUtilityStore.getState().chatValueStore === "")
+    ) {
       setChatValueStore(chatInputValue);
     }
-  }, [chatHistory.length, isBuilding, chatInputValue, setChatValueStore]);
+  }, [
+    currentFlowId,
+    activeSessionId,
+    chatHistory.length,
+    isBuilding,
+    chatInputValue,
+    setChatValueStore,
+  ]);
 
   const stickyInstance = useStickToBottom({
     resize: "instant",
@@ -249,7 +276,7 @@ export function FlowPageSlidingContainerContent({
             </StickToBottom>
 
             <div
-              className={`flex-shrink-0 p-4 ${isFullscreen ? "flex justify-center" : ""}`}
+              className={`flex-shrink-0 px-4 pt-4 pb-[calc(theme(spacing.4)+env(safe-area-inset-bottom))] ${isFullscreen ? "flex justify-center" : ""}`}
             >
               <div
                 className={`${isFullscreen ? "w-full max-w-[744px]" : "w-full"} p-0`}

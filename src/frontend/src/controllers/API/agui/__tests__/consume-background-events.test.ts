@@ -60,6 +60,7 @@ jest.mock(
   () => ({ updateMessage: (...args: unknown[]) => updateMessageMock(...args) }),
 );
 
+import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
 import { queryClient } from "@/contexts";
 import { consumeBackgroundEvents } from "@/controllers/API/agui/run-flow-bridge";
 
@@ -286,5 +287,64 @@ describe("consumeBackgroundEvents", () => {
     expect(setIsBuilding).toHaveBeenLastCalledWith(false);
     expect(setAwaitingInput).toHaveBeenLastCalledWith(false);
     expect(setBuildInfo).toHaveBeenCalledWith({ success: true });
+  });
+
+  it("keys the card and run messages by messageFlowId when the chat view reads another id", async () => {
+    // The shareable playground reads messages under a per-visitor flow id, not the real one.
+    global.fetch = jest.fn().mockResolvedValue({
+      ok: true,
+      body: sseStream([
+        JSON.stringify({ type: "RUN_STARTED", runId: "job-5" }),
+        JSON.stringify({
+          type: "CUSTOM",
+          name: "langflow.event",
+          value: {
+            event_type: "add_message",
+            data: {
+              id: "m1",
+              flow_id: "real-flow",
+              sender: "User",
+              text: "hi",
+            },
+          },
+        }),
+        JSON.stringify({
+          type: "CUSTOM",
+          name: "langflow.event",
+          value: {
+            event_type: "end",
+            data: { id: "m2", flow_id: "real-flow", sender: "Machine" },
+          },
+        }),
+        JSON.stringify({
+          type: "CUSTOM",
+          name: "langflow.human_input_required",
+          value: {
+            request_id: "HI:job-5",
+            kind: "node_input",
+            prompt: "Approve?",
+            options: [{ action_id: "approve", label: "Approve" }],
+            schema: [],
+            allowed_decisions: ["approve"],
+          },
+        }),
+      ]),
+    }) as unknown as typeof fetch;
+
+    await consumeBackgroundEvents("job-5", {
+      flowId: "real-flow",
+      threadId: "s1",
+      messageFlowId: "visitor-flow",
+    });
+
+    expect(handleMessageEvent).toHaveBeenCalledWith(
+      "add_message",
+      expect.objectContaining({ id: "m1", flow_id: "visitor-flow" }),
+    );
+    expect(handleMessageEvent).toHaveBeenCalledWith(
+      "end",
+      expect.objectContaining({ id: "m2", flow_id: "visitor-flow" }),
+    );
+    expect(updateMessageMock.mock.calls[0][0].flow_id).toBe("visitor-flow");
   });
 });

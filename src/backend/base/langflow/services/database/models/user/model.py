@@ -1,10 +1,11 @@
 from datetime import datetime, timezone
+from secrets import token_urlsafe
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from lfx.schema.validators import ensure_utc
 from pydantic import BaseModel, field_validator
-from sqlalchemy import JSON, Column, Index, text
+from sqlalchemy import JSON, Column, Index, event, inspect, text
 from sqlmodel import Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -38,6 +39,7 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True, unique=True)
     username: str = Field(index=True, unique=True)
     password: str = Field()
+    session_version: str | None = Field(default=None, nullable=True, max_length=64)
     profile_image: str | None = Field(default=None, nullable=True)
     is_active: bool = Field(default=False)
     is_superuser: bool = Field(default=False)
@@ -112,6 +114,13 @@ class User(SQLModel, table=True):  # type: ignore[call-arg]
     optins: dict[str, Any] | None = Field(
         sa_column=Column(JSON, default=lambda: UserOptin().model_dump(), nullable=True)
     )
+
+
+@event.listens_for(User, "before_update")
+def _rotate_password_session_version(_mapper, _connection, user: User) -> None:
+    """Retire native sessions in the same transaction as a password change."""
+    if inspect(user).attrs.password.history.has_changes():
+        user.session_version = token_urlsafe(32)
 
 
 class UserCreate(SQLModel):
