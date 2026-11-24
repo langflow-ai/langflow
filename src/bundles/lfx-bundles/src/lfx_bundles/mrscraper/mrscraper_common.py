@@ -222,19 +222,6 @@ def wait_for_selector_input() -> StrInput:
     )
 
 
-def action_input() -> StrInput:
-    return StrInput(
-        name="action",
-        display_name="Action",
-        value="",
-        advanced=True,
-        info=(
-            "Scraper action that routes the request or simply flags it, useful for separating analytics "
-            "per domain. Leave blank to send no action."
-        ),
-    )
-
-
 def geo_code_input() -> StrInput:
     return StrInput(
         name="geo_code",
@@ -273,7 +260,7 @@ def max_retries_input() -> StrInput:
     )
 
 
-def page_inputs(*, loading: bool, action: bool) -> list[Any]:
+def page_inputs(*, loading: bool) -> list[Any]:
     """Inputs shared by the page components, in the standard parameter order."""
     inputs: list[Any] = []
     if loading:
@@ -282,8 +269,6 @@ def page_inputs(*, loading: bool, action: bool) -> list[Any]:
     if loading:
         inputs += [warm_start_input(), block_resources_input()]
     inputs.append(wait_for_selector_input())
-    if action:
-        inputs.append(action_input())
     inputs += [geo_code_input(), max_age_input(), max_retries_input()]
     return inputs
 

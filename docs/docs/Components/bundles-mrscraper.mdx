@@ -25,7 +25,6 @@ All seven components return the API payload as [`Data`](/data-types#json). The S
 | Warm Start (`warm_start`) | `false` | Whether to open the site's home page first to warm the session before loading the target URL. Not shown on **Get Screenshot**. |
 | Block Resources (`block_resources`) | `false` | Whether to block images, fonts, and stylesheets while loading the page. Not shown on **Get Screenshot**. |
 | Wait for Selector (`wait_for_selector`) | Blank | CSS selector or text to wait for on the page before returning the result, up to 500 characters. A selector needs a rendered page, so don't combine it with **Browser Rendering** `Disabled`. |
-| Action (`action`) | Blank | Scraper action that routes the request or simply flags it, useful for separating analytics per domain. **Scrape HTML** and **Scrape Markdown** only. |
 | Geo Code (`geo_code`) | Blank | Two-letter country code to load the page from, sent in lowercase. Blank uses the API default (United States). |
 | Max Age (milliseconds) (`max_age`) | `0` | Return a cached result of the same request when it is newer than the selected age. A cached result costs the same tokens as the original scrape. Up to `604800000` (7 days); `0` always scrapes fresh. |
 | Max Retries (`max_retries`) | Blank | Maximum number of retries, as a nonnegative integer; `0` is preserved. Blank means no limit. |
@@ -38,7 +37,7 @@ The output contains selected status fields under `data`, such as `data.tokenLimi
 
 ## MrScraper Scrape HTML
 
-Retrieve the raw HTML of a page. Browser rendering is optional. This component sends `GET https://api.mrscraper.com` with `html=true` and `markdown=false`, the **URL**, and the shared page settings, including **Action**.
+Retrieve the raw HTML of a page. Browser rendering is optional. This component sends `GET https://api.mrscraper.com` with `html=true` and `markdown=false`, the **URL**, and the shared page settings.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -49,7 +48,7 @@ Without a screenshot, the output is `{"html": "..."}`. With a screenshot, the AP
 
 ## MrScraper Scrape Markdown
 
-Retrieve a page as clean Markdown. Browser rendering is optional. This component sends `GET https://api.mrscraper.com` with `markdown=true`, `html=false`, and `screenshot=false`, the **URL**, and the shared page settings, including **Action**. The output is `{"markdown": "..."}`.
+Retrieve a page as clean Markdown. Browser rendering is optional. This component sends `GET https://api.mrscraper.com` with `markdown=true`, `html=false`, and `screenshot=false`, the **URL**, and the shared page settings. The output is `{"markdown": "..."}`.
 
 ## MrScraper Get Screenshot
 
@@ -79,7 +78,7 @@ Extract structured JSON from a page using a natural-language prompt. Append `Jso
 | Include HTML (`html`) | `true` | Whether to include the page HTML in the response. Disable it for a smaller response. |
 | Include Screenshot (`screenshot`) | `false` | Whether to include a base64 screenshot in the response. |
 
-**Scrape JSON** also accepts the shared page settings except **Action**, and always sends `saveResult=true`. Extracted fields are in `data`; the output also contains `success`, `token_usage`, `status`, and `error`. A failed run returns `success: false` and is not billed.
+**Scrape JSON** also accepts the shared page settings and always sends `saveResult=true`. Extracted fields are in `data`; the output also contains `success`, `token_usage`, `status`, and `error`. A failed run returns `success: false` and is not billed.
 
 ## MrScraper Web Search
 

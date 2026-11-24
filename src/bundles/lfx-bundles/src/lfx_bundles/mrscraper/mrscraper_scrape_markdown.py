@@ -7,7 +7,6 @@ from lfx.schema.data import Data
 from lfx_bundles.mrscraper.mrscraper_common import (
     api_token_input,
     call_sdk,
-    optional_text,
     page_inputs,
     page_kwargs,
     payload,
@@ -24,7 +23,7 @@ class MrscraperScrapeMarkdown(Component):
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"
 
-    inputs = [api_token_input(), url_input(), *page_inputs(loading=True, action=True)]
+    inputs = [api_token_input(), url_input(), *page_inputs(loading=True)]
 
     outputs = [Output(display_name="Markdown", name="data", method="scrape")]
 
@@ -35,6 +34,5 @@ class MrscraperScrapeMarkdown(Component):
             "scrape_markdown",
             url=(self.url or "").strip(),
             **page_kwargs(self, loading=True),
-            action=optional_text(self.action),
         )
         return Data(data=payload(result, scalar_key="markdown"))

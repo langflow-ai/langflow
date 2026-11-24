@@ -42,7 +42,7 @@ class MrscraperGetScreenshot(Component):
                 "to 300, such as 1280x800 or 1920x1080-75."
             ),
         ),
-        *page_inputs(loading=False, action=False),
+        *page_inputs(loading=False),
     ]
 
     outputs = [Output(display_name="Screenshot", name="data", method="capture")]

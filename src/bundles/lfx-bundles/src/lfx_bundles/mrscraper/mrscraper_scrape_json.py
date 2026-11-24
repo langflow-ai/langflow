@@ -47,7 +47,7 @@ class MrscraperScrapeJson(Component):
             advanced=True,
             info="Whether to include the page HTML in the response.",
         ),
-        *page_inputs(loading=True, action=False),
+        *page_inputs(loading=True),
         BoolInput(
             name="screenshot",
             display_name="Include Screenshot",

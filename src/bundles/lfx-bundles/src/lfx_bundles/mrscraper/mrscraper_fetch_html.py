@@ -8,7 +8,6 @@ from lfx_bundles.mrscraper.mrscraper_common import (
     NO_SCREENSHOT,
     api_token_input,
     call_sdk,
-    optional_text,
     page_inputs,
     page_kwargs,
     payload,
@@ -43,7 +42,7 @@ class MrscraperFetchHtml(Component):
                 "Setting a screenshot also sends browserRendering=true."
             ),
         ),
-        *page_inputs(loading=True, action=True),
+        *page_inputs(loading=True),
     ]
 
     outputs = [Output(display_name="HTML", name="data", method="fetch")]
@@ -56,7 +55,6 @@ class MrscraperFetchHtml(Component):
             "scrape_html",
             url=(self.url or "").strip(),
             **page_kwargs(self, loading=True),
-            action=optional_text(self.action),
             screenshot=screenshot_capture(value=self.screenshot),
         )
         return Data(data=payload(result, scalar_key="html"))

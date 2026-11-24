@@ -165,6 +165,13 @@ def test_services_and_retired_placeholders_are_exported_and_discoverable():
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("component_class", [component_class for component_class, *_ in COMPONENTS])
+def test_no_component_has_an_action_input(component_class):
+    """Action is not an input on any component; only Brand and Search send a fixed action."""
+    assert "action" not in {component_input.name for component_input in component_class.inputs}
+
+
+@pytest.mark.unit
 @pytest.mark.parametrize(("component_class", "method_name", "_sdk_method", "values"), COMPONENTS)
 @pytest.mark.asyncio
 async def test_missing_sdk_error(component_class, method_name, _sdk_method, values):
@@ -196,8 +203,8 @@ async def test_default_inputs_send_exact_sdk_keywords(
     loading = {"browser_rendering": None, "warm_start": False, "block_resources": False}
     expected = {
         "status": {},
-        "scrape_html": {"url": URL, **loading, **page, "action": None, "screenshot": False},
-        "scrape_markdown": {"url": URL, **loading, **page, "action": None},
+        "scrape_html": {"url": URL, **loading, **page, "screenshot": False},
+        "scrape_markdown": {"url": URL, **loading, **page},
         "get_screenshot": {"url": URL, "screenshot": "full", **page},
         "scrape_brand": {"url": URL},
         "scrape_json": {"url": URL, "prompt": DEFAULT_PROMPT, "html": True, **loading, **page, "screenshot": False},
@@ -346,7 +353,6 @@ async def test_scrape_html_maps_every_option(http_transport):
         warm_start=True,
         block_resources=True,
         wait_for_selector=" .ready ",
-        action=" analytics ",
         geo_code="ID",
         max_age=86400000,
         max_retries="0",
@@ -362,7 +368,6 @@ async def test_scrape_html_maps_every_option(http_transport):
         ("warmStart", "true"),
         ("blockResources", "true"),
         ("waitForSelector", ".ready"),
-        ("action", "analytics"),
         ("geoCode", "id"),
         # Results are always saved; tokenCap is never sent.
         ("saveResult", "true"),
@@ -413,7 +418,6 @@ async def test_scrape_markdown_defaults_options_and_text_output(http_transport):
         url=URL,
         browser_rendering="Disabled",
         block_resources=True,
-        action="docs",
         geo_code="gb",
         max_retries="1",
     ).scrape()
@@ -437,7 +441,6 @@ async def test_scrape_markdown_defaults_options_and_text_output(http_transport):
         "timeout": "300",
         "warmStart": "false",
         "blockResources": "true",
-        "action": "docs",
         "geoCode": "gb",
         "saveResult": "true",
         "maxAge": "0",
