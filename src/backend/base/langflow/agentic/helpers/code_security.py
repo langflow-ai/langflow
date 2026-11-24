@@ -109,6 +109,9 @@ _PLATFORM_SERVICE_ACCESSORS: frozenset[str] = frozenset(
         "get_variable_service",
     }
 )
+_PLATFORM_SERVICE_ACCESSOR_HOSTS: frozenset[str] = frozenset(
+    f"{package}.{module}" for package in _PLATFORM_SERVICE_PACKAGES for module in ("base.data.utils", "utils.util")
+)
 
 
 def _is_blocked_attribute(attr: str | None, *, include_expression_methods: bool = True) -> bool:
@@ -996,6 +999,9 @@ _RESTRICTED_MODULE_REFERENCES: set[str] = {
     *_DANGEROUS_READ_MEMBERS,
     *(prefix.split(".")[0] for prefix in DANGEROUS_SUBMODULES),
     *_RESTRICTED_MODULE_REEXPORTS,
+    # These helpers re-export service accessors alongside public utilities.
+    # Restrict the module object at opaque boundaries while allowing direct utility use.
+    *_PLATFORM_SERVICE_ACCESSOR_HOSTS,
     "builtins",
     "__builtins__",
 }

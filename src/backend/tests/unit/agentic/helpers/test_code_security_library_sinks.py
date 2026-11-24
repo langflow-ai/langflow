@@ -81,7 +81,8 @@ def test_rejects_internal_platform_service_access(package: str, source: str) -> 
     assert any(f"{package}.services" in violation for violation in result.violations)
 
 
-@pytest.mark.parametrize("module", ["lfx.utils.util", "lfx.base.data.utils"])
+@pytest.mark.parametrize("package", ["langflow", "lfx"])
+@pytest.mark.parametrize("helper_path", ["utils.util", "base.data.utils"])
 @pytest.mark.parametrize(
     "source",
     [
@@ -93,15 +94,36 @@ def test_rejects_internal_platform_service_access(package: str, source: str) -> 
         "from {module} import *\naccessor = get_settings_service",
     ],
 )
-def test_rejects_platform_service_accessor_reexports(module: str, source: str) -> None:
+def test_rejects_platform_service_accessor_reexports(package: str, helper_path: str, source: str) -> None:
+    module = f"{package}.{helper_path}"
     result = scan_code_security(source.format(module=module))
 
     assert not result.is_safe
     assert any("get_settings_service" in violation for violation in result.violations)
 
 
-def test_preserves_public_utility_from_service_accessor_host() -> None:
-    assert scan_code_security("from lfx.utils.util import escape_json_dump").is_safe
+@pytest.mark.parametrize("package", ["langflow", "lfx"])
+@pytest.mark.parametrize("helper_path", ["utils.util", "base.data.utils"])
+@pytest.mark.parametrize(
+    "use", ["modules = [helper]", "modules = {'helper': helper}", "def pick_helper():\n    return helper"]
+)
+def test_rejects_service_accessor_hosts_at_opaque_boundaries(package: str, helper_path: str, use: str) -> None:
+    module = f"{package}.{helper_path}"
+    result = scan_code_security(f"import {module} as helper\n{use}")
+
+    assert not result.is_safe
+    assert any(f"Indirect reference to restricted module '{module}'" in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize("package", ["langflow", "lfx"])
+@pytest.mark.parametrize(
+    ("helper_path", "member"), [("utils.util", "escape_json_dump"), ("base.data.utils", "normalize_text")]
+)
+def test_preserves_public_utility_from_service_accessor_host(package: str, helper_path: str, member: str) -> None:
+    module = f"{package}.{helper_path}"
+    source = f"from {module} import {member}\nimport {module} as helper\ntransform = helper.{member}"
+
+    assert scan_code_security(source).is_safe
 
 
 @pytest.mark.parametrize("package", ["langflow", "lfx"])
