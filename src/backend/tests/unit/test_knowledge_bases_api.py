@@ -1637,16 +1637,19 @@ class TestKnowledgeBaseAPI:
             assert context.name == "Hooked_Delete"
             assert context.via == "request"
 
+    @pytest.mark.parametrize("bulk", [False, True])
     async def test_a_pre_deletion_refusal_keeps_the_knowledge_base_whole(
-        self, deletion_registry, client, logged_in_headers, seed_kb
+        self, deletion_registry, client, logged_in_headers, seed_kb, bulk
     ):
         from fastapi import HTTPException
 
+        allowed = await seed_kb("Allowed_Delete", backend_type="opensearch")
         record = await seed_kb("Refused_Delete", backend_type="opensearch")
         post_ran = []
 
-        async def refuse(_context):
-            raise HTTPException(status_code=409, detail="in use")
+        async def refuse(context):
+            if context.resource_id == record.id:
+                raise HTTPException(status_code=409, detail="in use")
 
         async def post(context):
             post_ran.append(context)
@@ -1654,13 +1657,26 @@ class TestKnowledgeBaseAPI:
         deletion_registry.register_pre_deletion_hook("knowledge_base", refuse)
         deletion_registry.register_post_deletion_hook("knowledge_base", post)
         backend = AsyncMock()
-        with patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=backend):
-            response = await client.delete("api/v1/knowledge_bases/Refused_Delete", headers=logged_in_headers)
+        with (
+            patch("langflow.services.knowledge_base_storage.runtime._raw_backend", return_value=backend),
+            patch.object(knowledge_base_service, "_cancel_inflight_ingestion_for_kb", new=AsyncMock()) as cancel,
+        ):
+            if bulk:
+                response = await client.request(
+                    "DELETE",
+                    "api/v1/knowledge_bases",
+                    headers=logged_in_headers,
+                    json={"kb_names": [allowed.name, record.name]},
+                )
+            else:
+                response = await client.delete(f"api/v1/knowledge_bases/{record.name}", headers=logged_in_headers)
         assert response.status_code == 409, response.text
-        backend.delete_collection.assert_not_awaited()  # storage untouched
-        retained = await knowledge_base_service.get_by_id(record.id)
-        assert retained is not None
-        assert retained.storage_state == "ready"
+        cancel.assert_not_awaited()
+        backend.delete_collection.assert_not_awaited()
+        for candidate in (allowed, record):
+            retained = await knowledge_base_service.get_by_id(candidate.id)
+            assert retained is not None
+            assert retained.storage_state == "ready"
         assert post_ran == []
 
     async def test_bulk_delete_knowledge_bases_runs_the_hooks_for_each(

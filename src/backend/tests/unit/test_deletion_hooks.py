@@ -222,3 +222,65 @@ async def test_after_commit_logs_a_failing_hook_and_still_runs_the_next_event(se
     await session.commit()
     await wait_for_post_deletion_runs()
     assert sorted(ran) == ["a", "b"]
+
+
+@pytest.mark.anyio
+async def test_releasing_a_savepoint_does_not_dispatch_until_root_commit(session):
+    seen = []
+
+    async def record(context):
+        seen.append(context.resource_id)
+
+    register_post_deletion_hook(RESOURCE_FLOW, record)
+    rolled_back = _context(RESOURCE_FLOW)
+    async with session.begin_nested():
+        run_post_deletion_after_commit(session, rolled_back)
+    await wait_for_post_deletion_runs()
+    assert seen == []
+    await session.rollback()
+    await session.commit()
+    await wait_for_post_deletion_runs()
+    assert seen == []
+
+    committed = _context(RESOURCE_FLOW)
+    async with session.begin():
+        async with session.begin_nested():
+            run_post_deletion_after_commit(session, committed)
+        await wait_for_post_deletion_runs()
+        assert seen == []
+    await wait_for_post_deletion_runs()
+    assert seen == [committed.resource_id]
+
+
+@pytest.mark.anyio
+async def test_savepoint_rollback_drops_only_its_own_events(session):
+    seen = []
+
+    async def record(context):
+        seen.append(context.resource_id)
+
+    register_post_deletion_hook(RESOURCE_FLOW, record)
+    outer = _context(RESOURCE_FLOW)
+    discarded = _context(RESOURCE_FLOW)
+    async with session.begin():
+        run_post_deletion_after_commit(session, outer)
+        savepoint = await session.begin_nested()
+        run_post_deletion_after_commit(session, discarded)
+        await savepoint.rollback()
+    await wait_for_post_deletion_runs()
+    assert seen == [outer.resource_id]
+
+
+@pytest.mark.anyio
+async def test_closing_a_session_drops_its_uncommitted_events(session):
+    seen = []
+
+    async def record(context):
+        seen.append(context.resource_id)
+
+    register_post_deletion_hook(RESOURCE_FLOW, record)
+    run_post_deletion_after_commit(session, _context(RESOURCE_FLOW))
+    await session.close()
+    await session.commit()
+    await wait_for_post_deletion_runs()
+    assert seen == []

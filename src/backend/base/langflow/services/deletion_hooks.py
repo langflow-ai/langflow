@@ -54,6 +54,7 @@ from sqlalchemy import event
 if TYPE_CHECKING:
     from uuid import UUID
 
+    from sqlalchemy.orm import Session, SessionTransaction
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 RESOURCE_KNOWLEDGE_BASE = "knowledge_base"
@@ -169,28 +170,42 @@ def run_post_deletion_after_commit(session: AsyncSession, context: DeletionConte
     For a delete that rides in the caller's transaction. The hooks run as a background task right after the commit
     (the commit cannot await them), so their failures are logged, never raised: a hook that must report a failure
     does so through its own durable state, which is what a repair or sweep reads. Safe to call several times.
-    A rolled-back *savepoint* does not drop the event, only a rolled-back transaction does.
+    Releasing a savepoint promotes its events to the parent transaction. Rolling a transaction back discards only
+    the events in that transaction, including any savepoints it had released.
     """
     if not _post_deletion_hooks.get(context.resource):
-        return  # nothing registered: a plain Langflow pays nothing for the seam
+        return
     sync_session = session.sync_session
-    pending: list[DeletionContext] | None = sync_session.info.get(_PENDING_KEY)
+    transaction = sync_session.get_nested_transaction() or sync_session.get_transaction()
+    if transaction is None:
+        transaction = sync_session.begin()
+    pending: dict[SessionTransaction, list[DeletionContext]] | None = sync_session.info.get(_PENDING_KEY)
     if pending is None:
-        pending = sync_session.info[_PENDING_KEY] = []
+        pending = sync_session.info[_PENDING_KEY] = {}
 
-        def _on_commit(_session: Any) -> None:
-            events, pending[:] = list(pending), []
+        def _on_commit(committing_session: Session) -> None:
+            committed = committing_session.get_nested_transaction() or committing_session.get_transaction()
+            if committed is None:
+                return
+            events = pending.pop(committed, [])
+            if not events:
+                return
+            if committed.parent is not None:
+                pending.setdefault(committed.parent, []).extend(events)
+                return
+            loop = asyncio.get_running_loop()
             for event_context in events:
-                task = asyncio.get_running_loop().create_task(_run_logged(event_context))
+                task = loop.create_task(_run_logged(event_context))
                 _background_runs.add(task)
                 task.add_done_callback(_background_runs.discard)
 
-        def _on_rollback(_session: Any) -> None:
-            pending.clear()
+        def _on_transaction_end(_session: Session, ended: SessionTransaction) -> None:
+            # A commit moved its events already. This also covers implicit rollback on session close.
+            pending.pop(ended, None)
 
         event.listen(sync_session, "after_commit", _on_commit)
-        event.listen(sync_session, "after_rollback", _on_rollback)
-    pending.append(replace(context, session=None))
+        event.listen(sync_session, "after_transaction_end", _on_transaction_end)
+    pending.setdefault(transaction, []).append(replace(context, session=None))
 
 
 async def _run_logged(context: DeletionContext) -> None:

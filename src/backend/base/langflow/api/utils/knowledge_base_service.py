@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -34,6 +35,7 @@ from sqlmodel import select
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.deletion_hooks import (
     RESOURCE_KNOWLEDGE_BASE,
+    VIA_CASCADE,
     VIA_REQUEST,
     DeletionContext,
     run_post_deletion_hooks,
@@ -44,6 +46,10 @@ from langflow.services.memory_base.embedding_helpers import infer_embedding_prov
 
 if TYPE_CHECKING:
     from collections.abc import Callable
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.jobs.service import JobService
 
 
 class _UnsetType:
@@ -530,22 +536,92 @@ async def update_column_config(
         await session.commit()
 
 
-async def delete_record(record_id: UUID, *, via: str = VIA_REQUEST) -> None:
-    """Drain writers and tombstone storage before removing authoritative routing.
+async def _cancel_inflight_ingestion_for_kb(
+    *,
+    kb_name: str,
+    asset_id: UUID,
+    job_service: JobService,
+) -> None:
+    """Cancel queued / in-progress ingestion jobs for the named KB.
 
-    Deletion hooks (:mod:`langflow.services.deletion_hooks`) run here, the one place every KB deletion ends: a
-    pre-deletion hook may refuse before anything is touched, a post-deletion hook runs once the routing row is gone.
-    ``via`` says why the KB is deleted (see :class:`~langflow.services.deletion_hooks.DeletionContext`).
+    Transitions every job with ``asset_type='knowledge_base'`` and
+    ``status in (QUEUED, IN_PROGRESS)`` to ``CANCELLED``. The ingestion polls
+    :func:`KBIngestionHelper.is_job_cancelled` between batches and bails out via
+    :class:`IngestionCancelledError` to stop unnecessary work promptly.
+
+    Cancellation is best-effort. The deletion path independently fences the KB,
+    drains guarded storage operations, and persists a SQLite tombstone or drops
+    the remote collection before removing routing. Cancellation failure cannot
+    allow an old writer to recreate deleted SQLite storage.
+
+    Not filtered by user: ``asset_id`` is the KB row the caller is already
+    authorized to delete, and a collaborator's run on a shared KB must stop
+    too, or it keeps writing into the deleted KB's storage.
     """
-    from langflow.services.knowledge_base_storage.runtime import delete_storage_for_record, operation
+    try:
+        cancelled = await job_service.cancel_in_flight_jobs_by_asset(
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+        )
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning("Cancel-on-delete failed for KB %s: %s", kb_name, exc)
+        return
 
+    if cancelled:
+        await logger.ainfo(
+            "Cancelled %d in-flight ingestion job(s) before deleting KB '%s'",
+            len(cancelled),
+            kb_name,
+        )
+
+
+def _record_deletion_context(
+    record: KnowledgeBaseRecord, *, via: str, session: AsyncSession | None = None
+) -> DeletionContext:
+    return DeletionContext(
+        resource=RESOURCE_KNOWLEDGE_BASE,
+        resource_id=record.id,
+        owner_id=record.user_id,
+        name=record.name,
+        via=via,
+        session=session,
+    )
+
+
+async def prepare_record_deletion(
+    record: KnowledgeBaseRecord, *, via: str = VIA_REQUEST, session: AsyncSession | None = None
+) -> DeletionContext:
+    """Run the guard before a caller cancels ingestion, fences storage, or removes the row."""
+    context = _record_deletion_context(record, via=via, session=session)
+    await run_pre_deletion_hooks(context)
+    return replace(context, session=None)
+
+
+async def discard_provisioned_record(record_id: UUID) -> None:
+    """Compensate a failed create for the exact KB UUID allocated by that attempt."""
+    record = await get_by_id(record_id)
+    if record is not None:
+        await delete_prepared_record(record, _record_deletion_context(record, via=VIA_CASCADE))
+
+
+async def delete_record(record_id: UUID, *, via: str = VIA_REQUEST, job_service: JobService | None = None) -> None:
+    """Guard the delete, drain writers, and tombstone storage before removing authoritative routing."""
     record = await get_by_id(record_id)
     if record is None:
         return
-    context = DeletionContext(
-        resource=RESOURCE_KNOWLEDGE_BASE, resource_id=record.id, owner_id=record.user_id, name=record.name, via=via
-    )
-    await run_pre_deletion_hooks(context)
+    context = await prepare_record_deletion(record, via=via)
+    await delete_prepared_record(record, context, job_service=job_service)
+
+
+async def delete_prepared_record(
+    record: KnowledgeBaseRecord, context: DeletionContext, *, job_service: JobService | None = None
+) -> None:
+    """Delete a record whose guard already ran and notify the plugin once its routing row commits."""
+    from langflow.services.knowledge_base_storage.runtime import delete_storage_for_record, operation
+
+    record_id = record.id
+    if job_service is not None:
+        await _cancel_inflight_ingestion_for_kb(kb_name=record.name, asset_id=record_id, job_service=job_service)
     await delete_storage_for_record(record)
     removed = False
     async with operation(record_id, allowed_states=("deleted",)), session_scope() as session:

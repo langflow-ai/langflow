@@ -30,6 +30,7 @@ from langflow.services.deletion_hooks import (
     VIA_CASCADE,
     DeletionContext,
     run_post_deletion_after_commit,
+    run_pre_deletion_hooks,
 )
 from langflow.services.knowledge_base_storage.runtime import StorageUnavailableError
 from langflow.services.memory_base.ingestion import cancel_active_jobs
@@ -60,9 +61,12 @@ class FlowMemoryBaseCleanup:
     backend_config: dict = field(default_factory=dict)
     kb_record_id: UUID | None = None
     storage_record: KnowledgeBaseRecord | None = None
+    storage_deletion: DeletionContext | None = None
 
 
-async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[FlowMemoryBaseCleanup]:
+async def purge_flow_memory_bases(
+    session: AsyncSession, flow_id: UUID, *, via: str = VIA_CASCADE
+) -> list[FlowMemoryBaseCleanup]:
     """Delete the DB rows for every Memory Base owned by ``flow_id``.
 
     Runs on the caller's session so the deletions commit (or roll back) together
@@ -77,9 +81,25 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
     run :func:`finalize_flow_memory_base_cleanup` after the transaction commits.
     No external I/O happens here.
     """
+    from langflow.api.utils.knowledge_base_service import prepare_record_deletion
+
     memory_bases = list((await session.exec(select(MemoryBase).where(MemoryBase.flow_id == flow_id))).all())
     if not memory_bases:
         return []
+    contexts = [
+        DeletionContext(
+            resource=RESOURCE_MEMORY_BASE,
+            resource_id=mb.id,
+            owner_id=mb.user_id,
+            name=mb.name,
+            via=via,
+            session=session,
+            extra={"flow_id": flow_id},
+        )
+        for mb in memory_bases
+    ]
+    for context in contexts:
+        await run_pre_deletion_hooks(context)
 
     # Resolve each owner's username once for residual legacy directory cleanup.
     username_cache: dict[UUID, str | None] = {}
@@ -91,6 +111,7 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
 
     handles: list[FlowMemoryBaseCleanup] = []
     for mb in memory_bases:
+        storage_deletion = None
         # Retain and fence routing for post-commit cleanup, and capture a trusted
         # snapshot for the owner-deletion case where an FK cascade removes it.
         kb_record = (
@@ -107,6 +128,7 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
                 if backend_type == "chroma" or kb_record.storage_state not in ("ready", "deleting", "deleted"):
                     msg = "Memory Base storage requires upgrade recovery before deleting its flow"
                     raise StorageUnavailableError(msg)
+                storage_deletion = await prepare_record_deletion(kb_record, via=via, session=session)
                 if kb_record.storage_state == "ready":
                     changed = await session.exec(
                         update(KnowledgeBaseRecord)
@@ -137,6 +159,7 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
                 backend_config=backend_config,
                 kb_record_id=kb_record.id if kb_record is not None else None,
                 storage_record=kb_record.model_copy(deep=True) if kb_record is not None else None,
+                storage_deletion=storage_deletion,
             )
         )
 
@@ -165,19 +188,16 @@ async def purge_flow_memory_bases(session: AsyncSession, flow_id: UUID) -> list[
         )
     )
     await session.exec(delete(MemoryBaseSession).where(col(MemoryBaseSession.memory_base_id).in_(memory_base_ids)))
-    await session.exec(delete(MemoryBase).where(col(MemoryBase.id).in_(memory_base_ids)))
-    for mb in memory_bases:
-        run_post_deletion_after_commit(
-            session,
-            DeletionContext(
-                resource=RESOURCE_MEMORY_BASE,
-                resource_id=mb.id,
-                owner_id=mb.user_id,
-                name=mb.name,
-                via=VIA_CASCADE,
-                extra={"flow_id": flow_id},
-            ),
-        )
+    removed_ids = set(
+        (
+            await session.exec(
+                delete(MemoryBase).where(col(MemoryBase.id).in_(memory_base_ids)).returning(MemoryBase.id)
+            )
+        ).scalars()
+    )
+    for context in contexts:
+        if context.resource_id in removed_ids:
+            run_post_deletion_after_commit(session, context)
 
     return handles
 
@@ -226,4 +246,7 @@ async def _drop_remote_collection(handle: FlowMemoryBaseCleanup) -> None:
                 handle.kb_name,
             )
         return
-    await knowledge_base_service.delete_record(record.id, via=VIA_CASCADE)
+    if handle.storage_deletion is None:
+        await knowledge_base_service.delete_record(record.id, via=VIA_CASCADE)
+    else:
+        await knowledge_base_service.delete_prepared_record(record, handle.storage_deletion)

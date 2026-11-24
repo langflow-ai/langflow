@@ -31,7 +31,6 @@ async def erase_knowledge_bases(session: AsyncSession, ctx: EraseContext) -> int
     # The KB delete route's own path: drain writers, fence and delete the store, then the row.
     # A store that cannot be reached raises, so the step is retried and holds the request open.
     from langflow.api.utils import knowledge_base_service
-    from langflow.api.v1 import knowledge_bases as kb_routes
 
     record = (
         await session.exec(
@@ -40,10 +39,8 @@ async def erase_knowledge_bases(session: AsyncSession, ctx: EraseContext) -> int
     ).first()
     if record is None:
         return 0
-    await kb_routes._cancel_inflight_ingestion_for_kb(  # noqa: SLF001
-        kb_name=record.name, asset_id=record.id, job_service=get_job_service()
-    )
-    await knowledge_base_service.delete_record(record.id, via=VIA_ERASE)
+    context = await knowledge_base_service.prepare_record_deletion(record, via=VIA_ERASE, session=session)
+    await knowledge_base_service.delete_prepared_record(record, context, job_service=get_job_service())
     return 1
 
 
