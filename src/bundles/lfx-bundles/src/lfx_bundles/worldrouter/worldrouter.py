@@ -45,7 +45,11 @@ class WorldRouterComponent(LCModelComponent):
     ]
 
     def fetch_models(self) -> list[dict]:
-        """Fetch available chat models from WorldRouter."""
+        """Fetch available chat models from WorldRouter.
+
+        Returns an empty list when the request fails or the response is not a model list, so the caller
+        reports the failure on the field instead of raising.
+        """
         if not self.api_key:
             return []
         try:
@@ -55,25 +59,40 @@ class WorldRouterComponent(LCModelComponent):
                 timeout=10.0,
             )
             response.raise_for_status()
-            models = response.json().get("data", [])
-            return sorted(
-                [
-                    {"id": m["id"], "context": m.get("context_length", 0)}
-                    for m in models
-                    if m.get("id") and not any(marker in m["id"].lower() for marker in NON_CHAT_MARKERS)
-                ],
-                key=lambda x: x["id"],
-            )
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
+            payload = response.json()
+        except (httpx.RequestError, httpx.HTTPStatusError, ValueError) as e:
             self.log(f"Error fetching models: {e}")
             return []
+
+        models = payload.get("data") if isinstance(payload, dict) else None
+        if not isinstance(models, list):
+            self.log("Error fetching models: unexpected response shape")
+            return []
+
+        chat_models = []
+        for model in models:
+            if not isinstance(model, dict):
+                continue
+            model_id = model.get("id")
+            if not isinstance(model_id, str) or not model_id:
+                continue
+            if any(marker in model_id.lower() for marker in NON_CHAT_MARKERS):
+                continue
+            context = model.get("context_length")
+            # WorldRouter's list does not report context length; keep it only when a real value is given.
+            if isinstance(context, bool) or not isinstance(context, int) or context <= 0:
+                context = None
+            chat_models.append({"id": model_id, "context": context})
+        return sorted(chat_models, key=lambda x: x["id"])
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:  # noqa: ARG002
         """Update model options."""
         models = self.fetch_models()
         if models:
             build_config["model_name"]["options"] = [m["id"] for m in models]
-            build_config["model_name"]["tooltips"] = {m["id"]: f"{m['context']:,} tokens" for m in models}
+            build_config["model_name"]["tooltips"] = {
+                m["id"]: f"{m['context']:,} tokens" for m in models if m["context"] is not None
+            }
             build_config["model_name"]["info"] = ""
         elif self.api_key:
             # Keep the selected model and existing options; report the failure on the field instead.

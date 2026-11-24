@@ -47,7 +47,40 @@ def test_discovery_authenticates_and_skips_media_models(component, monkeypatch):
 
     with httpx.Client(transport=httpx.MockTransport(respond)) as client:
         monkeypatch.setattr("lfx_bundles.worldrouter.worldrouter.httpx.get", client.get)
-        assert component.fetch_models() == [{"id": "a-chat", "context": 0}, {"id": "z-chat", "context": 128000}]
+        assert component.fetch_models() == [{"id": "a-chat", "context": None}, {"id": "z-chat", "context": 128000}]
+
+
+def test_discovery_drops_malformed_entries_and_context_values(component, monkeypatch):
+    payload = {
+        "data": [
+            "not-a-model",
+            {"id": None},
+            {"id": 42},
+            {"id": "null-context", "context_length": None},
+            {"id": "text-context", "context_length": "128k"},
+            {"id": "bool-context", "context_length": True},
+            {"id": "negative-context", "context_length": -1},
+        ]
+    }
+    with httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=payload))) as client:
+        monkeypatch.setattr("lfx_bundles.worldrouter.worldrouter.httpx.get", client.get)
+        assert component.fetch_models() == [
+            {"id": "bool-context", "context": None},
+            {"id": "negative-context", "context": None},
+            {"id": "null-context", "context": None},
+            {"id": "text-context", "context": None},
+        ]
+
+
+def test_refresh_without_context_lengths_sets_options_without_tooltips(component, build_config, monkeypatch):
+    payload = {"data": [{"id": "b-chat", "context_length": None}, {"id": "a-chat"}]}
+    with httpx.Client(transport=httpx.MockTransport(lambda _request: httpx.Response(200, json=payload))) as client:
+        monkeypatch.setattr("lfx_bundles.worldrouter.worldrouter.httpx.get", client.get)
+        result = component.update_build_config(build_config, "chat-model", "model_name")
+
+    assert result["model_name"]["options"] == ["a-chat", "b-chat"]
+    assert result["model_name"]["tooltips"] == {}
+    assert result["model_name"]["info"] == ""
 
 
 def test_missing_key_skips_discovery(component, build_config, monkeypatch):
@@ -61,12 +94,23 @@ def test_missing_key_skips_discovery(component, build_config, monkeypatch):
     assert component.update_build_config(build_config, "", "model_name") == original
 
 
-@pytest.mark.parametrize("failure", [401, 500, "timeout", "empty"])
+MALFORMED_BODIES = {
+    "null": b"null",
+    "list": b"[]",
+    "data-null": b'{"data": null}',
+    "data-object": b'{"data": {"id": "chat-model"}}',
+    "not-json": b"<html>bad gateway</html>",
+}
+
+
+@pytest.mark.parametrize("failure", [401, 500, "timeout", "empty", *MALFORMED_BODIES])
 def test_failed_refresh_preserves_selection(component, build_config, monkeypatch, failure):
     def respond(request):
         if failure == "timeout":
             message = "Timed out"
             raise httpx.ReadTimeout(message, request=request)
+        if failure in MALFORMED_BODIES:
+            return httpx.Response(200, content=MALFORMED_BODIES[failure])
         return httpx.Response(200 if failure == "empty" else failure, json={"data": []})
 
     original = deepcopy(build_config["model_name"])
