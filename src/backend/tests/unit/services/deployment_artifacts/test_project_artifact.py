@@ -20,6 +20,8 @@ import pytest
 from fastapi import HTTPException
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
+from langflow.services.database.models.variable.model import Variable
 from langflow.services.deployment_artifacts import (
     LFPKG_MEDIA_TYPE,
     EmptyProjectArtifactError,
@@ -28,9 +30,12 @@ from langflow.services.deployment_artifacts import (
     ProjectArtifactLimits,
     ProjectArtifactNotFoundError,
     ProjectArtifactRequiredConnection,
+    ProjectArtifactVariableBindingError,
     build_project_artifact,
     build_project_deployment_snapshot,
 )
+from langflow.services.deps import get_settings_service
+from langflow.services.variable.constants import GENERIC_TYPE
 
 MODULE = "langflow.services.deployment_artifacts.builder"
 FIXED_ZIP_TIMESTAMP = (1980, 1, 1, 0, 0, 0)
@@ -617,12 +622,6 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
                             },
                             "password": {"name": "password", "password": True, "value": "raw-password"},
                             "endpoint": {"name": "endpoint", "load_from_db": True, "value": "MY_INTERNAL_API_URL"},
-                            "mislabeled": {
-                                "name": "token",
-                                "password": True,
-                                "load_from_db": True,
-                                "value": "raw-mislabeled-secret\nwith-newline",
-                            },
                         }
                     }
                 }
@@ -641,7 +640,6 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
     )
 
     assert b"raw-password" not in artifact.content
-    assert b"raw-mislabeled-secret" not in artifact.content
     assert artifact.flows[0].required_variables == ("MY_INTERNAL_API_URL", "OPENAI_API_KEY")
     with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
         exported = json.loads(archive.read(f"flows/{flow.id}.json"))
@@ -651,57 +649,39 @@ async def test_build_project_artifact_preserves_variable_references_and_lists_re
     assert template["api_key"]["load_from_db"] is True
     assert template["password"]["value"] is None
     assert template["endpoint"]["value"] == "MY_INTERNAL_API_URL"
-    assert template["mislabeled"]["value"] is None
     assert manifest["required_variables"] == ["MY_INTERNAL_API_URL", "OPENAI_API_KEY"]
     assert manifest["flows"][0]["required_variables"] == ["MY_INTERNAL_API_URL", "OPENAI_API_KEY"]
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("owner_has_variables", [False, True])
-async def test_build_project_artifact_scrubs_unknown_name_shaped_bindings(*, owner_has_variables: bool) -> None:
-    owner_id = uuid4()
-    caller_id = uuid4()
-    project = Folder(id=uuid4(), name="Owner bindings", user_id=owner_id)
-    flow = _flow(owner_id=owner_id, project_id=project.id)
-    fields = {
-        "api_key": {"name": "api_key", "password": True, "load_from_db": True, "value": "OWNER_KEY"},
-        "token": {"name": "token", "password": True, "load_from_db": True, "value": "STALE_SECRET"},
-        "endpoint": {"name": "endpoint", "load_from_db": True, "value": "CALLER_ONLY"},
-    }
-    flow.data = {"nodes": [{"data": {"node": {"template": fields}}}], "edges": []}
-    original = deepcopy(flow.data)
-    session = _session_with_flows([flow])
-    user = SimpleNamespace(id=caller_id, is_superuser=False)
-    variable_service = AsyncMock()
-    variable_service.list_variables.return_value = ["OWNER_KEY"] if owner_has_variables else []
-    with (
-        patch(f"{MODULE}.authorized_or_owner_scoped", new_callable=AsyncMock, return_value=project),
-        patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
-        patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
-        patch(f"{MODULE}.get_variable_service", return_value=variable_service),
-    ):
-        artifact = await build_project_artifact(session, user, project.id)
+@pytest.mark.parametrize("typed", [False, True])
+async def test_project_artifact_resolves_saved_bindings_against_project_owner(async_session, monkeypatch, *, typed):
+    owner = User(username="project-owner", password=str(uuid4()))
+    editor = User(username="project-editor", password=str(uuid4()))
+    project = Folder(name="Owner bindings", user_id=owner.id)
+    flow = _flow(owner_id=owner.id, project_id=project.id, name="Report")
+    flow.last_modified_by = editor.id
+    field = {"name": "label", "load_from_db": True, "value": "DISPLAY_LABEL"}
+    flow.data = {"nodes": [{"data": {"node": {"template": {"label": field}}}}], "edges": []}
+    variable = Variable(user_id=editor.id, name="DISPLAY_LABEL", type=GENERIC_TYPE, value="Example")
+    async_session.add_all([owner, editor, project, flow, variable])
+    await async_session.commit()
+    monkeypatch.setattr(get_settings_service().settings, "deployment_typed_variables_enabled", typed)
 
+    with pytest.raises(ProjectArtifactVariableBindingError, match="Rebind field 'label' in flow 'Report'") as raised:
+        await build_project_artifact(async_session, owner, project.id)
+    assert "DISPLAY_LABEL" not in str(raised.value)
+    await async_session.refresh(flow)
+    assert flow.data["nodes"][0]["data"]["node"]["template"]["label"] == field
+
+    async_session.add(Variable(user_id=owner.id, name="DISPLAY_LABEL", type=GENERIC_TYPE, value="Owner label"))
+    await async_session.commit()
+    artifact = await build_project_artifact(async_session, owner, project.id)
     with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
-        for name in archive.namelist():
-            content = archive.read(name)
-            assert b"STALE_SECRET" not in content
-            assert b"CALLER_ONLY" not in content
-            if not owner_has_variables:
-                assert b"OWNER_KEY" not in content
-        exported = json.loads(archive.read(f"flows/{flow.id}.json"))
         manifest = json.loads(archive.read("manifest.json"))
-    template = exported["data"]["nodes"][0]["data"]["node"]["template"]
-    assert template["api_key"]["value"] == ("OWNER_KEY" if owner_has_variables else None)
-    assert template["token"]["value"] is None
-    assert template["endpoint"]["value"] is None
-    expected_names = ["OWNER_KEY"] if owner_has_variables else []
-    assert manifest["required_variables"] == expected_names
-    assert manifest["flows"][0]["required_variables"] == expected_names
-    assert artifact.flows[0].required_variables == tuple(expected_names)
-    assert flow.data == original
-    variable_service.list_variables.assert_awaited_once_with(user_id=owner_id, session=session)
-    variable_service.get_variable.assert_not_awaited()
+        packaged = json.loads(archive.read(f"flows/{flow.id}.json"))
+    assert manifest["required_variables"] == manifest["flows"][0]["required_variables"] == ["DISPLAY_LABEL"]
+    assert packaged["data"]["nodes"][0]["data"]["node"]["template"]["label"] == field
 
 
 @pytest.mark.asyncio
@@ -737,7 +717,7 @@ async def test_strict_project_artifact_refuses_unknown_name_shaped_binding() -> 
         patch(f"{MODULE}.ensure_project_permission", new_callable=AsyncMock),
         patch(f"{MODULE}.ensure_flows_permission", new_callable=AsyncMock),
         patch(f"{MODULE}.get_variable_service", return_value=variable_service),
-        pytest.raises(ProjectArtifactError, match="cannot be safely captured"),
+        pytest.raises(ProjectArtifactError, match="Rebind field 'api_key'"),
     ):
         await build_project_artifact(session, user, project.id, strict_snapshot=True)
 

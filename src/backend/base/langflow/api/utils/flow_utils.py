@@ -8,8 +8,14 @@ from typing import TYPE_CHECKING, Literal
 
 from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
+from lfx.log.logger import logger
 from lfx.services.deps import session_scope
-from lfx.utils.file_path_security import FLOW_STORAGE_SCOPE_PREFIX
+from lfx.utils.file_path_security import (
+    FLOW_STORAGE_SCOPE_PREFIX,
+    USER_STORAGE_SCOPE_PREFIX,
+    is_valid_scope_name,
+    storage_scope_id,
+)
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -36,6 +42,8 @@ from langflow.services.database.models.vertex_builds.model import VertexBuildTab
 from langflow.services.triggers.cleanup import delete_triggers
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from lfx.services.authorization.base import ExecutionPrincipal
 
     from langflow.services.chat.service import ChatService
@@ -63,6 +71,49 @@ async def get_authorized_legacy_flow_ids(flow_id: uuid.UUID | str) -> frozenset[
     return frozenset({str(flow_uuid)})
 
 
+_file_scope_provider: Callable[[uuid.UUID | str, str], Awaitable[object]] | None = None
+
+
+def register_file_scope_provider(provider: Callable[[uuid.UUID | str, str], Awaitable[object]] | None) -> None:
+    """Install, or with ``None`` remove, the server's answer to "which extra storage scopes may this user read?".
+
+    ``provider(flow_id, run_user_id)`` returns the typed scopes (for example ``user-<owner-id>``) a run by that
+    user may address on top of its own, the flow's and any authorized legacy ones. With no provider every run
+    keeps today's scopes, so OSS behavior is unchanged unless an extension registers one at startup.
+    """
+    global _file_scope_provider  # noqa: PLW0603 - explicit process-wide extension registration
+    _file_scope_provider = provider
+
+
+def _is_valid_extra_scope(scope: str) -> bool:
+    """The same rule ``_scope_roots`` applies: the scope, and for ``user-<id>`` the id too, must name one folder."""
+    if not is_valid_scope_name(scope):
+        return False
+    return not scope.startswith(USER_STORAGE_SCOPE_PREFIX) or is_valid_scope_name(storage_scope_id(scope))
+
+
+async def get_authorized_extra_file_scopes(flow_id: uuid.UUID | str, user_id: object | None) -> frozenset[str]:
+    """Ask the registered provider for this run's extra storage scopes; fail closed on any problem."""
+    if _file_scope_provider is None or not user_id:
+        return frozenset()
+    try:
+        answer = await _file_scope_provider(flow_id, str(user_id))
+    except Exception:  # noqa: BLE001 - a provider fault must never widen access
+        await logger.aexception("File scope provider failed for flow %s; granting no extra scopes", flow_id)
+        return frozenset()
+    if not isinstance(answer, (set, frozenset, list, tuple)):
+        return frozenset()
+    if not all(isinstance(item, str) for item in answer):
+        return frozenset()
+    scopes = frozenset(scope for scope in (item.strip() for item in answer) if scope)
+    # One member that cannot name a storage folder makes the whole answer invalid: passing it on would fail every
+    # file read of the run in restricted local-file mode, including the run's own.
+    if not all(_is_valid_extra_scope(scope) for scope in scopes):
+        await logger.awarning("File scope provider returned an invalid scope for flow %s; granting none", flow_id)
+        return frozenset()
+    return scopes
+
+
 async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
     """Build and cache the graph.
 
@@ -84,6 +135,7 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
         flow_name,
         kwargs.get("user_id"),
         authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+        authorized_extra_file_scopes=await get_authorized_extra_file_scopes(flow_id, kwargs.get("user_id")),
     )
     if (execution_principal := kwargs.get("execution_principal")) is not None:
         stamp_execution_principal(graph, execution_principal)
@@ -140,6 +192,7 @@ async def build_and_cache_graph_from_data(
         str_flow_id,
         user_id=user_id,
         authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+        authorized_extra_file_scopes=await get_authorized_extra_file_scopes(flow_id, user_id),
     )
     if execution_principal is not None:
         stamp_execution_principal(graph, execution_principal)
