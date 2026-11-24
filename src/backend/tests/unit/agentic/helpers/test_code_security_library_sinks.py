@@ -60,6 +60,79 @@ def test_rejects_embedded_sql_execution_modules(module, source):
     assert any(module in violation for violation in result.violations)
 
 
+@pytest.mark.parametrize("package", ["langflow", "lfx"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import {package}.services",
+        "import {package}.services.deps as service_helpers",
+        "from {package}.services.deps import get_settings_service",
+        "from {package} import services as service_helpers",
+        "import {package} as platform\nservice_helpers = platform.services",
+        "import {package} as platform\nservice_helpers = getattr(platform, 'services')",
+        "import {package} as platform\nservice_helpers = vars(platform)['services']",
+        "from {package} import *\nservice_helpers = services",
+    ],
+)
+def test_rejects_internal_platform_service_access(package: str, source: str) -> None:
+    result = scan_code_security(source.format(package=package))
+
+    assert not result.is_safe
+    assert any(f"{package}.services" in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize("package", ["langflow", "lfx"])
+@pytest.mark.parametrize("helper_path", ["utils.util", "base.data.utils"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from {module} import get_settings_service as settings",
+        "import {module} as helper\naccessor = helper.get_settings_service",
+        "import {module} as helper\naccessor = getattr(helper, 'get_settings_service')",
+        "import {module} as helper\naccessor = vars(helper)['get_settings_service']",
+        "import {module} as helper\naccessor = vars(helper).get('get_settings_service')",
+        "from {module} import *\naccessor = get_settings_service",
+    ],
+)
+def test_rejects_platform_service_accessor_reexports(package: str, helper_path: str, source: str) -> None:
+    module = f"{package}.{helper_path}"
+    result = scan_code_security(source.format(module=module))
+
+    assert not result.is_safe
+    assert any("get_settings_service" in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize("package", ["langflow", "lfx"])
+@pytest.mark.parametrize("helper_path", ["utils.util", "base.data.utils"])
+@pytest.mark.parametrize(
+    "use", ["modules = [helper]", "modules = {'helper': helper}", "def pick_helper():\n    return helper"]
+)
+def test_rejects_service_accessor_hosts_at_opaque_boundaries(package: str, helper_path: str, use: str) -> None:
+    module = f"{package}.{helper_path}"
+    result = scan_code_security(f"import {module} as helper\n{use}")
+
+    assert not result.is_safe
+    assert any(f"Indirect reference to restricted module '{module}'" in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize("package", ["langflow", "lfx"])
+@pytest.mark.parametrize(
+    ("helper_path", "member"), [("utils.util", "escape_json_dump"), ("base.data.utils", "normalize_text")]
+)
+def test_preserves_public_utility_from_service_accessor_host(package: str, helper_path: str, member: str) -> None:
+    module = f"{package}.{helper_path}"
+    source = f"from {module} import {member}\nimport {module} as helper\ntransform = helper.{member}"
+
+    assert scan_code_security(source).is_safe
+
+
+@pytest.mark.parametrize("package", ["langflow", "lfx"])
+def test_preserves_public_component_imports(package: str) -> None:
+    source = f"from {package}.custom import Component\nfrom {package}.io import Output"
+
+    assert scan_code_security(source).is_safe
+
+
 @pytest.mark.parametrize(
     "source",
     [
@@ -129,6 +202,7 @@ def test_rejects_mutable_sandbox_before_rendering_external_template(constructor,
         "import sympy\nresult = sympy.sympify(source)",
         "import duckdb\nresult = duckdb.sql(source)",
         "import sqlite3",
+        "from lfx.services.deps import get_settings_service",
         "import logging.config",
     ],
 )

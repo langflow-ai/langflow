@@ -97,6 +97,21 @@ _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 # code uses constantly for logging and error messages.
 _INERT_DUNDER_ATTRS: frozenset[str] = frozenset({"__name__", "__qualname__", "__module__", "__doc__"})
 _RUNTIME_LOADER_NAMES: frozenset[str] = frozenset({"__loader__", "__spec__"})
+_PLATFORM_SERVICE_PACKAGES: tuple[str, ...] = ("langflow", "lfx")
+_PLATFORM_SERVICE_ACCESSORS: frozenset[str] = frozenset(
+    {
+        "get_service",
+        "get_service_manager",
+        "get_settings_service",
+        "get_db_service",
+        "session_scope",
+        "session_scope_readonly",
+        "get_variable_service",
+    }
+)
+_PLATFORM_SERVICE_ACCESSOR_HOSTS: frozenset[str] = frozenset(
+    f"{package}.{module}" for package in _PLATFORM_SERVICE_PACKAGES for module in ("base.data.utils", "utils.util")
+)
 
 
 def _is_blocked_attribute(attr: str | None, *, include_expression_methods: bool = True) -> bool:
@@ -123,6 +138,11 @@ def _is_blocked_attribute(attr: str | None, *, include_expression_methods: bool 
 # Secret/env exfiltration is the concrete threat — components must use
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
+    # Generated components must use the component APIs for access to application data.
+    *[
+        (package, "services", f"{package}.services is forbidden in components")
+        for package in _PLATFORM_SERVICE_PACKAGES
+    ],
     # These shipped modules expose the real inspect module, including legacy
     # wildcard re-exports. Restrict the member, not safe classes or functions
     # from the same module. This also protects aliases and opaque transfers.
@@ -464,6 +484,7 @@ DANGEROUS_IMPORTS: set[str] = {
 # ``urllib.request`` additionally supports ``file://`` / ``ftp://`` schemes, so
 # it is a local-file-read and SSRF bypass beyond what plain HTTP allows.
 DANGEROUS_SUBMODULES: tuple[str, ...] = (
+    *(f"{package}.services" for package in _PLATFORM_SERVICE_PACKAGES),
     "concurrent.futures.process",
     "urllib.request",
     "urllib.error",
@@ -553,8 +574,16 @@ def _is_dangerous_submodule(dotted: str) -> bool:
 
 
 def _is_forbidden_module_reference(dotted: str) -> bool:
-    """Whether a resolved reference belongs to a forbidden module."""
-    return dotted in DANGEROUS_IMPORTS or dotted in DANGEROUS_SUBMODULES
+    """Whether a resolved reference is a forbidden module or platform service accessor."""
+    return dotted in DANGEROUS_IMPORTS or dotted in DANGEROUS_SUBMODULES or _is_platform_service_accessor(dotted)
+
+
+def _is_platform_service_accessor(dotted: str) -> bool:
+    """Catch internal accessors also imported by shipped helper modules."""
+    package, separator, _ = dotted.partition(".")
+    return bool(
+        separator and package in _PLATFORM_SERVICE_PACKAGES and dotted.rsplit(".", 1)[-1] in _PLATFORM_SERVICE_ACCESSORS
+    )
 
 
 def _dotted_parts(node: ast.AST) -> list[str] | None:
@@ -970,6 +999,9 @@ _RESTRICTED_MODULE_REFERENCES: set[str] = {
     *_DANGEROUS_READ_MEMBERS,
     *(prefix.split(".")[0] for prefix in DANGEROUS_SUBMODULES),
     *_RESTRICTED_MODULE_REEXPORTS,
+    # These helpers re-export service accessors alongside public utilities.
+    # Restrict the module object at opaque boundaries while allowing direct utility use.
+    *_PLATFORM_SERVICE_ACCESSOR_HOSTS,
     "builtins",
     "__builtins__",
 }
@@ -1681,6 +1713,9 @@ class _SecurityChecker(ast.NodeVisitor):
                     self._bind_name(reader_name, frozenset({reader_path}))
                 for binding, submodule in _WILDCARD_SUBMODULE_BINDINGS.get(node.module, {}).items():
                     self._bind_name(binding, frozenset({submodule}))
+                if root_module in _PLATFORM_SERVICE_PACKAGES:
+                    for name in _PLATFORM_SERVICE_ACCESSORS:
+                        self._bind_name(name, frozenset({f"{node.module}.{name}"}))
             else:
                 binding = alias.asname or alias.name
                 imported_name = _reexported_restricted_module(node.module, alias.name) or f"{node.module}.{alias.name}"
@@ -2197,6 +2232,7 @@ class _SecurityChecker(ast.NodeVisitor):
             return self.generic_visit(node)
         if not mapping_values:
             return self.generic_visit(node)
+        self._check_platform_service_reference(node)
         restricted_mapping_names = frozenset(name for name in mapping_values if _is_restricted_module_reference(name))
         if member_name is None:
             if restricted_mapping_names:
@@ -2247,6 +2283,13 @@ class _SecurityChecker(ast.NodeVisitor):
             None,
         )
 
+    def _check_platform_service_reference(self, node: ast.Call | ast.Subscript) -> None:
+        if name := next(
+            (name for name in sorted(self._resolved_assignment_value(node)) if _is_platform_service_accessor(name)),
+            None,
+        ):
+            self.violations.append(f"Access to '{name}' is forbidden in components")
+
     def visit_Name(self, node: ast.Name):
         """Catch wildcard-imported reads (``from os import *``; ``environ[...]``)."""
         if isinstance(node.ctx, ast.Load):
@@ -2280,6 +2323,7 @@ class _SecurityChecker(ast.NodeVisitor):
         getattr_arguments_validated = self._check_getattr_access(node)
         self._check_dunder_mapping_read(node)
         self._check_namespace_mapping_method(node)
+        self._check_platform_service_reference(node)
         resolved_call_names = self._resolved_assignment_value(node.func)
         self._check_numpy_pickle_load(node, resolved_call_names)
         if resolved_call_names & _NUMPY_ARCHIVE_READER_CALLS:
