@@ -64,13 +64,10 @@ HTML**, **MrScraper Scrape Markdown**, **MrScraper Get Screenshot**,
 Search**. Each accepts a secret API token from
 [the MrScraper app](https://app.mrscraper.com).
 
-Status, Scrape HTML, and Web Search keep the existing `MrscraperAccount`,
-`MrscraperFetchHtml`, and `MrscraperWebSearch` identifiers, so saved flows keep
-loading. The seven legacy AI, crawling, batch, rerun, and results components
-were retired in Langflow 1.13.0; their saved nodes load as placeholders that name
-MrScraper Scrape HTML as the replacement. See the
-[component reference and migration guide](../../../docs/docs/Components/bundles-mrscraper.mdx)
-for parameters, output formats, and flow updates.
+Status, Scrape HTML, and Web Search use the `MrscraperAccount`,
+`MrscraperFetchHtml`, and `MrscraperWebSearch` identifiers. See the
+[component reference](../../../docs/docs/Components/bundles-mrscraper.mdx)
+for parameters and output formats.
 
 ### OpenDsStar: manual installation only
 
