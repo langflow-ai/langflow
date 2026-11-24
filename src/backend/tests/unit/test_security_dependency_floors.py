@@ -35,6 +35,23 @@ def _requirement(requirements: list[str], name: str) -> Requirement:
     return matches[0]
 
 
+def _requirement_for_python(requirements: list[str], name: str, python_version: str) -> Requirement:
+    env = {
+        "python_version": python_version,
+        "python_full_version": f"{python_version}.0",
+        "sys_platform": "linux",
+    }
+    matches = [
+        requirement
+        for spec in requirements
+        if (requirement := Requirement(spec)).name.lower() == name.lower()
+        and requirement.marker
+        and requirement.marker.evaluate(env)
+    ]
+    assert len(matches) == 1, f"Expected one applicable {name} requirement for Python {python_version}, found {matches}"
+    return matches[0]
+
+
 def _assert_specifier(requirement: Requirement, operator: str, version: str) -> None:
     assert any(spec.operator == operator and spec.version == version for spec in requirement.specifier), requirement
 

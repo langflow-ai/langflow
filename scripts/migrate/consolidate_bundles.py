@@ -167,6 +167,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     ],
     "nvidia": [
         "langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0",
+        "requests>=2.33.0",
         "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'",
         "gassist>=0.0.1; sys_platform == 'win32'",
     ],

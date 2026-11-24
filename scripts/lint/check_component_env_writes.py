@@ -50,11 +50,6 @@ DEFAULT_ROOTS = (
 # Keep this list tiny and justified; an entry here means "this component is knowingly
 # allowed to mutate the process environment". Prefer fixing the component over adding one.
 ALLOWLIST: dict[str, set[str]] = {
-    # The "Dotenv" component's entire purpose is to load a user-supplied .env blob into
-    # the process environment. It is a known multi-tenant hazard flagged for separate
-    # review; allow only the load_dotenv call, still flagging any direct os.environ write.
-    # (Moved from src/lfx/src/lfx/components/datastax/ in the lfx-datastax graduation.)
-    "src/bundles/datastax/src/lfx_datastax/components/datastax/dotenv.py": {"load_dotenv"},
     # mem0 creates PostHog clients at import time unless MEM0_TELEMETRY is
     # disabled. This import-time default is process-wide by design, preserves an
     # explicit deployer opt-in, and does not carry per-request values or secrets.

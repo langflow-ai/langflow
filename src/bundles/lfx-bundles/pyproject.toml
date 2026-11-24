@@ -16,7 +16,8 @@ keywords = ["langflow", "lfx", "extension", "bundle", "providers"]
 # its extra, so a user opts into exactly the providers they need.  The
 # generated ``all`` extra pulls every provider's deps for explicit opt-in
 # installs such as ``pip install "lfx[bundles]"`` or
-# ``pip install "lfx-bundles[all]"``. 1.12.4 provides the connector SSRF helper.
+# ``pip install "lfx-bundles[all]"``. The NVIDIA components use provider
+# credential and redirect helpers available from LFX 1.13.0.dev21.
 dependencies = [
     "lfx>=1.14.0.dev0,<2.0.0",
 ]
@@ -74,7 +75,7 @@ needle = ["needle-python>=0.4.0"]
 notdiamond = []
 notion = ["requests>=2.32.0", "Markdown>=3.8.0"]
 novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
-nvidia = ["langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
+nvidia = ["langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0", "requests>=2.33.0", "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'", "gassist>=0.0.1; sys_platform == 'win32'"]
 olivya = []
 ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
 olostep = []
