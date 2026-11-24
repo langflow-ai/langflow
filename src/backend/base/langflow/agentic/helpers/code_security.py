@@ -189,6 +189,32 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("unittest.mock", "_dot_lookup", "unittest.mock._dot_lookup is forbidden in components"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
+    # Import state is mutable even if it is passed through an alias first.
+    *[
+        ("sys", name, f"sys.{name} is forbidden in components (interpreter import state)")
+        for name in ("path", "meta_path", "path_hooks", "path_importer_cache")
+    ],
+    # Keep public temporary-file APIs available without exposing process-wide state.
+    *[
+        ("tempfile", name, f"tempfile.{name} is forbidden in components (process-wide state)")
+        for name in ("_os", "_sys", "tempdir")
+    ],
+    # Restrict code constructors and direct re-exports without blocking ordinary type helpers.
+    *[
+        (module, name, f"{module}.{name} is forbidden in components (dynamic code construction)")
+        for module, name in (
+            ("types", "CodeType"),
+            ("types", "FunctionType"),
+            ("types", "LambdaType"),
+            ("dataclasses", "FunctionType"),
+            ("unittest.mock", "CodeType"),
+            ("lfx.custom.annotation_validation", "FunctionType"),
+            ("lfx.custom.custom_component.component", "FunctionType"),
+            ("lfx.custom.validate", "FunctionType"),
+            ("lfx.graph.state.model", "FunctionType"),
+            ("langflow.custom.validate", "FunctionType"),
+        )
+    ],
     ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
     (
         "torch.package.package_importer",
@@ -977,7 +1003,7 @@ _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
 # dataclasses.inspect and traceback.linecache expose the same runtime and file
 # readers as direct imports. Third-party attributes with these names may be
 # unrelated objects, so canonicalization remains limited to stdlib hosts.
-_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys", "inspect", "linecache", "fileinput"})
+_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys", "inspect", "linecache", "fileinput", "types"})
 _STDLIB_MODULE_NAMES: frozenset[str] = frozenset(sys.stdlib_module_names)
 
 
