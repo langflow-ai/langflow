@@ -96,7 +96,7 @@
     "body-parser": "^1.20.9",
     "fflate": "^0.4.9",
     "http-proxy-middleware": "^2.0.10",
-    "launch-editor": "^2.14.1",
+    "launch-editor": "^2.14.2",
     "minimatch@^8": "^11.0.8",
     "minimatch@^9": "^11.0.8",
     "qs": "^6.17.1",
