@@ -474,6 +474,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "FAISS", name: "faiss", icon: "FAISS" },
   { display_name: "Figranium", name: "figranium", icon: "Figranium" },
   { display_name: "Firecrawl", name: "firecrawl", icon: "FirecrawlCrawlApi" },
+  { display_name: "Firma", name: "firma", icon: "Firma" },
   { display_name: "Git", name: "git", icon: "GitLoader" },
   { display_name: "GitHub", name: "github", icon: "Github" },
   { display_name: "GitLab", name: "gitlab", icon: "Gitlab" },

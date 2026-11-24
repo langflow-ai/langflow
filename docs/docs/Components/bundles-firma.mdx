@@ -1,0 +1,153 @@
+---
+title: Firma
+slug: /bundles-firma
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Firma** bundle.
+
+[Firma](https://firma.dev) is an electronic signature API.
+These components send documents and templates for e-signature, track signing requests, and return the signed document.
+
+All components need a Firma API key.
+Find it in Firma under **Workspace Settings** > **API** and enter it in the **Firma API Key** field, or store it in a [global variable](/configuration-global-variables) named `FIRMA_API_KEY`.
+
+All components call the fixed host `api.firma.dev`.
+Document uploads and downloads use temporary storage links that the Firma API returns; those requests do not carry the API key.
+
+For more information, see the [Firma documentation](https://docs.firma.dev).
+
+## Firma Send Template for Signature
+
+This component creates a signing request from a Firma template and sends it to the recipients in one call.
+
+It outputs a [`Data`](/data-types#json) object with the `signing_request_id`, `status`, the first signer's `signing_link`, and the full API response as `signing_request`.
+
+Give one signer with the **Signer First Name**, **Signer Last Name** and **Signer Email** fields, or several recipients with **Recipients (JSON)**.
+Every role of the template (each user who signs or approves) needs a recipient, matched by `template_user_id`, then by order, and each role keeps its own designation and order.
+The signer fields fill a template with one such role; a template with several roles needs **Recipients (JSON)** covering each one, and a list that misses a role is refused before anything is created.
+With no recipients at all, the request uses the template's own recipients.
+When **Request Name** is empty, the request takes the template's name.
+
+If Firma does not confirm the send (for example a `502` from the gateway, a timeout, or a server error), the request may still have been created and sent, so the component reports that and does not retry: check the signing requests in Firma before sending again.
+A `409` that names a `signing_request_id` reports that request instead of creating a second one.
+
+### Firma Send Template for Signature parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firma API Key (`api_key`) | SecretString | Input parameter. Your Firma API key. |
+| Template ID (`template_id`) | String | Input parameter. The ID of the Firma template to send. |
+| Request Name (`request_name`) | String | Input parameter. The signing request name shown to recipients. Default: the template's name. |
+| Signer First Name (`signer_first_name`) | String | Input parameter. First name of the single signer, who takes the template's one signing or approving role. |
+| Signer Last Name (`signer_last_name`) | String | Input parameter. Last name of the single signer. |
+| Signer Email (`signer_email`) | String | Input parameter. Email address of the single signer. Firma sends the signing invitation to it. |
+| Recipients (JSON) (`recipients_json`) | String | Input parameter. A JSON array of recipients, used instead of the signer fields. Each item has `first_name` and `email`, and optionally `last_name`, `designation` (`Signer`, `Approver` or `CC`), `order` and `template_user_id`. Every template role needs one item. |
+| Message to Recipients (`message`) | String | Input parameter. The signing request description, shown to recipients. |
+| Expiration (hours) (`expiration_hours`) | Integer | Input parameter. Hours until the request expires. Default: `0`, which keeps the workspace or template default. |
+| Language (`language`) | String | Input parameter. The language of the signing page and emails, one of 15 language codes. Default: the workspace language. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Firma to answer. Default: `60`. |
+
+## Firma Send Document for Signature
+
+This component sends a PDF or DOCX document to recipients for e-signature.
+
+It accepts an uploaded file in the **Document** field, or the document as base64 text in **Document (Base64)**.
+Documents up to 4 MiB are sent inline. Larger documents, up to 50 MB, are uploaded to Firma storage first.
+
+Each signer gets one signature field:
+
+* With **Signature Anchor Text**, Firma places the field on that text in the document. With several signers, `{n}` in the anchor text becomes the signer number, so `{{sign_{n}}}` matches `{{sign_1}}`, `{{sign_2}}`, and so on.
+* Without anchor text, the component places signature boxes along the bottom of the **Signature Page**, three per row.
+* **Fields (JSON)** and **Anchor Tags (JSON)** replace both, for full control over field types and positions. Recipients are named `temp_1`, `temp_2`, and so on, in list order.
+
+The component outputs the same `Data` object as **Firma Send Template for Signature**.
+
+### Firma Send Document for Signature parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firma API Key (`api_key`) | SecretString | Input parameter. Your Firma API key. |
+| Document (`document_file`) | File | Input parameter. The PDF or DOCX document to send. |
+| Document (Base64) (`document_base64`) | String | Input parameter. The document as base64 text, used when no file is attached. |
+| Document File Name (`document_file_name`) | String | Input parameter. The file name of a base64 document, such as `contract.pdf`. |
+| Request Name (`request_name`) | String | Input parameter. The signing request name shown to recipients. Default: the file name. |
+| Signer First Name, Signer Last Name, Signer Email, Recipients (JSON), Message to Recipients, Expiration (hours), Language, Timeout (seconds) | | Input parameters. The same as in **Firma Send Template for Signature**. |
+| Signature Anchor Text (`signature_anchor`) | String | Input parameter. Text in the document where each signer's signature goes. |
+| Signature Page (`signature_page`) | Integer | Input parameter. The page that gets the default signature boxes. Default: `1`. |
+| Fields (JSON) (`fields_json`) | String | Input parameter. A JSON array of fields, with positions in percent of the page. |
+| Anchor Tags (JSON) (`anchor_tags_json`) | String | Input parameter. A JSON array of anchor tags. |
+
+## Firma Get Signing Request
+
+This component returns one signing request with its status and recipients.
+
+It outputs a `Data` object with the `signing_request_id`, a one-word `status` (`not_sent`, `in_progress`, `finished`, `cancelled`, `declined` or `expired`), the full `signing_request`, and the `recipients` with their `finished_on` and `declined_on` times.
+
+### Firma Get Signing Request parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firma API Key (`api_key`) | SecretString | Input parameter. Your Firma API key. |
+| Signing Request ID (`signing_request_id`) | String | Input parameter. The ID of the signing request. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Firma to answer. Default: `60`. |
+
+## Firma List Signing Requests
+
+This component lists signing requests, newest first.
+
+It returns a [`Table`](/data-types#table) with one row per signing request, including its `id`, `name` and `status`.
+
+### Firma List Signing Requests parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firma API Key (`api_key`) | SecretString | Input parameter. Your Firma API key. |
+| Status (`status_filter`) | String | Input parameter. Only list requests with this status. Default: `all`. |
+| Name Contains (`name_filter`) | String | Input parameter. Only list requests whose name contains this text. |
+| Signer Email (`signer_email`) | String | Input parameter. Only list requests sent to this email address. |
+| Page (`page`) | Integer | Input parameter. The page of results, starting at 1. Default: `1`. |
+| Page Size (`page_size`) | Integer | Input parameter. Requests per page, from 1 to 200. Default: `25`. |
+| Exclude Deleted (`exclude_deleted`) | Boolean | Input parameter. Leave deleted requests out of the list. Default: `true`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Firma to answer. Default: `60`. |
+
+## Firma List Templates
+
+This component lists the templates in the workspace, newest first.
+
+It returns a `Table` with one row per template, including its `id` and `name`.
+
+### Firma List Templates parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firma API Key (`api_key`) | SecretString | Input parameter. Your Firma API key. |
+| Name Contains (`name_filter`) | String | Input parameter. Only list templates whose name contains this text. |
+| Page (`page`) | Integer | Input parameter. The page of results, starting at 1. Default: `1`. |
+| Page Size (`page_size`) | Integer | Input parameter. Templates per page, from 1 to 200. Default: `25`. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Firma to answer. Default: `60`. |
+
+## Firma Download Signed Document
+
+This component returns a temporary download link for the signed PDF of a signing request, with its completion certificate.
+
+It outputs a `Data` object whose text is the `download_url`, with its `expires_at` time and `is_partial`, which is `true` for a copy with only the signatures collected so far.
+
+Right after a request finishes, Firma generates the completion certificate. Until it is ready, the component returns an error that says to retry in a minute.
+
+### Firma Download Signed Document parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firma API Key (`api_key`) | SecretString | Input parameter. Your Firma API key. |
+| Signing Request ID (`signing_request_id`) | String | Input parameter. The ID of the signing request. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Firma to answer. Default: `60`. |
