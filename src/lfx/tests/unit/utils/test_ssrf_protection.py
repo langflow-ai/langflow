@@ -1048,13 +1048,38 @@ class TestGitRepositoryURLValidation:
         with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="scheme"):
             validate_git_repository_url("gopher://x/y")
 
-    def test_public_https_allowed(self):
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://github.com/user/repo.git",
+            "https://git@github.com/user/my%20repo.git",
+            "ssh://git@github.com:22/user/repo.git",
+        ],
+    )
+    def test_public_url_with_scheme_allowed(self, url):
         with (
             mock_ssrf_settings(enabled=True),
             patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
         ):
             mock_resolve.return_value = ["140.82.112.3"]  # public IP
-            validate_git_repository_url("https://github.com/user/repo.git")
+            validate_git_repository_url(url)
+        mock_resolve.assert_called_once_with("github.com")
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://us%65r@github.com/user/repo.git",
+            "https://g%69thub.com/user/repo.git",
+        ],
+    )
+    def test_percent_encoded_authority_rejected_before_dns(self, url):
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+            pytest.raises(SSRFProtectionError, match="Percent-encoding"),
+        ):
+            validate_git_repository_url(url)
+        mock_resolve.assert_not_called()
 
     def test_public_scp_like_allowed(self):
         with (
