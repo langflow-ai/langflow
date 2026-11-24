@@ -6,11 +6,11 @@ slug: /evaluations
 import Icon from "@site/src/components/icon";
 
 :::tip
-As of Langflow version 1.14.0, evaluations are disabled by default.
-To enable them, set the following environment variable in your `.env` file before starting Langflow:
+As of Langflow version 1.14.0, evaluations are enabled by default.
+To disable them, set the following environment variable in your `.env` file before starting Langflow:
 
 ```bash
-LANGFLOW_FEATURE_EVALS=true
+LANGFLOW_FEATURE_EVALS=false
 ```
 :::
 
@@ -21,7 +21,7 @@ To instead run one prompt at a time, see [Test flows in the Playground](/concept
 
 ## Prerequisites
 
-* Evaluations enabled, as described above.
+* Evaluations enabled, which is the default.
 * Permission to run the flow.
 * A flow Langflow can evaluate.
   The flow must have a **Chat Input** and a **Chat Output** component, and it must run to the output component without pausing for [human approval](/human-in-the-loop).
@@ -114,7 +114,7 @@ Project export does _not_ include datasets or evaluations.
 
 | Setting | Default | Meaning |
 | --- | --- | --- |
-| `LANGFLOW_FEATURE_EVALS` | `false` | When `true`, shows **Evaluations** and **Evaluate** and mounts the routes. |
+| `LANGFLOW_FEATURE_EVALS` | `true` | When `false`, hides **Evaluations** and **Evaluate** and does not mount the routes. |
 | `LANGFLOW_EVALS_MAX_ITEMS` | `1000` | Most items one run executes. A larger dataset is refused. |
 | `LANGFLOW_EVALS_ROW_TIMEOUT_S` | `300` | Seconds one row (the flow plus scoring) may take before it is recorded as a timeout. |
 | `LANGFLOW_EVALS_CSV_MAX_ROWS` | `5000` | Most rows one CSV import may add. |
