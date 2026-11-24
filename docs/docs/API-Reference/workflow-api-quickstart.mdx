@@ -24,6 +24,9 @@ The [Workflow API](./workflow-api) executes Langflow flows over `POST /api/v2/wo
 
 Use the default **`sync`** mode when you want to wait for the full JSON result in one response. Use **`stream`** when you need live Server-Sent Events (SSE) emitted as the flow runs. Use **`background`** when you want to queue a job and then poll or re-attach to its event stream.
 
+To copy a `sync` or `stream` request, click **Share**, and then click **API access**.
+The pane includes snippets to call the [Workflow API](/workflow-api) at `POST /api/v2/workflows`. The **Get the full result** snippet waits for one JSON response, and the **Stream the result as it runs** sets `"mode": "stream"` and reads events while the flow runs.
+
 This quickstart runs the same flow with each mode, so you can use the mode that fits your application.
 
 <PartialAPISetup />
