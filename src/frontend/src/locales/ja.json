@@ -3503,7 +3503,7 @@
   "settings.upgrade.repairExplanation": "プレビューではインストール済みの対象コードと現在の所有者ポリシーを使用します。安全でないフローは手動修復の対象として残ります。更新ごとに所有者が参照できる復元バージョンを保持します。",
   "settings.upgrade.selected": "選択したフロー {{count}}件、最大100件",
   "settings.upgrade.preview": "選択した更新をプレビュー",
-  "settings.upgrade.migrationPause": "インスタンスの移行に伴い変更が一時停止されています。修復のプレビューまたは適用の前に、移行設定で変更を再開してください。",
+  "settings.upgrade.migrationPause": "インスタンスの移行に伴い変更が一時停止されています。メンテナンスモードの変更や修復のプレビュー、適用の前に、移行設定で変更を再開してください。",
   "settings.upgrade.reason.missing": "このフローは削除されたか、このインスタンスに存在しません。",
   "settings.upgrade.rowRange": "全 {{total}} 行中 {{first}}～{{last}} 行",
   "settings.upgrade.freezeRequired": "データベースのメンテナンスが有効で、別のインスタンス移行による一時停止が無効な場合にのみ更新を適用してください。",

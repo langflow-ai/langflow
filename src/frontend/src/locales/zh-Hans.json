@@ -3502,7 +3502,7 @@
   "settings.upgrade.repairExplanation": "预览使用已安装的目标代码及所有者当前的策略。不安全的流程将保留以供手动修复。每次更新都会保留所有者可见的恢复版本。",
   "settings.upgrade.selected": "已选择 {{count}} 个流程，最多可选 100 个",
   "settings.upgrade.preview": "预览所选更新",
-  "settings.upgrade.migrationPause": "实例迁移已暂停更改。请在迁移设置中恢复更改，然后再预览或应用修复。",
+  "settings.upgrade.migrationPause": "实例迁移已暂停更改。请先在迁移设置中恢复更改，再切换维护模式、预览或应用修复。",
   "settings.upgrade.reason.missing": "此流程已被删除或不在此实例中。",
   "settings.upgrade.rowRange": "共 {{total}} 行，显示第 {{first}} 至 {{last}} 行",
   "settings.upgrade.freezeRequired": "仅在数据库维护已启用且独立的实例迁移暂停已关闭时应用更新。",

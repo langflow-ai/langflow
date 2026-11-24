@@ -3503,7 +3503,7 @@
   "settings.upgrade.repairExplanation": "L’aperçu utilise le code cible installé et la politique actuelle du propriétaire. Les flux à risque restent à réparer manuellement. Chaque mise à jour conserve une version de récupération visible par le propriétaire.",
   "settings.upgrade.selected": "Flux sélectionnés {{count}} sur 100 maximum",
   "settings.upgrade.preview": "Aperçu des mises à jour sélectionnées",
-  "settings.upgrade.migrationPause": "Les modifications sont suspendues pour la migration. Réactivez-les dans les paramètres de migration avant de prévisualiser ou d’appliquer les réparations.",
+  "settings.upgrade.migrationPause": "Les modifications sont suspendues pour la migration. Réactivez-les dans les paramètres de migration avant de changer le mode maintenance, de prévisualiser ou d’appliquer les réparations.",
   "settings.upgrade.reason.missing": "Ce flux a été supprimé ou est absent de cette instance.",
   "settings.upgrade.rowRange": "Lignes {{first}} à {{last}} sur {{total}}",
   "settings.upgrade.freezeRequired": "Appliquez les mises à jour uniquement lorsque la maintenance de la base de données est activée et que la pause distincte de migration de l’instance est désactivée.",

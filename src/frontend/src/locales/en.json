@@ -3502,7 +3502,7 @@
   "settings.upgrade.repairExplanation": "Preview uses the installed target code and current owner policy. Unsafe flows remain for manual repair. Each update retains an owner-visible recovery version.",
   "settings.upgrade.selected": "Selected flows {{count}} of 100 maximum",
   "settings.upgrade.preview": "Preview selected updates",
-  "settings.upgrade.migrationPause": "The instance migration pause is on. Resume changes in Migration settings before previewing or applying repairs.",
+  "settings.upgrade.migrationPause": "The instance migration pause is on. Resume changes in Migration settings before changing maintenance mode or previewing or applying repairs.",
   "settings.upgrade.reason.missing": "This flow was deleted or is missing from this instance.",
   "settings.upgrade.rowRange": "Rows {{first}}–{{last}} of {{total}}",
   "settings.upgrade.freezeRequired": "Apply updates only while database maintenance is enabled and the separate instance migration pause is off.",

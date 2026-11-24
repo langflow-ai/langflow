@@ -3503,7 +3503,7 @@
   "settings.upgrade.repairExplanation": "La vista previa utiliza el código de destino instalado y la política actual del propietario. Los flujos inseguros quedan pendientes de reparación manual. Cada actualización conserva una versión de recuperación visible para el propietario.",
   "settings.upgrade.selected": "Flujos seleccionados {{count}} de un máximo de 100",
   "settings.upgrade.preview": "Vista previa de actualizaciones seleccionadas",
-  "settings.upgrade.migrationPause": "La pausa de migración está activa. Reanuda los cambios en la configuración de migración antes de revisar o aplicar reparaciones.",
+  "settings.upgrade.migrationPause": "La pausa de migración está activa. Reanuda los cambios en la configuración de migración antes de cambiar el modo de mantenimiento o de revisar o aplicar reparaciones.",
   "settings.upgrade.reason.missing": "Este flujo se eliminó o no existe en esta instancia.",
   "settings.upgrade.rowRange": "Filas {{first}}–{{last}} de {{total}}",
   "settings.upgrade.freezeRequired": "Aplique las actualizaciones solo cuando el mantenimiento de la base de datos esté activado y la pausa independiente de migración de la instancia esté desactivada.",

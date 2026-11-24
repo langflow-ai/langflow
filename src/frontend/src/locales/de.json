@@ -3503,7 +3503,7 @@
   "settings.upgrade.repairExplanation": "Die Vorschau verwendet den installierten Zielcode und die aktuelle Richtlinie des Eigentümers. Unsichere Flows bleiben zur manuellen Reparatur bestehen. Jede Aktualisierung bewahrt eine für den Eigentümer sichtbare Wiederherstellungsversion auf.",
   "settings.upgrade.selected": "Ausgewählte Flows {{count}} von höchstens 100",
   "settings.upgrade.preview": "Vorschau ausgewählter Aktualisierungen",
-  "settings.upgrade.migrationPause": "Die Instanzmigration ist pausiert. Geben Sie Änderungen in den Migrationseinstellungen frei, bevor Sie Reparaturen prüfen oder anwenden.",
+  "settings.upgrade.migrationPause": "Die Instanzmigration ist pausiert. Geben Sie Änderungen in den Migrationseinstellungen frei, bevor Sie den Wartungsmodus ändern oder Reparaturen prüfen oder anwenden.",
   "settings.upgrade.reason.missing": "Dieser Flow wurde gelöscht oder fehlt auf dieser Instanz.",
   "settings.upgrade.rowRange": "Zeilen {{first}}–{{last}} von {{total}}",
   "settings.upgrade.freezeRequired": "Wenden Sie Aktualisierungen nur bei aktivierter Datenbankwartung und deaktivierter separater Instanzmigrationspause an.",

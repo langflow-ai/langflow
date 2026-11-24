@@ -3502,7 +3502,7 @@
   "settings.upgrade.repairExplanation": "미리보기에서는 설치된 대상 코드와 소유자의 현재 정책을 사용합니다. 안전하지 않은 Flow는 직접 복구해야 합니다. 업데이트할 때마다 소유자가 확인할 수 있는 복구 버전을 보관합니다.",
   "settings.upgrade.selected": "선택한 Flow {{count}}개, 최대 100개",
   "settings.upgrade.preview": "선택한 업데이트 미리보기",
-  "settings.upgrade.migrationPause": "인스턴스 마이그레이션으로 변경이 일시 중지되었습니다. 복구를 미리 보거나 적용하려면 마이그레이션 설정에서 변경을 재개하세요.",
+  "settings.upgrade.migrationPause": "인스턴스 마이그레이션으로 변경이 일시 중지되었습니다. 유지 관리 모드를 변경하거나 복구를 미리 보거나 적용하기 전에 마이그레이션 설정에서 변경을 재개하세요.",
   "settings.upgrade.reason.missing": "이 플로우는 삭제되었거나 이 인스턴스에 없습니다.",
   "settings.upgrade.rowRange": "전체 {{total}}개 중 {{first}}–{{last}}행",
   "settings.upgrade.freezeRequired": "데이터베이스 유지보수가 켜져 있고 별도의 인스턴스 마이그레이션 일시 중지가 꺼져 있을 때만 업데이트를 적용하세요.",

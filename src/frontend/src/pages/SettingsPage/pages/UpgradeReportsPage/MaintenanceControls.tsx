@@ -30,7 +30,7 @@ export default function MaintenanceControls({
   const enable = !status.maintenance;
   useEffect(() => {
     setOpen(false);
-  }, [enable]);
+  }, [enable, status.migration]);
   const action = t(
     enable
       ? "settings.upgrade.turnMaintenanceOn"
@@ -63,7 +63,7 @@ export default function MaintenanceControls({
         <p className="break-words">{status.reason}</p>
       )}
       <Dialog
-        open={open}
+        open={open && !status.migration}
         onOpenChange={(next) => {
           if (update.isPending) return;
           update.reset();
@@ -75,7 +75,7 @@ export default function MaintenanceControls({
           <Button
             ref={trigger}
             variant="outline"
-            disabled={busy}
+            disabled={busy || status.migration}
             aria-disabled={update.isPending || undefined}
             ignoreTitleCase
           >
@@ -122,7 +122,7 @@ export default function MaintenanceControls({
               {t("modal.cancelButton")}
             </Button>
             <Button
-              disabled={busy || update.isPending}
+              disabled={busy || status.migration || update.isPending}
               onClick={() =>
                 update.mutate(
                   { enabled: enable, reason: reason.trim() || undefined },

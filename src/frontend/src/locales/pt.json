@@ -3503,7 +3503,7 @@
   "settings.upgrade.repairExplanation": "A prévia usa o código de destino instalado e a política atual do proprietário. Os fluxos inseguros permanecem para reparo manual. Cada atualização mantém uma versão de recuperação visível ao proprietário.",
   "settings.upgrade.selected": "Fluxos selecionados {{count}} de no máximo 100",
   "settings.upgrade.preview": "Visualizar atualizações selecionadas",
-  "settings.upgrade.migrationPause": "A pausa de migração está ativa. Retome as alterações nas configurações de migração antes de visualizar ou aplicar os reparos.",
+  "settings.upgrade.migrationPause": "A pausa de migração está ativa. Retome as alterações nas configurações de migração antes de alterar o modo de manutenção, visualizar ou aplicar reparos.",
   "settings.upgrade.reason.missing": "Este fluxo foi excluído ou não existe nesta instância.",
   "settings.upgrade.rowRange": "Linhas {{first}}–{{last}} de {{total}}",
   "settings.upgrade.freezeRequired": "Aplique atualizações apenas com a manutenção do banco de dados ativada e a pausa independente de migração da instância desativada.",
