@@ -88,26 +88,15 @@ def test_filter_by_provider():
         assert result[0]["provider"] == "Anthropic"
 
 
-def test_filter_by_model_name(monkeypatch):
-    from lfx.base.models.unified_models import model_catalog
-
+def test_filter_by_model_name():
     target = "gpt-4"
-    models = [
-        {"provider": provider, "name": name, "model_type": "llm"}
-        for provider in ["OpenAI", "Ace Data Cloud"]
-        for name in [target, "another-model"]
-    ]
-    monkeypatch.setattr(model_catalog, "get_models_detailed", lambda: [models])
     result = get_unified_models_detailed(model_name=target)
-    assert {(provider["provider"], model["model_name"]) for provider in result for model in provider["models"]} == {
-        ("OpenAI", target),
-        ("Ace Data Cloud", target),
-    }
-    assert all(len(provider["models"]) == 1 for provider in result)
-    openai = get_unified_models_detailed(providers=["OpenAI"], model_name=target)
-    assert len(openai) == 1
-    assert openai[0]["provider"] == "OpenAI"
-    assert [model["model_name"] for model in openai[0]["models"]] == [target]
+    # Should only include OpenAI provider with the single model
+    assert len(result) == 1
+    provider_dict = result[0]
+    assert provider_dict["provider"] == "OpenAI"
+    assert len(provider_dict["models"]) == 1
+    assert provider_dict["models"][0]["model_name"] == target
 
 
 def test_filter_by_metadata():

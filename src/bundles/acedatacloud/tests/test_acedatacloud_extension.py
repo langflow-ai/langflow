@@ -140,7 +140,7 @@ def test_custom_chat_host_preserves_user_configuration() -> None:
     assert str(model.openai_api_base).rstrip("/") == "https://example.org/v1"
     assert model.max_retries == 0
     assert any(item["name"] == "gpt-4.1-mini" for item in load_catalog())
-    assert not any(item["tool_calling"] for item in load_catalog())
+    assert all("tool_calling" not in item for item in load_catalog())
     assert _is_chat_model({"id": "gpt-4.1-mini", "type": "chat"})
     assert not _is_chat_model({"id": "gpt-image-2", "type": "image"})
     assert _is_chat_model({"id": "gpt-4o-image", "type": "chat", "capabilities": ["image_generation"]})
@@ -188,7 +188,7 @@ def test_live_models_use_current_typed_catalog_and_account_visibility(
     models = fetch_live_models("user-1")
     assert [item["name"] for item in models] == ["gpt-4.1-mini", "gpt-4o-image", "new-chat-model"]
     assert models[2]["reasoning"] is True
-    assert all(item["tool_calling"] is None for item in models)
+    assert all("tool_calling" not in item for item in models)
     assert calls == [f"{API_BASE}/models", PUBLIC_CHAT_CATALOG]
 
 

@@ -134,16 +134,15 @@ class ChatAceDataCloud:
 
 
 def _metadata(row: dict[str, Any]) -> dict[str, Any]:
-    # None means unknown, not a negative capability claim. The underlying clients
-    # still accept explicit tools and user settings without borrowing vendor data.
-    return create_model_metadata(
+    metadata = create_model_metadata(
         provider=PROVIDER,
         name=row["id"],
         icon=ICON,
         model_type="llm",
-        tool_calling=None,
         reasoning="reasoning" in row.get("capabilities", []),
     )
+    metadata.pop("tool_calling")  # The public catalog does not declare this capability.
+    return metadata
 
 
 def load_catalog() -> list[dict[str, Any]]:

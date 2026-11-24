@@ -7,7 +7,7 @@ class ModelMetadata(TypedDict, total=False):
     provider: str  # Provider name (e.g., "anthropic", "groq", "openai")
     name: str  # Model name/ID
     icon: str  # Icon name for UI
-    tool_calling: bool | None  # None is explicitly unknown, not a negative capability claim.
+    tool_calling: bool  # Whether model supports tool calling (defaults to False)
     reasoning: bool  # Reasoning models (defaults to False)
     search: bool  # Search models (defaults to False)
     preview: bool  # Whether model is in preview/beta (defaults to False)
@@ -29,7 +29,7 @@ def create_model_metadata(
     name: str,
     icon: str,
     *,
-    tool_calling: bool | None = False,
+    tool_calling: bool = False,
     reasoning: bool = False,
     search: bool = False,
     preview: bool = False,
@@ -54,11 +54,6 @@ def create_model_metadata(
         model_type=model_type,
         created=created,
     )
-
-
-def matches_model_metadata(metadata: dict[str, Any], filters: dict[str, Any]) -> bool:
-    """Match requested metadata values; unknown capabilities do not imply support."""
-    return all(metadata.get(key) == expected for key, expected in filters.items())
 
 
 LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
