@@ -6,6 +6,7 @@ markdown (Loop.done -> Chat Output took workers down with OOMKilled).
 """
 
 import pytest
+from langflow.helpers.data import safe_convert as backend_safe_convert
 from lfx.helpers.data import safe_convert
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -66,3 +67,27 @@ def test_should_keep_escaping_pipes_when_rendering_a_table():
     markdown = safe_convert(table)
 
     assert r"a \| b" in markdown
+
+
+@pytest.mark.parametrize("converter", ["lfx", "backend"])
+@pytest.mark.parametrize("first_id", [1_234_567, 2**53])
+@pytest.mark.parametrize("clean_data_flag", [0, 1])
+def test_should_preserve_integer_ids_in_mixed_numeric_tables(converter: str, first_id: int, clean_data_flag: int):
+    # Both safe_convert copies are used by bundled components. With a decimal
+    # column present, pandas promoted the integer IDs to float and tabulate
+    # rendered them as scientific notation, losing the exact values.
+    convert = safe_convert if converter == "lfx" else backend_safe_convert
+    table = DataFrame(
+        [
+            {"id": first_id, "score": 0.5},
+            {"id": first_id + 1, "score": 0.25},
+        ]
+    )
+
+    markdown = convert(table, clean_data=bool(clean_data_flag))
+
+    rows = [line.split("|")[1:-1] for line in markdown.splitlines()[2:]]
+    assert [[cell.strip() for cell in row] for row in rows] == [
+        [str(first_id), "0.5"],
+        [str(first_id + 1), "0.25"],
+    ]
