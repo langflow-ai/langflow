@@ -1003,6 +1003,14 @@ def validate_git_repository_url(url: str) -> None:
     if not is_ssrf_protection_enabled():
         return
 
+    if scheme:
+        _validate_raw_url_authority(url)
+        # Git interprets URL escapes independently. Require a literal authority
+        # so the host checked here matches the transport's destination.
+        if "%" in parsed.netloc:
+            msg = "Percent-encoding in the Git repository URL authority is not permitted."
+            raise SSRFProtectionError(msg)
+
     # scp-like syntax (git@host:path) has no scheme; the host is before the first ':'.
     hostname = (url.split("@", 1)[-1].split(":", 1)[0] or None) if scheme == "" else parsed.hostname
 
