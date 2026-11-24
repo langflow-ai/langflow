@@ -232,6 +232,39 @@ async def test_upload_requires_authentication_before_form_validation(files_clien
     assert response.status_code in {status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN}
 
 
+async def test_upload_releases_flow_transaction_before_reading_body(
+    files_client, files_created_api_key, files_flow, monkeypatch
+):
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    flow_session = None
+    original_get = AsyncSession.get
+
+    async def capture_flow_lookup(session, entity, ident, **kwargs):
+        nonlocal flow_session
+        result = await original_get(session, entity, ident, **kwargs)
+        if entity is Flow and ident == files_flow.id:
+            assert session.in_transaction()
+            flow_session = session
+        return result
+
+    url = f"api/v1/files/upload/{files_flow.id}"
+    multipart = files_client.build_request(
+        "POST", url, files={"file": ("test.txt", b"test content")}, headers={"x-api-key": files_created_api_key.api_key}
+    )
+
+    async def upload_body():
+        assert flow_session is not None
+        assert not flow_session.in_transaction()
+        yield multipart.read()
+
+    with monkeypatch.context() as patch:
+        patch.setattr(AsyncSession, "get", capture_flow_lookup)
+        response = await files_client.post(url, content=upload_body(), headers=multipart.headers)
+
+    assert response.status_code == 201, response.text
+
+
 async def test_download_file(files_client, files_created_api_key, files_flow):
     headers = {"x-api-key": files_created_api_key.api_key}
 

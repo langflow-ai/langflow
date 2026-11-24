@@ -194,6 +194,7 @@ async def test_files_upload_viewer_denied(owner):
     storage = MagicMock(save_file=AsyncMock())
     settings_service = SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=100))
     request = MagicMock(spec=Request)
+    session = SimpleNamespace(commit=AsyncMock())
 
     set_current_external_access_context(_viewer_ceiling())
     try:
@@ -202,6 +203,7 @@ async def test_files_upload_viewer_denied(owner):
                 request=request,
                 flow=flow,
                 current_user=owner,
+                session=session,
                 storage_service=storage,
                 settings_service=settings_service,
             )
@@ -209,6 +211,7 @@ async def test_files_upload_viewer_denied(owner):
         set_current_external_access_context(None)
 
     assert exc_info.value.status_code == 403
+    session.commit.assert_not_awaited()
     request.body.assert_not_awaited()
     storage.save_file.assert_not_awaited()
 

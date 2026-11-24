@@ -24,6 +24,7 @@ from langflow.api.utils import (
     ValidatedFileName,
     ValidatedFolderName,
     build_content_disposition,
+    release_db_transaction,
 )
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.authorization import FlowAction, ensure_flow_permission
@@ -189,19 +190,24 @@ async def upload_file(
     request: Request,
     flow: Annotated[Flow, Depends(get_flow)],
     current_user: CurrentActiveUser,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     # Writing a file to a flow's storage is a flow mutation: enforce WRITE so
     # the external access ceiling (e.g. a "viewer") cannot upload via this route.
+    flow_id = flow.id
     await ensure_flow_permission(
         current_user,
         FlowAction.WRITE,
-        flow_id=flow.id,
+        flow_id=flow_id,
         flow_user_id=flow.user_id,
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
     )
+
+    # Return the connection used by the flow lookup to the pool before reading the upload.
+    await release_db_transaction(session)
 
     # A declared UploadFile parameter makes FastAPI parse the form before running auth dependencies.
     await _validate_upload_boundary(request)
@@ -215,13 +221,13 @@ async def upload_file(
                     else {"type": "value_error", "msg": "Expected an uploaded file"}
                 )
                 raise RequestValidationError([{**error, "loc": ("body", "file")}])
-            return await _store_flow_upload(file, flow, storage_service, settings_service)
+            return await _store_flow_upload(file, flow_id, storage_service, settings_service)
     except MultipartParseError as exc:
         raise HTTPException(status_code=400, detail="There was an error parsing the body") from exc
 
 
 async def _store_flow_upload(
-    file: UploadFile, flow: Flow, storage_service: StorageService, settings_service: SettingsService
+    file: UploadFile, flow_id: UUID, storage_service: StorageService, settings_service: SettingsService
 ) -> UploadFileResponse:
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
@@ -238,9 +244,9 @@ async def _store_flow_upload(
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         full_file_name = f"{timestamp}_{file_name}"
-        folder = flow_storage_scope(flow.id)
+        folder = flow_storage_scope(flow_id)
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
-        return UploadFileResponse(flow_id=str(flow.id), file_path=f"{folder}/{full_file_name}")
+        return UploadFileResponse(flow_id=str(flow_id), file_path=f"{folder}/{full_file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
