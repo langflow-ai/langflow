@@ -1,0 +1,517 @@
+import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { useUtilityStore } from "@/stores/utilityStore";
+import type { GlobalVariable } from "@/types/global_variables";
+import DBProvidersPage from "../index";
+
+// ---------------------------------------------------------------------------
+// Characterization (golden-master) suite for the untouched 866-line page.
+// It pins the observable behavior BEFORE the WP2 extraction so every
+// extraction commit can be validated against it. No implementation details
+// are asserted — only what a user (or consumer) can observe.
+// ---------------------------------------------------------------------------
+
+let mockGlobalVariables: GlobalVariable[] = [];
+
+const postCalls: Array<Record<string, unknown>> = [];
+const patchCalls: Array<Record<string, unknown>> = [];
+const mockPostMutateAsync = jest.fn((params: Record<string, unknown>) => {
+  postCalls.push(params);
+  return Promise.resolve(undefined);
+});
+const mockPatchMutateAsync = jest.fn((params: Record<string, unknown>) => {
+  patchCalls.push(params);
+  return Promise.resolve(undefined);
+});
+const mockTestMutateAsync = jest.fn(
+  (_params: {
+    backend_type: string;
+    backend_config: Record<string, unknown>;
+  }) => Promise.resolve({ ok: true, message: "cluster green" }),
+);
+
+const mockSetSuccessData = jest.fn();
+const mockSetErrorData = jest.fn();
+
+jest.mock("@/controllers/API/queries/variables", () => ({
+  useGetGlobalVariables: () => ({ data: mockGlobalVariables }),
+  usePostGlobalVariables: () => ({
+    mutateAsync: mockPostMutateAsync,
+    isPending: false,
+  }),
+  usePatchGlobalVariables: () => ({
+    mutateAsync: mockPatchMutateAsync,
+    isPending: false,
+  }),
+}));
+
+jest.mock(
+  "@/controllers/API/queries/knowledge-bases/use-test-kb-connection",
+  () => ({
+    useTestDBProviderConnection: () => ({
+      mutateAsync: mockTestMutateAsync,
+      isPending: false,
+    }),
+  }),
+);
+
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({
+      setSuccessData: mockSetSuccessData,
+      setErrorData: mockSetErrorData,
+    }),
+}));
+
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  default: ({ name, className }: { name: string; className?: string }) => (
+    <span data-testid={`icon-${name}`} className={className} />
+  ),
+}));
+
+const STRINGS: Record<string, string> = {
+  "settings.dbProviders.title": "DB Providers",
+  "settings.dbProviders.description":
+    "Configure vector-store providers for Knowledge Bases.",
+  "settings.dbProviders.active": "Active",
+  "settings.dbProviders.comingSoon": "Coming soon",
+  "settings.dbProviders.comingSoonDescription":
+    "This provider is stubbed in the Knowledge Base backend registry and will become configurable after the provider implementation is wired through end-to-end.",
+  "settings.dbProviders.sqliteDescription":
+    "SQLite stores vectors on disk next to Langflow and is enabled by default. Selecting it here makes it the default provider for new Knowledge Bases.",
+  "settings.dbProviders.sqliteSelected": "SQLite selected",
+  "settings.dbProviders.useSQLite": "Use SQLite",
+  "settings.dbProviders.save": "Save",
+  "settings.dbProviders.useProvider": "Use {{provider}}",
+  "settings.dbProviders.saveAndUseProvider": "Save and use {{provider}}",
+  "settings.dbProviders.testConnection": "Test connection",
+  "settings.dbProviders.savedAsGlobalVariable": "Saved as global variable",
+  "settings.dbProviders.errorMissingConfig": "Missing required configuration",
+  "settings.dbProviders.configSaved": "{{provider}} configuration saved",
+  "settings.dbProviders.postgresDescription":
+    "Postgres pgvector is set up automatically from your server's environment configuration.",
+  "settings.dbProviders.postgresChecking": "Checking connection…",
+  "settings.dbProviders.postgresConfigured": "Configured and reachable",
+  "settings.dbProviders.postgresNotConfigured":
+    "Not configured. Set PGVECTOR_CONNECTION_STRING in your server environment.",
+  "settings.dbProviders.usePostgres": "Use Postgres pgVector",
+  "settings.dbProviders.postgresSelected": "Postgres pgVector selected",
+  // Non-English copy proves these strings come from translation keys.
+  "settings.dbProviders.fields.OPENSEARCH_USE_SSL.label": "Usar TLS (HTTPS)",
+  "settings.dbProviders.fields.OPENSEARCH_PASSWORD.placeholder":
+    "Digite a senha do OpenSearch",
+};
+
+jest.mock("react-i18next", () => ({
+  // Consumed by src/i18n.ts, which is pulled in transitively through
+  // the ui/badge → utils import chain.
+  initReactI18next: { type: "3rdParty", init: () => {} },
+  useTranslation: () => ({
+    t: (key: string, options?: Record<string, unknown>) => {
+      const template = STRINGS[key] ?? (options?.defaultValue as string) ?? key;
+      return template.replace(/\{\{(\w+)\}\}/g, (_match, name: string) =>
+        String(options?.[name] ?? ""),
+      );
+    },
+  }),
+}));
+
+const variable = (
+  name: string,
+  value: string | undefined,
+  id = `id-${name}`,
+  type: "Credential" | "Generic" = "Generic",
+  hasValue?: boolean,
+): GlobalVariable =>
+  ({
+    id,
+    name,
+    value,
+    type,
+    has_value: hasValue,
+  }) as unknown as GlobalVariable;
+
+const openSearchRequiredSaved = (): GlobalVariable[] => [
+  variable("OPENSEARCH_URL", "https://localhost:9200"),
+  variable("OPENSEARCH_USERNAME", "admin"),
+  // Credential values come back masked/absent from the API. `has_value`
+  // distinguishes a stored credential from an empty row.
+  variable(
+    "OPENSEARCH_PASSWORD",
+    undefined,
+    "id-OPENSEARCH_PASSWORD",
+    "Credential",
+    true,
+  ),
+  variable("OPENSEARCH_INDEX_NAME", "langflow"),
+];
+
+const getSaveButton = (name: RegExp) => screen.getByRole("button", { name });
+
+beforeEach(() => {
+  useUtilityStore.setState({
+    localVectorStoreAvailable: true,
+    defaultVectorStoreBackend: undefined,
+    configuredVectorStoreBackends: [],
+  });
+  mockGlobalVariables = [];
+  postCalls.length = 0;
+  patchCalls.length = 0;
+  jest.clearAllMocks();
+});
+
+describe("DBProvidersPage characterization", () => {
+  describe("environment-configured OpenSearch", () => {
+    it.each(["postgres", "opensearch"])(
+      "tests server configuration without saving credentials when %s is the default",
+      async (defaultBackend) => {
+        useUtilityStore.setState({
+          defaultVectorStoreBackend: defaultBackend,
+          configuredVectorStoreBackends: ["postgres", "opensearch"],
+        });
+        const user = userEvent.setup();
+        render(<DBProvidersPage />);
+        await user.click(screen.getByTestId("db-provider-item-opensearch"));
+        expect(
+          screen.getByText("settings.dbProviders.serverConfiguration"),
+        ).toBeInTheDocument();
+        const testButton = screen.getByTestId("db-provider-test-connection");
+        expect(testButton).toBeEnabled();
+        mockTestMutateAsync.mockClear();
+        await user.click(testButton);
+        await waitFor(() =>
+          expect(mockTestMutateAsync).toHaveBeenCalledWith({
+            backend_type: "opensearch",
+            backend_config: expect.objectContaining({
+              url_variable: "OPENSEARCH_URL",
+            }),
+          }),
+        );
+        const config = mockTestMutateAsync.mock.calls[0][0].backend_config;
+        expect(config).not.toHaveProperty("use_ssl");
+        expect(config).not.toHaveProperty("verify_certs");
+        expect(postCalls).toEqual([]);
+        expect(patchCalls).toEqual([]);
+      },
+    );
+
+    it("activates environment-configured OpenSearch without creating credential variables", async () => {
+      useUtilityStore.setState({
+        defaultVectorStoreBackend: "postgres",
+        configuredVectorStoreBackends: ["postgres", "opensearch"],
+      });
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+      await user.click(getSaveButton(/^use opensearch$/i));
+      await waitFor(() => expect(postCalls).toHaveLength(1));
+      expect(postCalls[0]).toMatchObject({
+        name: "LANGFLOW_KNOWLEDGE_BACKEND",
+        value: "opensearch",
+      });
+      expect(patchCalls).toEqual([]);
+    });
+
+    it("requires a complete configuration when overriding the server fields", async () => {
+      useUtilityStore.setState({
+        configuredVectorStoreBackends: ["opensearch"],
+      });
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+      await user.type(
+        screen.getByPlaceholderText("https://search.example.com:9200"),
+        "https://other.example.com",
+      );
+      expect(screen.getByTestId("db-provider-test-connection")).toBeDisabled();
+    });
+  });
+  describe("provider list", () => {
+    it.each(["environment", "saved variables"])(
+      "shows a muted check for inactive OpenSearch configured through %s",
+      (configurationSource) => {
+        if (configurationSource === "environment") {
+          useUtilityStore.setState({
+            configuredVectorStoreBackends: ["opensearch"],
+          });
+        } else {
+          mockGlobalVariables = openSearchRequiredSaved();
+        }
+        render(<DBProvidersPage />);
+        expect(screen.getByTestId("db-provider-item-sqlite")).toHaveTextContent(
+          "Active",
+        );
+        const openSearchItem = screen.getByTestId(
+          "db-provider-item-opensearch",
+        );
+        expect(openSearchItem).not.toHaveTextContent("Active");
+        const check = within(openSearchItem).getByTestId("icon-Check");
+        expect(check).toHaveClass("text-muted-foreground");
+        expect(check).not.toHaveClass("text-status-green");
+        expect(within(openSearchItem).queryByTestId("icon-Plus")).toBeNull();
+      },
+    );
+
+    it("shows a muted plus for unconfigured OpenSearch", () => {
+      render(<DBProvidersPage />);
+      const openSearchItem = screen.getByTestId("db-provider-item-opensearch");
+      expect(within(openSearchItem).getByTestId("icon-Plus")).toHaveClass(
+        "text-muted-foreground",
+      );
+      expect(within(openSearchItem).queryByTestId("icon-Check")).toBeNull();
+    });
+
+    it("renders supported and future providers in canonical order", () => {
+      render(<DBProvidersPage />);
+      const items = screen.getAllByTestId(/^db-provider-item-/);
+      expect(items.map((item) => item.getAttribute("data-testid"))).toEqual([
+        "db-provider-item-sqlite",
+        "db-provider-item-opensearch",
+        "db-provider-item-astra",
+        "db-provider-item-mongodb",
+        "db-provider-item-postgres",
+      ]);
+    });
+
+    it("marks sqlite as the active provider when no backend variable exists", () => {
+      render(<DBProvidersPage />);
+      const sqliteItem = screen.getByTestId("db-provider-item-sqlite");
+      expect(sqliteItem).toHaveTextContent("Active");
+      expect(
+        sqliteItem.querySelector('[data-testid="icon-Check"]'),
+      ).toBeInTheDocument();
+    });
+
+    it("marks the provider stored in LANGFLOW_KNOWLEDGE_BACKEND as active", () => {
+      mockGlobalVariables = [
+        variable("LANGFLOW_KNOWLEDGE_BACKEND", "opensearch"),
+        ...openSearchRequiredSaved(),
+      ];
+      render(<DBProvidersPage />);
+      expect(
+        screen.getByTestId("db-provider-item-opensearch"),
+      ).toHaveTextContent("Active");
+      expect(
+        screen.getByTestId("db-provider-item-sqlite"),
+      ).not.toHaveTextContent("Active");
+    });
+
+    it("shows a coming-soon badge for astra and mongodb", () => {
+      render(<DBProvidersPage />);
+      for (const id of ["astra", "mongodb"]) {
+        expect(screen.getByTestId(`db-provider-item-${id}`)).toHaveTextContent(
+          "Coming soon",
+        );
+      }
+    });
+  });
+
+  describe("sqlite panel (default selection)", () => {
+    it("shows a disabled 'SQLite selected' action while sqlite is active", () => {
+      render(<DBProvidersPage />);
+      const button = getSaveButton(/sqlite selected/i);
+      expect(button).toBeDisabled();
+      expect(screen.queryByTestId("db-provider-test-connection")).toBeNull();
+    });
+  });
+
+  it("does not offer retired Chroma providers even with saved credentials", () => {
+    mockGlobalVariables = [
+      variable("CHROMA_API_KEY", undefined, "key", "Credential", true),
+    ];
+    render(<DBProvidersPage />);
+    expect(screen.queryByTestId("db-provider-item-chroma")).toBeNull();
+    expect(screen.queryByTestId("db-provider-item-chroma_cloud")).toBeNull();
+  });
+
+  describe("postgres pgvector panel", () => {
+    it("renders the environment-driven panel with test and use actions and no config fields", async () => {
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-postgres"));
+
+      // Environment-driven: a passive connectivity ping (mocked ok) gates the
+      // Use action. The panel exposes Test connection + Use, not credential
+      // fields, and is no longer a coming-soon stub.
+      expect(
+        await screen.findByTestId("db-provider-test-connection"),
+      ).toBeInTheDocument();
+      const useButton = getSaveButton(/use postgres pgvector/i);
+      await waitFor(() => expect(useButton).toBeEnabled());
+      // The Button must preserve the "pgVector" brand casing (ignoreTitleCase);
+      // without it the label auto-title-cases to "Pgvector".
+      expect(useButton.textContent).toContain("pgVector");
+      expect(useButton.textContent).not.toContain("Pgvector");
+      expect(screen.queryByRole("textbox")).toBeNull();
+    });
+  });
+
+  describe("opensearch panel", () => {
+    const openOpenSearch = async () => {
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+      return user;
+    };
+
+    it("renders text fields with variable keys, defaults and both TLS toggles", async () => {
+      await openOpenSearch();
+      for (const key of [
+        "OPENSEARCH_URL",
+        "OPENSEARCH_USERNAME",
+        "OPENSEARCH_PASSWORD",
+        "OPENSEARCH_INDEX_NAME",
+        "OPENSEARCH_VECTOR_FIELD",
+        "OPENSEARCH_TEXT_FIELD",
+      ]) {
+        expect(screen.getByText(key)).toBeInTheDocument();
+      }
+      // Optional fields come pre-filled with their defaults.
+      expect(screen.getByDisplayValue("vector_field")).toBeInTheDocument();
+      expect(screen.getByDisplayValue("text")).toBeInTheDocument();
+      // Both TLS toggles render checked (defaultValue true).
+      expect(
+        screen.getByTestId("db-provider-toggle-OPENSEARCH_USE_SSL"),
+      ).toHaveAttribute("aria-checked", "true");
+      expect(
+        screen.getByTestId("db-provider-toggle-OPENSEARCH_VERIFY_CERTS"),
+      ).toHaveAttribute("aria-checked", "true");
+    });
+
+    it("names the TLS switches and the password placeholder in the interface language", async () => {
+      await openOpenSearch();
+      // The switch's accessible name used to be the English field label.
+      expect(
+        screen.getByRole("switch", { name: "Usar TLS (HTTPS)" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText("Digite a senha do OpenSearch"),
+      ).toBeInTheDocument();
+      // Example-value placeholders have no key and stay as written.
+      expect(
+        screen.getByPlaceholderText("https://search.example.com:9200"),
+      ).toBeInTheDocument();
+    });
+
+    it("keeps Save and Test connection disabled until every required field has a value", async () => {
+      const user = await openOpenSearch();
+      const save = getSaveButton(/save and use opensearch/i);
+      const test = screen.getByTestId("db-provider-test-connection");
+      expect(save).toBeDisabled();
+      expect(test).toBeDisabled();
+
+      const [url, username, indexName] = [
+        "https://localhost:9200",
+        "admin",
+        "langflow",
+      ];
+      const textboxes = screen.getAllByRole("textbox");
+      // textboxes: URL, Username, Index name, Vector field, Text field
+      await user.type(textboxes[0], url);
+      await user.type(textboxes[1], username);
+      expect(save).toBeDisabled();
+      const password = document.querySelector('input[type="password"]');
+      await user.type(password as Element, "secret");
+      await user.type(textboxes[2], indexName);
+
+      expect(save).toBeEnabled();
+      expect(test).toBeEnabled();
+    });
+
+    it("masks a configured secret and offers plain activation when hydrated", async () => {
+      mockGlobalVariables = openSearchRequiredSaved();
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+
+      const password = document.querySelector('input[type="password"]');
+      expect(password).toHaveValue("••••••••");
+      // Hydrated + no session edits → button switches to plain activation.
+      const useButton = getSaveButton(/^use opensearch$/i);
+      expect(useButton).toBeEnabled();
+    });
+
+    it("saves new required fields as global variables and activates the provider", async () => {
+      const user = await openOpenSearch();
+      const textboxes = screen.getAllByRole("textbox");
+      await user.type(textboxes[0], "https://localhost:9200");
+      await user.type(textboxes[1], "admin");
+      await user.type(
+        document.querySelector('input[type="password"]') as Element,
+        "secret",
+      );
+      await user.type(textboxes[2], "langflow");
+
+      await user.click(getSaveButton(/save and use opensearch/i));
+
+      await waitFor(() => {
+        expect(mockSetSuccessData).toHaveBeenCalledWith({
+          title: "OpenSearch configuration saved",
+        });
+      });
+
+      const byName = Object.fromEntries(
+        postCalls.map((call) => [call.name, call]),
+      );
+      expect(byName.OPENSEARCH_URL).toMatchObject({
+        value: "https://localhost:9200",
+        type: "Generic",
+      });
+      expect(byName.OPENSEARCH_USERNAME).toMatchObject({ value: "admin" });
+      // Secrets persist as Credential-type variables.
+      expect(byName.OPENSEARCH_PASSWORD).toMatchObject({
+        value: "secret",
+        type: "Credential",
+      });
+      expect(byName.OPENSEARCH_INDEX_NAME).toMatchObject({
+        value: "langflow",
+      });
+      // Activation writes the backend selector variable.
+      expect(byName.LANGFLOW_KNOWLEDGE_BACKEND).toMatchObject({
+        value: "opensearch",
+      });
+      expect(patchCalls).toHaveLength(0);
+    });
+
+    it("updates existing variables through PATCH instead of re-creating them", async () => {
+      mockGlobalVariables = openSearchRequiredSaved();
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-opensearch"));
+
+      const textboxes = screen.getAllByRole("textbox");
+      await user.clear(textboxes[0]);
+      await user.type(textboxes[0], "https://other:9200");
+      await user.click(getSaveButton(/save and use opensearch/i));
+
+      await waitFor(() => {
+        expect(
+          patchCalls.some(
+            (call) =>
+              call.id === "id-OPENSEARCH_URL" &&
+              call.value === "https://other:9200",
+          ),
+        ).toBe(true);
+      });
+      // The untouched, already-saved fields are not re-created.
+      expect(
+        postCalls.filter((call) => call.name === "OPENSEARCH_PASSWORD"),
+      ).toHaveLength(0);
+    });
+  });
+
+  describe("coming-soon panel", () => {
+    it("shows the stub description and no actions for astra", async () => {
+      const user = userEvent.setup();
+      render(<DBProvidersPage />);
+      await user.click(screen.getByTestId("db-provider-item-astra"));
+      expect(
+        screen.getByText(/stubbed in the Knowledge Base backend registry/),
+      ).toBeInTheDocument();
+      expect(screen.queryByTestId("db-provider-test-connection")).toBeNull();
+      expect(screen.queryByRole("button", { name: /Save/ })).toBeNull();
+    });
+  });
+});

@@ -200,18 +200,22 @@ class TestLocalStorageServiceListOperations:
         flow_id = "dir_test"
         file_name = "test.txt"
 
-        # Create a file
+        # Create a file via the service
         await local_storage_service.save_file(flow_id, file_name, b"content")
 
-        # Create a subdirectory (by creating a file in a subdirectory)
-        await local_storage_service.save_file(f"{flow_id}/subdir", "nested.txt", b"content")
+        # Create a subdirectory directly on disk so list_files has something to skip.
+        # Cannot route this through save_file: passing a slashed flow_id is the same
+        # shape as the public-build arbitrary-file-read regression, so the storage
+        # layer (correctly) rejects it.
+        subdir_path = local_storage_service.data_dir / flow_id / "subdir"
+        await subdir_path.mkdir(parents=True, exist_ok=True)
 
         # List files - should only return files in the flow_id directory, not subdirectories
         listed_files = await local_storage_service.list_files(flow_id)
 
-        # Should only return the file in the root, not the nested one
+        # Should only return the file in the root, not the subdirectory
         assert file_name in listed_files
-        assert "nested.txt" not in listed_files  # Nested file is in subdirectory
+        assert "subdir" not in listed_files
 
 
 @pytest.mark.asyncio
@@ -321,6 +325,87 @@ class TestLocalStorageServiceTeardown:
 
 
 @pytest.mark.asyncio
+class TestLocalStorageServicePathTraversal:
+    """Regression tests for PVR0754098 — path traversal on read/delete/size endpoints."""
+
+    @pytest.mark.parametrize(
+        "malicious_filename",
+        [
+            "../../../etc/passwd",
+            "../other_flow/file.txt",
+            "..\\..\\etc\\passwd",
+            "..",
+            "sub/dir.txt",
+        ],
+    )
+    async def test_get_file_rejects_traversal(self, local_storage_service, malicious_filename):
+        with pytest.raises(ValueError, match="Invalid file"):
+            await local_storage_service.get_file("flow_a", malicious_filename)
+
+    @pytest.mark.parametrize(
+        "malicious_filename",
+        [
+            "../../../etc/passwd",
+            "../other_flow/file.txt",
+            "..",
+        ],
+    )
+    async def test_delete_file_rejects_traversal(self, local_storage_service, malicious_filename):
+        with pytest.raises(ValueError, match="Invalid file"):
+            await local_storage_service.delete_file("flow_a", malicious_filename)
+
+    @pytest.mark.parametrize(
+        "malicious_filename",
+        [
+            "../../../etc/passwd",
+            "../other_flow/file.txt",
+            "..",
+        ],
+    )
+    async def test_get_file_size_rejects_traversal(self, local_storage_service, malicious_filename):
+        with pytest.raises(ValueError, match="Invalid file"):
+            await local_storage_service.get_file_size("flow_a", malicious_filename)
+
+    async def test_get_file_stream_rejects_traversal(self, local_storage_service):
+        with pytest.raises(ValueError, match="Invalid file"):
+            # AsyncIterator functions don't raise until first iteration.
+            async for _ in local_storage_service.get_file_stream("flow_a", "../escape.txt"):
+                pass
+
+    async def test_cross_flow_read_is_blocked(self, local_storage_service):
+        """Writing a file to flow_b then attempting to read it from flow_a must fail."""
+        await local_storage_service.save_file("flow_b", "secret.txt", b"hidden")
+
+        with pytest.raises(ValueError, match="Invalid file"):
+            await local_storage_service.get_file("flow_a", "../flow_b/secret.txt")
+
+    @pytest.mark.parametrize(
+        "malicious_flow_id",
+        [
+            "/etc",
+            "..",
+            "../other",
+            "..\\other",
+            "flow/sub",
+            "flow\\sub",
+            "with\x00null",
+            "",
+        ],
+    )
+    async def test_get_file_rejects_malicious_flow_id(self, local_storage_service, malicious_flow_id):
+        # Pre-vuln: flow_id="/etc" + file_name="passwd" collapsed Path join to /etc/passwd
+        # and the containment check passed because it was anchored at folder_path.
+        with pytest.raises(ValueError, match="Invalid"):
+            await local_storage_service.get_file(malicious_flow_id, "passwd")
+
+    async def test_get_file_rejects_absolute_flow_id_collapse(self, local_storage_service):
+        # Direct regression for the public-build arbitrary-file-read: ensure the
+        # /etc/<file> shape is rejected even when the file would exist on disk.
+        with pytest.raises(ValueError, match="Invalid"):
+            await local_storage_service.get_file("/etc", "hosts")
+
+
+@pytest.mark.asyncio
 class TestLocalStorageServiceEdgeCases:
     """Test edge cases and error conditions."""
 
@@ -361,3 +446,28 @@ class TestLocalStorageServiceEdgeCases:
         # Verify all files were saved
         listed = await local_storage_service.list_files(flow_id)
         assert len(listed) == 10
+
+    async def test_concurrent_write_then_read(self, local_storage_service):
+        """Regression test for SystemError(11, 'Resource temporarily unavailable').
+
+        Under concurrent execution, aiofile/caio would leak kernel AIO contexts
+        causing EAGAIN after ~150-200 runs. This test verifies that writing a file
+        and immediately reading it back works reliably under concurrency with the
+        aiofiles backend. See https://github.com/langflow-ai/langflow/issues/12414
+        """
+        flow_id = "concurrent_rw_flow"
+        num_files = 50
+
+        async def write_then_read(i: int) -> None:
+            file_name = f"file_{i}.bin"
+            data = f"payload-{i}".encode()
+            await local_storage_service.save_file(flow_id, file_name, data)
+            retrieved = await local_storage_service.get_file(flow_id, file_name)
+            assert retrieved == data, f"file_{i} content mismatch"
+
+        async with anyio.create_task_group() as tg:
+            for i in range(num_files):
+                tg.start_soon(write_then_read, i)
+
+        listed = await local_storage_service.list_files(flow_id)
+        assert len(listed) == num_files

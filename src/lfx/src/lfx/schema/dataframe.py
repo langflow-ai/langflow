@@ -153,6 +153,14 @@ class Table(pandas_DataFrame):
         """
         return not self.empty
 
+    def __repr__(self) -> str:
+        # Disable column-width truncation so agent observations include full content.
+        # Pandas default (50 chars) silently truncates Memory Base / Knowledge Base results.
+        with pd.option_context("display.max_colwidth", None):
+            return super().__repr__()
+
+    __str__ = __repr__
+
     __hash__ = None  # Tables are mutable and shouldn't be hashable
 
     _CONTENT_COLUMNS = frozenset(
@@ -185,8 +193,10 @@ class Table(pandas_DataFrame):
         if self.empty:
             return self
 
-        content_cols = [c for c in self.columns if c.lower() in self._CONTENT_COLUMNS]
-        system_cols = [c for c in self.columns if c.lower() in self._SYSTEM_COLUMNS or c.startswith("_")]
+        content_cols = [c for c in self.columns if isinstance(c, str) and c.lower() in self._CONTENT_COLUMNS]
+        system_cols = [
+            c for c in self.columns if isinstance(c, str) and (c.lower() in self._SYSTEM_COLUMNS or c.startswith("_"))
+        ]
         regular_cols = [c for c in self.columns if c not in content_cols and c not in system_cols]
 
         new_order = content_cols + regular_cols + system_cols

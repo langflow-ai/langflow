@@ -310,6 +310,159 @@ async def test_load_langchain_object_with_cached_session(basic_graph_data):
 #     assert graph1 == graph2
 
 
+def test_tweak_no_node_id_boolean():
+    """Test that boolean tweaks at root level are applied to all matching nodes."""
+    graph_data = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": True, "type": "bool"},
+                                "param1": {"value": "hello", "type": "str"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": True, "type": "bool"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    tweaks = {"enabled": False}
+    expected_result = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": False, "type": "bool"},
+                                "param1": {"value": "hello", "type": "str"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "enabled": {"value": False, "type": "bool"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    result = process_tweaks(graph_data, tweaks)
+    assert result == expected_result
+
+
+def test_tweak_no_node_id_numeric():
+    """Test that numeric tweaks at root level are applied to all matching nodes."""
+    graph_data = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 1.0, "type": "float"},
+                                "max_tokens": {"value": 100, "type": "int"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 1.0, "type": "float"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    tweaks = {"temperature": 0.7, "max_tokens": 256}
+    expected_result = {
+        "data": {
+            "nodes": [
+                {
+                    "id": "node1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 0.7, "type": "float"},
+                                "max_tokens": {"value": 256, "type": "int"},
+                            }
+                        }
+                    },
+                },
+                {
+                    "id": "node2",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "temperature": {"value": 0.7, "type": "float"},
+                            }
+                        }
+                    },
+                },
+            ]
+        }
+    }
+    result = process_tweaks(graph_data, tweaks)
+    assert result == expected_result
+
+
+def test_tweaks_schema_accepts_bool():
+    """Tweaks model must accept boolean root-level values without coercion."""
+    from lfx.schema.graph import Tweaks
+
+    tweaks = Tweaks(root={"stream": False, "enabled": True})
+    assert tweaks.root["stream"] is False
+    assert tweaks.root["enabled"] is True
+    # Verify bool is preserved and not coerced to int
+    assert isinstance(tweaks.root["stream"], bool)
+    assert isinstance(tweaks.root["enabled"], bool)
+
+
+def test_tweaks_schema_accepts_numerics():
+    """Tweaks model must accept int and float root-level values."""
+    from lfx.schema.graph import Tweaks
+
+    tweaks = Tweaks(root={"temperature": 0.7, "max_tokens": 256})
+    assert tweaks.root["temperature"] == 0.7
+    assert tweaks.root["max_tokens"] == 256
+
+
+def test_tweaks_schema_rejects_invalid():
+    """Tweaks model should still reject unsupported value types."""
+    import pytest
+    from lfx.schema.graph import Tweaks
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        Tweaks(root={"param": [1, 2, 3]})
+
+
 def test_apply_tweaks_code_override_prevention():
     """Test that code tweaks are prevented and logged as warning."""
     from unittest.mock import patch
@@ -333,17 +486,57 @@ def test_apply_tweaks_code_override_prevention():
     node_tweaks = {"code": "malicious_code_injection", "param1": "new_value"}
 
     # Capture log output
-    with patch("langflow.processing.process.logger") as mock_logger:
+    with patch("lfx.processing.process.logger") as mock_logger:
         apply_tweaks(node, node_tweaks)
 
-        # Verify warning was logged for code override attempt
-        mock_logger.warning.assert_called_once_with("Security: Code field cannot be overridden via tweaks.")
+        # Verify warning was logged for code override attempt (and names the field)
+        mock_logger.warning.assert_called_once_with("Security: refusing to override protected field 'code' via tweaks.")
 
     # Verify code field was NOT modified
     assert node["data"]["node"]["template"]["code"]["value"] == "original_code"
 
     # Verify other parameter WAS modified
     assert node["data"]["node"]["template"]["param1"]["value"] == "new_value"
+
+
+def test_apply_tweaks_blocks_sql_connection_and_query():
+    """A run caller cannot repoint the stored SQL sink or replace its query."""
+    from unittest.mock import call, patch
+
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "SQLComponent-test",
+        "data": {
+            "type": "SQLComponent",
+            "node": {
+                "template": {
+                    "database_url": {"value": "postgresql://stored/db", "type": "str"},
+                    "query": {"value": "SELECT 1", "type": "str"},
+                    "include_columns": {"value": True, "type": "bool"},
+                }
+            },
+        },
+    }
+
+    with patch("lfx.processing.process.logger") as mock_logger:
+        apply_tweaks(
+            node,
+            {
+                "database_url": "sqlite:////etc/passwd",
+                "query": "DROP TABLE users",
+                "include_columns": False,
+            },
+        )
+
+    template = node["data"]["node"]["template"]
+    assert template["database_url"]["value"] == "postgresql://stored/db"
+    assert template["query"]["value"] == "SELECT 1"
+    assert template["include_columns"]["value"] is False
+    assert mock_logger.warning.call_args_list == [
+        call("Security: refusing to override protected field 'database_url' via tweaks."),
+        call("Security: refusing to override protected field 'query' via tweaks."),
+    ]
 
 
 def test_apply_tweaks_code_only_prevention():
@@ -368,14 +561,167 @@ def test_apply_tweaks_code_only_prevention():
     node_tweaks = {"code": "attempted_code_injection"}
 
     # Capture log output
-    with patch("langflow.processing.process.logger") as mock_logger:
+    with patch("lfx.processing.process.logger") as mock_logger:
         apply_tweaks(node, node_tweaks)
 
-        # Verify warning was logged
-        mock_logger.warning.assert_called_once_with("Security: Code field cannot be overridden via tweaks.")
+        # Verify warning was logged and names the offending field (not a generic "Code field").
+        mock_logger.warning.assert_called_once_with("Security: refusing to override protected field 'code' via tweaks.")
 
     # Verify code field was NOT modified
     assert node["data"]["node"]["template"]["code"]["value"] == "original_code"
+
+
+def test_apply_tweaks_blocks_code_type_field_with_other_name():
+    """A code-injection bypass: a field of type 'code' but named something other than 'code'.
+
+    The old guard only blocked the literal field name 'code'. Block by field *type*.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "node": {
+                "template": {
+                    "custom_source": {"value": "original", "type": "code"},
+                    "param1": {"value": "ok", "type": "str"},
+                }
+            }
+        },
+    }
+    apply_tweaks(node, {"custom_source": "import os; os.system('id')", "param1": "new"})
+
+    # The code-type field must NOT be overridden; the ordinary field is fine.
+    assert node["data"]["node"]["template"]["custom_source"]["value"] == "original"
+    assert node["data"]["node"]["template"]["param1"]["value"] == "new"
+
+
+def test_apply_tweaks_blocks_code_execution_component_fields():
+    """Tweaks must not override the executable/sandbox inputs of a code-execution component.
+
+    The executable input lives under names like 'python_code' (MultilineInput → type
+    'str'), not 'code', so the block keys off the component *type*
+    (CODE_EXECUTION_COMPONENT_TYPES) plus the code/sandbox field names
+    (CODE_EXECUTION_FIELD_NAMES). 'global_imports' is the import allow-list that
+    populates the exec() namespace and must stay blocked too.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "PythonREPLComponent",
+            "node": {
+                "template": {
+                    "python_code": {"value": "print('safe')", "type": "str"},
+                    "global_imports": {"value": "math", "type": "str"},
+                }
+            },
+        },
+    }
+    apply_tweaks(node, {"python_code": "__import__('os').system('id')", "global_imports": "os,subprocess"})
+
+    assert node["data"]["node"]["template"]["python_code"]["value"] == "print('safe')"
+    assert node["data"]["node"]["template"]["global_imports"]["value"] == "math"
+
+
+def test_apply_tweaks_allows_benign_fields_on_code_execution_component():
+    """Scoped block: benign fields on a code-execution component remain tweakable.
+
+    Regression for the over-block where every field on a code-execution node was
+    dropped — renaming a Python REPL tool (name/description) must still work.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "PythonREPLTool",
+            "node": {
+                "template": {
+                    "name": {"value": "old_name", "type": "str"},
+                    "description": {"value": "old desc", "type": "str"},
+                    "python_code": {"value": "print('safe')", "type": "str"},
+                }
+            },
+        },
+    }
+    apply_tweaks(
+        node,
+        {"name": "new_name", "description": "new desc", "python_code": "__import__('os').system('id')"},
+    )
+
+    # Benign metadata is applied; the executable 'python_code' field is still blocked.
+    assert node["data"]["node"]["template"]["name"]["value"] == "new_name"
+    assert node["data"]["node"]["template"]["description"]["value"] == "new desc"
+    assert node["data"]["node"]["template"]["python_code"]["value"] == "print('safe')"
+
+
+def test_apply_tweaks_blocks_removed_python_code_structured_tool_code():
+    """The removed PythonCodeStructuredTool's exec input is 'tool_code' (type 'str').
+
+    Its type is retained in CODE_EXECUTION_COMPONENT_TYPES to keep stored code in
+    existing flows un-overridable; the tweak guard must cover 'tool_code' too.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "PythonCodeStructuredTool",
+            "node": {"template": {"tool_code": {"value": "stored_code", "type": "str"}}},
+        },
+    }
+    apply_tweaks(node, {"tool_code": "__import__('os').system('id')"})
+
+    assert node["data"]["node"]["template"]["tool_code"]["value"] == "stored_code"
+
+
+def test_apply_tweaks_blocks_csv_agent_dangerous_code_flag():
+    """CSVAgent's LangChain Python-execution opt-in is a sandbox boundary."""
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "CSVAgent",
+            "node": {
+                "template": {
+                    "allow_dangerous_code": {"value": False, "type": "bool"},
+                    "input_value": {"value": "summarize", "type": "str"},
+                }
+            },
+        },
+    }
+    apply_tweaks(node, {"allow_dangerous_code": True, "input_value": "count rows"})
+
+    assert node["data"]["node"]["template"]["allow_dangerous_code"]["value"] is False
+    assert node["data"]["node"]["template"]["input_value"]["value"] == "count rows"
+
+
+def test_apply_tweaks_smart_transform_blocks_instruction_allows_data():
+    """Smart Transform's 'filter_instruction' drives an eval()'d lambda → blocked.
+
+    Other inputs (data, sample_size, ...) carry no code and stay tweakable.
+    """
+    from langflow.processing.process import apply_tweaks
+
+    node = {
+        "id": "n",
+        "data": {
+            "type": "Smart Transform",
+            "node": {
+                "template": {
+                    "filter_instruction": {"value": "uppercase the text", "type": "str"},
+                    "sample_size": {"value": 10, "type": "int"},
+                }
+            },
+        },
+    }
+    apply_tweaks(node, {"filter_instruction": "lambda x: __import__('os').system('id')", "sample_size": 25})
+
+    assert node["data"]["node"]["template"]["filter_instruction"]["value"] == "uppercase the text"
+    assert node["data"]["node"]["template"]["sample_size"]["value"] == 25
 
 
 def test_apply_tweaks_mcp_field_type():

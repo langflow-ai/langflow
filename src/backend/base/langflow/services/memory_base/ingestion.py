@@ -1,0 +1,722 @@
+"""Ingestion orchestration for MemoryBase — auto-capture, regeneration, and mismatch detection.
+
+Extracted from MemoryBaseService to keep single-responsibility per file.
+The MemoryBaseService delegates to these functions for all ingestion-related work.
+"""
+
+from __future__ import annotations
+
+import uuid
+from contextlib import AsyncExitStack, asynccontextmanager, nullcontext
+from datetime import datetime, timezone
+from typing import TYPE_CHECKING
+
+from lfx.log.logger import logger
+from sqlmodel import col, func, select
+
+from langflow.api.utils.kb_helpers import (
+    backend_for_name,
+    resolve_backend_selection,
+    resolve_embedding_selection,
+)
+from langflow.services.database.models.jobs.crud import update_job_status as crud_update_job_status
+from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
+from langflow.services.database.models.memory_base.model import (
+    MemoryBase,
+    MemoryBaseSession,
+    MemoryBaseWorkflowRun,
+)
+from langflow.services.deps import get_job_service, get_task_service, session_scope
+from langflow.services.jobs import DuplicateJobError
+from langflow.services.memory_base.kb_path_helpers import (
+    hash_session_id,
+    resolve_kb_username,
+)
+from langflow.services.memory_base.provider_scope import (
+    preflight_memory_provider_use,
+    resolve_memory_provider_scope,
+)
+from langflow.services.memory_base.task import IngestionRequest, ingest_memory_task
+
+if TYPE_CHECKING:
+    from lfx.base.knowledge_bases.backends.base import BaseVectorStoreBackend
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+async def trigger_ingestion(
+    memory_base_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    session_id: str,
+    *,
+    get_mb_or_raise,
+    get_or_create_session,
+) -> str:
+    """Manually trigger (or auto-trigger) an ingestion sync.
+
+    Returns:
+        job_id string for the newly created job.
+
+    Raises:
+        ValueError: If MemoryBase not found.
+        RuntimeError: If a job is already active (caller should return 409).
+    """
+    async with session_scope() as db:
+        mb = await get_mb_or_raise(db, memory_base_id, owner_user_id)
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=memory_base_id,
+            owner_user_id=owner_user_id,
+            actor_user_id=actor_user_id,
+            memory_base=mb,
+        )
+
+    embedding_provider, embedding_model = await resolve_embedding_selection(
+        user_id=owner_user_id,
+        kb_name=mb.kb_name,
+    )
+    await preflight_memory_provider_use(
+        provider_scope,
+        embedding_provider=embedding_provider,
+        preprocessing=mb.preprocessing,
+        preproc_model=mb.preproc_model,
+    )
+
+    async with session_scope() as db:
+        # Ensure a session record exists
+        mbs = await get_or_create_session(db, memory_base_id, session_id)
+
+        # Snapshot the cursor NOW (immutable arg for the task)
+        cursor_id_snapshot = mbs.cursor_id
+
+        # Build dedupe_key from the latest uncovered WORKFLOW run for idempotency.
+        latest_job_id = await _get_latest_pending_workflow_job_id(db, mb, mbs)
+        dedupe_key: str | None = None
+        if latest_job_id is not None:
+            dedupe_key = f"ingestion:{memory_base_id}:{session_id}:{latest_job_id}"
+
+        kb_username = await resolve_kb_username(db, mb.user_id)
+
+    # Create tracking job
+    job_service = get_job_service()
+    job_id = uuid.uuid4()
+    await job_service.create_job(
+        job_id=job_id,
+        flow_id=mb.flow_id,
+        user_id=mb.user_id,
+        job_type=JobType.INGESTION,
+        asset_id=memory_base_id,
+        asset_type="memory_base",
+        dedupe_key=dedupe_key,
+        # Live from insert, then kept alive by execute_with_status, so an orphan sweep
+        # cannot fail it mid-run. Ingestion writes no job_metadata of its own.
+        heartbeat=True,
+    )
+
+    task_service = get_task_service()
+    await task_service.fire_and_forget_task(
+        job_service.execute_with_status,
+        job_id=job_id,
+        run_coro_func=ingest_memory_task,
+        keep_alive=True,
+        request=IngestionRequest(
+            memory_base_id=memory_base_id,
+            session_id=session_id,
+            flow_id=mb.flow_id,
+            kb_name=mb.kb_name,
+            kb_username=kb_username,
+            owner_user_id=mb.user_id,
+            actor_user_id=actor_user_id,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_model,
+            cursor_id=cursor_id_snapshot,
+            task_job_id=job_id,
+            job_service=job_service,
+            preprocessing=mb.preprocessing,
+            preproc_model=mb.preproc_model,
+            preproc_instructions=mb.preproc_instructions,
+            preproc_kill_phrase=mb.preproc_kill_phrase,
+        ),
+    )
+
+    return str(job_id)
+
+
+async def on_flow_output(
+    flow_id: uuid.UUID,
+    session_id: str,
+    job_id: uuid.UUID | None,
+    *,
+    get_or_create_session,
+) -> None:
+    """Called after a flow run completes.
+
+    For every MemoryBase watching this flow with auto_capture=True:
+    1. Record the workflow run in the tracking table (inside _maybe_trigger).
+    2. Count uncovered WORKFLOW runs for this session.
+    3. If count >= threshold, fire ingestion task.
+    """
+    async with session_scope() as db:
+        stmt = (
+            select(MemoryBase).where(MemoryBase.flow_id == flow_id).where(MemoryBase.auto_capture == True)  # noqa: E712
+        )
+        result = await db.exec(stmt)
+        memory_bases = list(result.all())
+
+    hashed_sid = hash_session_id(session_id)
+    for mb in memory_bases:
+        try:
+            await logger.adebug(
+                "Auto-capture check | memory_base=%s threshold=%s session=%s",
+                mb.id,
+                mb.threshold,
+                hashed_sid,
+            )
+            await _maybe_trigger(
+                mb=mb, session_id=session_id, job_id=job_id, get_or_create_session=get_or_create_session
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.aerror("Auto-capture failed for memory_base=%s session=%s", mb.id, hashed_sid, exc_info=True)
+
+
+async def _maybe_trigger(
+    *,
+    mb: MemoryBase,
+    session_id: str,
+    job_id: uuid.UUID | None,
+    get_or_create_session,
+) -> None:
+    async with session_scope() as db:
+        mbs = await get_or_create_session(db, mb.id, session_id)
+
+        # Record this workflow run before evaluating the threshold.
+        await _insert_workflow_run(db, mb.id, session_id, job_id)
+
+        pending = await count_pending_messages(db, mb, mbs)
+
+        if pending < mb.threshold:
+            return
+
+        cursor_id_snapshot = mbs.cursor_id
+
+        # Build dedupe_key from the latest pending WORKFLOW run for idempotency.
+        latest_wf_job_id = await _get_latest_pending_workflow_job_id(db, mb, mbs)
+        dedupe_key: str | None = None
+        if latest_wf_job_id is not None:
+            dedupe_key = f"ingestion:{mb.id}:{session_id}:{latest_wf_job_id}"
+
+        provider_scope = await resolve_memory_provider_scope(
+            db,
+            memory_base_id=mb.id,
+            owner_user_id=mb.user_id,
+            actor_user_id=mb.user_id,
+            memory_base=mb,
+        )
+
+    embedding_provider, embedding_model = await resolve_embedding_selection(user_id=mb.user_id, kb_name=mb.kb_name)
+    await preflight_memory_provider_use(
+        provider_scope,
+        embedding_provider=embedding_provider,
+        preprocessing=mb.preprocessing,
+        preproc_model=mb.preproc_model,
+    )
+    async with session_scope() as db:
+        kb_username = await resolve_kb_username(db, mb.user_id)
+
+    job_service = get_job_service()
+    job_id = uuid.uuid4()
+    try:
+        await job_service.create_job(
+            job_id=job_id,
+            flow_id=mb.flow_id,
+            user_id=mb.user_id,
+            job_type=JobType.INGESTION,
+            asset_id=mb.id,
+            asset_type="memory_base",
+            dedupe_key=dedupe_key,
+            heartbeat=True,
+        )
+    except DuplicateJobError:
+        await logger.adebug("Auto-capture: duplicate job for dedupe_key=%s - skipping.", dedupe_key)
+        return
+
+    task_service = get_task_service()
+    await task_service.fire_and_forget_task(
+        job_service.execute_with_status,
+        job_id=job_id,
+        run_coro_func=ingest_memory_task,
+        keep_alive=True,
+        request=IngestionRequest(
+            memory_base_id=mb.id,
+            session_id=session_id,
+            flow_id=mb.flow_id,
+            kb_name=mb.kb_name,
+            kb_username=kb_username,
+            owner_user_id=mb.user_id,
+            actor_user_id=mb.user_id,
+            embedding_provider=embedding_provider,
+            embedding_model=embedding_model,
+            cursor_id=cursor_id_snapshot,
+            task_job_id=job_id,
+            job_service=job_service,
+            preprocessing=mb.preprocessing,
+            preproc_model=mb.preproc_model,
+            preproc_instructions=mb.preproc_instructions,
+            preproc_kill_phrase=mb.preproc_kill_phrase,
+        ),
+    )
+
+
+async def check_mismatch(
+    memory_base_id: uuid.UUID,
+    user_id: uuid.UUID,
+    *,
+    get_mb_or_raise,
+) -> bool:
+    """Return True if metadata claims processed rows but vector store is empty."""
+    async with session_scope() as db:
+        mb = await get_mb_or_raise(db, memory_base_id, user_id)
+        stmt = select(func.sum(MemoryBaseSession.total_processed)).where(
+            MemoryBaseSession.memory_base_id == memory_base_id
+        )
+        result = await db.exec(stmt)
+        total_processed: int = result.first() or 0
+
+    if total_processed == 0:
+        return False
+
+    # Ask the vector store, not the filesystem. For a remote-backed Memory Base
+    # the local directory says nothing about whether the vectors are actually
+    # there, and on a replica that never ran an ingestion it may not exist at
+    # all — which the old check read as "empty" and would answer by regenerating
+    # a Memory Base that was perfectly intact.
+    try:
+        await resolve_backend_selection(user_id=user_id, kb_name=mb.kb_name)
+    except ValueError:
+        # No ``knowledge_base`` row: nothing was ever provisioned, so the
+        # processed-rows count genuinely has no vectors behind it.
+        return True
+
+    backend = await backend_for_name(user_id, mb.kb_name, embedding_function=None)
+    try:
+        await backend.ensure_ready()
+        return await backend.count() == 0
+    except Exception:  # noqa: BLE001
+        # A transient backend failure must not be read as "empty" — the caller
+        # answers a mismatch by regenerating, and regenerating on a connection
+        # blip would discard a healthy Memory Base.
+        await logger.awarning(
+            "Could not count chunks for memory_base=%s; assuming no mismatch",
+            memory_base_id,
+            exc_info=True,
+        )
+        return False
+    finally:
+        await backend.teardown()
+
+
+async def regenerate(
+    memory_base_id: uuid.UUID,
+    owner_user_id: uuid.UUID,
+    actor_user_id: uuid.UUID,
+    *,
+    get_mb_or_raise,
+    trigger_ingestion_fn,
+) -> list[str]:
+    """Reset all session cursors to None and re-trigger ingestion per session.
+
+    Used to recover from FS / Vector DB mismatch (Chroma dir deleted externally).
+    Returns list of newly created job IDs.
+    Also deletes all MessageIngestionRecord rows for this memory base atomically
+    with the cursor reset so that re-ingestion starts clean without hitting the
+    unique constraint.
+    """
+    from sqlalchemy import delete as sa_delete
+
+    from langflow.services.database.models.memory_base.model import (
+        MemoryBasePreprocessingOutput,
+        MessageIngestionRecord,
+    )
+
+    async with session_scope() as db:
+        mb = await get_mb_or_raise(db, memory_base_id, owner_user_id)
+        from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
+
+        record = await resolve_record(owner_user_id, mb.kb_name)
+        async with operation(record):
+            provider_scope = await resolve_memory_provider_scope(
+                db,
+                memory_base_id=memory_base_id,
+                owner_user_id=owner_user_id,
+                actor_user_id=actor_user_id,
+                memory_base=mb,
+            )
+            embedding_provider, _embedding_model = await resolve_embedding_selection(
+                user_id=owner_user_id,
+                kb_name=mb.kb_name,
+            )
+            await preflight_memory_provider_use(
+                provider_scope,
+                embedding_provider=embedding_provider,
+                preprocessing=mb.preprocessing,
+                preproc_model=mb.preproc_model,
+            )
+
+            stmt = select(MemoryBaseSession).where(MemoryBaseSession.memory_base_id == memory_base_id)
+            result = await db.exec(stmt)
+            sessions = list(result.all())
+
+            for s in sessions:
+                s.cursor_id = None
+                db.add(s)
+
+            # Delete existing ingestion records so re-ingestion inserts fresh rows
+            await db.exec(  # type: ignore[call-overload]
+                sa_delete(MessageIngestionRecord).where(MessageIngestionRecord.memory_base_id == memory_base_id)
+            )
+            # Same for preprocessing outputs — without this, a stale "processed" row would
+            # cause Phase A on the very next job to skip the LLM and retry with the old text.
+            await db.exec(  # type: ignore[call-overload]
+                sa_delete(MemoryBasePreprocessingOutput).where(
+                    MemoryBasePreprocessingOutput.memory_base_id == memory_base_id
+                )
+            )
+            await db.commit()
+
+    job_ids: list[str] = []
+    for s in sessions:
+        try:
+            jid = await trigger_ingestion_fn(
+                memory_base_id=memory_base_id,
+                owner_user_id=owner_user_id,
+                actor_user_id=actor_user_id,
+                session_id=s.session_id,
+            )
+            job_ids.append(jid)
+        except DuplicateJobError:
+            await logger.awarning(
+                "Regenerate: duplicate batch already ingested for session %s - skipped.",
+                hash_session_id(s.session_id),
+            )
+        except RuntimeError:
+            await logger.awarning(
+                "Regenerate: active job exists for session %s - reset cursor but skipped trigger.",
+                hash_session_id(s.session_id),
+            )
+    return job_ids
+
+
+@asynccontextmanager
+async def session_storage_operation(*, user_id: uuid.UUID, session_ids: list[str]):
+    """Fence the owner's affected stores before mutating messages or Memory history."""
+    from sqlalchemy import and_, or_
+
+    from langflow.services.database.models.message.model import MessageTable
+    from langflow.services.knowledge_base_storage.runtime import operation, resolve_record
+
+    async with session_scope() as db:
+        stmt = (
+            select(MemoryBase, MemoryBaseSession)
+            .outerjoin(
+                MemoryBaseSession,
+                and_(
+                    MemoryBaseSession.memory_base_id == MemoryBase.id,
+                    col(MemoryBaseSession.session_id).in_(session_ids),
+                ),
+            )
+            .where(MemoryBase.user_id == user_id)
+            .where(
+                or_(
+                    col(MemoryBaseSession.id).isnot(None),
+                    col(MemoryBase.flow_id).in_(
+                        select(MessageTable.flow_id).where(col(MessageTable.session_id).in_(session_ids))
+                    ),
+                )
+            )
+        )
+        result = await db.exec(stmt)
+        pairs = list(result.all())
+    records = {}
+    for mb, _mbs in pairs:
+        record = await resolve_record(user_id, mb.kb_name)
+        records[record.id] = record
+    async with AsyncExitStack() as stack:
+        # Stable ordering avoids deadlocks when concurrent requests overlap.
+        for record_id in sorted(records, key=str):
+            await stack.enter_async_context(
+                operation(
+                    records[record_id], allowed_states=("ready", "needs_attention", "detached", "deleting", "deleted")
+                )
+            )
+        yield [(mb, mbs) for mb, mbs in pairs if mbs is not None]
+
+
+async def purge_session_data(
+    *,
+    user_id: uuid.UUID,
+    session_ids: list[str],
+    db=None,
+) -> int:
+    """Delete session vectors and history while holding all affected KB fences.
+
+    Ready stores purge vectors first. Unavailable or retired stores queue durable
+    vector purges so relational history can be removed. Active migrations remain
+    fenced, and failures deleting ready vectors must propagate to the caller.
+    """
+    from sqlalchemy import delete as sa_delete
+
+    from langflow.services.database.models.memory_base.model import (
+        MemoryBasePreprocessingOutput,
+        MessageIngestionRecord,
+    )
+
+    if not session_ids:
+        return 0
+    async with session_storage_operation(user_id=user_id, session_ids=session_ids) as pairs:
+        if not pairs:
+            return 0
+        purged_ids = []
+        pending_ids = []
+        from langflow.services.knowledge_base_storage.runtime import resolve_record
+
+        for mb, mbs in pairs:
+            record = await resolve_record(user_id, mb.kb_name)
+            if record.storage_state == "ready":
+                await _delete_chunks_for_session(
+                    kb_username="", kb_name=mb.kb_name, user_id=user_id, session_id=mbs.session_id
+                )
+                purged_ids.append(mbs.id)
+            else:
+                pending_ids.append(mbs.id)
+
+        affected_mb_ids = {mb.id for mb, _mbs in pairs}
+        affected_session_ids = {mbs.session_id for _mb, mbs in pairs}
+        caller_db = db
+        async with nullcontext(caller_db) if caller_db is not None else session_scope() as purge_db:
+            for model in (
+                MemoryBaseWorkflowRun,
+                MessageIngestionRecord,
+                MemoryBasePreprocessingOutput,
+            ):
+                await purge_db.exec(
+                    sa_delete(model)
+                    .where(col(model.memory_base_id).in_(affected_mb_ids))
+                    .where(col(model.session_id).in_(affected_session_ids))
+                )
+            for tracking_id in pending_ids:
+                tracking = await purge_db.get(MemoryBaseSession, tracking_id)
+                if tracking is not None:
+                    tracking.purge_pending = True
+                    tracking.cursor_id = None
+                    tracking.total_processed = 0
+                    tracking.last_sync_at = None
+                    purge_db.add(tracking)
+            if purged_ids:
+                await purge_db.exec(sa_delete(MemoryBaseSession).where(col(MemoryBaseSession.id).in_(purged_ids)))
+            if caller_db is None:
+                await purge_db.commit()
+    return len(pairs)
+
+
+async def apply_pending_session_purges(record, backend) -> None:
+    """Replay durable session deletion intents before publishing a migrated store."""
+    from sqlalchemy import delete as sa_delete
+
+    async with session_scope() as db:
+        pending = list(
+            (
+                await db.exec(
+                    select(MemoryBaseSession)
+                    .join(MemoryBase, MemoryBaseSession.memory_base_id == MemoryBase.id)
+                    .where(MemoryBase.user_id == record.user_id, MemoryBase.kb_name == record.name)
+                    .where(MemoryBaseSession.purge_pending == True)  # noqa: E712 -- SQL predicate
+                )
+            ).all()
+        )
+    for tracking in pending:
+        await backend.delete_by({"session_id": tracking.session_id})
+        async with session_scope() as db:
+            await db.exec(sa_delete(MemoryBaseSession).where(MemoryBaseSession.id == tracking.id))
+            await db.commit()
+
+
+async def _delete_chunks_for_session(
+    *,
+    kb_username: str,  # noqa: ARG001 - compatibility signature
+    kb_name: str,
+    user_id: uuid.UUID,
+    session_id: str,
+) -> None:
+    """Delete every chunk tagged with ``session_id`` from the KB's vector store.
+
+    The filter is a flat ``{key: value}`` dict, which is the contract
+    ``BaseVectorStoreBackend.delete_by`` accepts across backends — Chroma treats
+    it as ``$eq`` shorthand and OpenSearch translates it into a bool-must query.
+    Passing Chroma's explicit ``{"$eq": ...}`` operator form here would silently
+    match nothing on a remote backend.
+    """
+    backend = await backend_for_name(user_id, kb_name, embedding_function=None)
+    try:
+        await backend.ensure_ready()
+        await backend.delete_by({"session_id": session_id})
+        await refresh_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
+    finally:
+        await backend.teardown()
+
+
+async def refresh_metrics_after_purge(*, user_id: uuid.UUID, kb_name: str, backend: BaseVectorStoreBackend) -> None:
+    """Refresh the knowledge_base row's cached counts after a privacy deletion, best-effort.
+
+    Row-driven (not the sidecar), so it's replica-safe. The deletion has already
+    succeeded by the time this runs, so a failed refresh only logs a warning.
+    """
+    try:
+        await _sync_metrics_after_purge(user_id=user_id, kb_name=kb_name, backend=backend)
+    except Exception as exc:  # noqa: BLE001 -- successful privacy deletion is independent of cached metrics
+        await logger.awarning("Memory metrics refresh after purge lagged: %s", exc)
+
+
+async def _sync_metrics_after_purge(*, user_id: uuid.UUID, kb_name: str, backend) -> None:
+    """Refresh the knowledge_base row's cached counts after a session purge.
+
+    Delegates to the shared, best-effort :func:`sync_kb_stats_to_record` so the
+    post-purge metrics land on the DB row rather than an on-disk sidecar.
+    """
+    from langflow.services.memory_base.document_builders import sync_kb_stats_to_record
+
+    await sync_kb_stats_to_record(user_id=user_id, kb_name=kb_name, backend=backend)
+
+
+async def cancel_active_jobs(*, memory_base_id: uuid.UUID, db: AsyncSession) -> None:
+    """Cancel all IN_PROGRESS or QUEUED jobs for this memory base."""
+    stmt = (
+        select(Job)
+        .where(Job.asset_id == memory_base_id)
+        .where(Job.asset_type == "memory_base")
+        .where(col(Job.status).in_([JobStatus.IN_PROGRESS, JobStatus.QUEUED]))
+    )
+    result = await db.exec(stmt)
+    active_jobs = list(result.all())
+
+    task_service = get_task_service()
+    for job in active_jobs:
+        try:
+            await task_service.revoke_task(job.job_id)
+            # Reuse the caller's session instead of JobService.update_job_status,
+            # which opens its own session_scope(). A second writer session here
+            # would contend with this transaction's own write lock under SQLite
+            # (the caller is mid flow-deletion transaction), timing out and
+            # aborting this loop before later jobs are cancelled.
+            # Stamp the finish time with the status: retention dates an
+            # unstamped terminal row from its creation, which deletes a
+            # long-running job the moment it is cancelled.
+            await crud_update_job_status(
+                db, job.job_id, JobStatus.CANCELLED, finished_timestamp=datetime.now(timezone.utc)
+            )
+            await logger.ainfo("Cancelled job %s for memory_base %s", job.job_id, memory_base_id)
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning(
+                "Could not cancel job %s for memory_base %s", job.job_id, memory_base_id, exc_info=True
+            )
+
+
+# ------------------------------------------------------------------ #
+#  Shared query helpers (public — used by service.py and memories.py) #
+# ------------------------------------------------------------------ #
+
+
+async def count_pending_messages(db: AsyncSession, mb: MemoryBase, mbs: MemoryBaseSession) -> int:
+    """Count WORKFLOW runs for this (memory_base, session) not yet covered by a completed ingestion.
+
+    A row in memory_base_workflow_run with ingestion_job_id IS NULL means the run
+    has not been processed by any ingestion job.  Count pending = number of such rows.
+    This is session-scoped and time-independent; job failures leave rows NULL so they
+    are correctly re-counted on the next threshold check.
+    """
+    stmt = (
+        select(func.count())
+        .select_from(MemoryBaseWorkflowRun)
+        .where(MemoryBaseWorkflowRun.memory_base_id == mb.id)
+        .where(MemoryBaseWorkflowRun.session_id == mbs.session_id)
+        .where(MemoryBaseWorkflowRun.ingestion_job_id == None)  # noqa: E711
+    )
+    try:
+        result = await db.exec(stmt)
+        row = result.first()
+        if row is None:
+            return 0
+        return int(row)
+    except (TypeError, ValueError, OSError) as e:
+        await logger.aerror("Error counting pending workflow runs: %s", e)
+        return 0
+
+
+async def _insert_workflow_run(
+    db: AsyncSession,
+    memory_base_id: uuid.UUID,
+    session_id: str,
+    job_id: uuid.UUID | None,
+) -> None:
+    """Record a WORKFLOW job run for (memory_base_id, session_id).
+
+    Verifies that job_id refers to a WORKFLOW type job before inserting.
+    Uses dialect-specific INSERT ... ON CONFLICT DO NOTHING for idempotency —
+    safe to call multiple times with the same arguments.
+    Skips silently if job_id is None or the job is not of WORKFLOW type.
+    """
+    from datetime import datetime, timezone
+
+    hashed_sid = hash_session_id(session_id)
+    if job_id is None:
+        await logger.awarning(
+            "on_flow_output called with no job_id for memory_base=%s session=%s — run not recorded.",
+            memory_base_id,
+            hashed_sid,
+        )
+        return
+
+    job_result = await db.exec(select(Job).where(Job.job_id == job_id).where(Job.type == JobType.WORKFLOW))
+    if job_result.first() is None:
+        await logger.awarning(
+            "job_id=%s is not a WORKFLOW job — skipping workflow run record for memory_base=%s session=%s.",
+            job_id,
+            memory_base_id,
+            hashed_sid,
+        )
+        return
+
+    row = {
+        "id": uuid.uuid4(),
+        "memory_base_id": memory_base_id,
+        "session_id": session_id,
+        "workflow_job_id": job_id,
+        "ingestion_job_id": None,
+        "recorded_at": datetime.now(timezone.utc),
+    }
+    conn = await db.connection()
+    if conn.dialect.name == "postgresql":
+        from sqlalchemy.dialects.postgresql import insert as pg_insert
+
+        stmt = pg_insert(MemoryBaseWorkflowRun).values([row]).on_conflict_do_nothing()
+    else:
+        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
+
+        stmt = sqlite_insert(MemoryBaseWorkflowRun).values([row]).on_conflict_do_nothing()
+    await db.exec(stmt)  # type: ignore[call-overload]
+    await db.commit()
+
+
+async def _get_latest_pending_workflow_job_id(
+    db: AsyncSession, mb: MemoryBase, mbs: MemoryBaseSession
+) -> uuid.UUID | None:
+    """Return the workflow_job_id of the most recent uncovered workflow run for this session."""
+    stmt = (
+        select(MemoryBaseWorkflowRun.workflow_job_id)
+        .where(MemoryBaseWorkflowRun.memory_base_id == mb.id)
+        .where(MemoryBaseWorkflowRun.session_id == mbs.session_id)
+        .where(MemoryBaseWorkflowRun.ingestion_job_id == None)  # noqa: E711
+        .order_by(col(MemoryBaseWorkflowRun.recorded_at).desc())
+        .limit(1)
+    )
+    result = await db.exec(stmt)
+    return result.first()

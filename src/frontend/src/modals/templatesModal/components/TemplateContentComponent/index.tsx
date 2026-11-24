@@ -1,11 +1,14 @@
 import Fuse from "fuse.js";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { ForwardedIconComponent } from "../../../../components/common/genericIconComponent";
 import { Input } from "../../../../components/ui/input";
 import { useFolderStore } from "../../../../stores/foldersStore";
@@ -24,7 +27,11 @@ export default function TemplateContentComponent({
   loading,
   onFlowCreating,
 }: TemplateContentComponentProps) {
+  const { t } = useTranslation();
   const allExamples = useFlowsManagerStore((state) => state.examples);
+  const catalogGovernanceEnabled = useUtilityStore(
+    (state) => state.catalogGovernanceEnabled,
+  );
 
   const examples = useMemo(() => {
     return allExamples
@@ -45,6 +52,9 @@ export default function TemplateContentComponent({
   const [filteredExamples, setFilteredExamples] = useState(examples);
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
+  const dismissWelcomeForNavigation = useFlowBuilderWelcomeStore(
+    (state) => state.dismissForNavigation,
+  );
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -80,6 +90,8 @@ export default function TemplateContentComponent({
     updateIds(example.data);
     addFlow({ flow: example })
       .then((id) => {
+        // Same tick as the navigate — see ``dismissForNavigation``.
+        dismissWelcomeForNavigation();
         navigate(`/flow/${id}/folder/${folderIdUrl}`);
       })
       .finally(() => {
@@ -98,6 +110,8 @@ export default function TemplateContentComponent({
   const currentTabItem = categories.find((item) => item.id === currentTab);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const isCatalogPolicyEmpty =
+    catalogGovernanceEnabled && allExamples.length === 0 && searchQuery === "";
 
   return (
     <div className="flex flex-1 flex-col gap-6 overflow-hidden">
@@ -108,7 +122,7 @@ export default function TemplateContentComponent({
         />
         <Input
           type="search"
-          placeholder="Search..."
+          placeholder={t("templatesModal.search")}
           icon={"SearchIcon"}
           data-testid="search-input-template"
           value={searchQuery}
@@ -130,14 +144,21 @@ export default function TemplateContentComponent({
         ) : (
           <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
             <p className="text-sm text-secondary-foreground">
-              No templates found.{" "}
-              <a
-                className="cursor-pointer underline underline-offset-4"
-                onClick={handleClearSearch}
-              >
-                Clear your search
-              </a>{" "}
-              and try a different query.
+              {isCatalogPolicyEmpty ? (
+                t("templatesModal.catalogPolicyEmpty")
+              ) : (
+                <>
+                  {t("templatesModal.noTemplatesFound")}{" "}
+                  <button
+                    type="button"
+                    className="cursor-pointer border-0 bg-transparent p-0 underline underline-offset-4"
+                    onClick={handleClearSearch}
+                  >
+                    {t("templatesModal.clearSearch")}
+                  </button>{" "}
+                  {t("templatesModal.tryDifferentQuery")}
+                </>
+              )}
             </p>
           </div>
         )}

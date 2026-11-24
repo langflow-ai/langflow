@@ -1,8 +1,14 @@
 module.exports = {
   docs: [
     {
+      type: "html",
+      value: `<div class="sidebar-group-label">Build</div>`,
+      className: "sidebar-group-divider",
+    },
+    {
       type: "category",
       label: "Get started",
+      className: "sidebar-category-with-icon sidebar-icon-rocket",
       items: [
         {
           type: "doc",
@@ -34,6 +40,7 @@ module.exports = {
     {
       type: "category",
       label: "Flows",
+      className: "sidebar-category-with-icon sidebar-icon-workflow",
       items: [
         {
           type: "doc",
@@ -44,6 +51,11 @@ module.exports = {
           type: "doc",
           id: "Flows/concepts-flows",
           label: "Build flows"
+        },
+        {
+          type: "doc",
+          id: "Flows/concurrent-editing",
+          label: "Concurrent editing"
         },
         {
           type: "category",
@@ -59,6 +71,11 @@ module.exports = {
               id: "Flows/webhook",
               label: "Trigger flows with webhooks"
             },
+            {
+              type: "doc",
+              id: "Flows/human-in-the-loop",
+              label: "Human-in-the-Loop"
+            },
           ],
         },
         {
@@ -71,31 +88,59 @@ module.exports = {
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
+        {
+          type: "doc",
+          id: "Flows/langflow-assistant",
+          label: "Build flows and components with Langflow Assistant"
+        },
       ],
     },
     {
       type: "category",
       label: "Agents",
+      className: "sidebar-category-with-icon sidebar-icon-bot",
       items: [
         "Agents/agents",
         "Agents/agents-tools",
+        "Agents/a2a-server",
       ],
     },
     {
       type: "category",
       label: "Model Context Protocol (MCP)",
+      className: "sidebar-category-with-icon sidebar-icon-plug",
       items: [
         "Agents/mcp-client",
         "Agents/mcp-server",
+        "Agents/langflow-mcp-client",
         "Agents/mcp-component-astra",
       ],
     },
     {
+      type: "html",
+      value: `<div class="sidebar-group-label">Develop & Deploy</div>`,
+      className: "sidebar-group-divider",
+    },
+    {
       type: "category",
       label: "Develop",
+      className: "sidebar-category-with-icon sidebar-icon-code",
       items: [
-        "Develop/api-keys-and-authentication",
-        "Develop/jwt-authentication",
+        {
+          type: "category",
+          label: "Authentication and authorization",
+          items: [
+            "Develop/authentication-overview",
+            "Develop/api-keys-and-authentication",
+            "Develop/external-authentication",
+            "Develop/authorization",
+            "Develop/audit-logging",
+            "Develop/admin-api-cli",
+            "Develop/connections",
+            "Develop/connection-oauth",
+            "Develop/entra-app-registration",
+          ],
+        },
         "Develop/install-custom-dependencies",
         "Develop/configuration-global-variables",
         "Develop/environment-variables",
@@ -121,10 +166,17 @@ module.exports = {
             "Develop/configuration-custom-database",
             {
               type: "doc",
+              id: "Develop/database-migrations",
+              label: "Database migrations"
+            },
+            {
+              type: "doc",
               id: "Develop/enterprise-database-guide",
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/knowledge-storage-upgrade",
+            "Develop/memory-bases",
           ],
         },
         {
@@ -132,10 +184,14 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-opentelemetry",
+            "Develop/observability-new-relic",
+            "Develop/observability-instana",
+            "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
-              label: "Monitoring",
+              label: "LLM tracing",
               items: [
                 "Develop/integrations-arize",
                 "Develop/integrations-langfuse",
@@ -157,7 +213,7 @@ module.exports = {
         {
           type: "doc",
           id: "Develop/concepts-voice-mode",
-          label: "Use voice mode"
+          label: "Use speech input"
         },
         {
           type: "doc",
@@ -169,11 +225,17 @@ module.exports = {
     {
       type: "category",
       label: "Deploy",
+      className: "sidebar-category-with-icon sidebar-icon-cloud",
       items: [
         {
           type:"doc",
           id: "Deployment/deployment-overview",
           label: "Langflow deployment overview"
+        },
+        {
+          type: "doc",
+          id: "Deployment/instance-migration",
+          label: "Migrate to a new instance"
         },
         {
           type: "doc",
@@ -186,6 +248,11 @@ module.exports = {
           label: "Deploy Langflow with Nginx and SSL"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-wxo",
+          label: "Deploy flows on watsonx Orchestrate"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
@@ -194,6 +261,16 @@ module.exports = {
               type: "doc",
               id: "Deployment/deployment-docker",
               label: "Langflow Docker images"
+            },
+            {
+              type: "doc",
+              id: "Deployment/docker-image-profiles",
+              label: "Choose a Langflow image"
+            },
+            {
+              type: "doc",
+              id: "Deployment/downstream-bundle-profiles",
+              label: "Downstream bundle profiles"
             },
             {
               type: "doc",
@@ -256,6 +333,36 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-multi-worker",
+          label: "Deploy Langflow with multiple workers",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-trigger-listeners",
+          label: "Deploy Langflow trigger listeners",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-trigger-webhooks",
+          label: "Receive provider events with trigger webhooks",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-block-custom-components",
+          label: "Block custom components",
+        },
+        {
+          type: "doc",
+          id: "Deployment/sandbox-backends",
+          label: "Sandbox backends",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-tweaks-policy",
+          label: "Restrict API tweaks",
+        },
+        {
+          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },
@@ -263,7 +370,65 @@ module.exports = {
     },
     {
       type: "category",
+      label: "LFX",
+      className: "sidebar-category-with-icon sidebar-icon-terminal",
+      items: [
+        {
+          type: "doc",
+          id: "Lfx/lfx-overview",
+          label: "About LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-install",
+          label: "Install LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-run",
+          label: "Run flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-serve",
+          label: "Serve flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-connections",
+          label: "Resolve connections in headless LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-prewarm",
+          label: "Pre-warm LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-mcp",
+          label: "Build flows with the LFX MCP server"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-devops-sdk",
+          label: "Flow DevOps Toolkit SDK"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-compatibility",
+          label: "LFX and Langflow version compatibility"
+        },
+      ],
+    },
+    {
+      type: "html",
+      value: `<div class="sidebar-group-label">Reference</div>`,
+      className: "sidebar-group-divider",
+    },
+    {
+      type: "category",
       label: "Components reference",
+      className: "sidebar-category-with-icon sidebar-icon-blocks",
       items: [
         "Components/concepts-components",
         {
@@ -275,7 +440,6 @@ module.exports = {
               label: "Input / Output",
               items: [
                 "Components/chat-input-and-output",
-                "Components/text-input-and-output",
                 "Components/webhook",
               ]
             },
@@ -283,8 +447,7 @@ module.exports = {
               type: "category",
               label: "Processing",
               items: [
-                "Components/data-operations",
-                "Components/dataframe-operations",
+                "Components/operations",
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
@@ -305,8 +468,9 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
-                "Components/directory",
+                "Components/file-system",
                 "Components/knowledge-base",
+                "Components/memory-base",
                 "Components/read-file",
                 "Components/write-file",
               ]
@@ -316,6 +480,7 @@ module.exports = {
               label: "Flow Controls",
               items: [
                 "Components/if-else",
+                "Components/human-input",
                 "Components/loop",
                 "Components/notify-and-listen",
                 "Components/run-flow",
@@ -327,6 +492,7 @@ module.exports = {
               items: [
                 "Components/batch-run",
                 "Components/guardrails",
+                "Components/policies",
                 "Components/llm-selector",
                 "Components/smart-router",
                 "Components/smart-transform",
@@ -340,6 +506,7 @@ module.exports = {
                 "Components/components-models",
                 "Components/components-prompts",
                 "Components/components-agents",
+                "Components/a2a-agent",
                 "Components/mcp-tools",
                 "Components/components-embedding-models",
                 "Components/message-history",
@@ -365,7 +532,6 @@ module.exports = {
             "Components/components-bundles",
             "Components/bundles-agentics",
             "Components/bundles-aiml",
-            "Components/bundles-altk",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
             "Components/bundles-apify",
@@ -375,13 +541,14 @@ module.exports = {
             "Components/bundles-baidu",
             "Components/bundles-bing",
             "Components/bundles-cassandra",
-            "Components/bundles-chroma",
             "Components/bundles-cleanlab",
+            "Components/bundles-codeagents",
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
             "Components/bundles-cometapi",
             "Components/bundles-composio",
+            "Components/bundles-confluent",
             "Components/bundles-couchbase",
             "Components/bundles-cuga",
             "Components/bundles-datastax",
@@ -389,8 +556,12 @@ module.exports = {
             "Components/bundles-docling",
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
+            "Components/bundles-empiriolabs",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-figranium",
+            "Components/bundles-files-ingestion",
+            "Components/bundles-firecrawl",
             "Components/bundles-glean",
             "Components/bundles-google",
             "Components/bundles-groq",
@@ -402,32 +573,55 @@ module.exports = {
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
+            "Components/bundles-microsoft",
             "Components/bundles-milvus",
             "Components/bundles-mistralai",
             "Components/bundles-mongodb",
+            "Components/bundles-mrscraper",
+            "Components/bundles-nextplaid",
             "Components/bundles-notion",
             "Components/bundles-novita",
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
+            "Components/bundles-openai-compatible",
             "Components/bundles-openrouter",
+            "Components/bundles-oracle",
+            "Components/bundles-orcarouter",
+            "Components/bundles-paddle",
             "Components/bundles-perplexity",
             "Components/bundles-pgvector",
             "Components/bundles-pinecone",
+            "Components/bundles-plivo",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
             "Components/bundles-serper",
+            "Components/bundles-serpingapi",
+            "Components/bundles-serply",
+            "Components/bundles-slack",
             "Components/bundles-supabase",
             "Components/bundles-upstash",
-            "Components/bundles-vllm",
+            "Components/bundles-valkey",
             "Components/bundles-vectara",
             "Components/bundles-vertexai",
+            "Components/bundles-vllm",
             "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
             "Components/bundles-youdotcom",
+          ],
+        },
+        {
+          type: "category",
+          label: "Extensions",
+          items: [
+            "Lfx/extensions-overview",
+            "Lfx/extensions-bundle-list",
+            "Lfx/extensions-quickstart",
+            "Lfx/extensions-manifest",
+            "Lfx/extensions-errors",
           ],
         },
         "Components/components-custom-components",
@@ -436,6 +630,7 @@ module.exports = {
     {
       type: "category",
       label: "API reference",
+      className: "sidebar-category-with-icon sidebar-icon-fileCode",
       items: [
         {
           type: "doc",
@@ -456,58 +651,19 @@ module.exports = {
           type: "category",
           label: "Developer API (Beta)",
           items: [
-            {
-              type: "doc",
-              id: "API-Reference/workflows-api",
-              label: "Workflow API (Beta)",
-            },
-            {
-              type: "link",
-              label: "Workflow API specification (Beta)",
-              href: "/api/workflow",
-            },
+            "API-Reference/workflow-api-quickstart",
+            "API-Reference/workflows-api",
           ],
         },
-        {
-          type: "doc",
-          id: "API-Reference/api-openai-responses",
-          label: "OpenAI Responses endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-flows",
-          label: "Flow management endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-files",
-          label: "Files endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-projects",
-          label: "Projects endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-logs",
-          label: "Logs endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-monitor",
-          label: "Monitor endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-build",
-          label: "Build endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-users",
-          label: "Users endpoints",
-        },
+        "API-Reference/api-openai-responses",
+        "API-Reference/api-flows",
+        "API-Reference/api-files",
+        "API-Reference/api-projects",
+        "API-Reference/api-logs",
+        "API-Reference/api-monitor",
+        "API-Reference/api-build",
+        "API-Reference/api-users",
+        "API-Reference/api-governance-policy",
         {
           type: "link",
           label: "Langflow API specification",
@@ -516,8 +672,14 @@ module.exports = {
       ],
     },
     {
+      type: "html",
+      value: `<div class="sidebar-group-label">Community</div>`,
+      className: "sidebar-group-divider",
+    },
+    {
       type: "category",
       label: "Contribute",
+      className: "sidebar-category-with-icon sidebar-icon-gitPR",
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
@@ -530,11 +692,17 @@ module.exports = {
     {
       type: "category",
       label: "Support",
+      className: "sidebar-category-with-icon sidebar-icon-helpCircle",
       items: [
         {
           type: "doc",
           id: "Support/troubleshooting",
           label: "Troubleshoot",
+        },
+        {
+          type: "doc",
+          id: "Support/macos-support-matrix",
+          label: "macOS support",
         },
         {
           type: "doc",
@@ -557,8 +725,8 @@ module.exports = {
       type: "html",
       className: "sidebar-ad",
       value: `
-        <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <a href="https://www.langflow.org/desktop" target="_blank" rel="noopener noreferrer" class="menu__link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <g clip-path="url(#clip0_1645_37)">
               <path d="M12 17H20C21.1046 17 22 16.1046 22 15V13M12 17H4C2.89543 17 2 16.1046 2 15V5C2 3.89543 2.89543 3 4 3H10M12 17V21M8 21H12M12 21H16M11.75 10.2917H13.2083L16.125 7.375H17.5833L20.5 4.45833H21.9583M16.125 11.75H17.5833L20.5 8.83333H21.9583M11.75 5.91667H13.2083L16.125 3H17.5833" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </g>

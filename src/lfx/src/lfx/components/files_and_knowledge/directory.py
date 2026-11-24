@@ -1,9 +1,20 @@
-from lfx.base.data.utils import TEXT_FILE_TYPES, parallel_load_data, parse_text_file_to_data, retrieve_file_paths
+from pathlib import Path, PurePath, PureWindowsPath
+
+import lfx
+from lfx.base.data.utils import (
+    TEXT_FILE_TYPES,
+    parallel_load_data,
+    parse_local_text_file_to_data,
+    parse_text_file_to_data,
+    retrieve_file_paths,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, IntInput, MessageTextInput, MultiselectInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
 
 
 class DirectoryComponent(Component):
@@ -13,7 +24,7 @@ class DirectoryComponent(Component):
     icon = "folder"
     name = "Directory"
     legacy = True
-    replacement = ["data.File"]
+    replacement = ["files_and_knowledge.File"]
 
     inputs = [
         MessageTextInput(
@@ -73,6 +84,41 @@ class DirectoryComponent(Component):
         Output(display_name="Loaded Files", name="dataframe", method="as_dataframe"),
     ]
 
+    @staticmethod
+    def _has_parent_reference(path: str) -> bool:
+        path_parts = (*PurePath(path).parts, *PureWindowsPath(path).parts)
+        return any(part == ".." for part in path_parts)
+
+    @staticmethod
+    def _bundled_components_root() -> Path:
+        # The component sources shipped with lfx are public, read-only package files that the
+        # Langflow Assistant reads wherever lfx is installed, whatever the working directory.
+        return (Path(lfx.__file__).parent / "components").resolve()
+
+    def _allowed_roots(self) -> list[Path]:
+        roots = {Path.cwd().resolve(), self._bundled_components_root()}
+        configured_roots = getattr(get_settings_service().settings, "directory_component_allowed_roots", []) or []
+        for root in configured_roots:
+            if root:
+                roots.add(Path(root).expanduser().resolve())
+        return list(roots)
+
+    def _resolve_directory_path(self, path: str) -> str:
+        path = str(path or ".").strip()
+        # Reject null bytes and parent references outright. A drive-absolute or UNC
+        # path (e.g. ``D:\\shared\\docs``) is NOT blanket-rejected here: canonicalization
+        # plus the ``_allowed_roots()`` containment check below decides whether it is
+        # allowed, so operator-configured roots on another drive remain reachable.
+        if "\x00" in path or self._has_parent_reference(path):
+            msg = "Directory path escapes the allowed root."
+            raise ValueError(msg)
+
+        resolved_path = Path(self.resolve_path(path)).expanduser().resolve()
+        if not any(resolved_path == root or resolved_path.is_relative_to(root) for root in self._allowed_roots()):
+            msg = "Directory path escapes the allowed root."
+            raise ValueError(msg)
+        return str(resolved_path)
+
     def load_directory(self) -> list[Data]:
         path = self.path
         types = self.types
@@ -83,7 +129,13 @@ class DirectoryComponent(Component):
         silent_errors = self.silent_errors
         use_multithreading = self.use_multithreading
 
-        resolved_path = self.resolve_path(path)
+        resolved_path = self._resolve_directory_path(path)
+        bundled_sources = Path(resolved_path).is_relative_to(self._bundled_components_root())
+
+        # Security: confine directory reads to the storage dir in restricted (multi-tenant)
+        # mode so a tenant cannot recursively read arbitrary server directories.
+        if not bundled_sources:
+            resolved_path = str(enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self)))
 
         # If no types are specified, use all supported types
         if not types:
@@ -101,11 +153,18 @@ class DirectoryComponent(Component):
             resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=valid_types
         )
 
+        # The bundled sources are package files on the local disk, so read them directly whatever
+        # the storage backend. Under S3 the storage-aware reader confines every local read to the
+        # user's storage scope, which would undo the exemption above.
+        load_function = parse_local_text_file_to_data if bundled_sources else parse_text_file_to_data
+
         loaded_data = []
         if use_multithreading:
-            loaded_data = parallel_load_data(file_paths, silent_errors=silent_errors, max_concurrency=max_concurrency)
+            loaded_data = parallel_load_data(
+                file_paths, silent_errors=silent_errors, max_concurrency=max_concurrency, load_function=load_function
+            )
         else:
-            loaded_data = [parse_text_file_to_data(file_path, silent_errors=silent_errors) for file_path in file_paths]
+            loaded_data = [load_function(file_path, silent_errors=silent_errors) for file_path in file_paths]
 
         valid_data = [x for x in loaded_data if x is not None and isinstance(x, Data)]
         self.status = valid_data

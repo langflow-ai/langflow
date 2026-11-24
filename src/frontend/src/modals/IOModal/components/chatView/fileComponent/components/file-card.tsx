@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useGetDownloadFileMutation } from "@/controllers/API/queries/files";
 import { getBaseUrl } from "@/customization/utils/urls";
 import { ForwardedIconComponent } from "../../../../../../components/common/genericIconComponent";
@@ -15,6 +16,7 @@ export default function FileCard({
   fileType,
   showFile = true,
 }: fileCardPropsType): JSX.Element | undefined {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const { mutate } = useGetDownloadFileMutation({
     filename: fileName,
@@ -68,7 +70,7 @@ export default function FileCard({
           <ForwardedIconComponent name="File" className="h-8 w-8" />
           <div className="flex flex-col">
             <span className="font-bold">{formatFileName(fileName, 20)}</span>
-            <span>File</span>
+            <span>{t("chat.file")}</span>
           </div>
         </div>
         <DownloadButton

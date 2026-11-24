@@ -11,7 +11,7 @@ export const customUseStartRecording = (
   playNextAudioChunk: () => void,
   isPlayingRef: React.MutableRefObject<boolean>,
   audioQueueRef: MutableRefObject<AudioBuffer[]>,
-  workletCode: string,
+  workletUrl: string,
   processorRef: MutableRefObject<AudioWorkletNode | null>,
   setStatus: (status: string) => void,
 ) => {
@@ -25,7 +25,7 @@ export const customUseStartRecording = (
     playNextAudioChunk,
     isPlayingRef,
     audioQueueRef,
-    workletCode,
+    workletUrl,
     processorRef,
     setStatus,
   );

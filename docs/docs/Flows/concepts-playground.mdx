@@ -17,7 +17,7 @@ The **Playground** allows you to quickly iterate over your flow's logic and beha
 ## Run a flow in the Playground
 
 To run a flow in the **Playground**, open the flow, and then click <Icon name="Play" aria-hidden="true"/> **Playground**.
-Then, if your flow has a [**Chat Input** component](/chat-input-and-output), enter a prompt or [use voice mode](/concepts-voice-mode) to trigger the flow and start a chat session.
+Then, if your flow has a [**Chat Input** component](/chat-input-and-output), enter a prompt or [use speech input](/concepts-voice-mode) to trigger the flow and start a chat session.
 
 To expand the **Playground** view, click <Icon name="Expand" aria-hidden="true"/> **Enter fullscreen** within the **Playground** panel.
 
@@ -42,6 +42,14 @@ This helps you monitor the agent's tool use and understand the logic behind the 
 For example, the following agent used a connected `fetch_content` tool to perform a web search:
 
 ![Playground with agent response](/img/playground-with-agent.png)
+
+### Respond to Human-in-the-Loop prompts
+
+When a flow pauses for human approval from a [**Human Input** component](./human-input) or an [**Agent**](./agents), the **Playground** prompts you to approve or reject the tool call.
+
+Select an action to resume the run from where it was paused.
+
+For more information, see [Human-in-the-Loop](./human-in-the-loop).
 
 ### View chat history {#view-chat-history}
 
@@ -151,9 +159,11 @@ To share a flow's **Playground** with another user, do the following:
 This window's URL is the flow's **Shareable Playground** address, such as `https://3f7c-73-64-93-151.ngrok-free.app/playground/d764c4b8-5cec-4c0f-9de0-4b419b11901a`.
 4. Send the URL to another user to give them access to the flow's **Playground**.
 
+By default, a shared **Playground** can't run a flow that contains a custom component, because the run is unauthenticated and Langflow executes only its own copy of each component on that path. To run one anyway, install the component on the server with `LANGFLOW_COMPONENTS_PATH`. For more information, see [Custom components in publicly shared flows](/deployment-block-custom-components#public-flow-custom-components).
+
 ## See also
 
 - [Upload images](/concepts-file-management#upload-images)
-- [Use voice mode](/concepts-voice-mode)
+- [Use speech input](/concepts-voice-mode)
 - [Trigger flows with the Langflow API](/concepts-publish)
 - [Session ID](/session-id)

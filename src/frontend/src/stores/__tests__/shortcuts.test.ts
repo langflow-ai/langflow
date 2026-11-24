@@ -28,6 +28,11 @@ const mockShortcuts = [
   },
 ];
 
+// Reads a shortcut key that is not part of the store type (tests intentionally
+// set arbitrary names to exercise the dynamic-key behavior of the store).
+const getDynamicShortcut = (store: unknown, name: string): unknown =>
+  (store as Record<string, unknown>)[name];
+
 describe("useShortcutsStore", () => {
   beforeEach(() => {
     localStorage.clear();
@@ -163,7 +168,9 @@ describe("useShortcutsStore", () => {
         result.current.updateUniqueShortcut("customShortcut", "mod+custom");
       });
 
-      expect((result.current as any).customShortcut).toBe("mod+custom");
+      expect(getDynamicShortcut(result.current, "customShortcut")).toBe(
+        "mod+custom",
+      );
     });
 
     it("should not affect shortcuts array when updating individual shortcuts", () => {
@@ -189,6 +196,85 @@ describe("useShortcutsStore", () => {
       });
 
       expect(result.current.shortcuts).toEqual(originalShortcuts);
+    });
+
+    it("should keep valid custom shortcuts untouched", () => {
+      const saved = [{ name: "Test", display_name: "Test", shortcut: "mod+t" }];
+      localStorage.setItem("langflow-shortcuts", JSON.stringify(saved));
+      const { result } = renderHook(() => useShortcutsStore());
+
+      act(() => {
+        result.current.getShortcutsFromStorage();
+      });
+
+      expect((result.current as unknown as Record<string, string>).Test).toBe(
+        "mod+t",
+      );
+      expect(result.current.shortcuts).toEqual(saved);
+      expect(JSON.parse(localStorage.getItem("langflow-shortcuts")!)).toEqual(
+        saved,
+      );
+    });
+
+    it("should replace a modifier-only saved shortcut with the default for that action", () => {
+      localStorage.setItem(
+        "langflow-shortcuts",
+        JSON.stringify([
+          { name: "Test", display_name: "Test", shortcut: "mod" },
+        ]),
+      );
+      const { result } = renderHook(() => useShortcutsStore());
+
+      act(() => {
+        result.current.getShortcutsFromStorage();
+      });
+
+      expect((result.current as unknown as Record<string, string>).Test).toBe(
+        "t",
+      );
+      expect(result.current.shortcuts).toEqual([
+        { name: "Test", display_name: "Test", shortcut: "t" },
+      ]);
+    });
+
+    it("should persist the sanitized combination back to localStorage", () => {
+      localStorage.setItem(
+        "langflow-shortcuts",
+        JSON.stringify([
+          { name: "Test", display_name: "Test", shortcut: "ctrl+shift" },
+        ]),
+      );
+      const { result } = renderHook(() => useShortcutsStore());
+
+      act(() => {
+        result.current.getShortcutsFromStorage();
+      });
+
+      expect(JSON.parse(localStorage.getItem("langflow-shortcuts")!)).toEqual([
+        { name: "Test", display_name: "Test", shortcut: "t" },
+      ]);
+    });
+
+    it("should drop a modifier-only shortcut that has no default", () => {
+      localStorage.setItem(
+        "langflow-shortcuts",
+        JSON.stringify([
+          { name: "Ghost", display_name: "Ghost", shortcut: "mod" },
+        ]),
+      );
+      const { result } = renderHook(() => useShortcutsStore());
+
+      act(() => {
+        result.current.getShortcutsFromStorage();
+      });
+
+      expect(
+        (result.current as unknown as Record<string, string>).Ghost,
+      ).toBeUndefined();
+      expect(result.current.shortcuts).toEqual([]);
+      expect(JSON.parse(localStorage.getItem("langflow-shortcuts")!)).toEqual(
+        [],
+      );
     });
   });
 
@@ -228,7 +314,7 @@ describe("useShortcutsStore", () => {
         result.current.updateUniqueShortcut("special", "mod+shift+~");
       });
 
-      expect((result.current as any).special).toBe("mod+shift+~");
+      expect(getDynamicShortcut(result.current, "special")).toBe("mod+shift+~");
     });
 
     it("should handle empty string shortcuts", () => {
@@ -238,7 +324,7 @@ describe("useShortcutsStore", () => {
         result.current.updateUniqueShortcut("empty", "");
       });
 
-      expect((result.current as any).empty).toBe("");
+      expect(getDynamicShortcut(result.current, "empty")).toBe("");
     });
 
     it("should handle shortcuts array with duplicate names", () => {

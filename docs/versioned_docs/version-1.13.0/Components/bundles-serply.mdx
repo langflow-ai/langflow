@@ -1,0 +1,38 @@
+---
+title: Serply
+slug: /bundles-serply
+---
+
+import Icon from "@site/src/components/icon";
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="serply" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Serply** bundle.
+
+## Serply Search
+
+This component runs a web search through the [Serply](https://serply.io) SERP API and returns the organic Google results.
+
+Get an API key from [serply.io](https://serply.io). For details on the underlying API, see the [Serply documentation](https://serply.io/docs).
+
+It outputs the results as a [`Table`](/data-types#table) with `title`, `link`, `description`, and `position` columns. The `text` of each row is the result description.
+If the request fails, for example because the API key is missing or invalid, the table contains a single row with an `error` column that describes the problem.
+
+In [tool mode](/agents-tools), the component exposes a single tool named `serply_search` that an [**Agent** component](/agents) can call with a search query.
+
+### Serply Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`input_value`) | String | Input parameter. The search query to execute with Serply. |
+| Serply API Key (`serply_api_key`) | SecretString | Input parameter. Your Serply API key. |
+| Max Results (`max_results`) | Integer | Input parameter. The maximum number of organic results to return, from `1` to `100`. Default: `10`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**DuckDuckGo** bundle](/bundles-duckduckgo)
+* [**Serper** bundle](/bundles-serper)

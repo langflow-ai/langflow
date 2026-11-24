@@ -1,0 +1,42 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "channel": "C0SUPPORT1",
+    "channel_type": "channel",
+    "event_ts": "1700000600.001300",
+    "hidden": true,
+    "message": {
+      "edited": {
+        "ts": "1700000600.001300",
+        "user": "U0ALICE001"
+      },
+      "text": "The nightly deploy is failing again (edited)",
+      "ts": "1700000000.000100",
+      "type": "message",
+      "user": "U0ALICE001"
+    },
+    "previous_message": {
+      "text": "The nightly deploy is failing again",
+      "ts": "1700000000.000100",
+      "type": "message",
+      "user": "U0ALICE001"
+    },
+    "subtype": "message_changed",
+    "ts": "1700000600.001300",
+    "type": "message"
+  },
+  "event_id": "Ev0EDT00001",
+  "event_time": 1700000600,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}

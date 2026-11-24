@@ -18,16 +18,18 @@ jobs:
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: ./docs/package-lock.json
 
       - name: Validate Branch Names
+        env:
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           # Check if branch names contain invalid characters. Only alphanumeric, _, -, ., and / are allowed.
           validate_branch_name() {
@@ -37,10 +39,12 @@ jobs:
                   exit 1
               fi
           }
-          validate_branch_name "${{ github.event.pull_request.head.ref }}"
+          validate_branch_name "$BRANCH_REF"
 
       - name: Extract Branch Names
         id: extract_branch
+        env:
+          BRANCH_REF: ${{ github.event.pull_request.head.ref }}
         run: |
           # Extract and transform branch names
           extract_branch() {
@@ -56,7 +60,7 @@ jobs:
           }
 
           # Transform branch names in form of `refs/heads/main` to `main`
-          draft_branch=$(extract_branch "${{ github.event.pull_request.head.ref }}")
+          draft_branch=$(extract_branch "$BRANCH_REF")
 
           # Replace / with - in the draft branch name to use as a directory name
           draft_directory=$(echo "$draft_branch" | tr / -)
@@ -143,7 +147,7 @@ jobs:
 
       - name: Create Build Success Comment
         if: success()
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: "${{ env.BUILD_SUCCESS_COMMENT }}"
@@ -151,7 +155,7 @@ jobs:
 
       - name: Create Build Failure Comment
         if: failure()
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
@@ -162,7 +166,7 @@ jobs:
       - name: Find Comment
         id: fc
         if: success()
-        uses: peter-evans/find-comment@v3
+        uses: peter-evans/find-comment@v4
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body-includes: Build successful!
@@ -251,7 +255,7 @@ jobs:
 
       - name: Update Comment
         if: ${{ steps.fc.outputs.comment-id != '' }}
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@v5
         with:
           comment-id: ${{ steps.fc.outputs.comment-id }}
           body: |
@@ -259,7 +263,7 @@ jobs:
           reactions: hooray
 
       - name: Upload Deploy Log
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         if: always()
         with:
           name: deploy.log

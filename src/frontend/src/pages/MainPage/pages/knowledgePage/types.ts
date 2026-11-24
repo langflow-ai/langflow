@@ -9,4 +9,5 @@ export interface KnowledgeBasesTabProps {
   setQuantitySelected: (quantity: number) => void;
   isShiftPressed: boolean;
   onRowClick?: (knowledgeBase: KnowledgeBaseInfo) => void;
+  onViewChunks?: (knowledgeBase: KnowledgeBaseInfo) => void;
 }

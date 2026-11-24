@@ -1,6 +1,5 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useCallback, useState } from "react";
 import {
-  LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_API_TOKEN,
   LANGFLOW_AUTO_LOGIN_OPTION,
   LANGFLOW_REFRESH_TOKEN,
@@ -9,7 +8,6 @@ import { useGetUserData } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariablesMutation } from "@/controllers/API/queries/variables/use-get-mutation-global-variables";
 import useAuthStore from "@/stores/authStore";
 import { cookieManager } from "@/utils/cookie-manager";
-import { setLocalStorage } from "@/utils/local-storage-util";
 import { useStoreStore } from "../stores/storeStore";
 import type { Users } from "../types/api";
 import type { AuthContextType } from "../types/contexts/auth";
@@ -33,8 +31,19 @@ export function AuthProvider({ children }): React.ReactElement {
   // Authentication state is now managed via session validation
   // instead of reading cookies directly (supports HttpOnly cookies)
   const [accessToken, setAccessToken] = useState<string | null>(null);
-  const [userData, setUserData] = useState<Users | null>(null);
+  const [userData, setUserDataState] = useState<Users | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
+
+  // `useAuthStore.userData` mirrors this state for hooks and stores that live
+  // outside the context (the Connections page, flowStore, use-get-flow-id, and
+  // the multi-edit autosave, conflict and draft paths, which otherwise lose the
+  // draft and misattribute your own edit from another tab). Writing both here
+  // keeps every path in sync, including a session restored after a reload,
+  // which never goes through `useGetUserData`.
+  const setUserData = useCallback((user: Users | null) => {
+    setUserDataState(user);
+    useAuthStore.getState().setUserData(user);
+  }, []);
 
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
@@ -67,15 +76,11 @@ export function AuthProvider({ children }): React.ReactElement {
   function login(
     newAccessToken: string,
     autoLogin: string,
-    refreshToken?: string,
+    _refreshToken?: string,
   ) {
-    cookieManager.set(LANGFLOW_ACCESS_TOKEN, newAccessToken);
+    // The server owns both token cookies so their HttpOnly attributes cannot
+    // be downgraded by a JavaScript-written cookie with the same name.
     cookieManager.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin);
-    setLocalStorage(LANGFLOW_ACCESS_TOKEN, newAccessToken);
-
-    if (refreshToken) {
-      cookieManager.set(LANGFLOW_REFRESH_TOKEN, refreshToken);
-    }
     setAccessToken(newAccessToken);
 
     let userLoaded = false;
@@ -130,7 +135,6 @@ export function AuthProvider({ children }): React.ReactElement {
 
   function clearAuthSession() {
     cookieManager.clearAuthCookies();
-    localStorage.removeItem(LANGFLOW_ACCESS_TOKEN);
     localStorage.removeItem(LANGFLOW_API_TOKEN);
     localStorage.removeItem(LANGFLOW_REFRESH_TOKEN);
     setAccessToken(null);

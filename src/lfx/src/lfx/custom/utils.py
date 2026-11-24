@@ -297,7 +297,12 @@ def run_build_inputs(
         raise HTTPException(status_code=500, detail=str(exc)) from exc
 
 
-def get_component_instance(custom_component: CustomComponent | Component, user_id: str | UUID | None = None):
+def get_component_instance(
+    custom_component: CustomComponent | Component,
+    user_id: str | UUID | None = None,
+    *,
+    class_name: str | None = None,
+):
     """Returns an instance of a custom component, evaluating its code if necessary.
 
     If the input is already an instance of `Component` or `CustomComponent`, it is returned directly.
@@ -316,7 +321,7 @@ def get_component_instance(custom_component: CustomComponent | Component, user_i
 
     # Only now, try to process expensive exception/log traceback only *if needed*
     try:
-        custom_class = eval_custom_component_code(code)
+        custom_class = eval_custom_component_code(code, class_name=class_name)
     except Exception as exc:
         # Only generate traceback if an error occurs (save time on success)
         tb = traceback.format_exc()
@@ -504,15 +509,114 @@ def build_custom_component_template_from_inputs(
     return frontend_node.to_dict(keep_name=False), cc_instance
 
 
+def _stamp_integration_policy_identity(frontend_node, custom_component) -> None:
+    """Stamp the integration provider and capability ids of a bundle action class.
+
+    The bundle registry is the source of truth: a capability declares the
+    component class that performs it through ``component_ref``. Nothing is
+    stamped when the class performs no declared capability, so unrelated
+    components in mixed bundles are unaffected, and a stale stamp from a reused
+    template is always cleared.
+    """
+    frontend_node.metadata.pop("integration_provider_id", None)
+    frontend_node.metadata.pop("integration_capability_ids", None)
+    provider_id: str | None = None
+    capability_ids: list[str] = []
+    try:
+        from lfx.extension.bundle_registry import get_default_registry
+
+        class_name = type(custom_component).__name__
+        for integration in get_default_registry().list_integrations():
+            for capability in integration.capability_manifest.capabilities:
+                if capability.component_ref == class_name:
+                    provider_id = integration.provider_id
+                    capability_ids.append(capability.id)
+    except Exception as exc:  # noqa: BLE001
+        # Registry access must never break template building; a missing stamp
+        # only means the palette filter falls back to the component's
+        # ConnectionRefInput declarations.
+        logger.debug(f"Could not resolve integration capabilities for {type(custom_component).__name__}: {exc}")
+        return
+
+    if provider_id is None:
+        return
+    frontend_node.metadata["integration_provider_id"] = provider_id
+    frontend_node.metadata["integration_capability_ids"] = sorted(set(capability_ids))
+
+
+def _stamp_trigger_kind(frontend_node, custom_component) -> None:
+    """Mark a trigger node with its trigger kind, from the loaded class.
+
+    Core triggers sit in the palette's ``triggers`` category, but provider
+    triggers (``Slack: On Message``) sit in their provider's group, next to its
+    actions. The marker is what lets the frontend recognise every trigger,
+    wherever it is listed, without parsing class names - and it is produced
+    from the loaded class, never inferred from the serialized source field. A
+    stale marker from a reused template is always cleared.
+    """
+    from lfx.base.triggers.base import BaseTriggerComponent
+
+    if isinstance(custom_component, BaseTriggerComponent) and custom_component.trigger_kind:
+        frontend_node.metadata["trigger_kind"] = custom_component.trigger_kind
+    else:
+        frontend_node.metadata.pop("trigger_kind", None)
+
+
 def build_component_metadata(
     frontend_node: CustomComponentFrontendNode, custom_component: CustomComponent, module_name: str, ctype_name: str
 ):
     """Build the metadata for a custom component."""
+    frontend_node.metadata["component_class_name"] = type(custom_component).__name__
     if module_name:
         frontend_node.metadata["module"] = module_name
     else:
         module_name = get_module_name_from_display_name(frontend_node.display_name)
         frontend_node.metadata["module"] = f"custom_components.{module_name}"
+
+    # Standalone model/embedding components predate the unified provider
+    # selector and otherwise carry no policy identity in the shared palette.
+    # Stamp only those base classes; mixed bundles keep every unrelated tool.
+    from lfx.base.embeddings.model import LCEmbeddingsModel
+    from lfx.base.models.model import LCModelComponent
+    from lfx.base.models.provider_registry import (
+        get_provider_descriptor,
+        model_component_policy_mode,
+        model_component_provider_id,
+    )
+
+    if isinstance(custom_component, LCModelComponent | LCEmbeddingsModel):
+        policy_mode = model_component_policy_mode(custom_component)
+        # This metadata is produced from the loaded class, not inferred from
+        # the serialized source field. Static registry consumers can therefore
+        # honor inherited and annotated policy declarations without parsing
+        # user-controlled code.
+        frontend_node.metadata["model_provider_policy_mode"] = policy_mode
+        if policy_mode == "standalone":
+            provider_id = model_component_provider_id(
+                custom_component,
+                module_name=module_name,
+            )
+            descriptor = get_provider_descriptor(provider_id)
+            frontend_node.metadata["model_provider_id"] = provider_id
+            frontend_node.metadata["model_provider_display_name"] = (
+                descriptor.display_name
+                if descriptor is not None and descriptor.display_name
+                else provider_id.replace("_", " ").replace("-", " ").title()
+            )
+        else:
+            # Delegating/identity-free components must not retain a stale
+            # standalone identity from a reused or pre-populated template.
+            frontend_node.metadata.pop("model_provider_id", None)
+            frontend_node.metadata.pop("model_provider_display_name", None)
+
+    # Integration governance identity (INT-7). A connection-backed component
+    # carries its provider and actions on its ConnectionRefInput, but an
+    # API-key-mode action component has no such input, so the loaded class name
+    # is matched against the bundle registry's capability component_ref. The
+    # stamp is produced from the loaded class, never inferred from the
+    # serialized source field.
+    _stamp_integration_policy_identity(frontend_node, custom_component)
+    _stamp_trigger_kind(frontend_node, custom_component)
 
     # Generate code hash for cache invalidation and debugging
     try:
@@ -541,6 +645,8 @@ def build_custom_component_template(
     custom_component: CustomComponent,
     user_id: str | UUID | None = None,
     module_name: str | None = None,
+    *,
+    class_name: str | None = None,
 ) -> tuple[dict[str, Any], CustomComponent | Component]:
     """Builds a frontend node template and instance for a custom component.
 
@@ -554,6 +660,10 @@ def build_custom_component_template(
                       template construction.
     """
     try:
+        if class_name is not None:
+            # Editor requests start with a generic Component containing source.
+            # Resolve its saved identity before deriving inputs and outputs.
+            custom_component = get_component_instance(custom_component, user_id=user_id, class_name=class_name)
         has_template_config = hasattr(custom_component, "template_config")
     except Exception as exc:
         raise HTTPException(
@@ -593,10 +703,9 @@ def build_custom_component_template(
 
         reorder_fields(frontend_node, custom_instance._get_field_order())
 
-        if module_name:
-            frontend_node = build_component_metadata(
-                frontend_node, custom_component, module_name, custom_component.__class__.__name__
-            )
+        frontend_node = build_component_metadata(
+            frontend_node, custom_component, module_name, custom_component.__class__.__name__
+        )
 
         return frontend_node.to_dict(keep_name=False), custom_instance
     except Exception as exc:

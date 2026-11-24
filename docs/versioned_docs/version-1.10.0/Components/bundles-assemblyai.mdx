@@ -1,0 +1,166 @@
+---
+title: AssemblyAI
+slug: /bundles-assemblyai
+---
+
+import Icon from "@site/src/components/icon";
+
+The AssemblyAI components allow you to apply powerful Speech AI models to your app for tasks like:
+
+- Transcribing audio and video files
+- Formatting transcripts
+- Generating subtitles
+- Applying LLMs to audio files
+
+For more information about AssemblyAI features and functionality used by AssemblyAI components, see the [AssemblyAI API Docs](https://www.assemblyai.com/docs).
+
+## Prerequisites
+
+* An [AssemblyAI account](https://www.assemblyai.com/dashboard/signup) and an AssemblyAI API key.
+
+    Enter the key in the *AssemblyAI API Key* field in all Langflow components that require the AssemblyAI key.
+
+* Optional: To use LeMUR, you need a paid AssemblyAI account because LeMUR isn't included in the free account.
+
+## Components
+
+![AssemblyAI components](/img/assemblyai-components.png)
+
+### AssemblyAI Start Transcript
+
+This component allows you to submit an audio or video file for transcription.
+
+**Tip**: You can freeze the path of this component to only submit the file once.
+
+- **Input**:
+    - AssemblyAI API Key: Your API key.
+    - Audio File: The audio or video file to transcribe.
+    - Speech Model (Optional): Select the class of models. Default is *Best*. See [speech models](https://www.assemblyai.com/docs/speech-to-text/speech-recognition#select-the-speech-model-with-best-and-nano) for more info.
+    - Automatic Language Detection (Optional): Enable automatic language detection.
+    - Language (Optional): The language of the audio file. Can be set manually if automatic language detection is disabled.
+            See [supported languages](https://www.assemblyai.com/docs/getting-started/supported-languages) for a list of supported language codes.
+    - Enable Speaker Labels (Optional): Detect speakers in an audio file and what each speaker said.
+    - Expected Number of Speakers (Optional): Set the expected number of speakers, if Speaker Labels is enabled.
+    - Audio File URL (Optional): The URL of the audio or video file to transcribe. Can be used instead of *Audio File*.
+    - Punctuate (Optional): Apply punctuation. Default is `true`.
+    - Format Text (Optional): Apply casing and text formatting. Default is `true`.
+
+- **Output**:
+    - Transcript ID: The id of the transcript
+
+
+### AssemblyAI Poll Transcript
+
+This components allows you to poll the transcripts. It checks the status of the transcript every few seconds until the transcription is completed.
+
+- **Input**:
+    - AssemblyAI API Key: Your API key.
+    - Polling Interval (Optional): The polling interval in seconds. Default is 3.
+
+- **Output**:
+    - Transcription Result: The AssemblyAI JSON response of a completed transcript. Contains the text and other info.
+
+
+### AssemblyAI Get Subtitles
+
+This component allows you to generate subtitles in SRT or VTT format.
+
+- **Input**:
+    - AssemblyAI API Key: Your API key.
+    - Transcription Result: The output of the **Poll Transcript** component.
+    - Subtitle Format: The format of the captions (SRT or VTT).
+    - Character per Caption (Optional): The maximum number of characters per caption (0 for no limit).
+
+- **Output**:
+    - Subtitles: A JSON response with the `subtitles` field containing the captions in SRT or VTT format.
+
+
+### AssemblyAI LeMUR
+
+This component allows you to apply Large Language Models to spoken data using the [AssemblyAI LeMUR framework](https://www.assemblyai.com/docs/lemur).
+
+LeMUR automatically ingests the transcript as additional context, making it easy to apply LLMs to audio data. You can use it for tasks like summarizing audio, extracting insights, or asking questions.
+
+- **Input**:
+    - AssemblyAI API Key: Your API key.
+    - Transcription Result: The output of the **Poll Transcript** component.
+    - Input Prompt: The text to prompt the model. You can type your prompt in this field or connect it to a **Prompt Template** component.
+    - Final Model: The model that is used for the final prompt after compression is performed. Default is Claude 3.5 Sonnet.
+    - Temperature (Optional): The temperature to use for the model. Default is 0.0.
+    - Max Output Size (Optional): Max output size in tokens, up to 4000. Default is 2000.
+    - Endpoint (Optional): The LeMUR endpoint to use. Default is "task". For "summary" and "question-answer", no prompt input is needed. See [LeMUR API docs](https://www.assemblyai.com/docs/api-reference/lemur/) for more info.
+    - Questions (Optional): Comma-separated list of your questions. Only used if *Endpoint* is "question-answer".
+    - Transcript IDs (Optional): Comma-separated list of transcript IDs. LeMUR can perform actions over multiple transcripts. If provided, the *Transcription Result* is ignored.
+
+- **Output**:
+    - LeMUR Response: The generated LLM response.
+
+### AssemblyAI List Transcripts
+
+This component can be used as a standalone component to list all previously generated transcripts.
+
+- **Input**:
+    - AssemblyAI API Key: Your API key.
+    - Limit (Optional): Maximum number of transcripts to retrieve. Default is 20, use 0 for all.
+    - Filter (Optional): Filter by transcript status.
+    - Created On (Optional): Only get transcripts created on this date (YYYY-MM-DD).
+    - Throttled Only (Optional): Only get throttled transcripts, overrides the status filter
+
+- **Output**:
+    - Transcript List: A list of all transcripts with info such as the transcript ID, the status, and the data.
+
+
+## Flow Process
+
+1. The user inputs an audio or video file.
+2. The user can also input an LLM prompt. In this example, we want to generate a summary of the transcript.
+3. The flow submits the audio file for transcription.
+4. The flow checks the status of the transcript every few seconds until transcription is completed.
+5. The flow parses the transcription result and outputs the transcribed text.
+6. The flow also generates subtitles.
+7. The flow applies the LLM prompt to generate a summary.
+8. As a standalone component, all transcripts can be listed.
+
+## Run the Transcription and Speech AI Flow
+
+1. Build the flow manually or import a pre-build JSON file:
+
+    * Recommended: [Download the AssemblyAI Transcription and Speech AI flow JSON](/files/AssemblyAI_Flow.json), and then [import the flow](/concepts-flows-import) into Langflow.
+    * Create a blank flow, and then add the previously described components to your flow, connecting them as shown in the flow diagram.
+
+2. Input your AssemblyAI API key in all components that require the key (**Start Transcript**, **Poll Transcript**, **Get Subtitles**, **LeMUR**, **List Transcripts**).
+
+3. Select an audio or video file for the **Start Transcript** component.
+
+    Optional: After adding a file to the **Start Transcript** component, run and [freeze the component](/concepts-components#freeze-a-component) so you only submit the file once, no matter how many times you run the flow.
+    To do this, click <Icon name="Play" aria-hidden="true" /> **Run component** to preload the file, and then click <Icon name="Ellipsis" aria-hidden="true" /> **Show More** and select **Freeze** to lock the result.
+    Subsequent flow runs use the frozen component's cached output.
+
+4. Test the transcription by clicking <Icon name="Play" aria-hidden="true" /> **Run component** on the **Parser** component. Make sure that the specified template is `{text}`.
+
+    Running one component runs all upstream components as well as the selected component and then stops the flow run.
+    In this case, the **Start Transcript** and **Poll Transcript** components are upstream from the **Parser** component.
+    If you froze the **Start Transcript** component, the flow sends the cached output from **Start Transcript**, runs the **Poll Transcript** component, to get the transcription result.
+    Check the flow logs or inspect the output of the **Parser** component to see the transcribed text result.
+
+5. To generate subtitles and run the full flow, click <Icon name="Play" aria-hidden="true" /> **Run component** on the **List Transcript** component.
+
+## Customization
+
+The flow can be customized by:
+
+1. Modifying the parameters in the **Start Transcript** component.
+2. Modifying the subtitle format in the **Get Subtitles** component.
+3. Modifying the LLM prompt for input of the **LeMUR** component.
+4. Modifying the LLM parameters (e.g., temperature) in the **LeMUR** component.
+
+## Troubleshooting
+
+If you encounter issues:
+
+1. Ensure the API key is correctly set in all components that require the key.
+2. To use LeMUR, you need to upgrade your AssemblyAI account, since this isn't included in the free account.
+3. Verify that all components are properly connected in the flow.
+4. Review the Langflow logs for any error messages.
+5. Check the [AssemblyAI API documentation](https://www.assemblyai.com/docs/).
+6. Contact [AssemblyAI support](https://www.assemblyai.com/contact/support).

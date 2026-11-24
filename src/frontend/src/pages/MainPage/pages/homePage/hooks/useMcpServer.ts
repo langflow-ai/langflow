@@ -12,10 +12,12 @@ import {
 } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import { customGetMCPUrl } from "@/customization/utils/custom-mcp-url";
+import { useCopyToClipboard } from "@/shared/hooks/use-copy-to-clipboard";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import type { InputFieldType } from "@/types/api";
 import type { AuthSettingsType, MCPSettingsType } from "@/types/mcp";
+import i18n from "../../../../../i18n";
 import {
   buildMcpServerJson,
   extractInstalledClientNames,
@@ -30,7 +32,6 @@ type InstalledMCPItem = { name?: string; available?: boolean };
 type State = {
   apiKey: string;
   isGeneratingApiKey: boolean;
-  isCopied: boolean;
   loadingMCP: string[];
   authModalOpen: boolean;
   isWaitingForComposer: boolean;
@@ -85,7 +86,6 @@ export const useMcpServer = ({
   const [s, setS] = useState<State>({
     apiKey: "",
     isGeneratingApiKey: false,
-    isCopied: false,
     loadingMCP: [],
     authModalOpen: false,
     isWaitingForComposer: false,
@@ -143,7 +143,7 @@ export const useMcpServer = ({
     } catch (e) {
       console.error("Error generating API key:", e);
       setErrorData({
-        title: "Error generating API key",
+        title: i18n.t("errors.errorGeneratingApiKey"),
         list: [(e as Error).message],
       });
     } finally {
@@ -151,15 +151,7 @@ export const useMcpServer = ({
     }
   }, [folderName, setErrorData]);
 
-  const copyToClipboard = useCallback((payload: string) => {
-    navigator.clipboard?.writeText(payload).then(
-      () => {
-        setS((p) => ({ ...p, isCopied: true }));
-        setTimeout(() => setS((p) => ({ ...p, isCopied: false })), 1000);
-      },
-      () => {},
-    );
-  }, []);
+  const { copy: copyToClipboard, isCopied } = useCopyToClipboard();
 
   const installClient = useCallback(
     (clientName: string, clientTitle?: string, transport?: MCPTransport) => {
@@ -169,9 +161,9 @@ export const useMcpServer = ({
         {
           onSuccess: () => {
             setSuccessData({
-              title: `MCP Server installed successfully on ${
-                clientTitle ?? clientName
-              }. You may need to restart your client to see the changes.`,
+              title: i18n.t("mcp.installedSuccessfully", {
+                client: clientTitle ?? clientName,
+              }),
             });
             setS((p) => ({
               ...p,
@@ -181,9 +173,9 @@ export const useMcpServer = ({
           onError: (e) => {
             const message = (e as { message?: string })?.message ?? String(e);
             setErrorData({
-              title: `Failed to install MCP Server on ${
-                clientTitle ?? clientName
-              }`,
+              title: i18n.t("mcp.failedToInstall", {
+                client: clientTitle ?? clientName,
+              }),
               list: [message],
             });
             setS((p) => ({
@@ -259,6 +251,7 @@ export const useMcpServer = ({
   const mcpJson = useMemo(() => {
     return buildMcpServerJson({
       folderName,
+      backendServerName: mcpProjectData?.server_name,
       selectedPlatform,
       apiUrl,
       isOAuthProject,
@@ -268,6 +261,7 @@ export const useMcpServer = ({
     });
   }, [
     folderName,
+    mcpProjectData?.server_name,
     selectedPlatform,
     apiUrl,
     isOAuthProject,
@@ -327,7 +321,7 @@ export const useMcpServer = ({
     apiKey: apiKeyFromStore || s.apiKey,
     isGeneratingApiKey: s.isGeneratingApiKey,
     generateApiKey,
-    isCopied: s.isCopied,
+    isCopied,
     copyToClipboard,
     loadingMCP: s.loadingMCP,
     installClient,

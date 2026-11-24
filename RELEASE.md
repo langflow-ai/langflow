@@ -39,8 +39,27 @@ This step also usually lasts about a week.
 After QA and bugfixing are complete for both OSS and Desktop:
 
 * Final releases are cut from their respective RC branches.
-* Release timing is coordinated with Langflow’s DevRel team.
+* Release timing is coordinated with Langflow's DevRel team.
 * For at least 24 hours after release, Discord, GitHub, and other support channels should be monitored for critical bug reports.
+
+### 4. Release Artifacts
+
+The release workflow automatically publishes the following artifacts:
+
+* **PyPI Packages:**
+  * `langflow` - Main package with all integrations
+  * `langflow-base` - Core framework without integrations
+  * `lfx` - Lightweight executor CLI
+  * `langflow-sdk` - SDK for programmatic access (when updated)
+
+* **Docker Images:**
+  * `langflowai/langflow` - Full Langflow image
+  * `langflowai/langflow-backend` - Backend-only image (published independently)
+  * `langflowai/langflow-frontend` - Frontend-only image (published independently)
+  * `langflowai/langflow-ep` - Enterprise edition image (published independently)
+  * `langflowai/langflow-base` - Base image without integrations
+
+**Note:** Backend, frontend, and enterprise images are published separately from the main image and will be built even if the main version already exists on Docker Hub.
 
 ## Branch Model
 
@@ -66,15 +85,25 @@ git push -u origin release-X.Y.Z       # Push RC branch to remote
 3. Review and approve as normal.
 4. Merge into the RC branch after review.
 
-### 3. Final Release
+### 3. Review Regression Log
 
-```sh
-git checkout release-X.Y.Z && git pull # Ensure RC branch is up to date
-git tag vX.Y.Z                         # Create final release tag
-git push origin vX.Y.Z                 # Push tag to remote
-```
+Before tagging, review `regressions/X.Y.x.yaml` to confirm no unresolved `blocking` entries exist.
+If `blocking` entries exist, they should be signed off on.
 
-### 4. Merge RC Back into Main
+See [regressions/README.md](./regressions/README.md) for the full schema and entry instructions.
+
+### 4. Final Release
+
+Use the [prepared release-tag process](./DEVELOPMENT.md#preparing-official-release-tags) so published source archives, wheels and images disable automatic login while development branches retain it.
+
+1. Finish version updates and fixes on `release-X.Y.Z`.
+2. Run **Prepare Release Tag** with `tag=vX.Y.Z` and `ref=release-X.Y.Z`.
+   If an earlier candidate already uses this tag and the source has changed, enable `replace_prepared_tag`. The workflow verifies the existing preparation, protects final GitHub releases and checks for concurrent tag updates.
+3. Run the normal release workflow with `release_tag=vX.Y.Z`, `release_commit` set to the full prepared SHA, and `pre_release` disabled. The workflow reserves a draft final release before publishing packages or images, even when `create_release=false`. Keep that reservation if publication fails and retry the same source commit.
+
+Use the same preparation process before each release candidate. Do not create tags directly on the release branch or move published final tags; publish a new version for subsequent fixes. Keep the authentication-preparation commit out of the branch merged back into `main`.
+
+### 5. Merge RC Back into Main
 
 ```sh
 git checkout main
@@ -101,6 +130,47 @@ git merge --ff-only release-X.Y.Z      # Fast-forward main to include RC changes
 
 * Follows [Semantic Versioning](https://semver.org): `MAJOR.MINOR.PATCH`.
 * RC tags use `-rc.N`, e.g. `v1.8.0-rc.1`.
+* **All tags MUST start with `v` prefix** (e.g., `v1.9.1`, not `1.9.1`).
+  * The release workflow validates this format and rejects tags without the `v` prefix.
+  * Duplicate tags (e.g., both `1.8.3` and `v1.8.3`) cause GitHub's release notes generation to use the wrong base comparison, resulting in incomplete changelogs.
+  * The workflow automatically checks for and prevents duplicate tags.
+
+## LFX Compatibility
+
+Langflow and LFX share a **major.minor version line**. The compatibility contract is:
+
+> **LFX X.Y.N is guaranteed compatible with any Flow exported from Langflow X.Y.M.**
+
+Patch releases (`N` and `M`) are independent — a patch to LFX does not require a Langflow patch release, and vice versa.
+
+### Version management
+
+`make patch v=X.Y.Z` updates all four artifacts together:
+
+| Artifact | Version set |
+|---|---|
+| `langflow` | `X.Y.Z` |
+| `langflow-base` | `0.Y.Z` |
+| `lfx` | `X.Y.Z` |
+| frontend | `X.Y.Z` |
+
+### Cutting an LFX patch release
+
+Use `scripts/release-lfx.sh <version>`. The script warns if the LFX minor version does not match the current Langflow minor version, which would violate the compatibility contract. A warning is not a hard block — patch-only LFX releases within the same minor are expected and fine.
+
+### Implications for users
+
+Users can pin `lfx~=X.Y.0` in their `requirements.txt` to receive all compatible LFX patch releases for a given Langflow minor.
+
+### Migrating from lfx 0.5.x to 1.10.0
+
+LFX was realigned from its standalone `0.5.x` line onto Langflow's `major.minor` line, so the version jumps from `0.5.0` to `1.10.0` in a single step. This is a version-numbering change, not 95 minors of feature churn. The jump affects downstream pins, and neither pip nor uv will flag it — so it must be called out in the release announcement, not just here:
+
+- `lfx==0.5.x` or `lfx<1.0` pins will **not** upgrade (intentional — those deployments stay put).
+- `lfx>=0.5,<1` pins will **not** upgrade.
+- `lfx>=0.5` with no upper bound **will** pull `1.10.0` on the next install — a major jump with no warning.
+
+Going forward, pin `lfx~=X.Y.0` (e.g. `lfx~=1.10.0`) so you track compatible patches for a given Langflow minor without silently crossing minor lines.
 
 ## Roles
 

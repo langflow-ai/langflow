@@ -26,6 +26,11 @@ export interface KnowledgeBaseInfo {
     vectorize: boolean;
     identifier: boolean;
   }>;
+  storage_state?: string;
+  storage_generation?: number;
+  active_migration_id?: string | null;
+  backend_type?: string;
+  backend_config?: Record<string, unknown>;
 }
 
 export const useGetKnowledgeBases: useQueryFunctionType<
@@ -39,11 +44,15 @@ export const useGetKnowledgeBases: useQueryFunctionType<
     return res.data;
   };
 
-  const queryResult: UseQueryResult<KnowledgeBaseInfo[], any> = query(
+  const queryResult: UseQueryResult<KnowledgeBaseInfo[], Error> = query(
     ["useGetKnowledgeBases"],
     getKnowledgeBasesFn,
     {
-      refetchOnWindowFocus: false,
+      // Refetch on tab focus so a KB ingestion run from a flow on
+      // another tab/window surfaces fresh stats when the user returns.
+      // Programmatic invalidation in flowStore.onBuildComplete handles
+      // the same-tab case (canvas → assets/knowledge-bases nav).
+      refetchOnWindowFocus: true,
       ...options,
     },
   );

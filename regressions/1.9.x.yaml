@@ -1,0 +1,84 @@
+schema_version: 1
+release: 1.9.x
+
+entries:
+
+- id: GH-12591
+  title: Loop component fails with vector database components inside the loop
+  status: resolved
+  area: components
+  first_bad_version: 1.8.x
+  last_known_good_version: 1.7.3
+  resolved_in_version: 1.10.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12877
+  workaround: none
+
+- id: GH-12731
+  title: Shareable Playground strips spaces from text input
+  status: resolved
+  area: flow_editor
+  first_bad_version: 1.9.0
+  last_known_good_version: 1.8.4
+  resolved_in_version: 1.9.1
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12833
+  workaround: none
+
+- id: GH-12732
+  title: Deleting a flow fails on PostgreSQL when tracing data exists
+  status: resolved
+  area: database
+  first_bad_version: 1.9.0
+  last_known_good_version: unknown
+  resolved_in_version: 1.8.2
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12242
+  workaround: Duplicate of an issue originally fixed in 1.8.2.
+
+- id: GH-13059
+  title: Agent chat history leaks across flows when two flows use the same session name
+  status: resolved
+  area: components
+  first_bad_version: 1.9.2
+  last_known_good_version: unknown
+  resolved_in_version: 1.10.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/13087
+  workaround: Give each flow a distinct session name instead of keeping the default "New Session 0".
+
+- id: GH-14253
+  title: Reading an MCP resource fails although the server advertises it
+  status: resolved
+  area: mcp
+  first_bad_version: 1.9.1
+  last_known_good_version: 1.9.0
+  resolved_in_version: 1.12.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/14253
+  workaround: none
+
+- id: GH-12665
+  title: Chroma component silently returns no results from a remote server on chromadb 1.0+
+  status: resolved
+  area: components
+  first_bad_version: unknown
+  last_known_good_version: unknown
+  resolved_in_version: 1.10.0
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12900
+  workaround: none
+
+- id: GH-12824
+  title: Qdrant component ignores the dimension of the connected embedding model
+  status: resolved
+  area: components
+  first_bad_version: 1.9.0
+  last_known_good_version: 1.8.3
+  resolved_in_version: 1.9.2
+  fix_pr: https://github.com/langflow-ai/langflow/pull/12876
+  workaround: none
+
+- id: GH-13318
+  title: Trace view stops loading after upgrading, on rows written by an older version
+  status: resolved
+  area: database
+  first_bad_version: 1.9.1
+  last_known_good_version: 1.9.0
+  resolved_in_version: 1.10.1
+  fix_pr: https://github.com/langflow-ai/langflow/pull/13346
+  workaround: none

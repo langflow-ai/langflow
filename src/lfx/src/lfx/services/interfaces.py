@@ -7,10 +7,17 @@ from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     import asyncio
+    from collections.abc import Awaitable, Callable
     from uuid import UUID
 
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from lfx.integrations.models import (
+        ConnectionRef,
+        ConnectionResolutionRequest,
+        ConnectionStatus,
+        ResolvedCredential,
+    )
     from lfx.services.adapters.deployment.schema import (
         ConfigListParams,
         ConfigListResult,
@@ -19,6 +26,7 @@ if TYPE_CHECKING:
         DeploymentDeleteResult,
         DeploymentDuplicateResult,
         DeploymentGetResult,
+        DeploymentListLlmsResult,
         DeploymentListParams,
         DeploymentListResult,
         DeploymentListTypesResult,
@@ -33,7 +41,10 @@ if TYPE_CHECKING:
         RedeployResult,
         SnapshotListParams,
         SnapshotListResult,
+        VerifyCredentials,
+        VerifyCredentialsResult,
     )
+    from lfx.services.authorization.base import ExecutionPrincipal
     from lfx.services.settings.base import Settings
 
 
@@ -52,6 +63,29 @@ class AuthUserProtocol(Protocol):
 
 class AuthServiceProtocol(Protocol):
     """Protocol for auth service (minimal surface for dependency injection)."""
+
+    def run_sync_validation(self, validate: Callable[[], Awaitable[None]]) -> None:
+        """Run host authorization checks from synchronous execution paths."""
+        ...
+
+    async def validate_tool_call(
+        self,
+        *,
+        flow_id: str,
+        component_id: str,
+        tool_tag: str,
+        tool_name: str,
+        approval_actions: tuple[str, ...],
+        metadata_configured: bool,
+    ) -> None:
+        """Recheck current host tool settings before execution."""
+        ...
+
+    async def validate_execution_user(
+        self, user_id: str | UUID | None, *, principal: Any = None, db: Any = None
+    ) -> None:
+        """Recheck the host's persisted execution identity before side effects."""
+        ...
 
     @abstractmethod
     async def get_current_user(
@@ -150,6 +184,25 @@ class VariableServiceProtocol(Protocol):
         ...
 
 
+@runtime_checkable
+class ConnectionResolverProtocol(Protocol):
+    """Portable surface implemented by host connection resolvers."""
+
+    @abstractmethod
+    async def resolve(self, request: ConnectionResolutionRequest) -> ResolvedCredential:
+        """Resolve a non-secret reference for the current execution principal."""
+        ...
+
+    @abstractmethod
+    async def describe(
+        self,
+        ref: ConnectionRef,
+        principal: ExecutionPrincipal,
+    ) -> ConnectionStatus | None:
+        """Return credential-free connection status when supported."""
+        ...
+
+
 class CacheServiceProtocol(Protocol):
     """Protocol for cache service."""
 
@@ -205,6 +258,9 @@ class TransactionServiceProtocol(Protocol):
         status: str,
         target_id: str | None = None,
         error: str | None = None,
+        *,
+        user_id: UUID | None = None,
+        session_id: str | None = None,
     ) -> None:
         """Log a transaction record for a vertex execution.
 
@@ -216,6 +272,8 @@ class TransactionServiceProtocol(Protocol):
             status: Execution status (success/error)
             target_id: Optional target vertex ID
             error: Optional error message
+            user_id: Message owner of the run (the end user when one is known)
+            session_id: Session of the run
         """
         ...
 
@@ -241,8 +299,9 @@ class DeploymentServiceProtocol(Protocol):
     Adapter-specific or advanced operations are defined on concrete deployment
     service classes.
 
-    ``deployment_type`` is accepted as an optional routing hint by all
-    operations that act on a specific deployment (including executions).
+    ``deployment_type`` is accepted as an optional routing hint by operations
+    that act on a specific deployment. For execution creation, it is provided
+    in the ``ExecutionCreate`` payload.
     """
 
     @abstractmethod
@@ -264,6 +323,16 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
+        ...
+
+    @abstractmethod
+    async def list_llms(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListLlmsResult:
+        """List provider-available LLM model names for deployment configuration."""
         ...
 
     @abstractmethod
@@ -300,6 +369,8 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
+        # TODO: Add a rollback-update interface contract for adapters so callers
+        # can compensate provider-side updates when downstream local sync fails.
         ...
 
     @abstractmethod
@@ -355,7 +426,6 @@ class DeploymentServiceProtocol(Protocol):
         self,
         *,
         user_id: IdLike,
-        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -394,6 +464,16 @@ class DeploymentServiceProtocol(Protocol):
         db: AsyncSession,
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter."""
+        ...
+
+    @abstractmethod
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify provider credentials before account creation."""
         ...
 
     @abstractmethod

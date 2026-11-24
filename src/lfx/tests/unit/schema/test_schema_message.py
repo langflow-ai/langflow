@@ -1,14 +1,26 @@
 import base64
+import importlib
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
+from types import SimpleNamespace
+from uuid import uuid4
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
 from lfx.log.logger import logger
+from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
+from lfx.utils.image import create_image_content_dict
 from platformdirs import user_cache_dir
+
+
+@pytest.fixture(autouse=True)
+def unrestricted_standalone_attachments(monkeypatch):
+    """These standalone conversion tests intentionally attach temporary local paths."""
+    monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", False)
 
 
 @pytest.fixture
@@ -78,6 +90,13 @@ def test_message_from_ai_text():
     assert lc_message.content == text
 
 
+def test_message_serializes_run_id_as_string():
+    run_id = uuid4()
+    message = Message(text="hello", run_id=run_id)
+    dumped = message.model_dump()
+    assert dumped["run_id"] == str(run_id)
+
+
 def test_message_with_single_image(sample_image):
     """Test creating a message with text and an image."""
     text = "Check out this image"
@@ -142,9 +161,11 @@ def test_message_with_invalid_image_path():
     file_path = "test_flow/non_existent.png"
     message = Message(text="Invalid image", sender=MESSAGE_SENDER_USER, files=[file_path])
 
-    # When files don't exist and can't be found in cache, it should raise FileNotFoundError
-    with pytest.raises(FileNotFoundError, match="Image file not found"):
-        message.to_lc_message()
+    # Missing images are skipped during conversion (no exception), leaving only the text content.
+    lc_message = message.to_lc_message()
+    assert isinstance(lc_message, HumanMessage)
+    assert isinstance(lc_message.content, list)
+    assert lc_message.content == [{"type": "text", "text": "Invalid image"}]
 
     # The invalid file path is still stored in the message
     assert message.files == [file_path]
@@ -164,13 +185,17 @@ def test_message_serialization():
     # Create a timestamp with timezone
     message = Message(text="Test message", sender=MESSAGE_SENDER_USER)
     timestamp_str = message.timestamp
-    timestamp = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+    timestamp_dt = datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+
     serialized = message.model_dump()
 
     assert serialized["text"] == "Test message"
     assert serialized["sender"] == MESSAGE_SENDER_USER
-    assert serialized["timestamp"] == timestamp
-    assert serialized["timestamp"].tzinfo == timezone.utc
+    assert serialized["timestamp"] == timestamp_str
+
+    parsed = datetime.strptime(serialized["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert parsed.tzinfo == timezone.utc
+    assert parsed == timestamp_dt
 
 
 def test_message_to_lc_without_sender():
@@ -186,17 +211,26 @@ def test_timestamp_serialization():
     # Test with timezone
     msg1 = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
     serialized1 = msg1.model_dump()
-    assert serialized1["timestamp"].tzinfo == timezone.utc
+    ts1 = datetime.strptime(serialized1["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert ts1.tzinfo == timezone.utc
 
     # Test without timezone
     msg2 = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
     serialized2 = msg2.model_dump()
-    assert serialized2["timestamp"].tzinfo == timezone.utc
+    ts2 = datetime.strptime(serialized2["timestamp"], "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    assert ts2.tzinfo == timezone.utc
 
     # Test that both formats result in equivalent UTC times when appropriate
     msg_with_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45 UTC")
     msg_without_tz = Message(text="Test message", sender=MESSAGE_SENDER_USER, timestamp="2023-12-25 15:30:45")
-    assert msg_with_tz.model_dump()["timestamp"] == msg_without_tz.model_dump()["timestamp"]
+
+    ser_with_tz = msg_with_tz.model_dump()["timestamp"]
+    ser_without_tz = msg_without_tz.model_dump()["timestamp"]
+
+    parsed_with_tz = datetime.strptime(ser_with_tz, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+    parsed_without_tz = datetime.strptime(ser_without_tz, "%Y-%m-%d %H:%M:%S.%f %Z").replace(tzinfo=timezone.utc)
+
+    assert parsed_with_tz == parsed_without_tz
 
 
 def test_message_with_image_object_direct():
@@ -305,6 +339,71 @@ def test_get_file_content_dicts_with_string_paths():
         Path(tmp_path).unlink(missing_ok=True)
 
 
+def test_should_not_inject_binary_payload_as_text_when_file_is_neither_image_nor_known_text_type():
+    """QA API-010: refuse to text-decode unknown binary files.
+
+    ``tweaks.ChatInput.files=['<path>']`` was injecting raw bytes as text into the
+    HumanMessage when the file was not detected as an image.
+
+    Root cause: ``read_text_file`` falls back to ``latin-1`` decoding (which always
+    succeeds), so binary content like a non-PIL-readable PNG slips through and is
+    embedded as a long stream of garbled latin-1 characters in the message. The
+    guard MUST refuse to text-decode files whose extension is neither a known text
+    type nor a known image type — silently skipping is safer than feeding the LLM
+    a binary blob.
+    """
+    import tempfile
+
+    binary_content = b"\x00\x01\x02\xff\xfe\xfd" + bytes(range(256)) * 4
+    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as tmp:
+        tmp.write(binary_content)
+        tmp_path = tmp.name
+
+    try:
+        message = Message(text="Look at this", sender=MESSAGE_SENDER_USER)
+        message.files = [tmp_path]
+
+        content_dicts = message.get_file_content_dicts()
+
+        assert content_dicts == [], (
+            f"Binary attachment with an unknown extension must be skipped, not decoded as text. "
+            f"Got {len(content_dicts)} content dict(s) with text starting "
+            f"{content_dicts[0].get('text', '')[:60]!r}..."
+        )
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def test_should_not_use_attachment_prefix_that_triggers_gemini_refusal_in_file_text_content():
+    r"""QA GAP-M-3: avoid attachment framing that triggers Gemini refusals.
+
+    The ``Attachment: <filename>\n<contents>`` framing triggers Gemini refusals
+    (``"I cannot process attachments in this environment"``). Wrap text-file
+    contents in a neutral header that doesn't read as a multimodal-attachment request.
+    """
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w", encoding="utf-8") as tmp:
+        tmp.write("hello world, this is the file body")
+        tmp_path = tmp.name
+
+    try:
+        message = Message(text="Summarize this", sender=MESSAGE_SENDER_USER)
+        message.files = [tmp_path]
+
+        content_dicts = message.get_file_content_dicts()
+
+        assert len(content_dicts) == 1
+        text = content_dicts[0].get("text", "")
+        assert "hello world, this is the file body" in text
+        assert not text.startswith("Attachment:"), (
+            "The 'Attachment:' prefix triggers Gemini refusals. Use a neutral header that does "
+            "not look like a multimodal-attachment request to the model."
+        )
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
 # Clean up the cache directory after all tests
 @pytest.fixture(autouse=True)
 def cleanup():
@@ -316,3 +415,166 @@ def cleanup():
             shutil.rmtree(str(cache_dir))
         except OSError as exc:
             logger.error(f"Error cleaning up cache directory: {exc}")
+
+
+class _StorageBackendError(Exception):
+    """Stand-in for a botocore ClientError.
+
+    ``S3StorageService`` only translates a 404 into ``FileNotFoundError``; an AccessDenied,
+    throttling or a network blip is re-raised as a botocore ``ClientError``, which is not an
+    ``OSError`` and so matches none of the specific handlers in ``get_file_content_dicts``.
+    """
+
+
+class _S3LikeStorage:
+    """Stand-in for S3StorageService: keys carry a prefix and nothing exists on local disk."""
+
+    prefix = "files/"
+
+    def __init__(self, blobs: dict[str, bytes]):
+        self.blobs = blobs
+        self.unreadable: set[str] = set()
+
+    def build_full_path(self, flow_id: str, file_name: str) -> str:
+        return f"{self.prefix}{flow_id}/{file_name}"
+
+    def parse_file_path(self, full_path: str) -> tuple[str, str]:
+        flow_id, file_name = full_path.removeprefix(self.prefix).rsplit("/", 1)
+        return flow_id, file_name
+
+    async def get_file(self, flow_id: str, file_name: str) -> bytes:
+        key = f"{flow_id}/{file_name}"
+        if key in self.unreadable:
+            msg = f"An error occurred (AccessDenied) when calling the GetObject operation: {key}"
+            raise _StorageBackendError(msg)
+        try:
+            return self.blobs[key]
+        except KeyError as exc:
+            raise FileNotFoundError(key) from exc
+
+    async def get_file_size(self, flow_id: str, file_name: str) -> int:
+        return len(await self.get_file(flow_id, file_name))
+
+
+@pytest.fixture
+def s3_storage(monkeypatch):
+    """Provide uncached object-storage reads without relying on local files or a live bucket."""
+    # ``create_image_content_dict`` is lru_cached on the path, so a stale entry from another
+    # test would be served instead of going through the stub.
+    create_image_content_dict.cache_clear()
+    storage = _S3LikeStorage({})
+    settings_service = SimpleNamespace(settings=SimpleNamespace(storage_type="s3"))
+    for module in ("lfx.schema.image", "lfx.utils.image", "lfx.base.data.storage_utils", "lfx.services.deps"):
+        monkeypatch.setattr(importlib.import_module(module), "get_storage_service", lambda: storage)
+    for module in ("lfx.base.data.storage_utils", "lfx.base.data.utils", "lfx.services.deps"):
+        monkeypatch.setattr(importlib.import_module(module), "get_settings_service", lambda: settings_service)
+    return storage
+
+
+def test_image_attachment_from_s3_storage_reaches_the_model(s3_storage):
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+    )
+    s3_storage.blobs["flow-1/photo.png"] = png
+
+    content = Message(text="what is it?", files=["flow-1/photo.png"]).get_file_content_dicts()
+
+    assert len(content) == 1
+    assert content[0]["type"] == "image_url"
+    assert content[0]["image_url"]["url"] == f"data:image/png;base64,{base64.b64encode(png).decode()}"
+
+
+def test_text_attachment_from_s3_storage_reaches_the_model(s3_storage):
+    s3_storage.blobs["flow-1/act.txt"] = b"Act 42: accepted"
+
+    content = Message(text="summarize", files=["flow-1/act.txt"]).get_file_content_dicts()
+
+    assert content == [{"type": "text", "text": "File 'act.txt' contents:\nAct 42: accepted"}]
+
+
+@pytest.mark.usefixtures("s3_storage")
+def test_missing_attachment_in_s3_storage_is_skipped():
+    content = Message(text="summarize", files=["flow-1/gone.txt"]).get_file_content_dicts()
+
+    assert content == []
+
+
+@pytest.mark.usefixtures("s3_storage")
+def test_absolute_local_path_attached_under_s3_storage_is_not_read(tmp_path):
+    secret = tmp_path / "server-secret.txt"
+    secret.write_text("do not leak")
+
+    content = Message(text="summarize", files=[str(secret)]).get_file_content_dicts()
+
+    assert content == []
+
+
+@pytest.mark.parametrize(
+    ("file_name", "blob"),
+    [("denied.txt", b"Act 42: accepted"), ("denied.png", b"\x89PNG\r\n\x1a\n")],
+    ids=["document", "image"],
+)
+def test_s3_backend_error_skips_the_attachment_instead_of_failing_the_message(s3_storage, file_name, blob):
+    """A storage error that is not a 404 must not take the whole message down with it.
+
+    ``S3StorageService`` re-raises anything but a 404 as a botocore ``ClientError``, which is
+    neither an ``OSError`` nor any of the other types handled per attachment. Without the
+    catch-all a role that can PutObject but not GetObject turns every attachment-bearing chat
+    message into a failed run, losing the user's text along with the attachment.
+    """
+    s3_storage.blobs[f"flow-1/{file_name}"] = blob
+    s3_storage.unreadable.add(f"flow-1/{file_name}")
+
+    content = Message(text="summarize", files=[f"flow-1/{file_name}"]).get_file_content_dicts()
+
+    assert content == []
+
+
+@pytest.mark.parametrize("relative", [False, True], ids=["absolute", "relative"])
+def test_local_file_with_image_extension_but_non_image_content_is_not_sent_as_image(tmp_path, monkeypatch, relative):
+    fake_png = tmp_path / "fake.png"
+    fake_png.write_bytes(b"not an image at all")
+    monkeypatch.chdir(tmp_path)
+
+    content = Message(text="what is it?", files=["fake.png" if relative else str(fake_png)]).get_file_content_dicts()
+
+    assert content == []
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [(42, "42"), (0, "0"), (3.5, "3.5"), (False, "False"), ({"a": 1}, "{'a': 1}"), (["a"], "['a']")],
+    ids=["int", "zero", "float", "bool", "dict", "list"],
+)
+def test_non_string_text_is_kept_as_text(value, expected):
+    message = Data(data={"text": value}).to_message()
+    message.sender = MESSAGE_SENDER_USER
+
+    assert message.text == expected
+    assert message.text_stream is None
+    assert message.data["text"] == expected
+    assert message.to_lc_message().content == expected
+    assert Message(**message.model_dump()).text == expected
+
+
+def test_iterator_text_stays_a_stream():
+    stream = iter(["a", "b"])
+
+    message = Message(text=stream)
+
+    assert message.text is stream
+    assert message.text_stream is stream
+    assert message.data["text"] == ""
+
+
+def test_async_iterator_text_stays_a_stream():
+    async def chunks():
+        yield "a"
+
+    stream = chunks()
+
+    message = Message(text=stream)
+
+    assert message.text is stream
+    assert message.text_stream is stream
+    assert message.data["text"] == ""

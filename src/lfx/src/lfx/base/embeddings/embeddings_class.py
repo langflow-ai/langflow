@@ -12,7 +12,8 @@ class EmbeddingsWithModels(Embeddings):
 
     Attributes:
         embeddings: The primary LangChain Embeddings instance (used as fallback).
-        available_models: Dict mapping model names to their dedicated Embeddings instances.
+        available_models: Dict mapping embedding model names to dedicated Embeddings instances
+                         across every configured provider in Model Providers settings.
                          Each model has its own pre-configured instance with specific parameters.
     """
 
@@ -25,9 +26,9 @@ class EmbeddingsWithModels(Embeddings):
 
         Args:
             embeddings: The primary LangChain Embeddings instance (used as default/fallback).
-            available_models: Dict mapping model names to dedicated Embeddings instances.
-                            Each value should be a fully configured Embeddings object ready to use.
-                            Defaults to empty dict if not provided.
+            available_models: Dict mapping embedding model names to dedicated Embeddings instances
+                            from all configured providers. Each value should be a fully configured
+                            Embeddings object ready to use. Defaults to empty dict if not provided.
         """
         super().__init__()
         self.embeddings = embeddings

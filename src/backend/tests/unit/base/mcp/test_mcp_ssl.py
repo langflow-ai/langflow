@@ -27,6 +27,11 @@ class TestSSLClientFactory:
         # httpx stores verify in the transport
         assert hasattr(client, "_transport")
 
+    def test_create_client_does_not_follow_redirects(self):
+        """MCP HTTP client must not follow redirects after one-shot SSRF check."""
+        client = create_mcp_http_client_with_ssl_option(verify_ssl=True)
+        assert client.follow_redirects is False
+
     def test_create_client_with_ssl_verification_disabled(self):
         """Test creating HTTP client with SSL verification disabled."""
         client = create_mcp_http_client_with_ssl_option(verify_ssl=False)

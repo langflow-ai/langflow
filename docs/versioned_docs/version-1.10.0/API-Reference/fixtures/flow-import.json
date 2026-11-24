@@ -1,0 +1,8 @@
+{
+  "name": "Fixture Flow",
+  "description": "Fixture flow used by docs API example automation.",
+  "data": {
+    "nodes": [],
+    "edges": []
+  }
+}

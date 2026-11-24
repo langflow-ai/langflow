@@ -1,6 +1,6 @@
 from typing import cast
 
-from langchain.chains import RetrievalQA
+from langchain_classic.chains import RetrievalQA
 
 from lfx.base.chains.model import LCChainComponent
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MultilineInput

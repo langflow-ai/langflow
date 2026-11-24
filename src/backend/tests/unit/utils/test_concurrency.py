@@ -177,7 +177,7 @@ class TestKeyedWorkerLockManager:
 
             manager = KeyedWorkerLockManager()
 
-            mock_cache_dir.assert_called_once_with("langflow")
+            mock_cache_dir.assert_called_once_with("langflow", ensure_exists=True)
             assert manager.locks_dir == mock_path_instance.__truediv__.return_value
 
     def test_validate_key_valid_keys(self):
@@ -376,6 +376,8 @@ class TestKeyedWorkerLockManager:
 
             KeyedWorkerLockManager()
 
+            # Verify user_cache_dir was called with ensure_exists=True
+            mock_cache_dir.assert_called_once_with("langflow", ensure_exists=True)
             # Verify Path was called correctly
-            mock_path.assert_called_once_with("/test/cache", ensure_exists=True)
+            mock_path.assert_called_once_with("/test/cache")
             mock_path_instance.__truediv__.assert_called_once_with("worker_locks")

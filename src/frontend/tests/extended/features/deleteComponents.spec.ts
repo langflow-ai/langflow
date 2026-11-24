@@ -1,18 +1,14 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 
 test(
   "should delete a component (requires store API key)",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.STORE_API_KEY,
-      "STORE_API_KEY required to run this test",
-    );
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    skipIfMissing.storeApiKey();
+    loadDotenvIfLocal(__dirname);
     await page.goto("/");
     await page.waitForTimeout(1000);
     await page.getByTestId("button-store").click();
@@ -21,11 +17,11 @@ test(
       timeout: 200000,
     });
     await page
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
     await page.getByTestId("api-key-save-button-store").click();
     await page.waitForTimeout(1000);
-    await page.getByText("Success! Your API Key has been saved.").isVisible();
+    await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
     await page.waitForTimeout(1000);
     await page.getByTestId("button-store").click();
 
@@ -35,9 +31,11 @@ test(
       timeout: 100000,
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
-    if (await page.getByText("Components").first().isVisible()) {
-      await page.getByText("Components").first().click();
-      await page.getByText("Basic RAG").first().isVisible();
+    if (await page.getByText(TEXTS.labelComponents).first().isVisible()) {
+      await page.getByText(TEXTS.labelComponents).first().click();
+      await expect(
+        page.getByText(TEXTS.templateBasicRag).first(),
+      ).toBeVisible();
       await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
         timeout: 100000,
       });
@@ -46,9 +44,9 @@ test(
       await page
         .getByText("Are you sure you want to delete the selected component?")
         .isVisible();
-      await page.getByText("Delete").nth(1).click();
+      await page.getByText(TEXTS.delete).nth(1).click();
       await page.waitForTimeout(1000);
-      await page.getByText("Successfully").first().isVisible();
+      await expect(page.getByText("Successfully").first()).toBeVisible();
     }
   },
 );

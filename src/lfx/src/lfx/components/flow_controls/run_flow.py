@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
@@ -18,8 +19,10 @@ class RunFlowComponent(RunFlowBaseComponent):
     name = "RunFlow"
     icon = "Workflow"
 
-    inputs = RunFlowBaseComponent.get_base_inputs()
-    outputs = RunFlowBaseComponent.get_base_outputs()
+    # Keep the concrete class templates detached from the base-class templates;
+    # Component.__init__ still makes the per-instance copies used at runtime.
+    inputs = deepcopy(RunFlowBaseComponent.get_base_inputs())
+    outputs = deepcopy(RunFlowBaseComponent.get_base_outputs())
 
     async def update_build_config(
         self,

@@ -1,7 +1,7 @@
-import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
 // TODO: This test might not be needed anymore
 test(
@@ -67,38 +67,18 @@ test(
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    expect(await page.getByText("BUTTON").isVisible()).toBeTruthy();
+    await expect(page.getByTestId("title-button")).toBeVisible();
     expect(await page.getByText("Click me").isVisible()).toBeTruthy();
     expect(await page.getByTestId("link_link_link")).toBeEnabled();
     await page.getByTestId("link_link_link").click();
   },
 );
 
-async function extractAndCleanCode(page: Page): Promise<string> {
-  const outerHTML = await page
-    .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
-
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the HTML");
-  }
-
-  const codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/");
-
-  return codeContent;
-}
-
 function updateComponentCode(
   code: string,
   updates: {
     imports?: string[];
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     inputs?: Array<{ name: string; config: Record<string, any> }>;
   },
 ): string {

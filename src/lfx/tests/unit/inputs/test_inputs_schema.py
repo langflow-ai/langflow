@@ -3,13 +3,35 @@ from types import NoneType
 from typing import Union
 
 import pytest
-from lfx.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput
+from lfx.inputs.inputs import (
+    BoolInput,
+    DictInput,
+    FloatInput,
+    InputTypes,
+    IntInput,
+    MessageTextInput,
+    MultiselectInput,
+    NestedDictInput,
+    instantiate_input,
+)
 from lfx.io.schema import schema_to_langflow_inputs
 from lfx.schema.data import Data
+from lfx.schema.json_schema import create_input_schema_from_json_schema
 from lfx.template import Input, Output
 from lfx.template.field.base import UNDEFINED
 from lfx.type_extraction.type_extraction import post_process_type
 from pydantic import BaseModel, Field, ValidationError
+
+
+@pytest.mark.parametrize("by_alias", [True, False])
+@pytest.mark.parametrize("is_list", [True, False])
+def test_multiselect_serialized_field_names_round_trip(by_alias, is_list):
+    original = MultiselectInput(name="checks", options=["PII"], value=["PII"], is_list=is_list)
+    payload = original.model_dump(by_alias=by_alias)
+    payload.pop("_input_type", None)
+    restored = instantiate_input("MultiselectInput", payload)
+    assert restored.is_list is is_list
+    assert restored.value == ["PII"]
 
 
 class TestInput:
@@ -107,12 +129,25 @@ class TestInput:
             "fileTypes": [],
             "file_path": "",
             "advanced": False,
+            "api_editable": False,
             "title_case": False,
             "dynamic": False,
             "info": "",
             "input_types": ["Text"],
             "load_from_db": False,
         }
+
+    def test_input_api_editable_flag(self):
+        input_obj = Input(field_type="str")
+        assert input_obj.to_dict()["api_editable"] is False
+        input_obj.api_editable = True
+        assert input_obj.to_dict()["api_editable"] is True
+
+    def test_mixin_input_api_editable_flag(self):
+        default_input = MessageTextInput(name="prompt")
+        assert default_input.to_dict()["api_editable"] is False
+        exposed_input = MessageTextInput(name="prompt", api_editable=True)
+        assert exposed_input.to_dict()["api_editable"] is True
 
 
 class TestOutput:
@@ -225,6 +260,115 @@ def test_schema_to_langflow_inputs():
     list_input = find_input("list_field")
     assert list_input.is_list is True
     assert isinstance(list_input, MessageTextInput)
+
+
+def test_schema_to_langflow_inputs_sets_input_types_for_connectable_handles():
+    """Non-string schema fields must carry input_types so the frontend renders connection handles.
+
+    Regression test for https://github.com/langflow-ai/langflow/issues/9424:
+    MCP Tool components did not expose input ports for number, bool, or dict/JSON fields
+    because schema_to_langflow_inputs left input_types unset, and the frontend's
+    computeDisplayHandle hides handles for LANGFLOW_SUPPORTED_TYPES with no input_types.
+    """
+
+    class ConnectableSchema(BaseModel):
+        lat: float = Field(description="Latitude")
+        count: int = Field(description="Count")
+        enabled: bool = Field(description="Enabled flag")
+        payload: dict = Field(description="JSON payload")
+
+    inputs = {inp.name: inp for inp in schema_to_langflow_inputs(ConnectableSchema)}
+
+    assert isinstance(inputs["lat"], FloatInput)
+    assert inputs["lat"].input_types == ["Message"]
+
+    assert isinstance(inputs["count"], IntInput)
+    assert inputs["count"].input_types == ["Message"]
+
+    assert isinstance(inputs["enabled"], BoolInput)
+    assert inputs["enabled"].input_types == ["Message"]
+
+    assert isinstance(inputs["payload"], DictInput)
+    assert inputs["payload"].input_types == ["JSON"]
+
+
+def test_schema_to_langflow_inputs_sets_data_input_types_for_nested_dict():
+    """Nullable object fields resolve to NestedDictInput and must also advertise a JSON handle."""
+    schema = {
+        "type": "object",
+        "properties": {
+            "config": {
+                "anyOf": [{"type": "object"}, {"type": "null"}],
+                "default": None,
+            },
+        },
+    }
+    model = create_input_schema_from_json_schema(schema)
+    inputs = {inp.name: inp for inp in schema_to_langflow_inputs(model)}
+
+    assert isinstance(inputs["config"], NestedDictInput)
+    assert inputs["config"].input_types == ["JSON"]
+
+
+def test_schema_to_langflow_inputs_preserves_optional_defaults_and_nullable_objects():
+    schema = {
+        "type": "object",
+        "properties": {
+            "task": {"type": "string"},
+            "model": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "default": "claude-sonnet-4.6",
+            },
+            "keep_alive": {
+                "anyOf": [{"type": "boolean"}, {"type": "null"}],
+                "default": False,
+            },
+            "output_schema": {
+                "anyOf": [{"type": "object"}, {"type": "null"}],
+                "default": None,
+            },
+            "proxy_country": {
+                "anyOf": [{"type": "string"}, {"type": "null"}],
+                "default": "us",
+            },
+        },
+        "required": ["task"],
+    }
+    model = create_input_schema_from_json_schema(schema)
+
+    inputs = {input_.name: input_ for input_ in schema_to_langflow_inputs(model)}
+
+    assert isinstance(inputs["task"], MessageTextInput)
+    assert inputs["task"].required is True
+    assert inputs["task"].value == ""
+
+    assert isinstance(inputs["model"], MessageTextInput)
+    assert inputs["model"].value == "claude-sonnet-4.6"
+
+    assert isinstance(inputs["keep_alive"], BoolInput)
+    assert inputs["keep_alive"].value is False
+
+    assert isinstance(inputs["output_schema"], NestedDictInput)
+    assert inputs["output_schema"].required is False
+    assert inputs["output_schema"].value is None
+
+    assert isinstance(inputs["proxy_country"], MessageTextInput)
+    assert inputs["proxy_country"].value == "us"
+
+
+def test_float_input_allows_range_spec_minimum_for_non_negative_values():
+    input_field = FloatInput.model_validate(
+        {
+            "name": "tool_execution_timeout",
+            "value": 0.0,
+            "range_spec": {"min": 0.0, "max": 3600.0, "step": 0.01},
+        }
+    )
+
+    assert input_field.range_spec is not None
+    assert input_field.range_spec.min == 0.0
+    assert input_field.range_spec.max == 3600.0
+    assert input_field.range_spec.step == 0.01
 
 
 def test_schema_to_langflow_inputs_invalid_type():

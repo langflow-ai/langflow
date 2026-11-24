@@ -29,6 +29,7 @@ from lfx.utils.concurrency import KeyedMemoryLockManager
 
 if TYPE_CHECKING:
     from lfx.services.base import Service
+    from lfx.services.connection.base import BaseConnectionResolverService
     from lfx.services.factory import ServiceFactory
 
 
@@ -52,6 +53,7 @@ class ServiceManager:
         self.keyed_lock = KeyedMemoryLockManager()
         self.factory_registered = False
         self._plugins_discovered = False
+        self.connection_resolver_fallback: BaseConnectionResolverService | None = None
 
         # Always register settings service
         from lfx.services.settings.factory import SettingsServiceFactory
@@ -266,7 +268,10 @@ class ServiceManager:
 
         # Create the actual service
         self.services[service_name] = self.factories[service_name].create(**dependent_services)
-        self.services[service_name].set_ready()
+        # Protocol-based caches have no readiness lifecycle to initialize.
+        set_ready = getattr(self.services[service_name], "set_ready", None)
+        if callable(set_ready):
+            set_ready()
 
     def _validate_service_creation(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
         """Validate whether the service can be created."""
@@ -283,18 +288,33 @@ class ServiceManager:
             self.services.pop(service_name, None)
             self.get(service_name)
 
-    async def teardown(self) -> None:
-        """Teardown all the services."""
-        for service in list(self.services.values()):
+    async def teardown(self, *, raise_on_error: bool = False) -> None:
+        """Teardown all the services.
+
+        Args:
+            raise_on_error: When True, still attempt every teardown, but re-raise the
+                first error after the table is cleared. Default False logs failures only.
+        """
+        errors: list[tuple[str, Exception]] = []
+        for service in [*self.services.values(), self.connection_resolver_fallback]:
             if service is None:
+                continue
+            # Registered services are duck-typed: the in-memory caches and the Noop
+            # database/transaction services implement plain protocols, not Service, so
+            # they have no teardown at all. Nothing to dispose is not a teardown failure —
+            # calling through would raise AttributeError and, under raise_on_error, abort
+            # a fork-safety teardown over a service that holds nothing.
+            teardown_callable = getattr(service, "teardown", None)
+            if teardown_callable is None:
                 continue
             logger.debug(f"Teardown service {service.name}")
             try:
-                teardown_result = service.teardown()
+                teardown_result = teardown_callable()
                 if asyncio.iscoroutine(teardown_result):
                     await teardown_result
             except Exception as exc:  # noqa: BLE001
                 logger.debug(f"Error in teardown of {service.name}", exc_info=exc)
+                errors.append((service.name, exc))
 
         # Adapter registries own singleton adapter instances and must also be cleaned up.
         try:
@@ -303,9 +323,22 @@ class ServiceManager:
             await teardown_all_adapter_registries()
         except Exception as exc:  # noqa: BLE001
             logger.error(f"Error during adapter registry teardown: {exc}", exc_info=True)
+            errors.append(("adapter_registries", exc))
 
         self.services = {}
+        self.connection_resolver_fallback = None
         self.factories = {}
+        # ``teardown`` empties the factory registry, so the "registered" flag has
+        # to drop too: get_service() re-registers factories only when
+        # are_factories_registered() is False. Leaving it set after a teardown
+        # makes the next lookup skip re-registration and raise
+        # NoFactoryRegisteredError.
+        self.factory_registered = False
+
+        if raise_on_error and errors:
+            names = ", ".join(name for name, _ in errors)
+            msg = f"Service teardown failed for: {names}"
+            raise RuntimeError(msg) from errors[0][1]
 
     @classmethod
     def get_factories(cls) -> list[ServiceFactory]:
@@ -390,17 +423,90 @@ class ServiceManager:
             )
             return
 
+        # Map of service_type → expected base class. Used to reject malformed
+        # entry-point plugins before they take over an authorization-critical
+        # service. Without this check an arbitrary class from an unrelated
+        # PyPI package that happened to register the same entry-point name
+        # would silently replace the OSS implementation.
+        expected_bases: dict[ServiceType, type] = {}
+        try:
+            from lfx.services.authorization.base import BaseAuthorizationService
+
+            expected_bases[ServiceType.AUTHORIZATION_SERVICE] = BaseAuthorizationService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseAuthorizationService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.connection.base import BaseConnectionResolverService
+
+            expected_bases[ServiceType.CONNECTION_RESOLVER_SERVICE] = BaseConnectionResolverService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseConnectionResolverService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+
+            expected_bases[ServiceType.CATALOG_POLICY_SERVICE] = BaseCatalogPolicyService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseCatalogPolicyService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+
+            expected_bases[ServiceType.MODEL_PROVIDER_POLICY_SERVICE] = BaseModelProviderPolicyService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseModelProviderPolicyService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.policy_bundle.base import BasePolicyBundleService
+
+            expected_bases[ServiceType.POLICY_BUNDLE_SERVICE] = BasePolicyBundleService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BasePolicyBundleService unavailable; entry-point validation skipped: {exc}")
+        try:
+            from lfx.services.integration_policy.base import BaseIntegrationPolicyService
+
+            expected_bases[ServiceType.INTEGRATION_POLICY_SERVICE] = BaseIntegrationPolicyService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseIntegrationPolicyService unavailable; entry-point validation skipped: {exc}")
+
         for ep in eps:
             try:
                 service_class = ep.load()
                 # Entry point name should match ServiceType enum value
                 service_type = ServiceType(ep.name)
+                expected_base = expected_bases.get(service_type)
+                if expected_base is not None and not (
+                    isinstance(service_class, type) and issubclass(service_class, expected_base)
+                ):
+                    if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
+                        msg = (
+                            "Connection resolver entry point must subclass "
+                            f"{expected_base.__name__}; refusing to use the environment fallback"
+                        )
+                        raise RuntimeError(msg)
+                    logger.warning(
+                        f"Entry point {ep.name} resolved to {service_class!r}, "
+                        f"which is not a subclass of {expected_base.__name__}. "
+                        f"Skipping registration to avoid silently replacing the "
+                        f"built-in service with an incompatible plugin."
+                    )
+                    continue
                 self.register_service_class(service_type, service_class, override=False)
                 logger.debug(f"Loaded service from entry point: {ep.name}")
+            except RuntimeError as exc:
+                if ep.name == ServiceType.CONNECTION_RESOLVER_SERVICE.value:
+                    raise
+                logger.warning(f"Error loading entry point {ep.name}: {exc}")
             except (ValueError, AttributeError) as exc:
+                if ep.name == ServiceType.CONNECTION_RESOLVER_SERVICE.value:
+                    msg = "Connection resolver entry point failed to load; refusing to use the environment fallback"
+                    raise RuntimeError(msg) from exc
                 logger.warning(f"Failed to load entry point {ep.name}: {exc}")
-            except Exception as exc:  # noqa: BLE001
-                logger.debug(f"Error loading entry point {ep.name}: {exc}")
+            except Exception as exc:
+                # Authz plugin failures are operator-visible — silent
+                # degradation to the OSS pass-through is exactly the kind
+                # of behavior change we want noisy.
+                if ep.name == ServiceType.CONNECTION_RESOLVER_SERVICE.value:
+                    msg = "Connection resolver entry point failed to load; refusing to use the environment fallback"
+                    raise RuntimeError(msg) from exc
+                logger.warning(f"Error loading entry point {ep.name}: {exc}")
 
     def _discover_from_config(self, config_dir: Path) -> None:
         """Discover services from config files (lfx.toml / pyproject.toml)."""
@@ -446,7 +552,77 @@ class ServiceManager:
             object_key=service_key,
         )
         if service_class is None:
+            if service_type == ServiceType.AUTHORIZATION_SERVICE:
+                msg = (
+                    "Configured authorization service could not be loaded; "
+                    "refusing to start with the OSS allow-all fallback"
+                )
+                raise RuntimeError(msg)
+            if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
+                msg = (
+                    "Configured connection resolver service could not be loaded; "
+                    "refusing to use the environment fallback"
+                )
+                raise RuntimeError(msg)
+            if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
+                msg = (
+                    "Configured model provider policy service could not be loaded; "
+                    "refusing to start with the OSS allow-all fallback"
+                )
+                raise RuntimeError(msg)
+            if service_type == ServiceType.POLICY_BUNDLE_SERVICE:
+                msg = (
+                    "Configured policy bundle service could not be loaded; "
+                    "refusing to start with the built-in process-local fallback"
+                )
+                raise RuntimeError(msg)
+            if service_type == ServiceType.INTEGRATION_POLICY_SERVICE:
+                msg = (
+                    "Configured integration policy service could not be loaded; "
+                    "refusing to start with the OSS unrestricted fallback"
+                )
+                raise RuntimeError(msg)
             return
+
+        if service_type == ServiceType.AUTHORIZATION_SERVICE:
+            from lfx.services.authorization.base import BaseAuthorizationService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseAuthorizationService):
+                msg = "Configured authorization service must subclass BaseAuthorizationService"
+                raise RuntimeError(msg)
+        if service_type == ServiceType.CONNECTION_RESOLVER_SERVICE:
+            from lfx.services.connection.base import BaseConnectionResolverService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseConnectionResolverService):
+                msg = "Configured connection resolver service must subclass BaseConnectionResolverService"
+                raise RuntimeError(msg)
+        if service_type == ServiceType.MODEL_PROVIDER_POLICY_SERVICE:
+            from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseModelProviderPolicyService):
+                msg = "Configured model provider policy service must subclass BaseModelProviderPolicyService"
+                raise RuntimeError(msg)
+        if service_type == ServiceType.CATALOG_POLICY_SERVICE:
+            from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseCatalogPolicyService):
+                logger.warning(
+                    "Configured catalog policy service must subclass BaseCatalogPolicyService; "
+                    "keeping the built-in fail-open service"
+                )
+                return
+        if service_type == ServiceType.POLICY_BUNDLE_SERVICE:
+            from lfx.services.policy_bundle.base import BasePolicyBundleService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BasePolicyBundleService):
+                msg = "Configured policy bundle service must subclass BasePolicyBundleService"
+                raise RuntimeError(msg)
+        if service_type == ServiceType.INTEGRATION_POLICY_SERVICE:
+            from lfx.services.integration_policy.base import BaseIntegrationPolicyService
+
+            if not isinstance(service_class, type) or not issubclass(service_class, BaseIntegrationPolicyService):
+                msg = "Configured integration policy service must subclass BaseIntegrationPolicyService"
+                raise RuntimeError(msg)
 
         self.register_service_class(service_type, service_class, override=True)
         logger.debug(f"Registered service from config: {service_key} -> {service_path}")

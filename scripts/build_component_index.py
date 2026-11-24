@@ -13,6 +13,13 @@ from pathlib import Path
 import orjson
 
 
+async def _load_components_for_index() -> dict:
+    """Load components serially so the generated index is reproducible."""
+    from lfx.interface.components import _load_components_dynamically
+
+    return {"components": await _load_components_dynamically(target_modules=None, parallel=False)}
+
+
 def _get_lfx_version():
     """Get the installed lfx version.
 
@@ -76,11 +83,8 @@ def _import_components() -> tuple[dict, int]:
     """
     import asyncio
 
-    from lfx.interface.components import import_langflow_components
-
     try:
-        # Run the async function
-        components_result = asyncio.run(import_langflow_components())
+        components_result = asyncio.run(_load_components_for_index())
         modules_dict = components_result.get("components", {})
         components_count = sum(len(v) for v in modules_dict.values())
         print(f"Discovered {components_count} components across {len(modules_dict)} categories")
@@ -179,7 +183,7 @@ def main():
     # Pretty-print for readable git diffs and resolvable merge conflicts
     print(f"\nWriting formatted index to {output_path}")
     json_bytes = orjson.dumps(index, option=orjson.OPT_SORT_KEYS | orjson.OPT_INDENT_2)
-    output_path.write_text(json_bytes.decode("utf-8"), encoding="utf-8")
+    output_path.write_text(json_bytes.decode("utf-8") + "\n", encoding="utf-8")
 
     print("\nIndex successfully written!")
     print(f"  Version: {index['version']}")

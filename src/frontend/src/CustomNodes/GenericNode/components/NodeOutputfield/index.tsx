@@ -10,8 +10,10 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useShortcutsStore } from "@/stores/shortcuts";
 import type { targetHandleType } from "@/types/flow";
 import ForwardedIconComponent, {
@@ -35,22 +37,26 @@ import {
   logTypeIsError,
   logTypeIsUnknown,
 } from "../../../../utils/utils";
+import { classNameFromType } from "../../../utils/class-name-from-type";
 import HandleRenderComponent from "../handleRenderComponent";
 import OutputComponent from "../OutputComponent";
 import OutputModal from "../outputModal";
 
-const _EyeIcon = memo(
-  ({ hidden, className }: { hidden: boolean; className: string }) => (
-    <IconComponent
-      className={className}
-      strokeWidth={ICON_STROKE_WIDTH}
-      name={hidden ? "EyeOff" : "Eye"}
-    />
-  ),
-);
 const SnowflakeIcon = memo(() => (
   <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
 ));
+
+type InspectButtonProps = {
+  disabled: boolean | undefined;
+  displayOutputPreview: boolean;
+  unknownOutput: boolean | undefined;
+  errorOutput: boolean;
+  isToolMode: boolean;
+  title: string;
+  onClick: () => void;
+  id: string;
+  ariaLabel: string;
+};
 
 const InspectButton = memo(
   forwardRef(
@@ -64,22 +70,15 @@ const InspectButton = memo(
         title,
         onClick,
         id,
-      }: {
-        disabled: boolean | undefined;
-        displayOutputPreview: boolean;
-        unknownOutput: boolean | undefined;
-        errorOutput: boolean;
-        isToolMode: boolean;
-        title: string;
-        onClick: () => void;
-        id: string;
-      },
+        ariaLabel,
+      }: InspectButtonProps,
       ref: React.ForwardedRef<HTMLButtonElement>,
     ) => (
       <Button
         ref={ref}
         disabled={disabled}
-        data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
+        data-testid={`output-inspection-${title.toLowerCase()}-${classNameFromType(id).toLowerCase()}`}
+        aria-label={ariaLabel}
         unstyled
         onClick={onClick}
       >
@@ -104,6 +103,8 @@ const InspectButton = memo(
 );
 InspectButton.displayName = "InspectButton";
 
+export { InspectButton };
+
 const MemoizedOutputComponent = memo(OutputComponent);
 
 function NodeOutputField({
@@ -127,10 +128,13 @@ function NodeOutputField({
   hidden,
   handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
   const edges = useFlowStore((state) => state.edges);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
   const setNode = useFlowStore((state) => state.setNode);
   const setFilterEdge = useFlowStore((state) => state.setFilterEdge);
   const flowPool = useFlowStore((state) => state.flowPool);
@@ -162,7 +166,9 @@ function NodeOutputField({
     () => ({
       displayOutputPreview:
         !!flowPool[flowPoolId] &&
-        logHasMessage(flowPoolNode?.data, internalOutputName),
+        (logHasMessage(flowPoolNode?.data, internalOutputName) ||
+          (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) >
+            0),
       unknownOutput: logTypeIsUnknown(flowPoolNode?.data, internalOutputName),
       errorOutput: logTypeIsError(flowPoolNode?.data, internalOutputName),
     }),
@@ -170,10 +176,17 @@ function NodeOutputField({
   );
 
   const emptyOutput = useMemo(() => {
-    return Object.keys(flowPoolNode?.data?.outputs ?? {})?.every(
+    const hasLogs =
+      (flowPoolNode?.data?.logs?.[internalOutputName ?? ""]?.length ?? 0) > 0;
+    if (hasLogs) return false;
+    return Object.keys(flowPoolNode?.data?.outputs ?? {}).every(
       (key) => flowPoolNode?.data?.outputs[key]?.message?.length === 0,
     );
-  }, [flowPoolNode?.data?.outputs]);
+  }, [
+    flowPoolNode?.data?.outputs,
+    flowPoolNode?.data?.logs,
+    internalOutputName,
+  ]);
 
   const disabledOutput = useMemo(
     () => edges.some((edge) => edge.sourceHandle === scapedJSONStringfy(id)),
@@ -194,6 +207,7 @@ function NodeOutputField({
 
   const handleUpdateOutputHide = useCallback(
     (value?: boolean) => {
+      if (isReadOnly) return;
       setNode(data.id, (oldNode) => {
         if (oldNode.type !== "genericNode") return oldNode;
         const newNode = cloneDeep(oldNode);
@@ -213,14 +227,19 @@ function NodeOutputField({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, index, setNode, updateNodeInternals],
+    [data.id, index, isReadOnly, setNode, updateNodeInternals],
   );
 
   useEffect(() => {
     const outputHasGroupOutputsFalse =
       data.node?.outputs?.[index]?.group_outputs === false;
 
-    if (disabledOutput && hidden && !outputHasGroupOutputsFalse) {
+    if (
+      !isReadOnly &&
+      disabledOutput &&
+      hidden &&
+      !outputHasGroupOutputsFalse
+    ) {
       handleUpdateOutputHide(false);
     }
   }, [
@@ -229,6 +248,7 @@ function NodeOutputField({
     hidden,
     data.node?.outputs,
     index,
+    isReadOnly,
   ]);
 
   const [openOutputModal, setOpenOutputModal] = useState(false);
@@ -305,9 +325,9 @@ function NodeOutputField({
           colors={colors}
           setFilterEdge={setFilterEdge}
           showNode={showNode}
-          testIdComplement={`${data?.type?.toLowerCase()}-${
-            showNode ? "shownode" : "noshownode"
-          }`}
+          testIdComplement={`${classNameFromType(
+            data?.type ?? "",
+          ).toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
           colorName={loopInputColorName}
         />
       );
@@ -337,9 +357,9 @@ function NodeOutputField({
         colors={colors}
         setFilterEdge={setFilterEdge}
         showNode={showNode}
-        testIdComplement={`${data?.type?.toLowerCase()}-${
-          showNode ? "shownode" : "noshownode"
-        }`}
+        testIdComplement={`${classNameFromType(
+          data?.type ?? "",
+        ).toLowerCase()}-${showNode ? "shownode" : "noshownode"}`}
         colorName={
           data.node?.outputs?.[index].allows_loop
             ? loopInputColorName
@@ -422,9 +442,9 @@ function NodeOutputField({
             content={
               displayOutputPreview
                 ? unknownOutput || emptyOutput
-                  ? "Output can't be displayed"
-                  : "Inspect output"
-                : "Please build the component first"
+                  ? t("node.outputCantBeDisplayed")
+                  : t("node.inspectOutput")
+                : t("node.buildComponentFirst")
             }
             styleClasses="z-40"
           >
@@ -445,6 +465,13 @@ function NodeOutputField({
                   title={title}
                   onClick={() => {}}
                   id={data?.type}
+                  ariaLabel={
+                    displayOutputPreview
+                      ? unknownOutput || emptyOutput
+                        ? t("node.outputCantBeDisplayed")
+                        : t("node.inspectOutput")
+                      : t("node.buildComponentFirst")
+                  }
                 />
               </OutputModal>
               {looping && (

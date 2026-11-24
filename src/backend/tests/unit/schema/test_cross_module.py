@@ -95,6 +95,28 @@ class TestDuckTypingMessage:
         assert isinstance(lfx_message, LfxData)
 
 
+class TestContentBlockExcludeUnsetCrossModule:
+    """langflow and lfx ``ContentBlock`` copies must share the ``exclude_unset`` contract.
+
+    Both ``__init__`` overrides mark only the ``type`` discriminator as set, so
+    a partial patch like ``ContentBlock(title="...")`` dumps just the fields the
+    caller touched. Marking every field set (the prior langflow-base behavior)
+    re-emitted defaulted ``duration`` / ``header`` / ``contents`` / ``media_url``
+    and clobbered persisted values on the ``aupdate_messages`` merge.
+    """
+
+    def test_langflow_content_block_exclude_unset_matches_lfx(self):
+        from langflow.schema.content_types import ContentBlock as LangflowContentBlock
+        from lfx.schema.content_types import ContentBlock as LfxContentBlock
+
+        langflow_dump = LangflowContentBlock(title="new", allow_markdown=False).model_dump(exclude_unset=True)
+        lfx_dump = LfxContentBlock(title="new", allow_markdown=False).model_dump(exclude_unset=True)
+
+        assert langflow_dump == lfx_dump
+        assert langflow_dump["type"] == "group"
+        assert langflow_dump.keys() <= {"type", "title", "allow_markdown"}
+
+
 class TestDuckTypingWithInputs:
     """Tests for duck-typing with input validation."""
 

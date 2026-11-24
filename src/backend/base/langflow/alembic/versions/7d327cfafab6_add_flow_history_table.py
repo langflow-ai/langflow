@@ -38,7 +38,13 @@ def upgrade() -> None:
             sa.ForeignKeyConstraint(["user_id"], ["user.id"], ondelete="SET NULL"),
             sa.PrimaryKeyConstraint("id"),
             sa.UniqueConstraint("flow_id", "version_number", name="unique_flow_version_number"),
-            sa.CheckConstraint("version_number >= 1", name="check_version_number_positive"),
+            # op.f() marks the name final so env.py's ck_%(table_name)s_%(constraint_name)s convention
+            # does not re-prefix it; the model declares the same name via conv(). Databases created
+            # before this fix carry one of two legacy names instead and are intentionally left alone:
+            #   - check_version_number_positive (fresh installs: create_all ran without the convention)
+            #   - ck_flow_version_check_version_number_positive (upgrades: op.create_table under it)
+            # Any later migration that drops or looks up this constraint must accept all three names.
+            sa.CheckConstraint("version_number >= 1", name=op.f("ck_flow_version_version_number_positive")),
         )
         op.create_index(op.f("ix_flow_version_flow_id"), "flow_version", ["flow_id"])
         op.create_index(op.f("ix_flow_version_user_id"), "flow_version", ["user_id"])

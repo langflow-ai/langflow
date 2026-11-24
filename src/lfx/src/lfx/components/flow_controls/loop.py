@@ -28,8 +28,8 @@ class LoopComponent(Component):
         HandleInput(
             name="data",
             display_name="Inputs",
-            info="The initial DataFrame to iterate over.",
-            input_types=["DataFrame", "Table"],
+            info="Data to iterate over. Accepts DataFrame, Table, Data, or Message.",
+            input_types=["DataFrame", "Table", "Data", "Message"],
         ),
     ]
 
@@ -38,15 +38,26 @@ class LoopComponent(Component):
             display_name="Item",
             name="item",
             method="item_output",
+            types=["Data"],
             allows_loop=True,
             loop_types=["Message"],
             group_outputs=True,
         ),
-        Output(display_name="Done", name="done", method="done_output", group_outputs=True),
+        Output(
+            display_name="Done",
+            name="done",
+            method="done_output",
+            types=["DataFrame", "Table"],
+            group_outputs=True,
+        ),
     ]
 
     def initialize_data(self) -> None:
-        """Initialize the data list, context index, and aggregated list."""
+        """Initialize the data list and context index.
+
+        Seeds the input list and index counter in ctx. The aggregated results
+        are owned by `_iterate`, which writes them once the subgraph finishes.
+        """
         if self.ctx.get(f"{self._id}_initialized", False):
             return
 
@@ -58,7 +69,6 @@ class LoopComponent(Component):
             {
                 f"{self._id}_data": data_list,
                 f"{self._id}_index": 0,
-                f"{self._id}_aggregated": [],
                 f"{self._id}_initialized": True,
             }
         )
@@ -68,7 +78,34 @@ class LoopComponent(Component):
         return convert_to_data(message, auto_parse=False)
 
     def _validate_data(self, data):
-        """Validate and return a list of Data objects."""
+        """Validate and normalize the input to a flat list of Data objects.
+
+        Coerces each accepted input type into Data so `validate_data_input`
+        always receives a homogeneous payload:
+        - Message -> a clean Data via `_convert_message_to_data` (just the
+          message payload, not the full envelope). `Message` subclasses
+          `Data`, so without this it would slip through as a single Data
+          carrying all of the message metadata.
+        - DataFrame/Table -> expanded to its rows.
+        - Data / list[Data] -> passed through unchanged.
+
+        Lists are normalized item-by-item so a mixed `[Message, DataFrame,
+        Data]` still yields `list[Data]` instead of being rejected as a
+        mixed-type list (`validate_data_input` requires every list item to be
+        a Data, and DataFrame is not a Data subclass).
+        """
+        if isinstance(data, Message):
+            data = self._convert_message_to_data(data)
+        elif isinstance(data, list):
+            normalized: list = []
+            for item in data:
+                if isinstance(item, Message):
+                    normalized.append(self._convert_message_to_data(item))
+                elif isinstance(item, DataFrame):
+                    normalized.extend(item.to_data_list())
+                else:
+                    normalized.append(item)
+            data = normalized
         return validate_data_input(data)
 
     def get_loop_body_vertices(self) -> set[str]:
@@ -143,43 +180,90 @@ class LoopComponent(Component):
             start_edge=start_edge,
             end_vertex_id=end_vertex_id,
             event_manager=event_manager,
+            user_id=self.user_id,
         )
 
-    def item_output(self) -> Data:
-        """Output is no longer used - loop executes internally now.
+    async def _iterate(self) -> list[Data]:
+        """Run the loop body subgraph once and cache the aggregated results.
 
-        This method is kept for backward compatibility but does nothing.
-        The actual loop execution happens in done_output().
+        Both `item_output` and `done_output` may be called during the same
+        vertex build (if both outputs have downstream consumers), so this
+        helper is idempotent: it caches the aggregated results in ctx under
+        `{self._id}_aggregated` and guards re-entry with `{self._id}_iterated`.
+        If a prior call raised, the exception is cached in
+        `{self._id}_iteration_error` and re-raised on subsequent calls so
+        repeat invocations surface the same failure instead of silently
+        returning empty data or re-running the subgraph.
+
+        Production constructs a fresh Graph per request (via
+        `Graph.from_payload`), so `ctx` is effectively per-run and the
+        cached `_iterated` flag does not leak across executions.
         """
-        self.stop("item")
-        return Data(text="")
+        if self.ctx.get(f"{self._id}_iterated", False):
+            cached_error = self.ctx.get(f"{self._id}_iteration_error")
+            if cached_error is not None:
+                raise cached_error
+            return self.ctx.get(f"{self._id}_aggregated", [])
 
-    async def done_output(self) -> DataFrame:
-        """Execute the loop body for all items and return aggregated results.
+        import time
 
-        This is now the main execution point for the loop. It:
-        1. Gets the data list to iterate over
-        2. Executes the loop body as an isolated subgraph for each item
-        3. Returns the aggregated results
-
-        Args:
-            event_manager: Optional event manager for UI event emission
-        """
-        self.initialize_data()
-
-        # Get data list
-        data_list = self.ctx.get(f"{self._id}_data", [])
-
-        if not data_list:
-            return DataFrame([])
-
-        # Execute loop body for all items
+        started_at = time.perf_counter()
         try:
+            self.initialize_data()
+            data_list = self.ctx.get(f"{self._id}_data", [])
+            self.log(f"Starting loop over {len(data_list)} item(s)", name="Start")
+
+            if not data_list:
+                self.update_ctx({f"{self._id}_aggregated": [], f"{self._id}_iterated": True})
+                self.log("No items to iterate, skipping loop body", name="Skipped")
+                return []
+
             aggregated_results = await self.execute_loop_body(data_list, event_manager=self._event_manager)
-            return DataFrame(aggregated_results)
-        except Exception as e:
-            # Log error and return empty DataFrame
+        except Exception as exc:
             from lfx.log.logger import logger
 
-            await logger.aerror(f"Error executing loop body: {e}")
+            elapsed = time.perf_counter() - started_at
+            self.log(f"Loop failed after {elapsed:.3f}s: {exc}", name="Error")
+            await logger.aexception(f"Loop {self._id} failed while executing loop body")
+            self.update_ctx({f"{self._id}_iteration_error": exc, f"{self._id}_iterated": True})
             raise
+
+        elapsed = time.perf_counter() - started_at
+        self.log(
+            f"Completed {len(aggregated_results)} iteration(s) in {elapsed:.3f}s",
+            name="Complete",
+        )
+        self.update_ctx({f"{self._id}_aggregated": aggregated_results, f"{self._id}_iterated": True})
+        return aggregated_results
+
+    async def item_output(self) -> Data:
+        """Display the inputs dispatched to the loop body.
+
+        Also triggers the iteration (idempotent) when `done` has no
+        downstream consumer, so the loop still runs if only the Item
+        output is connected. When `done` IS connected we leave iteration
+        to `done_output`. The `item` branch is stopped in both cases so
+        downstream vertices aren't executed by the outer graph (the loop
+        body runs internally via the subgraph in `_iterate`).
+
+        Returns a `Data` envelope so the outer item edge remains
+        compatible with Data-typed consumers in the loop body. The
+        wrapped payload exposes the iterated rows for inspection.
+        """
+        self.stop("item")
+        if self._vertex is not None and "done" not in self._vertex.edges_source_names:
+            await self._iterate()
+        data_list = self.ctx.get(f"{self._id}_data", [])
+        return Data(data={"count": len(data_list), "items": [d.data for d in data_list]})
+
+    async def done_output(self) -> DataFrame:
+        """Return the aggregated results from the loop iteration.
+
+        Triggers the iteration if it hasn't run yet (for example when only
+        `done` is connected and `item_output` never executed). In the common
+        case where `item` is also connected, `_iterate` has already cached
+        the aggregated results in ctx and this call is a cheap read, so the
+        order in which the two outputs are evaluated does not matter.
+        """
+        aggregated_results = await self._iterate()
+        return DataFrame(aggregated_results)

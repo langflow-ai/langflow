@@ -1,5 +1,7 @@
 import { api } from "@/controllers/API/api";
 import type { MCPTransport } from "@/controllers/API/queries/mcp/use-patch-install-mcp";
+import { useUtilityStore } from "@/stores/utilityStore";
+import { BASENAME } from "../config-constants";
 
 type ComposerConnectionOptions = {
   useComposer?: boolean;
@@ -26,7 +28,12 @@ export const customGetMCPUrl = (
     }
   }
 
-  const apiHost = api.defaults.baseURL || window.location.origin;
+  const configBaseUrl = useUtilityStore.getState().mcpBaseUrl;
+  const apiHost = (
+    configBaseUrl ||
+    api.defaults.baseURL ||
+    `${window.location.origin}${BASENAME}`
+  ).replace(/\/+$/, "");
   const baseUrl = `${apiHost}/api/v1/mcp/project/${projectId}`;
   return transport === "streamablehttp"
     ? `${baseUrl}/streamable`

@@ -1,22 +1,10 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "refresh dropdown list",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
     await page.goto("/");
     await awaitBootstrapTest(page);
 
@@ -27,10 +15,6 @@ test(
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
-    });
-
-    await initialGPTsetup(page, {
-      skipAdjustScreenView: true,
     });
 
     await page.waitForTimeout(3000);

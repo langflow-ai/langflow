@@ -1,4 +1,3 @@
-from pathlib import Path
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -9,6 +8,6 @@ class UploadFileResponse(BaseModel):
 
     id: UUID
     name: str
-    path: Path
+    path: str
     size: int
     provider: str | None = None

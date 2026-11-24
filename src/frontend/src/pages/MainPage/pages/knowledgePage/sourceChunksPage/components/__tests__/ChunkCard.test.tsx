@@ -1,6 +1,5 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -82,6 +81,123 @@ describe("ChunkCard", () => {
       );
 
       jest.useRealTimers();
+    });
+  });
+
+  describe("Metadata rendering", () => {
+    it("renders the file_name from metadata", () => {
+      render(
+        <ChunkCard
+          chunk={makeChunk({ metadata: { file_name: "Desktop Guide.pdf" } })}
+          index={1}
+          onCopy={jest.fn()}
+        />,
+      );
+      expect(screen.getByTestId("chunk-card-file-name")).toHaveTextContent(
+        "Desktop Guide.pdf",
+      );
+    });
+
+    it("renders user-supplied tags from source_metadata as chips", () => {
+      const metadata = {
+        file_name: "doc.pdf",
+        source_metadata: JSON.stringify({
+          file_name: "doc.pdf",
+          chunk_index: 0,
+          year: "2020",
+          dept: "engineering",
+        }),
+      };
+      render(
+        <ChunkCard
+          chunk={makeChunk({ metadata })}
+          index={1}
+          onCopy={jest.fn()}
+        />,
+      );
+      expect(
+        screen.getByTestId("chunk-card-metadata-tag-year"),
+      ).toHaveTextContent("year:");
+      expect(
+        screen.getByTestId("chunk-card-metadata-tag-year"),
+      ).toHaveTextContent("2020");
+      expect(
+        screen.getByTestId("chunk-card-metadata-tag-dept"),
+      ).toHaveTextContent("engineering");
+    });
+
+    it("hides reserved ingestion-internal keys from the tag chips", () => {
+      const metadata = {
+        source_metadata: JSON.stringify({
+          file_name: "doc.pdf",
+          chunk_index: 5,
+          source: "file_upload",
+          job_id: "abc-123",
+        }),
+      };
+      render(
+        <ChunkCard
+          chunk={makeChunk({ metadata })}
+          index={1}
+          onCopy={jest.fn()}
+        />,
+      );
+      expect(
+        screen.queryByTestId("chunk-card-metadata-tags"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("joins array-valued tags with commas in a single chip", () => {
+      const metadata = {
+        source_metadata: JSON.stringify({
+          tags: ["urgent", "review"],
+        }),
+      };
+      render(
+        <ChunkCard
+          chunk={makeChunk({ metadata })}
+          index={1}
+          onCopy={jest.fn()}
+        />,
+      );
+      expect(
+        screen.getByTestId("chunk-card-metadata-tag-tags"),
+      ).toHaveTextContent("urgent, review");
+    });
+
+    it("handles malformed source_metadata JSON without crashing", () => {
+      const metadata = {
+        file_name: "doc.pdf",
+        source_metadata: "{not-json",
+      };
+      render(
+        <ChunkCard
+          chunk={makeChunk({ metadata })}
+          index={1}
+          onCopy={jest.fn()}
+        />,
+      );
+      // file_name still renders from the top-level metadata; tag list is empty.
+      expect(screen.getByTestId("chunk-card-file-name")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("chunk-card-metadata-tags"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("renders nothing metadata-related when metadata is null", () => {
+      render(
+        <ChunkCard
+          chunk={makeChunk({ metadata: null })}
+          index={1}
+          onCopy={jest.fn()}
+        />,
+      );
+      expect(
+        screen.queryByTestId("chunk-card-file-name"),
+      ).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("chunk-card-metadata-tags"),
+      ).not.toBeInTheDocument();
     });
   });
 });

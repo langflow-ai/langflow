@@ -1,13 +1,15 @@
 import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StickToBottom } from "use-stick-to-bottom";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import { TextEffectPerChar } from "@/components/ui/textAnimation";
 import CustomChatInput from "@/customization/components/custom-chat-input";
-import { ENABLE_IMAGE_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useCustomUseFileHandler from "@/customization/hooks/use-custom-use-file-handler";
 import { track } from "@/customization/utils/analytics";
 import { useGetFlowId } from "@/modals/IOModal/hooks/useGetFlowId";
+import { ResponseCompleteStatus } from "@/shared/components/response-complete-status";
+import { useResponseCompleteCue } from "@/shared/hooks/use-response-complete-cue";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useMessagesStore } from "@/stores/messagesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -41,6 +43,7 @@ export default function ChatView({
   playgroundPage,
   sidebarOpen,
 }: chatViewProps): JSX.Element {
+  const { t } = useTranslation();
   const inputs = useFlowStore((state) => state.inputs);
   const realFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const currentFlowId = useGetFlowId();
@@ -85,12 +88,13 @@ export default function ChatView({
             files = [];
           }
         }
+
         return {
           isSend: message.sender === "User",
           message: message.text,
           sender_name: message.sender_name,
           files: files,
-          id: message.id,
+          id: message.id || "",
           timestamp: message.timestamp,
           session: message.session_id,
           edit: message.edit,
@@ -115,6 +119,8 @@ export default function ChatView({
     setChatHistory(finalChatHistory);
   }, [messages, visibleSession]);
 
+  const responseCue = useResponseCompleteCue(isBuilding, chatHistory);
+
   const ref = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -134,7 +140,10 @@ export default function ChatView({
       });
   }
 
-  const { files, setFiles, handleFiles } = useCustomUseFileHandler(realFlowId);
+  const { files, setFiles, handleFiles } = useCustomUseFileHandler(
+    realFlowId,
+    !!playgroundPage,
+  );
   const [isDragging, setIsDragging] = useState(false);
 
   const { dragOver, dragEnter, dragLeave } = useDragAndDrop(
@@ -143,10 +152,6 @@ export default function ChatView({
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!ENABLE_IMAGE_ON_PLAYGROUND && playgroundPage) {
-      e.stopPropagation();
-      return;
-    }
     e.preventDefault();
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
@@ -178,14 +183,24 @@ export default function ChatView({
       initial="instant"
     >
       <StickToBottom.Content className="flex flex-col min-h-full ">
-        <div className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]">
+        {/* aria-live="off" neutralizes role="log"'s implicit politeness: React
+            remounts earlier messages on send (lastMessage flips), which a live
+            list region re-announces as additions — Safari/VoiceOver read the
+            whole history on every send (LE-2041 QA). The completion cue is
+            announced solely by ResponseCompleteStatus below. */}
+        <div
+          className="flex flex-col flex-grow place-self-center w-5/6 max-w-[768px]"
+          role="log"
+          aria-live="off"
+          aria-label={t("chat.messagesRegionLabel")}
+        >
           {chatHistory &&
             (isBuilding || chatHistory?.length > 0 ? (
               chatHistory?.map((chat, index) => (
                 <MemoizedChatMessage
                   chat={chat}
                   lastMessage={chatHistory.length - 1 === index}
-                  key={`${chat.id}-${index}`}
+                  key={chat.id}
                   updateChat={updateChat}
                   closeChat={closeChat}
                   playgroundPage={playgroundPage}
@@ -195,8 +210,8 @@ export default function ChatView({
               <div className="flex flex-grow w-full flex-col items-center justify-center">
                 <div className="flex flex-col items-center justify-center gap-4 p-8">
                   <LangflowLogo
-                    title="Langflow logo"
                     className="h-10 w-10 scale-[1.5]"
+                    aria-hidden="true"
                   />
                   <div className="flex flex-col items-center justify-center">
                     <h3 className="mt-2 pb-2 text-2xl font-semibold text-primary">
@@ -228,6 +243,11 @@ export default function ChatView({
             flowRunningSkeletonMemo}
         </div>
       </StickToBottom.Content>
+      <ResponseCompleteStatus
+        completedCount={responseCue.completedCount}
+        completedText={responseCue.completedText}
+        isAnnouncing={responseCue.isAnnouncing}
+      />
       <SafariScrollFix />
 
       <div className="m-auto w-full max-w-[768px] md:w-5/6">

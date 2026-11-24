@@ -7,6 +7,8 @@ interface VersionPreviewState {
   previewLabel: string | null;
   /** The version entry ID currently being previewed, or null for current draft. */
   previewId: string | null;
+  /** Optional description of the previewed version. */
+  previewDescription: string | null;
   /** True while the sidebar is fetching a version entry to display. */
   isPreviewLoading: boolean;
   /** True after a version was activated via the restore hook. The sidebar
@@ -18,6 +20,7 @@ interface VersionPreviewState {
     edges: EdgeType[],
     label: string,
     id?: string | null,
+    description?: string | null,
   ) => void;
   clearPreview: () => void;
 }
@@ -27,15 +30,17 @@ const useVersionPreviewStore = create<VersionPreviewState>((set) => ({
   previewEdges: null,
   previewLabel: null,
   previewId: null,
+  previewDescription: null,
   isPreviewLoading: false,
   didRestore: false,
   setPreviewLoading: (loading) => set({ isPreviewLoading: loading }),
-  setPreview: (nodes, edges, label, id = null) =>
+  setPreview: (nodes, edges, label, id = null, description = null) =>
     set({
       previewNodes: nodes,
       previewEdges: edges,
       previewLabel: label,
       previewId: id,
+      previewDescription: description,
     }),
   clearPreview: () =>
     set({
@@ -43,6 +48,7 @@ const useVersionPreviewStore = create<VersionPreviewState>((set) => ({
       previewEdges: null,
       previewLabel: null,
       previewId: null,
+      previewDescription: null,
       isPreviewLoading: false,
       // NOTE: didRestore is intentionally NOT reset here. It is read and
       // reset by the sidebar unmount cleanup, which runs after clearPreview.

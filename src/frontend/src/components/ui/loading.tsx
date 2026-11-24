@@ -17,6 +17,8 @@ export const Loading = ({ size = 24, ...props }: LoadingProps) => (
     strokeLinecap="round"
     strokeLinejoin="round"
     className="feather feather-circle"
+    aria-hidden={props["aria-label"] ? undefined : true}
+    focusable={props["aria-label"] ? undefined : false}
     {...props}
     data-testid="loading-icon"
   >

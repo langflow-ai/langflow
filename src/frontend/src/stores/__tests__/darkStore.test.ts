@@ -257,4 +257,27 @@ describe("useDarkStore", () => {
       }
     });
   });
+
+  describe("refreshDiscordCount", () => {
+    // jest.setup.js mocks darkStore globally; these assert the real store.
+    const { useDarkStore: realDarkStore } =
+      jest.requireActual<typeof import("../darkStore")>("../darkStore");
+
+    it("fetches while no count is loaded", () => {
+      mockGetDiscordCount.mockResolvedValue(500);
+      realDarkStore.setState({ discordCount: 0 });
+
+      realDarkStore.getState().refreshDiscordCount();
+
+      expect(mockGetDiscordCount).toHaveBeenCalledTimes(1);
+    });
+
+    it("skips the request once a count is loaded", () => {
+      realDarkStore.setState({ discordCount: 500 });
+
+      realDarkStore.getState().refreshDiscordCount();
+
+      expect(mockGetDiscordCount).not.toHaveBeenCalled();
+    });
+  });
 });

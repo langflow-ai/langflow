@@ -1,4 +1,6 @@
-export function base64ToFloat32Array(base64String: string): Float32Array {
+export function base64ToFloat32Array(
+  base64String: string,
+): Float32Array<ArrayBuffer> {
   const binaryString = atob(base64String);
   const pcmData = new Int16Array(binaryString.length / 2);
 

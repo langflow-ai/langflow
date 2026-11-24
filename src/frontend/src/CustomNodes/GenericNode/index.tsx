@@ -2,8 +2,14 @@ import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
+import {
+  blockedStopsExecution,
+  isBlockedByCatalogPolicy,
+} from "@/CustomNodes/helpers/check-code-validity";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import UpdateComponentModal from "@/modals/updateComponentModal";
@@ -14,10 +20,14 @@ import { ICON_STROKE_WIDTH } from "../../constants/constants";
 import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarComponent";
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
-import useFlowStore from "../../stores/flowStore";
+import useFlowStore, {
+  completeNodeUpdate,
+  registerNodeUpdate,
+} from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
+import { useUtilityStore } from "../../stores/utilityStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import type { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
@@ -47,18 +57,26 @@ const _HiddenOutputsButton = memo(
   }: {
     showHiddenOutputs: boolean;
     onClick: () => void;
-  }) => (
-    <Button
-      unstyled
-      className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
-      onClick={onClick}
-    >
-      <ForwardedIconComponent
-        name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
-        className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
-      />
-    </Button>
-  ),
+  }) => {
+    const { t } = useTranslation();
+    return (
+      <Button
+        unstyled
+        className="group flex h-[1.25rem] w-[1.25rem] items-center justify-center rounded-full border bg-muted hover:text-foreground"
+        onClick={onClick}
+        aria-label={
+          showHiddenOutputs
+            ? t("flow.tooltipHiddenOutputsCollapse")
+            : t("flow.tooltipHiddenOutputsExpand")
+        }
+      >
+        <ForwardedIconComponent
+          name={showHiddenOutputs ? "ChevronsDownUp" : "ChevronsUpDown"}
+          className="h-3 w-3 text-placeholder-foreground group-hover:text-foreground"
+        />
+      </Button>
+    );
+  },
 );
 
 function GenericNode({
@@ -70,6 +88,7 @@ function GenericNode({
   xPos?: number;
   yPos?: number;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [borderColor, setBorderColor] = useState<string>("");
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [showHiddenOutputs, setShowHiddenOutputs] = useState(false);
@@ -92,6 +111,15 @@ function GenericNode({
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
   const removeDismissedNodes = useFlowStore(
     (state) => state.removeDismissedNodes,
+  );
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
+
+  const blockedComponentTypes = useUtilityStore(
+    (state) => state.blockedComponentTypes,
+  );
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
   );
 
   const dismissedNodesLegacy = useFlowStore(
@@ -117,10 +145,17 @@ function GenericNode({
     return null;
   }, []);
 
-  const { mutate: validateComponentCode } = usePostValidateComponentCode();
+  const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
 
   const [editNameDescription, toggleEditNameDescription, set] =
     useAlternate(false);
+
+  useEffect(() => {
+    if (isReadOnly) {
+      set(false);
+      setOpenUpdateModal(false);
+    }
+  }, [isReadOnly, set]);
 
   const componentUpdate = useFlowStore(
     useShallow((state: FlowStoreType) =>
@@ -130,10 +165,12 @@ function GenericNode({
 
   const {
     outdated: isOutdated,
+    blocked: isBlocked,
     breakingChange: hasBreakingChange,
     userEdited: isUserEdited,
   } = componentUpdate ?? {
     outdated: false,
+    blocked: false,
     breakingChange: false,
     userEdited: false,
   };
@@ -149,60 +186,83 @@ function GenericNode({
     updateNodeInternals(data.id);
   }, [data.node.template]);
 
-  if (!data.node!.template) {
+  useEffect(() => {
+    if (data.node?.template) return;
+
     setErrorData({
-      title: `Error in component ${data.node!.display_name}`,
+      title: t("node.errorNoTemplate", { name: data.node?.display_name }),
       list: [
-        `The component ${data.node!.display_name} has no template.`,
-        `Please contact the developer of the component to fix this issue.`,
+        t("node.errorNoTemplateDetail", { name: data.node?.display_name }),
+        t("node.errorNoTemplateContact"),
       ],
     });
-    takeSnapshot();
-    deleteNode(data.id);
-  }
+    if (!isReadOnly) {
+      takeSnapshot();
+      deleteNode(data.id);
+    }
+  }, [
+    data.id,
+    data.node?.display_name,
+    data.node?.template,
+    deleteNode,
+    isReadOnly,
+    setErrorData,
+    t,
+    takeSnapshot,
+  ]);
 
   const handleUpdateCode = useCallback(
-    (confirmed: boolean = false) => {
+    async (confirmed: boolean = false): Promise<void> => {
+      if (isReadOnly) return;
       if (!confirmed && hasBreakingChange) {
         setOpenUpdateModal(true);
         return;
       }
-      setLoadingUpdate(true);
-      takeSnapshot();
 
       const thisNodeTemplate = templates[data.type]?.template;
-      if (!thisNodeTemplate?.code) return;
+      if (!thisNodeTemplate?.code || !data.node) {
+        setErrorData({
+          title: t("node.errorUpdatingCode"),
+          list: [
+            t("node.errorUpdatingCodeDetail"),
+            t("node.errorUpdatingCodeReport"),
+          ],
+        });
+        throw new Error(`Unable to update component ${data.id}`);
+      }
 
       const currentCode = thisNodeTemplate.code.value;
-      if (data.node) {
-        validateComponentCode(
-          { code: currentCode, frontend_node: data.node },
-          {
-            onSuccess: ({ data: resData, type }) => {
-              if (resData && type && updateNodeCode) {
-                const newNode = processNodeAdvancedFields(
-                  resData,
-                  edges,
-                  data.id,
-                );
-                updateNodeCode(newNode, currentCode, "code", type);
-                removeDismissedNodes([data.id]);
-                setLoadingUpdate(false);
-              }
-            },
-            onError: (error) => {
-              setErrorData({
-                title: "Error updating Component code",
-                list: [
-                  "There was an error updating the Component.",
-                  "If the error persists, please report it on our Discord or GitHub.",
-                ],
-              });
-              console.error(error);
-              setLoadingUpdate(false);
-            },
-          },
-        );
+      setLoadingUpdate(true);
+      takeSnapshot();
+      registerNodeUpdate(data.id);
+
+      try {
+        const validation = await validateComponentCode({
+          code: currentCode,
+          frontend_node: data.node,
+        });
+        if (!validation) return;
+        const { data: resData, type } = validation;
+        if (!resData || !type) {
+          throw new Error(`Validation returned no update for ${data.id}`);
+        }
+
+        const newNode = processNodeAdvancedFields(resData, edges, data.id);
+        updateNodeCode(newNode, currentCode, "code", type);
+        removeDismissedNodes([data.id]);
+      } catch (error) {
+        setErrorData({
+          title: t("node.errorUpdatingCode"),
+          list: [
+            t("node.errorUpdatingCodeDetail"),
+            t("node.errorUpdatingCodeReport"),
+          ],
+        });
+        console.error(error);
+        throw error;
+      } finally {
+        setLoadingUpdate(false);
+        completeNodeUpdate(data.id);
       }
     },
     [
@@ -214,12 +274,15 @@ function GenericNode({
       validateComponentCode,
       setErrorData,
       takeSnapshot,
+      isReadOnly,
+      removeDismissedNodes,
+      t,
     ],
   );
 
   const handleUpdateCodeWShortcut = useCallback(() => {
     if (isOutdated && selected) {
-      handleUpdateCode();
+      void handleUpdateCode().catch(() => undefined);
     }
   }, [isOutdated, selected, handleUpdateCode]);
 
@@ -274,7 +337,8 @@ function GenericNode({
   );
 
   const handleSelectOutput = useCallback(
-    (output) => {
+    (output: OutputFieldType | null) => {
+      if (isReadOnly || !output) return;
       setSelectedOutput(output);
 
       setEdges((eds) => {
@@ -330,7 +394,7 @@ function GenericNode({
       });
       updateNodeInternals(data.id);
     },
-    [data.id, setNode, setEdges, updateNodeInternals],
+    [data.id, isReadOnly, setNode, setEdges, updateNodeInternals],
   );
 
   useEffect(() => {
@@ -340,10 +404,27 @@ function GenericNode({
         0) <= 1
     )
       return;
-    handleSelectOutput(
-      data.node?.outputs?.find((output) => output.selected) || null,
-    );
+    const defaultOutput =
+      data.node?.outputs?.find((output) => output.selected) ??
+      data.node?.outputs?.find((output) => !output.group_outputs) ??
+      null;
+    handleSelectOutput(defaultOutput);
   }, [data.node?.outputs, data?.selected_output, handleSelectOutput]);
+
+  // Sync local `selectedOutput` state when `data.selected_output` is mutated
+  // from outside the component (e.g. the agentic flow_builder updating the
+  // dropdown after wiring a non-default output). Without this the local state
+  // stays at the initial value captured by `useState(...)` and the dropdown
+  // never reflects programmatic changes.
+  useEffect(() => {
+    const newSelected =
+      data.node?.outputs?.find(
+        (output) => output.name === data?.selected_output,
+      ) || null;
+    if (newSelected?.name !== selectedOutput?.name) {
+      setSelectedOutput(newSelected);
+    }
+  }, [data?.selected_output, data.node?.outputs, selectedOutput?.name]);
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);
@@ -361,9 +442,37 @@ function GenericNode({
 
   const rightClickedNodeId = useFlowStore((state) => state.rightClickedNodeId);
 
+  // A node whose template has gone missing is always surfaced. Previously this
+  // only happened while custom components were disabled, so a component an
+  // administrator removed from the catalog left the node looking healthy until
+  // the flow was run.
+  // A user's own custom component has no template either, so the banner only
+  // treats a missing one as a problem where it actually stops the node.
+  const blockedByPolicy = isBlockedByCatalogPolicy(
+    blockedComponentTypes,
+    data.type,
+  );
+  const blockedIsFatal = blockedStopsExecution(
+    allowCustomComponents,
+    blockedComponentTypes,
+    data.type,
+  );
+
   const shouldShowUpdateComponent = useMemo(
-    () => (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll,
-    [isOutdated, hasBreakingChange, isUserEdited, dismissAll],
+    () =>
+      (isBlocked && blockedIsFatal) ||
+      (!allowCustomComponents
+        ? isOutdated || hasBreakingChange
+        : (isOutdated || hasBreakingChange) && !isUserEdited && !dismissAll),
+    [
+      isBlocked,
+      blockedIsFatal,
+      isOutdated,
+      hasBreakingChange,
+      isUserEdited,
+      dismissAll,
+      allowCustomComponents,
+    ],
   );
 
   const shouldShowLegacyComponent = useMemo(
@@ -374,7 +483,8 @@ function GenericNode({
   const memoizedNodeToolbarComponent = useMemo(() => {
     const isRightClicked = rightClickedNodeId === data.id;
     const isSelectedSingle = selected && selectedNodesCount === 1;
-    const shouldShowToolbar = isSelectedSingle || isRightClicked;
+    const shouldShowToolbar =
+      !isReadOnly && (isSelectedSingle || isRightClicked);
 
     return shouldShowToolbar ? (
       <>
@@ -398,9 +508,7 @@ function GenericNode({
             }}
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}
-            openAdvancedModal={false}
-            onCloseAdvancedModal={() => {}}
-            updateNode={() => handleUpdateCode()}
+            updateNode={() => void handleUpdateCode().catch(() => undefined)}
             isOutdated={isOutdated && (dismissAll || isUserEdited)}
             isUserEdited={isUserEdited}
             hasBreakingChange={hasBreakingChange}
@@ -429,6 +537,11 @@ function GenericNode({
                 ? "node-save-name-description-button"
                 : "node-edit-name-description-button"
             }
+            aria-label={
+              editedNameDescription
+                ? t("node.saveNodeDetails")
+                : t("node.editNodeDetails")
+            }
           >
             <ForwardedIconComponent
               name={editedNameDescription ? "Check" : "PencilLine"}
@@ -452,7 +565,7 @@ function GenericNode({
     takeSnapshot,
     setNode,
     showNode,
-    updateNodeCode,
+    handleUpdateCode,
     isOutdated,
     isUserEdited,
     selected,
@@ -462,6 +575,7 @@ function GenericNode({
     toggleEditNameDescription,
     selectedNodesCount,
     rightClickedNodeId,
+    isReadOnly,
   ]);
   useEffect(() => {
     if (hiddenOutputs && hiddenOutputs.length === 0) {
@@ -473,15 +587,19 @@ function GenericNode({
     () => handleUpdateCode(true),
     [handleUpdateCode],
   );
-  const memoizedSetDismissAll = useCallback(
-    () => addDismissedNodes([data.id]),
-    [addDismissedNodes, data.id],
-  );
+  const memoizedSetDismissAll = useCallback(() => {
+    if (isReadOnly) return;
+    addDismissedNodes([data.id]);
+    setNode(data.id, (old) => {
+      const newNode = cloneDeep(old);
+      (newNode.data as NodeDataType).node!.edited = true;
+      return newNode;
+    });
+  }, [addDismissedNodes, data.id, isReadOnly, setNode]);
 
-  const memoizedSetDismissAllLegacy = useCallback(
-    () => addDismissedNodesLegacy([data.id]),
-    [addDismissedNodesLegacy, data.id],
-  );
+  const memoizedSetDismissAllLegacy = useCallback(() => {
+    if (!isReadOnly) addDismissedNodesLegacy([data.id]);
+  }, [addDismissedNodesLegacy, data.id, isReadOnly]);
 
   return (
     <div className={cn(shouldShowUpdateComponent ? "relative -mt-10" : "")}>
@@ -493,7 +611,7 @@ function GenericNode({
           !hasOutputs && "pb-4",
         )}
       >
-        {openUpdateModal && (
+        {openUpdateModal && !isReadOnly && (
           <UpdateComponentModal
             open={openUpdateModal}
             setOpen={setOpenUpdateModal}
@@ -505,16 +623,29 @@ function GenericNode({
         {shouldShowUpdateComponent ? (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
+            blocked={isBlocked && blockedIsFatal}
+            blockedByCatalogPolicy={
+              // Restricted mode blocks every unknown code-bearing node on its
+              // own, so it stays the stated cause; the policy is only named
+              // when it is both in force and names this component.
+              isBlocked && allowCustomComponents && blockedByPolicy
+            }
             showNode={showNode}
-            handleUpdateCode={() => handleUpdateCode()}
+            handleUpdateCode={() =>
+              void handleUpdateCode().catch(() => undefined)
+            }
             loadingUpdate={loadingUpdate}
             setDismissAll={memoizedSetDismissAll}
+            dismissed={dismissAll}
+            isRequired={!allowCustomComponents}
+            disabled={isReadOnly}
           />
         ) : shouldShowLegacyComponent ? (
           <NodeLegacyComponent
             legacy={data.node?.legacy}
             replacement={data.node?.replacement}
             setDismissAll={memoizedSetDismissAllLegacy}
+            disabled={isReadOnly}
           />
         ) : (
           <></>
@@ -589,7 +720,7 @@ function GenericNode({
               data={data}
               frozen={data.node?.frozen}
               showNode={showNode}
-              display_name={data.node?.display_name!}
+              display_name={data.node?.display_name}
               nodeId={data.id}
               selected={selected}
               setBorderColor={setBorderColor}
@@ -612,11 +743,12 @@ function GenericNode({
                 editNameDescription={editNameDescription}
                 setEditNameDescription={set}
                 setHasChangedNodeDescription={setHasChangedNodeDescription}
+                readOnly={isReadOnly}
               />
             </div>
           )}
         </div>
-        {showNode && (
+        {showNode && data.node?.template && (
           <div
             className="nopan nodelete nodrag noflow relative cursor-auto"
             onMouseDown={(e) => e.stopPropagation()}
@@ -632,7 +764,7 @@ function GenericNode({
               />{" "}
               <div
                 className={classNames(
-                  Object.keys(data.node!.template).length < 1 ? "hidden" : "",
+                  Object.keys(data.node.template).length < 1 ? "hidden" : "",
                   "flex-max-width justify-center",
                 )}
               >

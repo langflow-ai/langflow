@@ -1,56 +1,90 @@
-import dotenv from "dotenv";
-import { readFileSync } from "fs";
-import path from "path";
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TID } from "../../utils/constants/testIds";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
+
+const ANTHROPIC_MODEL = "claude-sonnet-4-5-20250929";
+
+async function mockAnthropicModelCatalog(page: Page) {
+  await page.route(
+    (url) => url.pathname === "/api/v1/models/enabled_models",
+    async (route) => {
+      await route.fulfill({
+        json: {
+          enabled_models: {
+            Anthropic: { [ANTHROPIC_MODEL]: true },
+            OpenAI: { "gpt-4o-mini": true },
+          },
+        },
+      });
+    },
+  );
+  await page.route(
+    (url) => url.pathname === "/api/v1/models",
+    async (route) => {
+      await route.fulfill({
+        json: [
+          {
+            provider: "Anthropic",
+            icon: "Anthropic",
+            is_enabled: true,
+            is_configured: true,
+            models: [
+              {
+                model_name: ANTHROPIC_MODEL,
+                metadata: { model_type: "llm", tool_calling: true },
+              },
+            ],
+          },
+          {
+            provider: "OpenAI",
+            icon: "OpenAI",
+            is_enabled: true,
+            is_configured: true,
+            models: [
+              {
+                model_name: "gpt-4o-mini",
+                metadata: { model_type: "llm", tool_calling: true },
+              },
+            ],
+          },
+        ],
+      });
+    },
+  );
+}
 
 test(
-  "user must be able to send images in the playground with the agent component",
+  "user can select Anthropic before running Simple Agent through the loopback provider",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
+    await seedLoopbackProvider(page);
+    await mockAnthropicModelCatalog(page);
+    await openStarterProject(page, "Simple Agent");
+
+    const modelDropdown = page.getByTestId(TID.modelModel);
+    await modelDropdown.click();
+    const anthropicOption = page.getByTestId(
+      `Anthropic-${ANTHROPIC_MODEL}-option`,
     );
+    await anthropicOption.scrollIntoViewIfNeeded();
+    await anthropicOption.click();
+    await expect(modelDropdown).toContainText(ANTHROPIC_MODEL);
 
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-    await awaitBootstrapTest(page);
+    // The assertion above covers current ModelInput catalog selection. Runtime
+    // behavior is intentionally isolated from Anthropic credentials/network by
+    // switching the saved flow to the local OpenAI-compatible fixture below.
+    await configureLoopbackOpenAI(page);
 
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await page.getByTestId(TID.playgroundBtnFlowIo).click();
+    await sendPlaygroundMessage(page, "Describe deterministic CI in one line.");
 
-    await page.getByTestId("value-dropdown-dropdown_str_agent_llm").click();
-
-    await page.waitForTimeout(200);
-
-    await page.getByText("Anthropic").last().click();
-
-    await page
-      .getByTestId("popover-anchor-input-api_key")
-      .fill(process.env.ANTHROPIC_API_KEY || "");
-
-    await page.getByTestId("playground-btn-flow-io").click();
-
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 100000,
+    await expect(page.locator(".markdown.prose").last()).toContainText(/\S/, {
+      timeout: TIMEOUTS.buildComplete,
     });
-
-    await page.getByTestId("button-send").click();
-
-    await page.waitForSelector("text=Finished", {
-      timeout: 5000,
-    });
-
-    await page.waitForTimeout(2000);
-
-    const textFromLlm = await page
-      .locator(".markdown.prose")
-      .last()
-      .textContent();
-
-    const lengthOfTextFromLlm = textFromLlm?.length;
-    expect(lengthOfTextFromLlm).toBeGreaterThan(100);
   },
 );

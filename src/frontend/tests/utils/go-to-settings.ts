@@ -1,4 +1,5 @@
-import { type Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { TIMEOUTS } from "./constants/timeouts";
 
 export const navigateSettingsPages = async (
   page: Page,
@@ -9,13 +10,19 @@ export const navigateSettingsPages = async (
     return;
   }
   await page.getByTestId("user-profile-settings").click();
-  await page.getByText(`${pageName}`).first().click();
+  const settingsButton = page.getByTestId("menu_settings_button");
+  await expect(settingsButton).toBeVisible({ timeout: TIMEOUTS.medium });
+  await settingsButton.click();
+  await page.waitForURL(/\/settings(?:\/|$)/, { timeout: TIMEOUTS.standard });
 
   if (settingsMenuName) {
-    await page.getByText(`${settingsMenuName}`).first().click();
-    await page.waitForSelector('[data-testid="settings_menu_header"]', {
-      timeout: 5000,
+    const settingsMenuItem = page.getByTestId(
+      `sidebar-nav-${settingsMenuName}`,
+    );
+    await expect(settingsMenuItem).toBeVisible({ timeout: TIMEOUTS.standard });
+    await settingsMenuItem.click();
+    await expect(page.getByTestId("settings_menu_header")).toBeVisible({
+      timeout: TIMEOUTS.standard,
     });
-    await page.waitForTimeout(500);
   }
 };

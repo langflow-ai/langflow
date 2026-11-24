@@ -1,3 +1,4 @@
+from lfx.base.agents.crewai.crew import convert_llm, convert_tools
 from lfx.base.agents.crewai.tasks import SequentialTask
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, DictInput, HandleInput, MultilineInput, Output
@@ -9,7 +10,7 @@ class SequentialTaskAgentComponent(Component):
     documentation = "https://docs.crewai.com/how-to/LLM-Connections/"
     icon = "CrewAI"
     legacy = True
-    replacement = "agents.Agent"
+    replacement = ["models_and_agents.Agent"]
 
     inputs = [
         # Agent inputs
@@ -117,10 +118,10 @@ class SequentialTaskAgentComponent(Component):
             role=self.role,
             goal=self.goal,
             backstory=self.backstory,
-            llm=self.llm,
+            llm=convert_llm(self.llm),
             verbose=self.verbose,
             memory=self.memory,
-            tools=self.tools or [],
+            tools=convert_tools(self.tools),
             allow_delegation=self.allow_delegation,
             allow_code_execution=self.allow_code_execution,
             **agent_kwargs,

@@ -1,18 +1,13 @@
 import { expect } from "@playwright/test";
 import { test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "CodeAreaModalComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 3000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.getByTestId("canvas_controls_dropdown").click();
 
@@ -66,7 +61,7 @@ class CustomComponent(Component):
     await page.keyboard.press(`ControlOrMeta+A`);
     await page.locator("textarea").fill(codeInputCode);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     await page.getByTestId("div-generic-node").click();
 

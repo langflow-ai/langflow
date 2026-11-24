@@ -3,6 +3,8 @@ title: Deploy a public Langflow server
 slug: /deployment-public-server
 ---
 
+import PartialAutoLoginDefaults from '@site/docs/_partial-auto-login-defaults.mdx';
+
 By default, your Langflow server at `http://localhost:7860` isn't exposed to the public internet.
 However, you can forward Langflow server traffic with a forwarding platform like [ngrok](https://ngrok.com/docs/getting-started/) or [zrok](https://docs.zrok.io/docs/getting-started) to make your server public.
 
@@ -16,12 +18,16 @@ This guide uses ngrok, but you can use any similar reverse proxy or forwarding p
 
 If you want to follow along with this guide, [install ngrok](https://ngrok.com/docs/getting-started/#1-install-ngrok) and [create an ngrok authtoken](https://dashboard.ngrok.com/get-started/your-authtoken).
 
+<PartialAutoLoginDefaults />
+
+For more information, see [API keys and authentication](/api-keys-and-authentication).
+
 ## Expose your Langflow server with ngrok
 
 1. Start Langflow:
 
     ```bash
-    uv run langflow run
+    uv run langflow run --env-file .env
     ```
 
 2. In another terminal window, use your ngrok authtoken to authenticate your local ngrok server:
@@ -50,6 +56,7 @@ If you want to follow along with this guide, [install ngrok](https://ngrok.com/d
     The forwarding address acts as a reverse proxy for your Langflow server, and ngrok forwards your local traffic to this domain.
 
 4. To verify that your Langflow server is publicly available, navigate to the forwarding address URL, such as `https://94b1-76-64-171-14.ngrok-free.app`.
+   Sign in as `langflow`, or the username configured in `LANGFLOW_SUPERUSER`, with your superuser password.
 
 ## Use a public Langflow server
 

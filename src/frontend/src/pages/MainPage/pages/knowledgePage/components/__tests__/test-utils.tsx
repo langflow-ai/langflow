@@ -26,6 +26,7 @@ export const createTestWrapper = () => {
  */
 export const mockKnowledgeBase: KnowledgeBaseInfo = {
   id: "kb-1",
+  dir_name: "kb-1",
   name: "Test Knowledge Base",
   embedding_provider: "OpenAI",
   embedding_model: "text-embedding-ada-002",
@@ -34,12 +35,15 @@ export const mockKnowledgeBase: KnowledgeBaseInfo = {
   characters: 250000,
   chunks: 100,
   avg_chunk_size: 2500,
+  backend_type: "chroma",
+  backend_config: {},
 };
 
 export const mockKnowledgeBaseList: KnowledgeBaseInfo[] = [
   mockKnowledgeBase,
   {
     id: "kb-2",
+    dir_name: "kb-2",
     name: "Second Knowledge Base",
     embedding_provider: "Anthropic",
     embedding_model: "claude-embedding",
@@ -48,9 +52,12 @@ export const mockKnowledgeBaseList: KnowledgeBaseInfo[] = [
     characters: 400000,
     chunks: 150,
     avg_chunk_size: 2666,
+    backend_type: "opensearch",
+    backend_config: { index_name: "second_kb" },
   },
   {
     id: "kb-3",
+    dir_name: "kb-3",
     name: "Third Knowledge Base",
     embedding_model: undefined, // Test case for missing embedding model
     size: 512000,
@@ -58,6 +65,8 @@ export const mockKnowledgeBaseList: KnowledgeBaseInfo[] = [
     characters: 125000,
     chunks: 50,
     avg_chunk_size: 2500,
+    backend_type: "opensearch",
+    backend_config: { index_name: "third_kb" },
   },
 ];
 

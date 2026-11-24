@@ -23,6 +23,7 @@ const useAssistantManagerStore = create<AssistantManagerStoreType>(
       set({
         currentFlow: flow,
         currentFlowId: flow?.id ?? "",
+        assistantSidebarOpen: false, // Always close assistant when changing flows
       });
       useFlowStore.getState().resetFlow(flow);
     },
@@ -58,6 +59,10 @@ const useAssistantManagerStore = create<AssistantManagerStoreType>(
     assistantSidebarOpen: false,
     setAssistantSidebarOpen: (assistantSidebarOpen: boolean) => {
       set({ assistantSidebarOpen });
+    },
+    isAssistantProcessing: false,
+    setAssistantProcessing: (isAssistantProcessing: boolean) => {
+      set({ isAssistantProcessing });
     },
     takeSnapshot: () => {
       const currentFlowId = get().currentFlowId;

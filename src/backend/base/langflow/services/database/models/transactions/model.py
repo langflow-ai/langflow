@@ -119,6 +119,8 @@ class TransactionBase(SQLModel):
     status: str = Field(nullable=False)
     error: str | None = Field(default=None)
     flow_id: UUID = Field()
+    user_id: UUID | None = Field(default=None, index=True, description="Message owner of the run")
+    session_id: str | None = Field(default=None, index=True, description="Session of the run")
 
     # Needed for Column(JSON)
     class Config:

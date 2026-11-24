@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { ShowMoreSessions } from "@/components/core/playgroundComponent/chat-view/chat-header/components/show-more-sessions";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
 import { useVoiceStore } from "@/stores/voiceStore";
@@ -9,6 +11,7 @@ import SessionSelector from "./IOFieldView/components/session-selector";
 
 export const SidebarOpenView = ({
   sessions,
+  sessionsPagination,
   setSelectedViewField,
   setvisibleSession,
   handleDeleteSession,
@@ -17,6 +20,7 @@ export const SidebarOpenView = ({
   playgroundPage,
   setActiveSession,
 }: SidebarOpenViewProps) => {
+  const { t } = useTranslation();
   const [openMenuSession, setOpenMenuSession] = useState<string | null>(null);
 
   const setNewSessionCloseVoiceAssistant = useVoiceStore(
@@ -39,12 +43,13 @@ export const SidebarOpenView = ({
               />
               <div className="text-mmd font-normal">Chat</div>
             </div>
-            <ShadTooltip styleClasses="z-50" content="New Chat">
+            <ShadTooltip styleClasses="z-50" content={t("chat.newChat")}>
               <div>
                 <Button
                   data-testid="new-chat"
                   variant="ghost"
                   className="flex h-8 w-8 items-center justify-center !p-0 hover:bg-secondary-hover"
+                  aria-label={t("chat.newChat")}
                   onClick={(_) => {
                     setvisibleSession(undefined);
                     setSelectedViewField(undefined);
@@ -97,6 +102,7 @@ export const SidebarOpenView = ({
               }}
             />
           ))}
+          <ShowMoreSessions pagination={sessionsPagination} />
         </div>
       </div>
     </>

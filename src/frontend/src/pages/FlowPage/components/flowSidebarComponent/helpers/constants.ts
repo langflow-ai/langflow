@@ -1,14 +1,6 @@
-// Component name constants
-export const CHAT_INPUT_COMPONENT = "ChatInput";
-export const WEBHOOK_COMPONENT = "Webhook";
-
-// Exclusivity rules: components that cannot coexist
-export const EXCLUSIVITY_RULES = {
-  [CHAT_INPUT_COMPONENT]: [WEBHOOK_COMPONENT],
-  [WEBHOOK_COMPONENT]: [CHAT_INPUT_COMPONENT],
-} as const;
-
-// Tooltip messages
+// Tooltip messages shown when a sidebar item is disabled by a placement
+// constraint. Keyed by the violation case (see get-disabled-tooltip); the
+// constraint logic itself lives in `@/utils/componentConstraints`.
 export const TOOLTIP_MESSAGES = {
   CHAT_INPUT_ALREADY_ADDED: "Chat input already added",
   WEBHOOK_ALREADY_ADDED: "Webhook already added",
@@ -16,4 +8,7 @@ export const TOOLTIP_MESSAGES = {
     "Cannot add Chat Input when Webhook is present",
   CANNOT_ADD_WEBHOOK_WITH_CHAT_INPUT:
     "Cannot add Webhook when Chat Input is present",
+  // Not a placement constraint: an administrator's catalog policy refuses this
+  // component outright, so it can never be added to any flow.
+  BLOCKED_BY_CATALOG_POLICY: "Blocked by your organization's catalog policy",
 } as const;

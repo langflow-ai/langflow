@@ -1,9 +1,27 @@
-from typing import Any
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
 
 from pydantic import SecretStr
 
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models.folder.model import Folder
+
+if TYPE_CHECKING:
+    from lfx.services.settings.auth import AuthSettings
+
+    from langflow.services.database.models.user.model import User
+
+
+def get_default_project_auth_settings(auth_settings: AuthSettings, owner: User | None) -> dict[str, str]:
+    """Choose credentials that the project's MCP endpoint will accept."""
+    allows_superuser_fallback = (
+        auth_settings.AUTO_LOGIN
+        and auth_settings.skip_auth_auto_login
+        and owner is not None
+        and owner.username == auth_settings.SUPERUSER
+    )
+    return {"auth_type": "none" if allows_superuser_fallback else "apikey"}
 
 
 def handle_auth_settings_update(
@@ -34,7 +52,12 @@ def handle_auth_settings_update(
         # Explicitly set to None - clear auth settings
         existing_project.auth_settings = None
         # If we were using OAuth, stop the composer
-        return {"should_start_composer": False, "should_stop_composer": current_auth_type == "oauth"}
+        return {
+            "should_start_composer": False,
+            "should_stop_composer": current_auth_type == "oauth",
+            "should_handle_composer": current_auth_type == "oauth",
+            "new_auth_type": None,
+        }
 
     # Handle different input types (dict vs Pydantic model)
     if isinstance(new_auth_settings, dict):
@@ -72,4 +95,5 @@ def handle_auth_settings_update(
         "should_start_composer": should_start_composer,
         "should_stop_composer": should_stop_composer,
         "should_handle_composer": should_handle_composer,
+        "new_auth_type": new_auth_type,
     }

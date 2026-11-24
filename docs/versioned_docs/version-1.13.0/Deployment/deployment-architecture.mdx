@@ -1,0 +1,72 @@
+---
+title: Langflow architecture on Kubernetes
+slug: /deployment-architecture
+---
+
+There are two broad types of Langflow deployments:
+
+* **Langflow IDE (development)**: Deploy both the Langflow visual editor (frontend) and API (backend). Typically, this is used for development environments where developers use the visual editor to create and manage flows before packaging and serving them through a production runtime deployment.
+
+    The Langflow repository's example [`docker-compose.yml`](https://github.com/langflow-ai/langflow/blob/main/docker_example/docker-compose.yml) file builds a Langflow IDE image.
+
+    For information about IDE deployments on Kubernetes, see [Deploy the Langflow development environment on Kubernetes](/deployment-kubernetes-dev).
+
+
+* **Langflow runtime (production)**: Deploy the Langflow runtime for production flows, which is headless (backend only) service focused on serving the Langflow API. This is used for production environments where flows are executed programmatically without the need for the visual editor. The server exposes your flows as endpoints, and then runs only the processes necessary to serve each flow.
+
+    An external PostgreSQL database is strongly recommended with this deployment type to improve scalability and reliability as compared to the default SQLite database.
+
+    For information about runtime deployments on Kubernetes, see [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod).
+
+    :::tip
+    You can start Langflow in headless mode with the `LANGFLOW_BACKEND_ONLY` [environment variable](/environment-variables).
+    :::
+
+You can also [deploy the Langflow IDE and runtime on Docker](/deployment-docker).
+
+## Benefits of deploying Langflow on Kubernetes
+
+Deploying on Kubernetes offers the following advantages:
+
+* **Scalability**: Kubernetes allows you to scale the Langflow service to meet the demands of your workload.
+* **Availability and resilience**: Kubernetes provides built-in resilience features, such as automatic failover and self-healing, to ensure that the Langflow service is always available.
+* **Security**: Kubernetes provides security features, such as role-based access control and network isolation, to protect the Langflow service and its data.
+* **Portability**: Kubernetes is a portable platform, which means that you can deploy the Langflow service to any Kubernetes cluster, on-premises or in the cloud.
+
+    Langflow can be deployed on cloud platforms like AWS EKS, Google GKE, or Azure AKS. For more information, see the [Langflow Helm charts repository](https://github.com/langflow-ai/langflow-helm-charts).
+
+## Langflow deployment
+
+A typical Langflow deployment includes:
+
+* **Langflow services**: The Langflow API and, for IDE deployments, the visual editor.
+* **Kubernetes cluster**: The Kubernetes cluster provides a platform for deploying and managing Langflow and its supporting services.
+* **Persistent storage**: Persistent storage is used to store the Langflow service's data, such as models and training data.
+* **Ingress controller**: The ingress controller provides a single entry point for traffic to the Langflow service.
+* **Load balancer**: Balances traffic across multiple Langflow replicas.
+* **Vector database**: If you are using Langflow for RAG, you can integrate with the vector database in Astra Serverless.
+
+![Langflow reference architecture on Kubernetes](/img/langflow-reference-architecture.png)
+
+## Environment isolation
+
+It is recommended to deploy and run separate development and production environments for Langflow:
+
+* Deploy the IDE in your development environment where your developers prototype and test new flows.
+* Deploy the runtime in your production environment to serve flows as standalone services.
+
+![Langflow environments](/img/langflow-env.png)
+
+This separation is designed to enhance security, support an organized software development pipeline, and optimize infrastructure resource allocation:
+
+* **Isolation**: By separating the development and production environments, you can better isolate different phases of the application lifecycle. This isolation minimizes the risk of development-related issues impacting the production environments.
+* **Access control**: Different security policies and access controls can be applied to each environment. Developers may require broader access in the IDE for testing and debugging, while the runtime environment can be locked down with stricter security measures.
+* **Reduced attack surface**: The runtime environment is configured to include only essential components, reducing the attack surface and potential vulnerabilities.
+* **Optimized resource usage and cost efficiency**: By separating the two environments, you can allocate resources more effectively. Each flow can be deployed independently, providing fine-grained resource control.
+* **Scalability**: The runtime environment can be scaled independently based on application load and performance requirements, without affecting the development environment.
+
+## Next steps
+
+* [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices)
+* [Deploy the Langflow development environment on Kubernetes](/deployment-kubernetes-dev)
+* [Deploy the Langflow production environment on Kubernetes](/deployment-kubernetes-prod)

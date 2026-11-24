@@ -1,7 +1,9 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
@@ -76,23 +78,21 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
   test(
     "should prevent data leakage when default session is deleted and recreated",
-    { tag: ["@release", "@regression"] },
+    { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
-      await initialGPTsetup(page);
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -143,23 +143,21 @@ test.describe("Session Deletion Data Leakage Fix", () => {
 
   test(
     "should clear LLM context when session is deleted",
-    { tag: ["@release", "@regression"] },
+    { tag: ["@release"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
+      await seedLoopbackProvider(page);
       await awaitBootstrapTest(page);
 
       // Load a starter project with memory
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
-      await initialGPTsetup(page);
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
+      await configureLoopbackOpenAI(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 

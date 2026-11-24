@@ -3,10 +3,13 @@ python:
   - "src/backend/**"
   - "src/backend/**.py"
   - "src/lfx/**"
+  # Provider bundles are first-class Python sources since the metapackage
+  # split; without this a bundle-only PR reports python=false and skips the
+  # backend suite entirely, including the bundle's own tests.
+  - "src/bundles/**"
   - "pyproject.toml"
   - "uv.lock"
   - "src/backend/base/pyproject.toml"
-  - "src/backend/base/uv.lock"
   - "src/lfx/pyproject.toml"
   - "**/python_test.yml"
   - ".github/workflows/ci.yml"
@@ -23,6 +26,7 @@ frontend:
   - "src/frontend/**"
   - "**/typescript_test.yml"
   - "**/jest_test.yml"
+  - "**/lint-js.yml"
   - ".github/workflows/ci.yml"
   - "src/lfx/src/lfx/_assets/component_index.json"
 docs:
@@ -35,6 +39,7 @@ docker:
   - "src/frontend/**"
   - "src/lfx/**"
   - ".dockerignore"
+  - ".github/workflows/docker-build-v2.yml"
   - ".github/workflows/docker_test.yml"
 
 # Test categories and their associated paths
@@ -108,5 +113,15 @@ database:
   - "src/frontend/tests/core/features/**"
   - "src/frontend/tests/extended/features/**"
 
-mainpage:
-  - "src/frontend/src/pages/MainPage/**"
+# Code whose tests need a real S3-compatible server (SeaweedFS in CI).
+storage:
+  - "src/backend/base/langflow/services/storage/**"
+  - "src/backend/base/langflow/api/utils/file_relocation.py"
+  - "src/lfx/src/lfx/services/storage/**"
+  - "src/backend/tests/unit/api/utils/test_file_relocation.py"
+  - "src/backend/tests/unit/services/storage/**"
+  - ".github/workflows/ci.yml"
+
+design-md:
+  - "DESIGN.md"
+  - ".github/workflows/ci.yml"

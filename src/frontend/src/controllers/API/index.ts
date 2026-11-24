@@ -1,5 +1,5 @@
 import type { Edge, Node, ReactFlowJsonObject } from "@xyflow/react";
-import type { AxiosRequestConfig, AxiosResponse } from "axios";
+import axios, { type AxiosRequestConfig, type AxiosResponse } from "axios";
 import {
   customGetAppVersions,
   customGetLatestVersion,
@@ -19,7 +19,9 @@ const DISCORD_API_URL =
 
 export async function getRepoStars(owner: string, repo: string) {
   try {
-    const response = await api.get(`${GITHUB_API_URL}/repos/${owner}/${repo}`);
+    const response = await axios.get(
+      `${GITHUB_API_URL}/repos/${owner}/${repo}`,
+    );
     return response?.data.stargazers_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
@@ -29,7 +31,7 @@ export async function getRepoStars(owner: string, repo: string) {
 
 export async function getDiscordCount() {
   try {
-    const response = await api.get(DISCORD_API_URL);
+    const response = await axios.get(DISCORD_API_URL);
     return response?.data.approximate_member_count;
   } catch (error) {
     console.error("Error fetching repository data:", error);
@@ -40,9 +42,13 @@ export async function getDiscordCount() {
 export const getAppVersions = customGetAppVersions;
 export const getLatestVersion = customGetLatestVersion;
 
-export async function createApiKey(name: string) {
+export async function createApiKey(name: string, expiresAt?: string | null) {
   try {
-    const res = await api.post(`${getBaseUrl()}api_key/`, { name });
+    const payload: { name: string; expires_at?: string } = { name };
+    if (expiresAt) {
+      payload.expires_at = expiresAt;
+    }
+    const res = await api.post(`${getBaseUrl()}api_key/`, payload);
     if (res.status === 200) {
       return res.data;
     }
@@ -121,7 +127,7 @@ export async function getStoreComponents({
 }): Promise<StoreComponentResponse | undefined> {
   try {
     let url = `${getBaseUrl()}store/components/`;
-    const queryParams: any = [];
+    const queryParams: string[] = [];
     if (component_id !== undefined && component_id !== null) {
       queryParams.push(`component_id=${component_id}`);
     }
@@ -262,7 +268,7 @@ export async function getVerticesOrder(
 ): Promise<AxiosResponse<VerticesOrderTypeAPI>> {
   // nodeId is optional and is a query parameter
   // if nodeId is not provided, the API will return all vertices
-  const config: AxiosRequestConfig<any> = {};
+  const config: AxiosRequestConfig = {};
   if (stopNodeId) {
     config["params"] = { stop_component_id: stopNodeId };
   } else if (startNodeId) {

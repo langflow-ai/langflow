@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, ClassVar
 
 from lfx.services.base import Service
 
 if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
+    from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
     from lfx.services.adapters.deployment.schema import (
         ConfigListParams,
         ConfigListResult,
@@ -18,6 +19,7 @@ if TYPE_CHECKING:
         DeploymentDeleteResult,
         DeploymentDuplicateResult,
         DeploymentGetResult,
+        DeploymentListLlmsResult,
         DeploymentListParams,
         DeploymentListResult,
         DeploymentListTypesResult,
@@ -32,6 +34,8 @@ if TYPE_CHECKING:
         RedeployResult,
         SnapshotListParams,
         SnapshotListResult,
+        VerifyCredentials,
+        VerifyCredentialsResult,
     )
     from lfx.services.interfaces import DeploymentServiceProtocol
 
@@ -46,6 +50,8 @@ class BaseDeploymentService(Service, ABC):
         ``db`` parameters are typed as ``AsyncSession`` to align with current
         LFX dependency injection and service protocols.
     """
+
+    payload_schemas: ClassVar[DeploymentPayloadSchemas | None] = None
 
     @abstractmethod
     async def create(
@@ -65,6 +71,15 @@ class BaseDeploymentService(Service, ABC):
         db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
+
+    @abstractmethod
+    async def list_llms(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListLlmsResult:
+        """List provider-available LLM model names for deployment configuration."""
 
     @abstractmethod
     async def list(
@@ -148,7 +163,6 @@ class BaseDeploymentService(Service, ABC):
         self,
         *,
         user_id: IdLike,
-        deployment_type: DeploymentType | None = None,
         payload: ExecutionCreate,
         db: AsyncSession,
     ) -> ExecutionCreateResult:
@@ -184,6 +198,15 @@ class BaseDeploymentService(Service, ABC):
         db: AsyncSession,
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter."""
+
+    @abstractmethod
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify provider credentials before account creation."""
 
 
 if TYPE_CHECKING:

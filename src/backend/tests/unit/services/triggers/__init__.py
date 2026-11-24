@@ -1,0 +1,1 @@
+"""Trigger service regression tests."""

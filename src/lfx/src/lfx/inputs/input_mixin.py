@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     BaseModel,
@@ -10,8 +10,11 @@ from pydantic import (
     model_serializer,
 )
 
+from lfx.field_typing.conditional_options import ConditionalOptions
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.validators import CoalesceBool
+from lfx.integrations.capabilities import ConditionalScopeRequirement
+from lfx.integrations.models import PROVIDER_ID_PATTERN
 from lfx.schema.cross_module import CrossModuleModel
 
 
@@ -24,7 +27,10 @@ class FieldTypes(str, Enum):
     DICT = "dict"
     NESTED_DICT = "NestedDict"
     SORTABLE_LIST = "sortableList"
+    ACTION_PICKER = "actionPicker"
+    DURATION = "duration"
     CONNECTION = "connect"
+    CONNECTION_REF = "connection_ref"
     AUTH = "auth"
     FILE = "file"
     PROMPT = "prompt"
@@ -39,6 +45,10 @@ class FieldTypes(str, Enum):
     TOOLS = "tools"
     MCP = "mcp"
     MODEL = "model"
+    DATA_DISPLAY = "data_display"
+    # Wire value stays "knowledge_backend" for backward compatibility with
+    # serialized flows that predate the UI rename to "DB Provider".
+    DB_PROVIDER = "knowledge_backend"
 
 
 SerializableFieldTypes = Annotated[FieldTypes, PlainSerializer(lambda v: v.value, return_type=str)]
@@ -49,6 +59,7 @@ SENSITIVE_FIELD_TYPES = {
     FieldTypes.AUTH,
     FieldTypes.FILE,
     FieldTypes.CONNECTION,
+    FieldTypes.CONNECTION_REF,
     FieldTypes.MCP,
 }
 
@@ -86,6 +97,9 @@ class BaseInputMixin(CrossModuleModel, validate_assignment=True):  # type: ignor
 
     advanced: bool = False
     """Specifies if the field will an advanced parameter (hidden). Defaults to False."""
+
+    api_editable: bool = False
+    """Specifies if the field is exposed as an editable API input. Defaults to False."""
 
     input_types: list[str] | None = None
     """List of input types for the handle when the field has more than one type. Default is an empty list."""
@@ -159,6 +173,20 @@ class ModelInputMixin(BaseModel):
     """Limit for the number of options to display."""
     external_options: dict[str, Any] | None = None
     """Dictionary of external options to display below the dropdown options (e.g., 'Connect other models')."""
+    filters: dict[str, Any] | None = None
+    """Optional metadata constraints applied to the model picker.
+
+    Keys are model-metadata names (any field on ``ModelMetadata`` — e.g.
+    ``tool_calling``, ``reasoning``, ``vision``) and the values are matched
+    via ``==`` against each model's metadata. Models that don't satisfy
+    every constraint are hidden from the dropdown AND from the
+    sticky-default re-injection path, so a previously-saved selection that
+    no longer satisfies the constraints is replaced with a compatible
+    default instead of silently re-appearing.
+
+    Used by the Agent component (``filters={"tool_calling": True}``) to
+    keep models that can't actually run with tools out of the picker.
+    """
 
     @field_validator("model_options", mode="before")
     @classmethod
@@ -283,6 +311,8 @@ class RangeMixin(BaseModel):
 class DropDownMixin(BaseModel):
     options: list[str] | None = None
     """List of options for the field. Only used when is_list=True. Default is an empty list."""
+    conditional_options: list[ConditionalOptions] | None = None
+    """Ordered option rules evaluated against the other field values before configuration."""
     options_metadata: list[dict[str, Any]] | None = None
     """List of dictionaries with metadata for each option."""
     combobox: CoalesceBool = False
@@ -331,6 +361,18 @@ class ConnectionMixin(BaseModel):
     """Specifies the category of the field. Defaults to an empty list."""
     options: list[dict[str, Any]] = Field(default_factory=list)
     """List of dictionaries with metadata for each option."""
+
+
+class ConnectionRefMixin(BaseModel):
+    """Provider and capability metadata for a portable connection reference."""
+
+    provider: str = Field(pattern=PROVIDER_ID_PATTERN, max_length=120)
+    auth_profile_id: str = ""
+    required_scopes: list[str] = Field(default_factory=list)
+    conditional_scopes: list[ConditionalScopeRequirement] = Field(default_factory=list)
+    identity_kind: Literal["user", "instance", "any"] = "any"
+    ownership_mode: Literal["user", "instance", "any"] = "any"
+    capabilities: list[str] = Field(default_factory=list)
 
 
 class TabMixin(BaseModel):
@@ -384,6 +426,9 @@ class SliderMixin(BaseModel):
     slider_buttons: bool = Field(default=False)
     slider_buttons_options: list[str] = Field(default=[])
     slider_input: bool = Field(default=False)
+    value_inverted: bool = Field(default=False)
+    """Display min + max - value while preserving the stored numeric value."""
+    slider_color: Literal["default", "red"] = Field(default="default")
 
 
 class TableMixin(BaseModel):

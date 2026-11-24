@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
@@ -16,13 +17,16 @@ export const ErrorView = ({
   lastMessage,
   blocks,
 }: {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   blocks: any;
   showError: boolean;
   lastMessage: boolean;
   closeChat?: () => void;
   fitViewNode: (id: string) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   chat: any;
 }) => {
+  const { t } = useTranslation();
   return (
     <>
       <div className="w-5/6 max-w-[768px] py-4 word-break-break-word">
@@ -177,9 +181,11 @@ export const ErrorView = ({
                                   Steps to fix:
                                 </h3>
                                 <ol className="list-decimal pl-5">
-                                  <li>Check the component settings</li>
-                                  <li>Ensure all required fields are filled</li>
-                                  <li>Re-run your flow</li>
+                                  <li>{t("instructions.checkSettings")}</li>
+                                  <li>
+                                    {t("instructions.fillRequiredFields")}
+                                  </li>
+                                  <li>{t("instructions.rerunFlow")}</li>
                                 </ol>
                               </div>
                             )}

@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocation, useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
+import { useStartNewFlow } from "@/components/core/flowBuilderWelcome/hooks/use-start-new-flow";
 import { IS_MAC } from "@/constants/constants";
+import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
@@ -11,39 +14,65 @@ import {
   ENABLE_MCP,
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { FlowType } from "@/types/flow";
+import { getProjectDisplayName } from "@/utils/project-display-name";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
 import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import type { FlowTabType } from "../../types";
+import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
+import { isFolderEmpty } from "./utils/isFolderEmpty";
+
+// Keyed by the active tab, not the route: Flows and Deployments share /flows
+// and only differ by which header tab is selected.
+const PAGE_TITLE_KEYS: Record<FlowTabType, string> = {
+  flows: "mainPage.tabFlows",
+  deployments: "mainPage.tabDeployments",
+  components: "mainPage.tabComponents",
+  mcp: "mainPage.mcpServer",
+};
 
 const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
+  const { t } = useTranslation();
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
     return savedView === "grid" || savedView === "list" ? savedView : "list";
   });
   const [newProjectModal, setNewProjectModal] = useState(false);
   const { folderId } = useParams();
+  const location = useLocation();
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
-  const [isEmptyFolder, setIsEmptyFolder] = useState(true);
+  const [isEmptyFolder, setIsEmptyFolder] = useState<boolean | null>(null);
   const navigate = useCustomNavigate();
 
-  const [flowType, setFlowType] = useState<"flows" | "components" | "mcp">(
-    type,
+  const [flowType, setFlowType] = useState<FlowTabType>(
+    (location.state as Record<string, unknown>)?.flowType === "deployments"
+      ? "deployments"
+      : type,
   );
+  useDocumentTitle(t(PAGE_TITLE_KEYS[flowType]));
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
-  const folderName =
-    folders.find((folder) => folder.id === folderId)?.name ??
-    folders[0]?.name ??
-    "";
+  const currentFolderId = folderId ?? myCollectionId;
+  const currentFolder =
+    folders.find((folder) => folder.id === currentFolderId) ?? folders[0];
+  const folderName = currentFolder?.name ?? "";
+  const folderDisplayName = currentFolder
+    ? getProjectDisplayName(currentFolder, t)
+    : "";
   const flows = useFlowsManagerStore((state) => state.flows);
+  // The primary "New Flow" handler — creates an empty flow, primes the
+  // welcome overlay store, and navigates to the canvas. Replaces the old
+  // "open the templates modal" behavior. The templates modal is still
+  // reachable from inside the welcome via "Browse more templates".
+  const startNewFlow = useStartNewFlow();
 
   useEffect(() => {
     // Only check if we have a folderId and folders have loaded
@@ -57,8 +86,12 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     }
   }, [folderId, folders, navigate]);
 
+  // The page loads from `folderId ?? myCollectionId` (the default-collection
+  // route omits the id), so permission checks must scope to the same project.
+  const permissionsFolderId = folderId ?? myCollectionId;
+
   const { data: folderData, isLoading } = useGetFolderQuery({
-    id: folderId ?? myCollectionId!,
+    id: folderId ?? myCollectionId,
     page: pageIndex,
     size: pageSize,
     is_component: flowType === "components",
@@ -80,6 +113,15 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     },
   };
 
+  // Flow ids to evaluate for the permission gate. Only the flows/components
+  // tabs render selectable, gated cards; other tabs send no ids so the query
+  // is disabled and the gate fails open. Shared by the header bulk actions and
+  // the per-card menus so both entry points agree on what is allowed.
+  const permissionGatedFlowIds =
+    flowType === "flows" || flowType === "components"
+      ? data.flows.map((flow) => flow.id)
+      : [];
+
   useEffect(() => {
     localStorage.setItem("view", view);
   }, [view]);
@@ -95,14 +137,23 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, []);
 
   useEffect(() => {
-    const isEmpty =
-      flows?.find(
-        (flow) =>
-          flow.folder_id === (folderId ?? myCollectionId) &&
-          (ENABLE_MCP ? flow.is_component === false : true),
-      ) === undefined;
-    setIsEmptyFolder(isEmpty);
-  }, [flows, folderId, myCollectionId]);
+    // Wait until both the global flows store has populated and the folder
+    // query has settled (success or error) before deciding whether the
+    // folder is empty. This avoids a one-frame flash of <EmptyFolder> on
+    // initial mount and right after login, when the store is briefly
+    // stale. Gating on isLoading instead of folderData lets us still
+    // resolve when the query settles with no folder to read (it returns
+    // null when there is no valid folder id, after deleting all folders).
+    if (flows === undefined || isLoading) return;
+    setIsEmptyFolder(
+      isFolderEmpty({
+        flows,
+        folderId: folderId ?? myCollectionId ?? "",
+        folderTotal: folderData?.flows?.total,
+        enableMcp: ENABLE_MCP,
+      }),
+    );
+  }, [flows, folderId, myCollectionId, folderData, isLoading]);
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
@@ -248,7 +299,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   return (
     <CardsWrapComponent
       onFileDrop={flowType === "mcp" ? undefined : handleFileDrop}
-      dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
+      dragMessage={
+        isEmptyFolder
+          ? t("home.dragFlowsOrComponents")
+          : t("home.dragFlowType", { flowType })
+      }
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
@@ -257,76 +312,92 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         <div className="flex h-full w-full flex-col 3xl:container">
           {ENABLE_DATASTAX_LANGFLOW && <CustomBanner />}
           <div className="flex flex-1 flex-col justify-start p-4">
-            <div className="flex h-full flex-col justify-start">
-              <HeaderComponent
-                folderName={folderName}
-                flowType={flowType}
-                setFlowType={setFlowType}
-                view={view}
-                setView={setView}
-                setNewProjectModal={setNewProjectModal}
-                setSearch={onSearch}
-                isEmptyFolder={isEmptyFolder}
-                selectedFlows={selectedFlows}
-              />
-              {isEmptyFolder ? (
-                <EmptyFolder setOpenModal={setNewProjectModal} />
-              ) : (
-                <div className="flex h-full flex-col">
-                  {isLoading ? (
-                    view === "grid" ? (
-                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                        <ListSkeleton />
-                        <ListSkeleton />
-                      </div>
+            <PermissionsProvider
+              resourceType="flow"
+              resourceIds={permissionGatedFlowIds}
+              domain={
+                permissionsFolderId
+                  ? `project:${permissionsFolderId}`
+                  : undefined
+              }
+            >
+              <div className="flex h-full flex-col justify-start">
+                <HeaderComponent
+                  folderName={folderDisplayName}
+                  flowType={flowType}
+                  setFlowType={setFlowType}
+                  view={view}
+                  setView={setView}
+                  setNewProjectModal={setNewProjectModal}
+                  onNewFlow={startNewFlow}
+                  setSearch={onSearch}
+                  isEmptyFolder={isEmptyFolder === true}
+                  selectedFlows={selectedFlows}
+                />
+                {isEmptyFolder === true ? (
+                  <EmptyFolder
+                    setOpenModal={setNewProjectModal}
+                    onNewFlow={startNewFlow}
+                  />
+                ) : (
+                  <div className="flex h-full flex-col">
+                    {isLoading || isEmptyFolder === null ? (
+                      view === "grid" ? (
+                        <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                          <ListSkeleton />
+                          <ListSkeleton />
+                        </div>
+                      ) : (
+                        <div className="mt-4 flex flex-col gap-1">
+                          <ListSkeleton />
+                          <ListSkeleton />
+                        </div>
+                      )
+                    ) : flowType === "mcp" ? (
+                      <CustomMcpServerTab folderName={folderName} />
+                    ) : flowType === "deployments" ? (
+                      <DeploymentsPage />
+                    ) : (flowType === "flows" || flowType === "components") &&
+                      data &&
+                      data.pagination.total > 0 ? (
+                      view === "grid" ? (
+                        <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                          {data.flows.map((flow, index) => (
+                            <ListComponent
+                              key={flow.id}
+                              flowData={flow}
+                              selected={selectedFlows.includes(flow.id)}
+                              setSelected={(selected) =>
+                                setSelectedFlow(selected, flow.id, index)
+                              }
+                              shiftPressed={isShiftPressed || isCtrlPressed}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-4 flex flex-col gap-1">
+                          {data.flows.map((flow, index) => (
+                            <ListComponent
+                              key={flow.id}
+                              flowData={flow}
+                              selected={selectedFlows.includes(flow.id)}
+                              setSelected={(selected) =>
+                                setSelectedFlow(selected, flow.id, index)
+                              }
+                              shiftPressed={isShiftPressed || isCtrlPressed}
+                            />
+                          ))}
+                        </div>
+                      )
                     ) : (
-                      <div className="mt-4 flex flex-col gap-1">
-                        <ListSkeleton />
-                        <ListSkeleton />
+                      <div className="pt-24 text-center text-sm text-secondary-foreground">
+                        {t("home.flowTypeNotSupported", { flowType })}
                       </div>
-                    )
-                  ) : flowType === "mcp" ? (
-                    <CustomMcpServerTab folderName={folderName} />
-                  ) : (flowType === "flows" || flowType === "components") &&
-                    data &&
-                    data.pagination.total > 0 ? (
-                    view === "grid" ? (
-                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                        {data.flows.map((flow, index) => (
-                          <ListComponent
-                            key={flow.id}
-                            flowData={flow}
-                            selected={selectedFlows.includes(flow.id)}
-                            setSelected={(selected) =>
-                              setSelectedFlow(selected, flow.id, index)
-                            }
-                            shiftPressed={isShiftPressed || isCtrlPressed}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="mt-4 flex flex-col gap-1">
-                        {data.flows.map((flow, index) => (
-                          <ListComponent
-                            key={flow.id}
-                            flowData={flow}
-                            selected={selectedFlows.includes(flow.id)}
-                            setSelected={(selected) =>
-                              setSelectedFlow(selected, flow.id, index)
-                            }
-                            shiftPressed={isShiftPressed || isCtrlPressed}
-                          />
-                        ))}
-                      </div>
-                    )
-                  ) : (
-                    <div className="pt-24 text-center text-sm text-secondary-foreground">
-                      {flowType} not supported
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </PermissionsProvider>
           </div>
           {(flowType === "flows" || flowType === "components") &&
             !isLoading &&

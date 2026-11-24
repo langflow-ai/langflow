@@ -1,13 +1,30 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { BuildStatus } from "@/constants/enums";
 import { useAddMCPServer } from "@/controllers/API/queries/mcp/use-add-mcp-server";
 import { useGetMCPServers } from "@/controllers/API/queries/mcp/use-get-mcp-servers";
+import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
+import type { APIClassType } from "@/types/api";
 import ListSelectionComponent from "../../../../../CustomNodes/GenericNode/components/ListSelectionComponent";
 import { cn } from "../../../../../utils/utils";
 import { default as ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import type { InputProps } from "../../types";
+
+export type McpServerValue = {
+  name: string;
+  config?: Record<string, unknown>;
+};
+
+type McpSelectionItem = {
+  name: string;
+  description?: string;
+};
 
 export default function McpComponent({
   value,
@@ -16,33 +33,65 @@ export default function McpComponent({
   editNode = false,
   id = "",
   showParameter = true,
-}: InputProps<string, any>): JSX.Element | null {
+  nodeId = "",
+  nodeClass,
+  handleNodeClass,
+  ariaLabelledBy,
+}: InputProps<McpServerValue>): JSX.Element | null {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const { data: mcpServers } = useGetMCPServers({ withCounts: true });
+  const {
+    data: mcpServers,
+    refetch: refetchMCPServers,
+    isFetching: isFetchingMCPServers,
+  } = useGetMCPServers({ withCounts: true });
   const { mutate: addMcpServer } = useAddMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
+  const updateBuildStatus = useFlowStore((state) => state.updateBuildStatus);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const options = useMemo(
     () =>
       mcpServers?.map((server) => ({
         name: server.name,
-        description:
-          server.toolsCount === null
-            ? server.error
-              ? server.error.startsWith("Timeout")
-                ? "Timeout"
-                : "Error"
-              : "Loading..."
+        description: server.error
+          ? server.error
+          : server.toolsCount === null
+            ? t("mcp.loadingTools")
             : !server.toolsCount
-              ? "No tools found"
-              : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`,
+              ? t("mcp.noToolsFound")
+              : t("mcp.toolCount", { count: server.toolsCount }),
       })),
     [mcpServers],
   );
   const [addOpen, setAddOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<any[]>([]);
+  const [selectedItem, setSelectedItem] = useState<McpSelectionItem[]>([]);
   const { name, config } = useMemo(
     () => value ?? { name: "", config: {} },
     [value],
+  );
+  const selectedServerError = useMemo(
+    () => mcpServers?.find((server) => server.name === name)?.error,
+    [mcpServers, name],
+  );
+
+  const postTemplateValue = usePostTemplateValue({
+    parameterId: "mcp_server",
+    nodeId,
+    node: nodeClass!,
+  });
+
+  const clearStaleErrorStatus = useCallback(() => {
+    if (nodeId && typeof updateBuildStatus === "function") {
+      updateBuildStatus([nodeId], BuildStatus.TO_BUILD);
+    }
+  }, [nodeId, updateBuildStatus]);
+
+  const refreshNodeClass = useCallback(
+    (newNodeClass: APIClassType) => {
+      handleNodeClass?.(newNodeClass);
+      clearStaleErrorStatus();
+    },
+    [clearStaleErrorStatus, handleNodeClass],
   );
 
   // Initialize selected item from value on mount or value/options change
@@ -64,8 +113,9 @@ export default function McpComponent({
       name !== selectedOption?.name &&
       Object.keys(config ?? {}).length === 0
     ) {
-      setSelectedItem(
-        selectedOption ? [{ name: selectedOption.name }] : [{ name: "" }],
+      const nextName = selectedOption?.name ?? "";
+      setSelectedItem((current) =>
+        current[0]?.name === nextName ? current : [{ name: nextName }],
       );
       handleOnNewValue(
         { value: { name: "", config: {} } },
@@ -73,15 +123,17 @@ export default function McpComponent({
       );
       return;
     }
-    setSelectedItem([{ name }]);
+    setSelectedItem((current) =>
+      current[0]?.name === name ? current : [{ name }],
+    );
   }, [name, options]);
 
   // Handle selection from dialog
-  const handleSelection = (item: any) => {
+  const handleSelection = (item: McpSelectionItem) => {
     setSelectedItem([{ name: item.name }]);
     handleOnNewValue(
       { value: { name: item.name, config: {} } },
-      { skipSnapshot: true },
+      { skipSnapshot: true, setNodeClass: clearStaleErrorStatus },
     );
     setOpen(false);
   };
@@ -102,7 +154,7 @@ export default function McpComponent({
         },
         onError: (error) => {
           setErrorData({
-            title: "Error adding MCP server",
+            title: t("errors.addMcpServer"),
             list: [error.message],
           });
         },
@@ -114,13 +166,49 @@ export default function McpComponent({
     handleOnNewValue({ value: { name: "", config: {} } });
   };
 
+  const handleRefreshButtonClick = async () => {
+    if (!name || !nodeClass || !nodeId) return;
+
+    setIsRefreshing(true);
+    setOpen(false);
+    try {
+      await refetchMCPServers();
+      await mutateTemplate(
+        { name, config: config ?? {} },
+        nodeId,
+        nodeClass,
+        refreshNodeClass,
+        postTemplateValue,
+        setErrorData,
+        "mcp_server",
+        () => {
+          clearStaleErrorStatus();
+          setIsRefreshing(false);
+        },
+        nodeClass.tool_mode,
+        true,
+      );
+    } catch (error) {
+      setIsRefreshing(false);
+      setErrorData({
+        title: t("errors.refreshMcpServer"),
+        list: [error instanceof Error ? error.message : String(error)],
+      });
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 5000);
+    }
+  };
+
   const handleOpenListSelectionDialog = () => {
     setOpen(true);
   };
   const handleCloseListSelectionDialog = () => setOpen(false);
 
   const handleSuccess = (server: string) => {
-    handleOnNewValue({ value: { name: server, config: {} } });
+    handleOnNewValue(
+      { value: { name: server, config: {} } },
+      { setNodeClass: clearStaleErrorStatus },
+    );
     setOpen(false);
   };
 
@@ -131,6 +219,16 @@ export default function McpComponent({
       options !== null
     );
   }, [selectedOption, config]);
+
+  // Id of the visible span holding the selected server, so it can be
+  // composed into the trigger's accessible name alongside the field label.
+  const mcpValueId = `${id}-mcp-server-value`;
+  // The save/clear and loading states describe an action or a transient
+  // state rather than the field's value, so they keep their own aria-label.
+  const mcpTriggerLabelledBy =
+    showSaveButton || !options || !ariaLabelledBy
+      ? undefined
+      : `${ariaLabelledBy} ${mcpValueId}`;
 
   if (!showParameter) {
     return null;
@@ -143,7 +241,23 @@ export default function McpComponent({
           <Button
             variant={!showSaveButton ? "primary" : "secondary"}
             size="xs"
-            role="combobox"
+            aria-haspopup={!showSaveButton ? "dialog" : undefined}
+            aria-expanded={!showSaveButton ? open : undefined}
+            // This is a plain button, not a combobox: a screen reader
+            // announces its name and nothing else, so the name has to carry
+            // both the field and its current value. When a field label is
+            // available the two are composed via aria-labelledby (label id +
+            // the visible value span); aria-label is dropped in that case,
+            // since aria-labelledby wins and would strand the value here.
+            aria-label={
+              mcpTriggerLabelledBy
+                ? undefined
+                : showSaveButton
+                  ? t("mcp.clearServer")
+                  : !options
+                    ? t("mcp.loadingServers")
+                    : (selectedItem[0]?.name ?? t("mcp.selectServer"))
+            }
             onClick={
               !showSaveButton
                 ? handleOpenListSelectionDialog
@@ -157,18 +271,19 @@ export default function McpComponent({
             )}
             data-testid="mcp-server-dropdown"
             disabled={disabled || !options}
+            aria-labelledby={mcpTriggerLabelledBy}
           >
             <div
               className={cn(
                 "flex w-full items-center justify-start text-sm font-normal",
               )}
             >
-              <span className="truncate">
+              <span className="truncate" id={mcpValueId}>
                 {!options
-                  ? "Loading servers..."
+                  ? t("mcp.loadingServers")
                   : selectedItem[0]?.name
                     ? selectedItem[0]?.name
-                    : "Select a server..."}
+                    : t("mcp.selectServer")}
               </span>
               <ForwardedIconComponent
                 name={!showSaveButton ? "ChevronsUpDown" : "X"}
@@ -183,12 +298,37 @@ export default function McpComponent({
               className="px-2.5"
               onClick={handleSaveButtonClick}
               data-testid="save-mcp-server-button"
+              aria-label={t("mcp.saveServer")}
             >
               <ForwardedIconComponent
                 name="Save"
                 className="h-5 w-5 text-muted-foreground"
               />
             </Button>
+          )}
+          {name && !showSaveButton && (
+            <ShadTooltip
+              content={t("mcp.refreshServer")}
+              ariaDescribedBy={undefined}
+            >
+              <Button
+                variant="ghost"
+                size="iconMd"
+                className="px-2.5"
+                onClick={handleRefreshButtonClick}
+                data-testid="refresh-mcp-server-button"
+                aria-label={t("mcp.refreshServer")}
+                disabled={disabled || isRefreshing || isFetchingMCPServers}
+              >
+                <ForwardedIconComponent
+                  name="RefreshCcw"
+                  className={cn(
+                    "h-5 w-5 text-muted-foreground",
+                    (isRefreshing || isFetchingMCPServers) && "animate-spin",
+                  )}
+                />
+              </Button>
+            </ShadTooltip>
           )}
         </div>
       ) : (
@@ -197,7 +337,7 @@ export default function McpComponent({
           onClick={handleAddButtonClick}
           data-testid="add-mcp-server-simple-button"
         >
-          <span>Add MCP Server</span>
+          <span>{t("input.addMcpServer")}</span>
         </Button>
       )}
       {options && (
@@ -213,10 +353,10 @@ export default function McpComponent({
             id={id}
             value={name}
             editNode={editNode}
-            headerSearchPlaceholder="Search MCP Servers..."
+            headerSearchPlaceholder={t("mcp.searchServers")}
             handleOnNewValue={handleOnNewValue}
             disabled={disabled}
-            addButtonText="Add MCP Server"
+            addButtonText={t("mcp.addServer")}
             onAddButtonClick={handleAddButtonClick}
           />
           <AddMcpServerModal
@@ -225,6 +365,14 @@ export default function McpComponent({
             onSuccess={handleSuccess}
           />
         </>
+      )}
+      {selectedServerError && (
+        <div
+          className="break-words text-xs text-destructive"
+          data-testid="mcp-server-error"
+        >
+          {selectedServerError}
+        </div>
       )}
     </div>
   );

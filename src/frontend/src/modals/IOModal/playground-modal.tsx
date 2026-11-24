@@ -1,15 +1,17 @@
 //import LangflowLogoColor from "@/assets/LangflowLogocolor.svg?react";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ThemeButtons from "@/components/core/appHeaderComponent/components/ThemeButtons";
-import { useGetMessagesQuery } from "@/controllers/API/queries/messages";
 import { useDeleteSession } from "@/controllers/API/queries/messages/use-delete-sessions";
+import { useGetMessageHistory } from "@/controllers/API/queries/messages/use-get-message-history";
 import { useGetSessionsFromFlowQuery } from "@/controllers/API/queries/messages/use-get-sessions-from-flow";
 import { ENABLE_PUBLISH } from "@/customization/feature-flags";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
 import { LangflowButtonRedirectTarget } from "@/customization/utils/urls";
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { swatchColors } from "@/utils/styleUtils";
 import LangflowLogoColor from "../../assets/LangflowLogoColor.svg?react";
@@ -38,6 +40,7 @@ export default function IOModal({
   canvasOpen,
   playgroundPage,
 }: IOModalPropsType): JSX.Element {
+  const { t } = useTranslation();
   const setIOModalOpen = useFlowsManagerStore((state) => state.setIOModalOpen);
   const inputs = useFlowStore((state) => state.inputs);
   const outputs = useFlowStore((state) => state.outputs);
@@ -85,20 +88,19 @@ export default function IOModal({
   );
   const PlaygroundTitle = playgroundPage && flowName ? flowName : "Playground";
 
+  const sessionsQuery = useGetSessionsFromFlowQuery({
+    id: currentFlowId,
+    enabled: open,
+  });
   const {
     data: sessionsFromDb,
     isLoading: sessionsLoading,
     refetch: refetchSessions,
-  } = useGetSessionsFromFlowQuery(
-    {
-      id: currentFlowId,
-    },
-    { enabled: open },
-  );
+  } = sessionsQuery;
 
   useEffect(() => {
     if (sessionsFromDb && !sessionsLoading) {
-      const sessions = [...sessionsFromDb.sessions];
+      const sessions = [...sessionsFromDb];
       // Always include the currentFlowId as the default session if it's not already present
       if (!sessions.includes(currentFlowId)) {
         sessions.unshift(currentFlowId);
@@ -127,7 +129,7 @@ export default function IOModal({
 
     // Delete the session (which will delete all associated messages on the backend)
     deleteSessionFunction(
-      { sessionId: session_id },
+      { sessionId: session_id, flowId: currentFlowId },
       {
         onSuccess: () => {
           // Remove the session from local state
@@ -136,14 +138,15 @@ export default function IOModal({
           // Remove all messages for this session from local state
           const messageIdsToRemove = messages
             .filter((msg) => msg.session_id === session_id)
-            .map((msg) => msg.id);
+            .map((msg) => msg.id)
+            .filter((id): id is string => id != null);
 
           if (messageIdsToRemove.length > 0) {
             removeMessages(messageIdsToRemove);
           }
 
           setSuccessData({
-            title: "Session deleted successfully.",
+            title: t("success.sessionDeleted"),
           });
         },
         onError: () => {
@@ -153,7 +156,7 @@ export default function IOModal({
           }
 
           setErrorData({
-            title: "Error deleting session.",
+            title: t("errors.deleteSession"),
           });
         },
       },
@@ -184,17 +187,13 @@ export default function IOModal({
     (state) => state.setCurrentSessionId,
   );
 
+  const messageHistory = useGetMessageHistory({
+    id: currentFlowId,
+    sessionId: visibleSession,
+    enabled: open,
+  });
   const { isFetched: messagesFetched, refetch: refetchMessages } =
-    useGetMessagesQuery(
-      {
-        mode: "union",
-        id: currentFlowId,
-        params: {
-          session_id: visibleSession,
-        },
-      },
-      { enabled: open },
-    );
+    messageHistory;
 
   const chatValue = useUtilityStore((state) => state.chatValueStore);
   const setChatValue = useUtilityStore((state) => state.setChatValueStore);
@@ -228,18 +227,24 @@ export default function IOModal({
   );
 
   useEffect(() => {
-    if (playgroundPage && messages.length > 0) {
+    if (playgroundPage && !isAuthenticatedPlayground() && messages.length > 0) {
       window.sessionStorage.setItem(currentFlowId, JSON.stringify(messages));
     }
-    if (newChatOnPlayground && !sessionsLoading) {
+    // "New chat" sends under the generated `sessionId` (already namespaced on
+    // the playground page). Wait for its first message: the history load that
+    // opening a new chat triggers also changes `messages`, and refetching then
+    // would miss the session. Select it by id: the refetched list is newest
+    // first and may not be complete.
+    if (
+      newChatOnPlayground &&
+      !sessionsLoading &&
+      messages.some((message) => message.session_id === sessionId)
+    ) {
+      const newSessionId = sessionId;
       const handleRefetchAndSetSession = async () => {
         try {
-          const result = await refetchSessions();
-          if (result.data?.sessions && result.data.sessions.length > 0) {
-            setvisibleSession(
-              result.data.sessions[result.data.sessions.length - 1],
-            );
-          }
+          await refetchSessions();
+          setvisibleSession(newSessionId);
         } catch (error) {
           console.error("Error refetching sessions:", error);
         }
@@ -252,7 +257,12 @@ export default function IOModal({
 
   useEffect(() => {
     if (!visibleSession) {
-      setSessionId(createNewSessionName());
+      const name = createNewSessionName();
+      // The public playground stores sessions as `${virtualFlowId}:${name}` (the
+      // backend leaves an already-scoped id unchanged), so send under that id and
+      // the new-chat selection effect above matches what the server lists and
+      // filters on.
+      setSessionId(playgroundPage ? `${currentFlowId}:${name}` : name);
       setCurrentSessionId(currentFlowId);
     } else if (visibleSession) {
       setSessionId(visibleSession);
@@ -346,6 +356,7 @@ export default function IOModal({
       setOpen={setOpen}
       disable={disable}
       type={isPlayground ? "full-screen" : undefined}
+      ariaLabel="Playground"
       onSubmit={async () => await sendMessage({ repeat: 1 })}
       size="x-large"
       className="!rounded-[12px] p-0"
@@ -391,16 +402,26 @@ export default function IOModal({
                   <ShadTooltip
                     styleClasses="z-50"
                     side="right"
-                    content="Hide sidebar"
+                    content={
+                      sidebarOpen
+                        ? t("modal.io.hideSidebar")
+                        : t("modal.io.showSidebar")
+                    }
                   >
                     <Button
                       variant="ghost"
                       className="flex h-8 w-8 items-center justify-center !p-0"
                       onClick={() => setSidebarOpen(!sidebarOpen)}
+                      aria-label={
+                        sidebarOpen
+                          ? t("modal.io.hideSidebar")
+                          : t("modal.io.showSidebar")
+                      }
                     >
                       <IconComponent
                         name={sidebarOpen ? "PanelLeftClose" : "PanelLeftOpen"}
                         className="h-[18px] w-[18px] text-ring"
+                        ariaHidden
                       />
                     </Button>
                   </ShadTooltip>
@@ -408,6 +429,7 @@ export default function IOModal({
                 {sidebarOpen && !sessionsLoading && (
                   <SidebarOpenView
                     sessions={sessions}
+                    sessionsPagination={sessionsQuery}
                     setSelectedViewField={setSelectedViewField}
                     setvisibleSession={setvisibleSession}
                     handleDeleteSession={handleDeleteSession}
@@ -420,7 +442,7 @@ export default function IOModal({
                 {sidebarOpen && showPublishOptions && (
                   <div className="absolute bottom-2 left-0 flex w-full flex-col gap-8 border-t border-border px-2 py-4 transition-all">
                     <div className="flex items-center justify-between px-2">
-                      <div className="text-sm">Theme</div>
+                      <div className="text-sm">{t("modal.io.theme")}</div>
                       <ThemeButtons />
                     </div>
                     <Button
@@ -428,8 +450,10 @@ export default function IOModal({
                       variant="primary"
                       className="w-full !rounded-xl shadow-lg"
                     >
-                      <LangflowLogoColor />
-                      <div className="text-sm">Built with Langflow</div>
+                      <LangflowLogoColor aria-hidden="true" />
+                      <div className="text-sm">
+                        {t("modal.io.builtWithLangflow")}
+                      </div>
                     </Button>
                   </div>
                 )}
@@ -440,14 +464,18 @@ export default function IOModal({
                 <ShadTooltip
                   styleClasses="z-50"
                   side="right"
-                  content="Built with Langflow"
+                  content={t("modal.io.builtWithLangflowTooltip")}
                 >
                   <Button
                     variant="primary"
                     className="h-12 w-12 !rounded-xl !p-4 shadow-lg"
                     onClick={LangflowButtonClick}
+                    aria-label={t("modal.io.builtWithLangflow")}
                   >
-                    <LangflowLogoColor className="h-[18px] w-[18px] scale-150" />
+                    <LangflowLogoColor
+                      className="h-[18px] w-[18px] scale-150"
+                      aria-hidden="true"
+                    />
                   </Button>
                 </ShadTooltip>
               </div>
@@ -478,6 +506,7 @@ export default function IOModal({
                 setSelectedViewField={setSelectedViewField}
                 haveChat={haveChat}
                 messagesFetched={messagesFetched}
+                messageHistory={messageHistory}
                 sessionId={sessionId}
                 sendMessage={sendMessage}
                 canvasOpen={canvasOpen}

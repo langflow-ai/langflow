@@ -178,4 +178,35 @@ test.describe("ModelProviderModal", () => {
       ).toBeVisible();
     },
   );
+
+  test(
+    "should navigate to model provider page multiple times",
+    { tag: ["@release", "@components", "@workspace"] },
+    async ({ page }) => {
+      await awaitBootstrapTest(page, { skipModal: true });
+
+      // Wait for page to be ready
+      await page.waitForTimeout(1000);
+
+      // First navigation - open page
+      await navigateSettingsPages(page, "Settings", "Model Providers");
+      await expect(
+        page.getByTestId("settings_menu_header").last(),
+      ).toContainText("Model Providers", { timeout: 5000 });
+
+      // Navigate back
+      await page.getByTestId("icon-ChevronLeft").first().click();
+      await expect(
+        page.getByText(
+          "Configure AI model providers and manage their API keys.",
+        ),
+      ).not.toBeVisible({ timeout: 3000 });
+
+      // Second navigation - open page again
+      await navigateSettingsPages(page, "Settings", "Model Providers");
+      await expect(
+        page.getByTestId("settings_menu_header").last(),
+      ).toContainText("Model Providers", { timeout: 5000 });
+    },
+  );
 });

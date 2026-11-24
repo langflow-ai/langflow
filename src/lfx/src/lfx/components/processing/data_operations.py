@@ -2,7 +2,6 @@ import ast
 import json
 from typing import TYPE_CHECKING, Any
 
-import jq
 from json_repair import repair_json
 
 from lfx.custom import Component
@@ -12,6 +11,7 @@ from lfx.log.logger import logger
 from lfx.schema import Data
 from lfx.schema.dotdict import dotdict
 from lfx.utils.component_utils import set_current_fields, set_field_display
+from lfx.utils.jq_security import validate_jq_program
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -20,19 +20,11 @@ ACTION_CONFIG = {
     "Select Keys": {"is_list": False, "log_msg": "setting filter fields"},
     "Literal Eval": {"is_list": False, "log_msg": "setting evaluate fields"},
     "Combine": {"is_list": True, "log_msg": "setting combine fields"},
-    "Filter Values": {"is_list": False, "log_msg": "setting filter values fields"},
     "Append or Update": {"is_list": False, "log_msg": "setting Append or Update fields"},
     "Remove Keys": {"is_list": False, "log_msg": "setting remove keys fields"},
     "Rename Keys": {"is_list": False, "log_msg": "setting rename keys fields"},
     "Path Selection": {"is_list": False, "log_msg": "setting mapped key extractor fields"},
     "JQ Expression": {"is_list": False, "log_msg": "setting parse json fields"},
-}
-OPERATORS = {
-    "equals": lambda a, b: str(a) == str(b),
-    "not equals": lambda a, b: str(a) != str(b),
-    "contains": lambda a, b: str(b) in str(a),
-    "starts with": lambda a, b: str(a).startswith(str(b)),
-    "ends with": lambda a, b: str(a).endswith(str(b)),
 }
 
 
@@ -41,20 +33,20 @@ class DataOperationsComponent(Component):
     description = "Perform various operations on a JSON object."
     icon = "file-json"
     name = "DataOperations"
+    legacy = True
+    replacement = ["processing.Operations"]
     default_keys = ["operations", "data"]
     metadata = {
         "keywords": [
             "data",
             "json",
             "operations",
-            "filter values",
             "Append or Update",
             "remove keys",
             "rename keys",
             "select keys",
             "literal eval",
             "combine",
-            "filter",
             "append",
             "update",
             "remove",
@@ -75,7 +67,6 @@ class DataOperationsComponent(Component):
         "Select Keys": ["select_keys_input", "operations"],
         "Literal Eval": [],
         "Combine": [],
-        "Filter Values": ["filter_values", "operations", "operator", "filter_key"],
         "Append or Update": ["append_update_data", "operations"],
         "Remove Keys": ["remove_keys_input", "operations"],
         "Rename Keys": ["rename_keys_input", "operations"],
@@ -86,9 +77,6 @@ class DataOperationsComponent(Component):
     # All operation-specific input fields (used to hide and reset when no operation selected).
     ALL_OPERATION_FIELDS = [
         "select_keys_input",
-        "filter_key",
-        "operator",
-        "filter_values",
         "append_update_data",
         "remove_keys_input",
         "rename_keys_input",
@@ -145,7 +133,6 @@ class DataOperationsComponent(Component):
                 {"name": "Select Keys", "icon": "lasso-select"},
                 {"name": "Literal Eval", "icon": "braces"},
                 {"name": "Combine", "icon": "merge"},
-                {"name": "Filter Values", "icon": "filter"},
                 {"name": "Append or Update", "icon": "circle-plus"},
                 {"name": "Remove Keys", "icon": "eraser"},
                 {"name": "Rename Keys", "icon": "pencil-line"},
@@ -163,35 +150,6 @@ class DataOperationsComponent(Component):
             show=False,
             is_list=True,
             value=[],
-        ),
-        # filter values inputs
-        MessageTextInput(
-            name="filter_key",
-            display_name="Filter Key",
-            info=(
-                "Name of the key containing the list to filter. "
-                "It must be a top-level key in the JSON and its value must be a list."
-            ),
-            is_list=True,
-            show=False,
-            value=[],
-        ),
-        DropdownInput(
-            name="operator",
-            display_name="Comparison Operator",
-            options=["equals", "not equals", "contains", "starts with", "ends with"],
-            info="The operator to apply for comparing the values.",
-            value="equals",
-            advanced=False,
-            show=False,
-        ),
-        DictInput(
-            name="filter_values",
-            display_name="Filter Values",
-            info="List of values to filter by.",
-            show=False,
-            is_list=True,
-            value={},
         ),
         # update/ Append data inputs
         DictInput(
@@ -251,9 +209,6 @@ class DataOperationsComponent(Component):
     # Default values for operation fields when clearing (match input definitions)
     OPERATION_FIELD_DEFAULTS: dict[str, Any] = {
         "select_keys_input": [],
-        "filter_key": [],
-        "operator": "equals",
-        "filter_values": {},
         "append_update_data": {"key": "value"},
         "remove_keys_input": [],
         "rename_keys_input": {"old_key": "new_key"},
@@ -275,7 +230,11 @@ class DataOperationsComponent(Component):
     def json_query(self) -> Data:
         import json
 
-        import jq
+        try:
+            import jq
+        except ImportError:
+            msg = "jq is required for JQ Expression. Install with: pip install jq"
+            raise ImportError(msg) from None
 
         if not self.query or not self.query.strip():
             msg = "JSON Query is required and cannot be blank."
@@ -286,6 +245,7 @@ class DataOperationsComponent(Component):
             repaired = repair_json(input_str)
             data_json = json.loads(repaired)
             jq_input = data_json["data"] if isinstance(data_json, dict) and "data" in data_json else data_json
+            validate_jq_program(self.query)
             results = jq.compile(self.query).input(jq_input).all()
             if not results:
                 msg = "No result from JSON query."
@@ -317,6 +277,23 @@ class DataOperationsComponent(Component):
             msg = f"{operation} operation is not supported for multiple data objects."
             raise ValueError(msg)
 
+    def validate_data_edges(self, operation: str) -> None:
+        """Fail when several JSON edges feed an operation that takes one input.
+
+        A node keeps its edges when its operation changes, and for every operation but Combine the
+        ``data`` field takes one edge, so the graph would pass only the last edge's data. Count the
+        edges instead of trusting the value.
+        """
+        vertex = getattr(self, "_vertex", None)
+        if vertex is None:
+            return
+        if sum(1 for edge in vertex.incoming_edges if edge.target_param == "data") > 1:
+            msg = (
+                f"{operation} operation is not supported for multiple data objects. "
+                "Connect one JSON input, or use Combine."
+            )
+            raise ValueError(msg)
+
     def operation_exception(self, operations: list[str]) -> None:
         """Raise exception for incompatible operations."""
         msg = f"{operations} operations are not supported in combination with each other."
@@ -330,7 +307,8 @@ class DataOperationsComponent(Component):
         filter_criteria: list[str] = self.select_keys_input
 
         # Filter the data
-        if len(filter_criteria) == 1 and filter_criteria[0] == "data":
+        # Only a dict can be unwrapped into Data; any other value keeps its key.
+        if filter_criteria == ["data"] and isinstance(data_dict.get("data"), dict):
             filtered = data_dict["data"]
         else:
             if not all(key in data_dict for key in filter_criteria):
@@ -427,61 +405,7 @@ class DataOperationsComponent(Component):
         if evaluate:
             combined_data = self.recursive_eval(combined_data)
 
-        return Data(**combined_data)
-
-    def filter_data(self, input_data: list[dict[str, Any]], filter_key: str, filter_value: str, operator: str) -> list:
-        """Filter list data based on key, value, and operator."""
-        # Validate inputs
-        if not input_data:
-            self.status = "Input data is empty."
-            return []
-
-        if not filter_key or not filter_value:
-            self.status = "Filter key or value is missing."
-            return input_data
-
-        # Filter the data
-        filtered_data = []
-        for item in input_data:
-            if isinstance(item, dict) and filter_key in item:
-                if self.compare_values(item[filter_key], filter_value, operator):
-                    filtered_data.append(item)
-            else:
-                self.status = f"Warning: Some items don't have the key '{filter_key}' or are not dictionaries."
-
-        return filtered_data
-
-    def compare_values(self, item_value: Any, filter_value: str, operator: str) -> bool:
-        comparison_func = OPERATORS.get(operator)
-        if comparison_func:
-            return comparison_func(item_value, filter_value)
-        return False
-
-    def multi_filter_data(self) -> Data:
-        """Apply multiple filters to the data."""
-        self.validate_single_data("Filter Values")
-        data_filtered = self.get_normalized_data()
-
-        for filter_key in self.filter_key:
-            if filter_key not in data_filtered:
-                msg = f"Filter key '{filter_key}' not found in data. Available keys: {list(data_filtered.keys())}"
-                raise ValueError(msg)
-
-            if isinstance(data_filtered[filter_key], list):
-                for filter_data in self.filter_values:
-                    filter_value = self.filter_values.get(filter_data)
-                    if filter_value is not None:
-                        data_filtered[filter_key] = self.filter_data(
-                            input_data=data_filtered[filter_key],
-                            filter_key=filter_data,
-                            filter_value=filter_value,
-                            operator=self.operator,
-                        )
-            else:
-                msg = f"Filter key '{filter_key}' is not a list."
-                raise TypeError(msg)
-
-        return Data(**data_filtered)
+        return Data(data=combined_data)
 
     def append_update(self) -> Data:
         """Append or Update with new key-value pairs."""
@@ -491,7 +415,17 @@ class DataOperationsComponent(Component):
         for key, value in self.append_update_data.items():
             data_filtered[key] = value
 
-        return Data(**data_filtered)
+        return Data(data=data_filtered)
+
+    @staticmethod
+    def _set_data_list_flag(template: dict, action: str) -> None:
+        """Let the JSON input take several edges only for operations that consume a list (Combine).
+
+        The serialized template stores ``Input.is_list`` under ``list``; the canvas and the graph read
+        that key to decide whether ``data`` takes many edges. Drop any ``is_list`` an earlier save left.
+        """
+        template["data"]["list"] = ACTION_CONFIG[action]["is_list"]
+        template["data"].pop("is_list", None)
 
     # Configuration and execution methods
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
@@ -510,7 +444,7 @@ class DataOperationsComponent(Component):
             if len(selected_actions) == 1 and selected_actions[0] in ACTION_CONFIG:
                 action = selected_actions[0]
                 config = ACTION_CONFIG[action]
-                build_config["data"]["is_list"] = config["is_list"]
+                self._set_data_list_flag(build_config, action)
                 logger.info(config["log_msg"])
                 return set_current_fields(
                     build_config=build_config,
@@ -533,12 +467,58 @@ class DataOperationsComponent(Component):
 
         return build_config
 
+    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict) -> dict:
+        """Keep the saved operation's fields visible when the node is updated.
+
+        The rebuilt template carries class-default ``show`` flags, which the generic merge does not
+        restore, so visibility is re-derived here from the saved operation without touching saved values.
+        """
+        await super().update_frontend_node(new_frontend_node, current_frontend_node)
+
+        template = new_frontend_node.get("template", {})
+        operations_value = template.get("operations", {}).get("value") or []
+        selected_actions = [
+            action["name"]
+            for action in (operations_value if isinstance(operations_value, list) else [])
+            if isinstance(action, dict) and "name" in action
+        ]
+        action = selected_actions[0] if len(selected_actions) == 1 else None
+        if action not in ACTION_CONFIG:
+            action = None
+
+        # Re-apply visibility. Unlike update_build_config, keep saved values.
+        visible_fields = self.actions_data.get(action, []) if action else []
+        for field in self.ALL_OPERATION_FIELDS:
+            if field in template:
+                template[field]["show"] = field in visible_fields
+        if action and "data" in template:
+            self._set_data_list_flag(template, action)
+
+        # The merge restores only values, so rebuild Path Selection's dropdown from the saved JSON.
+        if action == "Path Selection" and "selected_key" in template:
+            mapped_json = template.get("mapped_json_display", {}).get("value")
+            if mapped_json:
+                try:
+                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
+                    logger.warning(f"Error parsing saved mapped JSON: {e}")
+                    template["selected_key"]["show"] = False
+
+        return new_frontend_node
+
     def json_path(self) -> Data:
+        try:
+            import jq
+        except ImportError:
+            msg = "jq is required for Path Selection. Install with: pip install jq"
+            raise ImportError(msg) from None
+
         try:
             if not self.data or not self.selected_key:
                 msg = "Missing input data or selected key."
                 raise ValueError(msg)
             input_payload = self.data[0].data if isinstance(self.data, list) else self.data.data
+            validate_jq_program(self.selected_key)
             compiled = jq.compile(self.selected_key)
             result = compiled.input(input_payload).first()
             if isinstance(result, dict):
@@ -562,18 +542,26 @@ class DataOperationsComponent(Component):
             "Select Keys": self.select_keys,
             "Literal Eval": self.evaluate_data,
             "Combine": self.combine_data,
-            "Filter Values": self.multi_filter_data,
             "Append or Update": self.append_update,
             "Remove Keys": self.remove_keys,
             "Rename Keys": self.rename_keys,
             "Path Selection": self.json_path,
             "JQ Expression": self.json_query,
         }
-        handler: Callable[[], Data] | None = action_map.get(selected_actions[0])
-        if handler:
-            try:
-                return handler()
-            except Exception as e:
-                logger.error(f"Error executing {selected_actions[0]}: {e!s}")
-                raise
-        return Data(data={})
+        action_name = selected_actions[0]
+        handler: Callable[[], Data] | None = action_map.get(action_name)
+        if handler is None:
+            # Fail fast instead of silently returning empty data. Persisted flows
+            # may still reference a removed operation (e.g. "Filter Values").
+            msg = (
+                f"The '{action_name}' operation is no longer supported by the JSON Operations component. "
+                "Update this flow to use the Operations component."
+            )
+            raise ValueError(msg)
+        if action_name != "Combine":
+            self.validate_data_edges(action_name)
+        try:
+            return handler()
+        except Exception as e:
+            logger.error(f"Error executing {action_name}: {e!s}")
+            raise

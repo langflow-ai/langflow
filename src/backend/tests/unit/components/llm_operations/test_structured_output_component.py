@@ -51,6 +51,24 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return the file names mapping for version-specific files."""
 
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs, mock_llm):
+        # Answer with a trustcall-shaped result offline; the component's unpacking of it runs for real.
+        def fake_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
+            class _Response(BaseModel):
+                def model_dump(self, **__):
+                    return {"objects": [{"field": "value"}]}
+
+            return {"messages": [], "responses": [_Response()], "response_metadata": [{"id": "mock_id"}], "attempts": 1}
+
+        with (
+            patch(
+                "lfx.base.models.unified_models.get_model_class",
+                return_value=MagicMock(return_value=mock_llm),
+            ),
+            patch("lfx.components.llm_operations.structured_output.get_chat_result", fake_get_chat_result),
+        ):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
+
     @pytest.fixture
     def mock_model_classes(self):
         """Helper fixture to create a mock model class factory for MockLanguageModel."""
@@ -78,7 +96,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
 
     @patch("lfx.base.models.unified_models.get_model_class")
     def test_successful_structured_output_generation_with_patch_with_config(self, mock_get_model_class, mock_llm):
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {"objects": [{"field": "value"}]}
@@ -362,6 +380,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result == [{"field": "value"}]
         mock_get_chat_result.assert_called_once()
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY is not set or is empty",
@@ -402,6 +421,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["name"] == "John Doe"
         assert result[0]["age"] == 30
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
@@ -471,7 +491,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that multiple patterns are extracted while removing exact duplicates but keeping variations."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {
@@ -528,6 +548,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
             assert 1099.99 in prices
             assert 899.99 in prices
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
@@ -580,6 +601,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
                 ]
             ), f"Expected max_tokens error but got: {error_message}"
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
@@ -635,6 +657,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["price"] == 129.99
         assert result[0]["rating"] == 4.0
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("OPENAI_API_KEY") or "").strip(),
         reason="OPENAI_API_KEY environment variable not set",
@@ -706,6 +729,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         assert result[0]["total_bill"] == 35.49
         assert result[0]["would_return"] is True
 
+    @pytest.mark.api_key_required
     @pytest.mark.skipif(
         not (os.getenv("NVIDIA_API_KEY") or "").strip(),
         reason="NVIDIA_API_KEY environment variable not set",
@@ -760,7 +784,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that when trustcall returns a dict without 'objects' key, we return the dict directly."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             # Return trustcall-style response but without BaseModel that creates "objects" key
             return {
                 "messages": ["mock_message"],
@@ -792,7 +816,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that when trustcall returns a non-dict response, we return it directly."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             # Return a string response (edge case)
             return "Simple string response"
 
@@ -819,7 +843,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that when trustcall returns empty responses array, we return the result dict."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             # Return trustcall-style response with empty responses
             return {
                 "messages": ["mock_message"],
@@ -854,7 +878,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that build_structured_output() fails when base method returns non-list."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             # Return a dict instead of list with objects
             return {
                 "messages": ["mock_message"],
@@ -886,7 +910,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that build_structured_output() returns Data object with dict data."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {"objects": [{"field": "value2", "number": 24}]}  # Return only one object
@@ -939,7 +963,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that build_structured_output() returns Data object with multiple objects wrapped in results."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {
@@ -995,7 +1019,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that build_structured_output() returns Data object when only one item in objects."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {"objects": [{"name": "John Doe", "age": 30}]}
@@ -1041,7 +1065,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that the returned Data object has proper properties."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {"objects": [{"product": "iPhone", "price": 999.99, "available": True}]}
@@ -1099,7 +1123,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that build_structured_dataframe() returns DataFrame object with single Data item."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {"objects": [{"field": "value2", "number": 24}]}
@@ -1147,7 +1171,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that build_structured_dataframe() returns DataFrame object with multiple Data items."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {
@@ -1207,7 +1231,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that build_structured_dataframe() fails when base method returns non-list."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             return {
                 "messages": ["mock_message"],
                 "responses": [{"single_item": "value"}],
@@ -1238,7 +1262,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that build_structured_dataframe() fails when base method returns empty list."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {"objects": []}
@@ -1438,7 +1462,7 @@ class TestStructuredOutputComponent(ComponentTestBaseWithoutClient):
         """Test that when trustcall succeeds, langchain fallback is not attempted."""
         mock_get_model_class.return_value = mock_model_classes(mock_llm)
 
-        def mock_get_chat_result(runnable, system_message, input_value, config):  # noqa: ARG001
+        def mock_get_chat_result(runnable, system_message, input_value, config, **kwargs):  # noqa: ARG001
             class MockBaseModel(BaseModel):
                 def model_dump(self, **__):
                     return {"objects": [{"field": "trustcall_value"}]}

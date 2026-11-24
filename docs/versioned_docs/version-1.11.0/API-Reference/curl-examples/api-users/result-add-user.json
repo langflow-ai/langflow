@@ -1,0 +1,16 @@
+{
+  "id": "10c1c6a2-ab8a-4748-8700-0e4832fd5ce8",
+  "username": "newuser2",
+  "profile_image": null,
+  "store_api_key": null,
+  "is_active": false,
+  "is_superuser": false,
+  "create_at": "2025-05-29T16:02:20.132436",
+  "updated_at": "2025-05-29T16:02:20.132442",
+  "last_login_at": null,
+  "optins": {
+    "github_starred": false,
+    "dialog_dismissed": false,
+    "discord_clicked": false
+  }
+}

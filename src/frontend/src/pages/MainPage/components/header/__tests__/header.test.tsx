@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import { useUtilityStore } from "@/stores/utilityStore";
 import HeaderComponent from "../index";
 
 interface IconProps {
@@ -118,7 +119,6 @@ jest.mock("@/modals/deleteConfirmationModal", () => ({
     children,
     onConfirm,
     description,
-    note,
     "data-testid": testId,
   }: DeleteModalProps) => (
     <div
@@ -173,6 +173,15 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    act(() => {
+      useUtilityStore.setState({ featureFlags: {} });
+    });
+  });
+
+  afterEach(() => {
+    act(() => {
+      useUtilityStore.setState({ featureFlags: {} });
+    });
   });
 
   describe("DeleteConfirmationModal TabIndex - No Selections", () => {
@@ -212,6 +221,58 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
     });
   });
 
+  describe("Accessibility - aria-label on icon-only buttons", () => {
+    it("download button has a non-empty aria-label when flows are selected", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} selectedFlows={["flow1"]} />,
+      );
+      const downloadBtn = container.querySelector(
+        '[data-testid="download-bulk-btn"]',
+      );
+      expect(downloadBtn).toHaveAttribute("aria-label");
+      expect(downloadBtn?.getAttribute("aria-label")).toBeTruthy();
+    });
+
+    it("view toggle buttons have aria-label attributes", () => {
+      const { container } = render(<HeaderComponent {...defaultProps} />);
+      const viewBtns = container.querySelectorAll("button[aria-pressed]");
+      expect(viewBtns.length).toBe(2);
+      viewBtns.forEach((btn) => {
+        expect(btn.getAttribute("aria-label")).toBeTruthy();
+      });
+    });
+
+    it("view toggle buttons expose aria-pressed reflecting active view", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} view="list" />,
+      );
+      // Find the two view toggle buttons by aria-pressed attribute presence
+      const pressedTrue = container.querySelector(
+        'button[aria-pressed="true"]',
+      );
+      const pressedFalse = container.querySelector(
+        'button[aria-pressed="false"]',
+      );
+      expect(pressedTrue).toBeInTheDocument();
+      expect(pressedFalse).toBeInTheDocument();
+    });
+
+    it("exactly one view toggle is aria-pressed=true and one is false", () => {
+      const { container } = render(
+        <HeaderComponent {...defaultProps} view="grid" />,
+      );
+      const allPressed = container.querySelectorAll("button[aria-pressed]");
+      const trueCount = Array.from(allPressed).filter(
+        (b) => b.getAttribute("aria-pressed") === "true",
+      ).length;
+      const falseCount = Array.from(allPressed).filter(
+        (b) => b.getAttribute("aria-pressed") === "false",
+      ).length;
+      expect(trueCount).toBe(1);
+      expect(falseCount).toBe(1);
+    });
+  });
+
   describe("Accessibility - TabIndex Impact", () => {
     it("should not interfere with other interactive elements when bulk actions are hidden", () => {
       render(<HeaderComponent {...defaultProps} selectedFlows={[]} />);
@@ -233,6 +294,18 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
       // Delete button should be accessible
       const deleteBtn = screen.getByTestId("delete-bulk-btn");
       expect(deleteBtn).not.toHaveAttribute("tabindex", "-1");
+    });
+
+    it("should hide the New Flow button when the feature flag is enabled", () => {
+      act(() => {
+        useUtilityStore.setState({
+          hideNewFlowButton: true,
+        });
+      });
+
+      render(<HeaderComponent {...defaultProps} selectedFlows={[]} />);
+
+      expect(screen.queryByTestId("new-project-btn")).not.toBeInTheDocument();
     });
   });
 });

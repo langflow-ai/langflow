@@ -1,16 +1,15 @@
-import json
-from unittest.mock import MagicMock, patch
+import hashlib
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import numpy as np
 import pytest
 from langflow.schema.data import Data
 from langflow.schema.dataframe import DataFrame
 from langflow.schema.message import Message
 from lfx.base.knowledge_bases import get_knowledge_bases
-from lfx.components.deactivated.ingestion import KnowledgeIngestionComponent
+from lfx.components.files_and_knowledge import KnowledgeIngestionComponent
 
 from tests.base import ComponentTestBaseWithClient
-
-pytestmark = pytest.mark.skip(reason="KnowledgeIngestionComponent is deactivated")
 
 
 class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
@@ -20,13 +19,21 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         return KnowledgeIngestionComponent
 
     @pytest.fixture(autouse=True)
-    def mock_knowledge_base_path(self, tmp_path):
-        """Mock the knowledge base root path directly."""
-        with patch("langflow.components.knowledge_bases.ingestion._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
+    def mock_knowledge_base_path(self, tmp_path, monkeypatch, active_user):  # noqa: ARG002 - orders app startup
+        """Pin the KB root at a fresh tmp dir for every test.
+
+        The user fixture starts the app before we patch its settings service.
+        Local storage reads ``knowledge_bases_dir`` live via
+        ``KBStorageHelper.get_root_path``, so the setting is what has to move.
+        """
+        from langflow.services.deps import get_settings_service
+
+        monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path))
+        with patch("lfx.components.files_and_knowledge._kb_paths._KNOWLEDGE_BASES_ROOT_PATH", tmp_path):
             yield
 
     @pytest.fixture
-    def default_kwargs(self, tmp_path, active_user):
+    async def default_kwargs(self, tmp_path, active_user, mock_knowledge_base_path):  # noqa: ARG002 - orders storage root
         """Return default kwargs for component instantiation."""
         # Create a sample DataFrame
         data_df = DataFrame(
@@ -40,21 +47,23 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
             {"column_name": "category", "vectorize": False, "identifier": True},
         ]
 
-        # Create knowledge base directory
         kb_name = "test_kb"
-        kb_path = tmp_path / active_user.username / kb_name
-        kb_path.mkdir(parents=True, exist_ok=True)
+        # Creation initializes the UUID-routed SQLite store and its metadata.
+        from langflow.api.utils import knowledge_base_service
 
-        # Create embedding metadata file
-        metadata = {
-            "embedding_provider": "HuggingFace",
-            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "api_key": None,
-            "api_key_used": False,
-            "chunk_size": 1000,
-            "created_at": "2024-01-01T00:00:00Z",
-        }
-        (kb_path / "embedding_metadata.json").write_text(json.dumps(metadata))
+        await knowledge_base_service.create_record(
+            user_id=active_user.id,
+            name=kb_name,
+            model_selection={
+                "name": "sentence-transformers/all-MiniLM-L6-v2",
+                "provider": "HuggingFace",
+                "metadata": {
+                    "embedding_class": "HuggingFaceEmbeddings",
+                    "param_mapping": {"model": "model_name"},
+                },
+            },
+            chunk_size=1000,
+        )
 
         return {
             "knowledge_base": kb_name,
@@ -73,6 +82,12 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         """Return file names mapping for version testing."""
         # This is a new component, so it doesn't exist in older versions
         return []
+
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "dataframe_output": "embeds the rows with a live embedding provider",
+        }
 
     def test_validate_column_config_valid(self, component_class, default_kwargs):
         """Test column configuration validation with valid config."""
@@ -99,107 +114,45 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         with pytest.raises(ValueError, match="Column 'nonexistent' not found in DataFrame"):
             component._validate_column_config(data_df)
 
-    def test_get_embedding_provider(self, component_class, default_kwargs):
-        """Test embedding provider detection."""
-        component = component_class(**default_kwargs)
+    @pytest.mark.parametrize("knowledge_base", ["../../outside", "../victim/secret_kb"])
+    async def test_legacy_kb_path_rejects_paths_outside_the_current_user_directory(
+        self, component_class, default_kwargs, knowledge_base
+    ):
+        from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
+        from langflow.services.deps import session_scope
 
-        # Test OpenAI provider
-        assert component._get_embedding_provider("text-embedding-ada-002") == "OpenAI"
-
-        # Test HuggingFace provider
-        assert component._get_embedding_provider("sentence-transformers/all-MiniLM-L6-v2") == "HuggingFace"
-
-        # Test Cohere provider
-        assert component._get_embedding_provider("embed-english-v3.0") == "Cohere"
-
-        # Test custom provider
-        assert component._get_embedding_provider("custom-model") == "Custom"
-
-    @patch("langchain_huggingface.HuggingFaceEmbeddings")
-    def test_build_embeddings_huggingface(self, mock_hf_embeddings, component_class, default_kwargs):
-        """Test building HuggingFace embeddings."""
-        component = component_class(**default_kwargs)
-
-        mock_embeddings = MagicMock()
-        mock_hf_embeddings.return_value = mock_embeddings
-
-        result = component._build_embeddings("sentence-transformers/all-MiniLM-L6-v2", None)
-
-        mock_hf_embeddings.assert_called_once_with(model="sentence-transformers/all-MiniLM-L6-v2")
-        assert result == mock_embeddings
-
-    @patch("langchain_openai.OpenAIEmbeddings")
-    def test_build_embeddings_openai(self, mock_openai_embeddings, component_class, default_kwargs):
-        """Test building OpenAI embeddings."""
-        component = component_class(**default_kwargs)
-
-        mock_embeddings = MagicMock()
-        mock_openai_embeddings.return_value = mock_embeddings
-
-        result = component._build_embeddings("text-embedding-ada-002", "test-api-key")
-
-        mock_openai_embeddings.assert_called_once_with(
-            model="text-embedding-ada-002",
-            api_key="test-api-key",  # pragma:allowlist secret
-            chunk_size=1000,  # pragma:allowlist secret
+        # Seed a historical malformed row directly. Current creation rejects
+        # this name before the legacy containment guard can be reached.
+        record = KnowledgeBaseRecord(
+            user_id=default_kwargs["_user_id"],
+            name=knowledge_base,
+            backend_type="chroma",
+            model_selection={"name": "m", "provider": "HuggingFace"},
         )
-        assert result == mock_embeddings
-
-    def test_build_embeddings_openai_no_key(self, component_class, default_kwargs):
-        """Test building OpenAI embeddings without API key raises error."""
+        async with session_scope() as session:
+            session.add(record)
+            await session.commit()
+        default_kwargs["knowledge_base"] = knowledge_base
         component = component_class(**default_kwargs)
 
-        with pytest.raises(ValueError, match="OpenAI API key is required"):
-            component._build_embeddings("text-embedding-ada-002", None)
+        with pytest.raises(ValueError, match="KB path escapes root directory"):
+            await component._kb_path()
 
-    @patch("langchain_cohere.CohereEmbeddings")
-    def test_build_embeddings_cohere(self, mock_cohere_embeddings, component_class, default_kwargs):
-        """Test building Cohere embeddings."""
+    def test_new_knowledge_dialog_uses_provider_credentials(self, component_class, default_kwargs):
+        """Test the create-knowledge dialog no longer exposes a redundant API key override."""
         component = component_class(**default_kwargs)
+        dialog_inputs = component.inputs[0].dialog_inputs["fields"]["data"]["node"]
+        embedding_model_input = dialog_inputs["template"]["02_embedding_model"]
+        backend_input = dialog_inputs["template"]["03_knowledge_backend"]
 
-        mock_embeddings = MagicMock()
-        mock_cohere_embeddings.return_value = mock_embeddings
-
-        result = component._build_embeddings("embed-english-v3.0", "test-api-key")
-
-        mock_cohere_embeddings.assert_called_once_with(
-            model="embed-english-v3.0",
-            cohere_api_key="test-api-key",  # pragma:allowlist secret
-        )  # pragma:allowlist secret
-        assert result == mock_embeddings
-
-    def test_build_embeddings_cohere_no_key(self, component_class, default_kwargs):
-        """Test building Cohere embeddings without API key raises error."""
-        component = component_class(**default_kwargs)
-
-        with pytest.raises(ValueError, match="Cohere API key is required"):
-            component._build_embeddings("embed-english-v3.0", None)
-
-    def test_build_embeddings_custom_not_supported(self, component_class, default_kwargs):
-        """Test building custom embeddings raises NotImplementedError."""
-        component = component_class(**default_kwargs)
-
-        with pytest.raises(NotImplementedError, match="Custom embedding models not yet supported"):
-            component._build_embeddings("custom-model", "test-key")
-
-    @patch("langflow.components.knowledge_bases.ingestion.get_settings_service")
-    @patch("langflow.components.knowledge_bases.ingestion.encrypt_api_key")
-    def test_build_embedding_metadata(self, mock_encrypt, mock_get_settings, component_class, default_kwargs):
-        """Test building embedding metadata."""
-        component = component_class(**default_kwargs)
-
-        mock_settings = MagicMock()
-        mock_get_settings.return_value = mock_settings
-        mock_encrypt.return_value = "encrypted_key"
-
-        metadata = component._build_embedding_metadata("sentence-transformers/all-MiniLM-L6-v2", "test-key")
-
-        assert metadata["embedding_provider"] == "HuggingFace"
-        assert metadata["embedding_model"] == "sentence-transformers/all-MiniLM-L6-v2"
-        assert metadata["api_key"] == "encrypted_key"  # pragma:allowlist secret
-        assert metadata["api_key_used"] is True
-        assert metadata["chunk_size"] == 1000
-        assert "created_at" in metadata
+        assert dialog_inputs["field_order"] == ["01_new_kb_name", "02_embedding_model", "03_knowledge_backend"]
+        assert "03_api_key" not in dialog_inputs["template"]
+        assert "configured credentials" in embedding_model_input.info
+        assert backend_input.field_type.value == "knowledge_backend"
+        assert backend_input.display_name == "DB Provider"
+        # Default is empty so the frontend can populate it from the user's
+        # configured active DB Provider on first render.
+        assert backend_input.value == {}
 
     def test_build_column_metadata(self, component_class, default_kwargs):
         """Test building column metadata."""
@@ -216,19 +169,114 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "text" in metadata["summary"]["vectorized_columns"]
         assert "category" in metadata["summary"]["identifier_columns"]
 
+    # Column Configuration cells hold real booleans when toggled, but a typed
+    # cell (or a flow saved before the cell rendered as a toggle) keeps the raw
+    # string, so every spelling the table can store must read the same way.
+    @pytest.mark.parametrize(
+        ("raw", "expected"),
+        [
+            (True, True),
+            ("True", True),
+            ("true", True),
+            ("TRUE", True),
+            (" true ", True),
+            ("1", True),
+            ("yes", True),
+            (False, False),
+            ("False", False),
+            ("false", False),
+            ("0", False),
+            ("no", False),
+            ("", False),
+            (None, False),
+        ],
+    )
+    def test_build_column_metadata_reads_string_flags(self, component_class, default_kwargs, raw, expected):
+        component = component_class(**default_kwargs)
+        data_df = default_kwargs["input_df"]
+        config_list = [{"column_name": "text", "vectorize": raw, "identifier": raw}]
+
+        metadata = component._build_column_metadata(config_list, data_df)
+
+        assert metadata["columns"] == [{"name": "text", "vectorize": expected, "identifier": expected}]
+        assert metadata["summary"] == {
+            "vectorized_columns": ["text"] if expected else [],
+            "identifier_columns": ["text"] if expected else [],
+        }
+
+    async def test_typed_vectorize_flag_reaches_the_embedding(self, component_class, default_kwargs):
+        """A Vectorize cell typed as ``"true"`` contributes to page content instead of flat metadata."""
+        data_df = DataFrame(
+            {
+                "question": ["What is Langflow?"],
+                "answer": ["A visual framework for building AI workflows"],
+                "category": ["general"],
+                "language": ["en"],
+            }
+        )
+        # The saved-flow shape: untouched cells stay booleans, typed cells are strings.
+        default_kwargs["input_df"] = data_df
+        default_kwargs["column_config"] = [
+            {"column_name": "question", "vectorize": True, "identifier": "true"},
+            {"column_name": "answer", "vectorize": "true", "identifier": "false"},
+        ]
+        component = component_class(**default_kwargs)
+
+        config_list = component._validate_column_config(data_df)
+        metadata = component._build_column_metadata(config_list, data_df)
+        [data_obj] = await component._convert_df_to_data_objects(data_df, config_list)
+
+        assert metadata["summary"] == {
+            "vectorized_columns": ["question", "answer"],
+            "identifier_columns": ["question"],
+        }
+        assert data_obj.data["text"] == "What is Langflow? A visual framework for building AI workflows"
+        assert "answer" not in data_obj.data
+        assert data_obj.data["category"] == "general"
+        assert data_obj.data["language"] == "en"
+        # The identifier column alone keys the row.
+        assert data_obj.data["_id"] == hashlib.sha256(b"What is Langflow?").hexdigest()
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_new_kb_record_persists_boolean_column_flags(
+        self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """The KB row stores canonical booleans, so later readers never re-parse typed strings."""
+        from langflow.api.utils import knowledge_base_service
+
+        default_kwargs["column_config"] = [
+            {"column_name": "question", "vectorize": True, "identifier": "true"},
+            {"column_name": "answer", "vectorize": "true", "identifier": "false"},
+        ]
+        component = component_class(**default_kwargs)
+        mock_get_embeddings.return_value.embed_query.return_value = [0.1, 0.2, 0.3]
+        field_value = {
+            "01_new_kb_name": "typed_flags_kb",
+            "02_embedding_model": [
+                {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
+            ],
+            "03_knowledge_backend": {"backend_type": "sqlite", "backend_config": {}},
+        }
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
+
+        await component.update_build_config(build_config, field_value, "knowledge_base")
+
+        record = await knowledge_base_service.get_by_user_and_name(default_kwargs["_user_id"], "typed_flags_kb")
+        assert record is not None
+        assert record.column_config == [
+            {"column_name": "question", "vectorize": True, "identifier": True},
+            {"column_name": "answer", "vectorize": True, "identifier": False},
+        ]
+        # The component's own input is left untouched.
+        assert component.column_config[1]["vectorize"] == "true"
+
     async def test_convert_df_to_data_objects(self, component_class, default_kwargs):
         """Test converting DataFrame to Data objects."""
         component = component_class(**default_kwargs)
         data_df = default_kwargs["input_df"]
         config_list = default_kwargs["column_config"]
 
-        # Mock Chroma to avoid actual vector store operations
-        with patch("langflow.components.knowledge_bases.ingestion.Chroma") as mock_chroma:
-            mock_chroma_instance = MagicMock()
-            mock_chroma_instance.get.return_value = {"metadatas": []}
-            mock_chroma.return_value = mock_chroma_instance
-
-            data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+        data_objects = await component._convert_df_to_data_objects(data_df, config_list)
 
         assert len(data_objects) == 2
         assert all(isinstance(obj, Data) for obj in data_objects)
@@ -247,24 +295,13 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         data_df = default_kwargs["input_df"]
         config_list = default_kwargs["column_config"]
 
-        # Mock Chroma with existing hash
-        with patch("langflow.components.knowledge_bases.ingestion.Chroma") as mock_chroma:
-            # Simulate existing document with same hash
-            existing_hash = "some_existing_hash"
-            mock_chroma_instance = MagicMock()
-            mock_chroma_instance.get.return_value = {"metadatas": [{"_id": existing_hash}]}
-            mock_chroma.return_value = mock_chroma_instance
-
-            # Mock hashlib to return the existing hash for first row
-            with patch("langflow.components.knowledge_bases.ingestion.hashlib.sha256") as mock_hash:
-                mock_hash_obj = MagicMock()
-                mock_hash_obj.hexdigest.side_effect = [existing_hash, "different_hash"]
-                mock_hash.return_value = mock_hash_obj
-
-                data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+        # The storage operation supplies existing identifiers to the converter.
+        existing_hash = hashlib.sha256(b"cat1").hexdigest()
+        data_objects = await component._convert_df_to_data_objects(data_df, config_list, existing_ids={existing_hash})
 
         # Should only return one object (second row) since first is duplicate
         assert len(data_objects) == 1
+        assert data_objects[0].data["category"] == "cat2"
 
     def test_is_valid_collection_name(self, component_class, default_kwargs):
         """Test collection name validation."""
@@ -274,29 +311,29 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert component.is_valid_collection_name("valid_name") is True
         assert component.is_valid_collection_name("valid-name") is True
         assert component.is_valid_collection_name("ValidName123") is True
+        assert component.is_valid_collection_name("docs.v2") is True
+        assert component.is_valid_collection_name("a" * 512) is True
 
         # Invalid names
         assert component.is_valid_collection_name("ab") is False  # Too short
-        assert component.is_valid_collection_name("a" * 64) is False  # Too long
+        assert component.is_valid_collection_name("a" * 513) is False  # Too long
         assert component.is_valid_collection_name("_invalid") is False  # Starts with underscore
         assert component.is_valid_collection_name("invalid_") is False  # Ends with underscore
         assert component.is_valid_collection_name("invalid@name") is False  # Invalid character
 
-    @patch("langflow.components.knowledge_bases.ingestion.json.loads")
-    @patch("langflow.components.knowledge_bases.ingestion.decrypt_api_key")
-    async def test_build_kb_info_success(self, mock_decrypt, mock_json_loads, component_class, default_kwargs):
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_build_kb_info_success(self, mock_get_embeddings, component_class, default_kwargs):
         """Test successful KB info building."""
         component = component_class(**default_kwargs)
 
-        # Mock metadata loading
-        mock_json_loads.return_value = {
-            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "api_key": "encrypted_key",  # pragma:allowlist secret
-        }
-        mock_decrypt.return_value = "decrypted_key"
+        mock_embedding_fn = MagicMock()
+        mock_get_embeddings.return_value = mock_embedding_fn
 
-        # Mock vector store creation
-        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+        # Isolate metadata building from storage and its statistics refresh.
+        with (
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -305,51 +342,172 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         assert "rows" in result.data
         assert result.data["rows"] == 2
 
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_build_kb_info_reports_the_knowledge_base_id(
+        self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """kb_id is the persisted id of the knowledge base and is stable across runs."""
+        from langflow.api.utils import knowledge_base_service
+
+        mock_get_embeddings.return_value = MagicMock()
+        record = await knowledge_base_service.get_by_user_and_name(default_kwargs["_user_id"], "test_kb")
+
+        kb_ids = []
+        for _ in range(2):
+            component = component_class(**default_kwargs)
+            with (
+                patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
+                patch.object(component, "_refresh_kb_stats"),
+            ):
+                result = await component.build_kb_info()
+            kb_ids.append(result.data["kb_id"])
+
+        assert kb_ids == [str(record.id), str(record.id)]
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_build_kb_info_keeps_the_knowledge_base_id_when_run_tracking_fails(
+        self, mock_get_embeddings, component_class, default_kwargs
+    ):
+        """A failure while starting run tracking must not hide the id of an existing knowledge base."""
+        from langflow.api.utils import knowledge_base_service
+
+        mock_get_embeddings.return_value = MagicMock()
+        record = await knowledge_base_service.get_by_user_and_name(default_kwargs["_user_id"], "test_kb")
+
+        component = component_class(**default_kwargs)
+        with (
+            patch("langflow.api.utils.ingestion_run_service.create_run", AsyncMock(side_effect=RuntimeError("boom"))),
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
+            result = await component.build_kb_info()
+
+        assert result.data["kb_id"] == str(record.id)
+
     async def test_get_knowledge_bases(self, tmp_path, active_user):
         """Test getting list of knowledge bases."""
         # Create additional test directories
-        (tmp_path / active_user.username / "kb1").mkdir(parents=True, exist_ok=True)
-        (tmp_path / active_user.username / "kb2").mkdir(parents=True, exist_ok=True)
-        (tmp_path / active_user.username / ".hidden").mkdir(parents=True, exist_ok=True)  # Should be ignored
+        from langflow.api.utils import knowledge_base_service
 
-        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+        # Rows are what the dropdown lists; a bare directory is invisible.
+        await knowledge_base_service.create_record(user_id=active_user.id, name="kb1")
+        await knowledge_base_service.create_record(user_id=active_user.id, name="kb2")
+        (tmp_path / active_user.username / "dir_without_row").mkdir(parents=True, exist_ok=True)
+
+        kb_list = await get_knowledge_bases(user_id=active_user.id)
 
         assert "test_kb" in kb_list
         assert "kb1" in kb_list
         assert "kb2" in kb_list
-        assert ".hidden" not in kb_list
+        assert "dir_without_row" not in kb_list
 
-    async def test_update_build_config_new_kb(self, component_class, default_kwargs):
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_update_build_config_new_kb(self, mock_get_embeddings, component_class, default_kwargs):
         """Test updating build config for new knowledge base creation."""
         component = component_class(**default_kwargs)
 
-        build_config = {"knowledge_base": {"value": None, "options": []}}
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
 
+        model_selection = [
+            {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
+        ]
         field_value = {
             "01_new_kb_name": "new_test_kb",
-            "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "03_api_key": "abc123",  # pragma:allowlist secret
+            "02_embedding_model": model_selection,
+            "03_knowledge_backend": {"backend_type": "sqlite", "backend_config": {}},
         }
 
         # Mock embedding validation
-        with (
-            patch.object(component, "_build_embeddings") as mock_build_emb,
-            patch.object(component, "_save_embedding_metadata"),
-        ):
-            mock_embeddings = MagicMock()
-            mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
-            mock_build_emb.return_value = mock_embeddings
+        mock_embeddings = MagicMock()
+        mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
+        mock_get_embeddings.return_value = mock_embeddings
 
+        with patch.object(
+            component,
+            "_create_knowledge_base_record",
+            wraps=component._create_knowledge_base_record,
+        ) as mock_create_record:
             result = await component.update_build_config(build_config, field_value, "knowledge_base")
 
         assert result["knowledge_base"]["value"] == "new_test_kb"
         assert "new_test_kb" in result["knowledge_base"]["options"]
+        assert "api_key" not in mock_get_embeddings.call_args.kwargs
+        assert mock_create_record.call_args.kwargs["backend_type"] == "sqlite"
+        assert mock_create_record.call_args.kwargs["backend_config"] == {}
 
-    @patch("langflow.components.knowledge_bases.ingestion.json.loads")
-    @patch("langflow.components.knowledge_bases.ingestion.decrypt_api_key")
-    async def test_build_kb_info_with_message_input(
-        self, mock_decrypt, mock_json_loads, component_class, default_kwargs
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_update_build_config_new_kb_rejects_storage_routing_for_regular_users(
+        self, mock_get_embeddings, component_class, default_kwargs
     ):
+        """A regular user cannot point a component-created KB at a named index."""
+        from lfx.base.knowledge_bases.backends.naming import StorageRoutingNotAllowedError
+
+        component = component_class(**default_kwargs)
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
+        field_value = {
+            "01_new_kb_name": "opensearch_test_kb",
+            "02_embedding_model": [{"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace"}],
+            "03_knowledge_backend": {
+                "backend_type": "opensearch",
+                "backend_config": {"url_variable": "OPENSEARCH_URL", "index_name": "kb-index"},
+            },
+        }
+
+        with (
+            patch.object(component, "_create_knowledge_base_record") as mock_create_record,
+            pytest.raises(StorageRoutingNotAllowedError, match="index_name"),
+        ):
+            await component.update_build_config(build_config, field_value, "knowledge_base")
+
+        mock_create_record.assert_not_called()
+        mock_get_embeddings.assert_not_called()
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_update_build_config_new_kb_persists_backend_selection(
+        self, mock_get_embeddings, component_class, default_kwargs, active_user
+    ):
+        """Test creating knowledge from the component dialog preserves the selected backend."""
+        component = component_class(**default_kwargs)
+
+        build_config = {"knowledge_base": {"value": None, "options": [], "dialog_inputs": {}}}
+        model_selection = [
+            {"name": "sentence-transformers/all-MiniLM-L6-v2", "provider": "HuggingFace", "metadata": {}}
+        ]
+        field_value = {
+            "01_new_kb_name": "opensearch_test_kb",
+            "02_embedding_model": model_selection,
+            "03_knowledge_backend": {
+                "backend_type": "opensearch",
+                "backend_config": {
+                    "url_variable": "OPENSEARCH_URL",
+                    "index_name": "kb-index",
+                    "vector_field": "embedding",
+                    "text_field": "content",
+                },
+            },
+        }
+
+        mock_embeddings = MagicMock()
+        mock_embeddings.embed_query.return_value = [0.1, 0.2, 0.3]
+        mock_get_embeddings.return_value = mock_embeddings
+
+        # Only a superuser may name the index a KB uses.
+        superuser = MagicMock(username=active_user.username, is_superuser=True)
+        with (
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id",
+                new=AsyncMock(return_value=superuser),
+            ),
+            patch.object(component, "_create_knowledge_base_record") as mock_create_record,
+        ):
+            await component.update_build_config(build_config, field_value, "knowledge_base")
+
+        assert mock_create_record.call_args.kwargs["backend_type"] == "opensearch"
+        assert mock_create_record.call_args.kwargs["backend_config"]["index_name"] == "kb-index"
+        assert mock_create_record.call_args.kwargs["backend_config"]["text_field"] == "content"
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_build_kb_info_with_message_input(self, mock_get_embeddings, component_class, default_kwargs):
         """Test that Message input is accepted and converted to DataFrame."""
         # Replace the DataFrame input with a Message
         default_kwargs["input_df"] = Message(text="Sample text 1")
@@ -358,13 +516,13 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
         ]
         component = component_class(**default_kwargs)
 
-        mock_json_loads.return_value = {
-            "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "api_key": "encrypted_key",  # pragma:allowlist secret
-        }
-        mock_decrypt.return_value = "decrypted_key"
+        mock_embedding_fn = MagicMock()
+        mock_get_embeddings.return_value = mock_embedding_fn
 
-        with patch.object(component, "_create_vector_store"), patch.object(component, "_save_kb_files"):
+        with (
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0})),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
             result = await component.build_kb_info()
 
         assert isinstance(result, Data)
@@ -377,10 +535,120 @@ class TestKnowledgeIngestionComponent(ComponentTestBaseWithClient):
 
         build_config = {"knowledge_base": {"value": None, "options": []}}
         field_value = {
-            "01_new_kb_name": "invalid@name",  # Invalid character
+            "01_new_kb_name": "../outside",
             "02_embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
-            "03_api_key": None,
+            "03_knowledge_backend": {"backend_type": "sqlite", "backend_config": {}},
         }
 
-        with pytest.raises(ValueError, match="Invalid knowledge base name"):
+        with pytest.raises(ValueError, match="KB name contains a path separator"):
             await component.update_build_config(build_config, field_value, "knowledge_base")
+
+    @patch("lfx.components.files_and_knowledge.knowledge.get_embeddings")
+    async def test_build_kb_info_with_new_format_metadata(self, mock_get_embeddings, component_class, default_kwargs):
+        """Test that build_kb_info uses ``model_selection`` straight off the KB row."""
+        component = component_class(**default_kwargs)
+        mock_get_embeddings.return_value = MagicMock()
+
+        with (
+            patch.object(component, "_create_vector_store", return_value=(AsyncMock(), {0, 1})),
+            patch.object(component, "_refresh_kb_stats"),
+        ):
+            result = await component.build_kb_info()
+
+        assert isinstance(result, Data)
+        assert result.data["rows"] == 2
+
+        # Verify get_embeddings was called with the full model_selection from the new-format metadata,
+        # not a minimal reconstructed dict from the backward-compat path.
+        call_kwargs = mock_get_embeddings.call_args
+        passed_model = call_kwargs.kwargs.get("model") or call_kwargs.args[0]
+        assert isinstance(passed_model, list)
+        assert passed_model[0]["name"] == "sentence-transformers/all-MiniLM-L6-v2"
+        assert passed_model[0]["provider"] == "HuggingFace"
+
+    async def test_convert_df_to_data_objects_allow_duplicates(self, component_class, default_kwargs):
+        """Test that allow_duplicates=True returns all rows even when their hashes already exist."""
+        default_kwargs["allow_duplicates"] = True
+        component = component_class(**default_kwargs)
+        data_df = default_kwargs["input_df"]
+        config_list = default_kwargs["column_config"]
+
+        existing_ids = {hashlib.sha256(category.encode()).hexdigest() for category in ("cat1", "cat2")}
+        data_objects = await component._convert_df_to_data_objects(data_df, config_list, existing_ids=existing_ids)
+
+        # All rows should be included — duplicates are allowed
+        assert len(data_objects) == 2
+
+    async def test_build_kb_info_without_a_kb_row_raises_error(
+        self, component_class, default_kwargs, tmp_path, active_user
+    ):
+        """A KB with no ``knowledge_base`` row has no embedding config to ingest with."""
+        (tmp_path / active_user.username / "rowless_kb").mkdir(parents=True, exist_ok=True)
+        default_kwargs["knowledge_base"] = "rowless_kb"
+        component = component_class(**default_kwargs)
+
+        with pytest.raises(RuntimeError, match="No embedding model configuration found"):
+            await component.build_kb_info()
+
+    def test_scalar_notna_with_scalar_values(self, component_class, default_kwargs):
+        """Test _scalar_notna returns correct results for scalar values."""
+        component = component_class(**default_kwargs)
+
+        assert component._scalar_notna("hello") is True
+        assert component._scalar_notna(42) is True
+        assert component._scalar_notna(0) is True
+        assert component._scalar_notna("") is True
+        assert component._scalar_notna(None) is False
+        assert component._scalar_notna(float("nan")) is False
+
+    def test_scalar_notna_with_numpy_arrays(self, component_class, default_kwargs):
+        """Test _scalar_notna handles numpy arrays without raising ambiguous truth value errors."""
+        component = component_class(**default_kwargs)
+
+        # Empty array — should be falsy (no valid data)
+        assert not component._scalar_notna(np.array([]))
+
+        # Array with valid values — should be truthy
+        assert component._scalar_notna(np.array([1, 2, 3]))
+
+        # Array containing NaN — should be falsy (not all values are non-NA)
+        assert not component._scalar_notna(np.array([1, float("nan"), 3]))
+
+        # Array of strings — should be truthy
+        assert component._scalar_notna(np.array(["a", "b"]))
+
+    def test_scalar_notna_with_lists(self, component_class, default_kwargs):
+        """Test _scalar_notna handles plain lists safely."""
+        component = component_class(**default_kwargs)
+
+        assert not component._scalar_notna([])
+        assert component._scalar_notna([1, 2])
+
+    async def test_convert_df_to_data_objects_with_array_cells(self, component_class, default_kwargs):
+        """Test that _convert_df_to_data_objects handles DataFrame rows containing numpy arrays.
+
+        This reproduces the bug where Split Text output contains metadata columns with
+        array values, causing 'truth value of an empty array is ambiguous' errors.
+        """
+        # Build a DataFrame with an array-valued metadata column (mimics Split Text output)
+        data_df = DataFrame(
+            {
+                "text": ["chunk 1", "chunk 2"],
+                "source": ["file.txt", "file.txt"],
+                "tags": [np.array([]), np.array(["important"])],
+            }
+        )
+        default_kwargs["input_df"] = data_df
+        default_kwargs["column_config"] = [
+            {"column_name": "text", "vectorize": True, "identifier": False},
+            {"column_name": "source", "vectorize": False, "identifier": True},
+            {"column_name": "tags", "vectorize": False, "identifier": False},
+        ]
+        component = component_class(**default_kwargs)
+        config_list = default_kwargs["column_config"]
+
+        # This should NOT raise "truth value of an empty array is ambiguous"
+        data_objects = await component._convert_df_to_data_objects(data_df, config_list)
+
+        assert len(data_objects) == 2
+        assert all(isinstance(obj, Data) for obj in data_objects)

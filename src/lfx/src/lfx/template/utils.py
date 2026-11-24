@@ -15,20 +15,21 @@ def raw_frontend_data_is_valid(raw_frontend_data):
 def get_file_path_value(file_path):
     """Get the file path value if the file exists, else return empty string."""
     try:
-        path = Path(file_path)
-    except TypeError:
+        path = Path(file_path).resolve()
+        cache_dir = Path(user_cache_dir("langflow", "langflow")).resolve()
+    except (OSError, RuntimeError, TypeError, ValueError):
         return ""
 
     # Check for safety
     # If the path is not in the cache dir, return empty string
     # This is to prevent access to files outside the cache dir
     # If the path is not a file, return empty string
-    if not str(path).startswith(user_cache_dir("langflow", "langflow")):
+    if not path.is_relative_to(cache_dir):
         return ""
 
-    if not path.exists():
+    if not path.is_file():
         return ""
-    return file_path
+    return str(path)
 
 
 def update_template_field(new_template, key, previous_value_dict) -> None:
@@ -38,12 +39,15 @@ def update_template_field(new_template, key, previous_value_dict) -> None:
         return
 
     if "value" in previous_value_dict and previous_value_dict["value"] is not None:
-        # if the new value is different, this means the default value has been changed
-        # so we need to update the value in the template_field
-        # and set other parameters to the new ones as well
-        if template_field.get("value") != previous_value_dict["value"]:
+        previous_value = previous_value_dict["value"]
+        value_changed = template_field.get("value") != previous_value
+        has_explicit_load_from_db = "load_from_db" in template_field and "load_from_db" in previous_value_dict
+
+        # Preserve the saved value and its explicit literal/global source mode together.
+        # When that mode is absent, retain the existing behavior for changed values.
+        if value_changed or has_explicit_load_from_db:
             template_field["load_from_db"] = previous_value_dict.get("load_from_db", False)
-        template_field["value"] = previous_value_dict["value"]
+        template_field["value"] = previous_value
 
     if previous_value_dict.get("file_path"):
         file_path_value = get_file_path_value(previous_value_dict["file_path"])

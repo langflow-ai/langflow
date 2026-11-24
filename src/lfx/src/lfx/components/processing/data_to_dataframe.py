@@ -14,7 +14,7 @@ class DataToDataFrameComponent(Component):
     icon = "table"
     name = "DataToDataFrame"
     legacy = True
-    replacement = ["processing.DataOperations", "processing.TypeConverterComponent"]
+    replacement = ["processing.Operations", "processing.TypeConverterComponent"]
 
     inputs = [
         DataInput(

@@ -14,6 +14,7 @@ from lfx.custom import validate
 from lfx.custom.custom_component.base_component import BaseComponent
 from lfx.helpers import (
     get_flow_by_id_or_name,
+    list_a2a_agents_by_flow_folder,
     list_flows,
     list_flows_by_flow_folder,
     list_flows_by_folder_id,
@@ -27,9 +28,11 @@ from lfx.services.storage.service import StorageService
 from lfx.template.utils import update_frontend_node_with_template_values
 from lfx.type_extraction import post_process_type
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.file_path_security import validate_storage_key
+from lfx.utils.flow_validation import is_protected_tweak_field
 
 if TYPE_CHECKING:
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
 
     from lfx.graph.graph.base import Graph
     from lfx.graph.vertex.base import Vertex
@@ -182,9 +185,30 @@ class CustomComponent(BaseComponent):
         return str(path_object)
 
     def get_full_path(self, path: str) -> str:
-        storage_svc: StorageService = get_storage_service()
+        """Resolve a ``"<namespace>/<file_name>"`` storage key to its backing storage path.
 
-        flow_id, file_name = path.split("/", 1)
+        The namespace segment arrives from a tenant-controlled component input and selects a
+        per-user / per-flow storage directory, so it is validated against the executing graph's
+        own scopes before the storage service is asked to build a path for it. Without that
+        check a caller could address another user's uploads by their storage key.
+
+        ``get_storage_service`` returns ``None`` whenever no storage factory is registered --
+        standalone ``lfx`` never registers one, and ``get_service`` also degrades to ``None``
+        when resolution fails. There is then no storage root to build against, so the key is
+        already the path the caller should see; this mirrors
+        ``ParameterHandler._resolve_storage_key``. Dereferencing the missing service instead
+        raised ``AttributeError``, which both call sites in ``base_file`` / ``file`` had to
+        catch and retry as a plain local path -- the same value this now returns directly,
+        but reached through an exception that hid every real ``AttributeError`` behind it.
+
+        Skipping *resolution* never skips *containment*: ``validate_storage_key`` runs first
+        either way, and callers still pin the result with ``enforce_local_file_access``.
+        """
+        storage_svc: StorageService | None = get_storage_service()
+
+        flow_id, file_name = validate_storage_key(self, path)
+        if storage_svc is None:
+            return path
         return storage_svc.build_full_path(flow_id, file_name)
 
     @property
@@ -335,6 +359,8 @@ class CustomComponent(BaseComponent):
         if not build_method or not build_method.get("has_return"):
             return []
         return_type = build_method["return_type"]
+        if return_type is None:
+            return []
 
         return self._extract_return_type(return_type)
 
@@ -468,8 +494,11 @@ class CustomComponent(BaseComponent):
             if context and "request_variables" in context:
                 request_variables = context["request_variables"]
                 if name in request_variables:
-                    logger.debug(f"Found context override for variable '{name}'")
-                    return request_variables[name]
+                    if is_protected_tweak_field(type(self).__name__, field):
+                        logger.warning("Ignoring request variable override for protected field {!r}.", field)
+                    else:
+                        logger.debug(f"Found context override for variable '{name}'")
+                        return request_variables[name]
 
         # Only check user_id when we need to access the database
         if hasattr(self, "_user_id") and not self.user_id:
@@ -549,6 +578,10 @@ class CustomComponent(BaseComponent):
             tweaks=tweaks,
             user_id=str(self.user_id),
             run_id=self.graph.run_id,
+            # A sub-flow is part of the parent's execution, not a new entry point:
+            # it must resolve connections under exactly the parent's principal, and
+            # never fall back to the fail-closed unknown() a fresh graph carries.
+            execution_principal=getattr(self.graph, "execution_principal", None),
         )
 
     def list_flows(self) -> list[Data]:
@@ -571,6 +604,17 @@ class CustomComponent(BaseComponent):
                 return await list_flows_by_flow_folder(user_id=str(self.user_id), flow_id=str(flow_id))
             except Exception as e:
                 msg = f"Error listing flows: {e}"
+                raise ValueError(msg) from e
+        return []
+
+    async def alist_a2a_agents_by_flow_folder(self) -> list[Data]:
+        """List flows published as A2A agents in the same folder as the current flow."""
+        flow_id = self._get_runtime_or_frontend_node_attr("flow_id")
+        if flow_id is not None:
+            try:  # user and flow ids are validated in the function
+                return await list_a2a_agents_by_flow_folder(user_id=str(self.user_id), flow_id=str(flow_id))
+            except Exception as e:
+                msg = f"Error listing A2A agents: {e}"
                 raise ValueError(msg) from e
         return []
 
@@ -627,9 +671,17 @@ class CustomComponent(BaseComponent):
         )
 
     def get_langchain_callbacks(self) -> list[BaseCallbackHandler]:
+        # Local import avoids any import-cycle risk with the observability module.
+        from lfx.observability_llm_metrics import get_llm_provider_metrics_handler
+
+        callbacks: list[BaseCallbackHandler] = []
         if self.tracing_service and hasattr(self.tracing_service, "get_langchain_callbacks"):
-            return self.tracing_service.get_langchain_callbacks()
-        return []
+            callbacks.extend(self.tracing_service.get_langchain_callbacks())
+        # None when the lfx[otel] extra is not installed: no meter to record on, so nothing to attach.
+        metrics_handler = get_llm_provider_metrics_handler()
+        if metrics_handler is not None:
+            callbacks.append(metrics_handler)
+        return callbacks
 
     def _get_runtime_or_frontend_node_attr(self, attr_name: str) -> Any:
         """Get attribute value from the attribute name.

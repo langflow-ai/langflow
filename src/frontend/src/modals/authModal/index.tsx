@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,6 +82,8 @@ const AuthModal = ({
     }
   }, [authSettings]);
 
+  const { t } = useTranslation();
+
   const handleAuthTypeChange = (value: string) => {
     setAuthType(value);
     setAuthFields({});
@@ -155,13 +158,13 @@ const AuthModal = ({
             name="Fingerprint"
             className="h-4 w-4 shrink-0"
           />
-          Configure MCP Server Authentication
+          {t("authModal.title")}
         </div>
         <div className="flex h-full p-0 border-t rounded-none">
           {/* Left column - Radio buttons */}
           <div className="flex flex-col p-4 gap-2 flex-1 items-start min-h-[250px] transition-all">
             <span className="text-mmd font-medium text-muted-foreground">
-              Auth type
+              {t("authModal.authTypeLabel")}
             </span>
             <RadioGroup value={authType} onValueChange={handleAuthTypeChange}>
               {AUTH_METHODS_ARRAY.map((option) => (
@@ -171,15 +174,14 @@ const AuthModal = ({
                     htmlFor={option.id}
                     className="!text-mmd font-normal cursor-pointer flex items-center gap-3"
                   >
-                    {option.label}
+                    {t(`authModal.authMethod.${option.id}`)}
                     {option.id === "none" && authType === "none" && (
                       <span className="text-accent-amber-foreground flex gap-1.5 text-xs items-center">
                         <ForwardedIconComponent
                           name="AlertTriangle"
                           className="h-3.5 w-3.5 shrink-0"
                         />
-                        Public endpoint - no auth. Use only in dev or trusted
-                        envs.
+                        {t("authModal.noAuthWarning")}
                       </span>
                     )}
                   </Label>
@@ -196,23 +198,29 @@ const AuthModal = ({
               {authType === "apikey" && (
                 <span className="flex flex-col items-start gap-1 text-mmd text-muted-foreground">
                   <p>
-                    Create a key in{" "}
+                    {t("authModal.apiKey.description")}{" "}
                     <CustomLink
                       className="text-accent-pink-foreground underline inline-block"
                       to="/settings/api-keys"
                     >
-                      Settings
+                      {t("authModal.apiKey.settings")}
                     </CustomLink>{" "}
-                    and include it in the{" "}
-                    <span className="font-semibold">install JSON</span>. Or,
-                    create a key automatically from the{" "}
-                    <span className="font-semibold">JSON tab</span>.
+                    {t("authModal.apiKey.descriptionMiddle")}{" "}
+                    <span className="font-semibold">
+                      {t("authModal.apiKey.installJson")}
+                    </span>
+                    {t("authModal.apiKey.descriptionOr")}
+                    <span className="font-semibold">
+                      {t("authModal.apiKey.jsonTab")}
+                    </span>
+                    .
                   </p>
                   {autoInstall && (
                     <p>
-                      <span className="font-semibold">Auto Install</span>{" "}
-                      creates and injects a key into the selected client profile
-                      on this machine.
+                      <span className="font-semibold">
+                        {t("authModal.apiKey.autoInstallBold")}
+                      </span>{" "}
+                      {t("authModal.apiKey.autoInstall")}
                     </p>
                   )}
                 </span>
@@ -221,7 +229,7 @@ const AuthModal = ({
               {authType === "oauth" && (
                 <div className="flex flex-col gap-4 h-full">
                   <span className="text-mmd font-medium text-muted-foreground">
-                    OAuth settings
+                    {t("authModal.oauth.settingsTitle")}
                   </span>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="flex flex-col gap-2">
@@ -229,7 +237,7 @@ const AuthModal = ({
                         htmlFor="oauth-host"
                         className="!text-mmd font-medium"
                       >
-                        Host
+                        {t("authModal.oauth.host")}
                       </Label>
                       <Input
                         id="oauth-host"
@@ -246,7 +254,7 @@ const AuthModal = ({
                         htmlFor="oauth-port"
                         className="!text-mmd font-medium"
                       >
-                        Port
+                        {t("authModal.oauth.port")}
                       </Label>
                       <Input
                         id="oauth-port"
@@ -264,7 +272,7 @@ const AuthModal = ({
                       htmlFor="oauth-server-url"
                       className="!text-mmd font-medium"
                     >
-                      Server URL
+                      {t("authModal.oauth.serverUrl")}
                     </Label>
                     <Input
                       id="oauth-server-url"
@@ -281,7 +289,7 @@ const AuthModal = ({
                       htmlFor="oauth-callback-url"
                       className="!text-mmd font-medium"
                     >
-                      Callback URL
+                      {t("authModal.oauth.callbackUrl")}
                     </Label>
                     <Input
                       id="oauth-callback-url"
@@ -301,12 +309,12 @@ const AuthModal = ({
                       htmlFor="oauth-client-id"
                       className="!text-mmd font-medium"
                     >
-                      Client ID
+                      {t("authModal.oauth.clientId")}
                     </Label>
                     <Input
                       id="oauth-client-id"
                       type="text"
-                      placeholder="Enter Client ID"
+                      placeholder={t("authModal.oauth.clientIdPlaceholder")}
                       value={authFields.oauthClientId || ""}
                       onChange={(e) =>
                         handleAuthFieldChange("oauthClientId", e.target.value)
@@ -318,12 +326,12 @@ const AuthModal = ({
                       htmlFor="oauth-client-secret"
                       className="!text-mmd font-medium"
                     >
-                      Client Secret
+                      {t("authModal.oauth.clientSecret")}
                     </Label>
                     <Input
                       id="oauth-client-secret"
                       type="password"
-                      placeholder="Enter Client Secret"
+                      placeholder={t("authModal.oauth.clientSecretPlaceholder")}
                       value={authFields.oauthClientSecret || ""}
                       onChange={(e) =>
                         handleAuthFieldChange(
@@ -338,7 +346,7 @@ const AuthModal = ({
                       htmlFor="oauth-auth-url"
                       className="!text-mmd font-medium"
                     >
-                      Authorization URL
+                      {t("authModal.oauth.authorizationUrl")}
                     </Label>
                     <Input
                       id="oauth-auth-url"
@@ -355,7 +363,7 @@ const AuthModal = ({
                       htmlFor="oauth-token-url"
                       className="!text-mmd font-medium"
                     >
-                      Token URL
+                      {t("authModal.oauth.tokenUrl")}
                     </Label>
                     <Input
                       id="oauth-token-url"
@@ -372,7 +380,7 @@ const AuthModal = ({
                       htmlFor="oauth-mcp-scope"
                       className="!text-mmd font-medium"
                     >
-                      MCP Scope
+                      {t("authModal.oauth.mcpScope")}
                     </Label>
                     <Input
                       id="oauth-mcp-scope"
@@ -389,7 +397,7 @@ const AuthModal = ({
                       htmlFor="oauth-provider-scope"
                       className="!text-mmd font-medium"
                     >
-                      Provider Scope
+                      {t("authModal.oauth.providerScope")}
                     </Label>
                     <Input
                       id="oauth-provider-scope"
@@ -412,7 +420,7 @@ const AuthModal = ({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: "Save",
+          label: t("authModal.saveButton"),
           onClick: handleSave,
         }}
         className="p-4 border-t"
@@ -424,10 +432,12 @@ const AuthModal = ({
           />
           <span className="text-mmd text-muted-foreground">
             {installedClients && installedClients.length > 0
-              ? `Changing auth type requires reinstalling this server in ${installedClients
-                  .map((client) => toSpaceCase(client))
-                  .join(", ")} and any other clients where it's used.`
-              : "Changing auth type requires reinstalling this server in all clients where it's used."}
+              ? t("authModal.reinstallWarningClients", {
+                  clients: installedClients
+                    .map((client) => toSpaceCase(client))
+                    .join(", "),
+                })
+              : t("authModal.reinstallWarning")}
           </span>
         </div>
       </BaseModal.Footer>

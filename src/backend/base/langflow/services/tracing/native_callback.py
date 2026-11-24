@@ -12,12 +12,13 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
-from langchain.callbacks.base import BaseCallbackHandler
+from langchain_classic.callbacks.base import BaseCallbackHandler
+from lfx.base.models.llm_callback_utils import detect_provider_from_model, extract_llm_model_name
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from langchain.schema import AgentAction, AgentFinish, LLMResult
+    from langchain_classic.schema import AgentAction, AgentFinish, LLMResult
     from langchain_core.documents import Document
     from langchain_core.messages import BaseMessage
 
@@ -86,55 +87,6 @@ class NativeCallbackHandler(BaseCallbackHandler):
         return serialized.get("name") or (serialized.get("id", [fallback])[-1] if serialized.get("id") else fallback)
 
     @staticmethod
-    def _extract_llm_model_name(kwargs: dict[str, Any]) -> str | None:
-        """Extract the model name from LangChain invocation params.
-
-        Checks ``invocation_params["model_name"]`` first (OpenAI-style), then
-        ``invocation_params["model"]`` (Anthropic/generic style).
-
-        Args:
-            kwargs: The ``**kwargs`` dict passed to ``on_llm_start`` or
-                ``on_chat_model_start`` by the LangChain callback system.
-
-        Returns:
-            Model name string, or ``None`` if not present.
-        """
-        params = kwargs.get("invocation_params") or {}
-        return params.get("model_name") or params.get("model") or None
-
-    @staticmethod
-    def _detect_provider_from_model(model_name: str | None) -> str | None:
-        """Detect provider from model name for gen_ai.provider.name attribute.
-
-        Pattern matching enables provider detection without database lookups or complex
-        configuration, making traces self-contained and parseable by observability tools.
-        """
-        if not model_name:
-            return None
-
-        model_lower = model_name.lower()
-
-        # Pattern-based detection works across different LangChain integrations
-        if "gpt" in model_lower or "o1" in model_lower or model_lower.startswith("text-"):
-            return "openai"
-        if "claude" in model_lower:
-            return "anthropic"
-        if "gemini" in model_lower or "palm" in model_lower:
-            return "google"
-        if "llama" in model_lower:
-            return "meta"
-        if "mistral" in model_lower or "mixtral" in model_lower:
-            return "mistral"
-        if "command" in model_lower or "coral" in model_lower:
-            return "cohere"
-        if "titan" in model_lower or "nova" in model_lower:
-            return "amazon"
-        if "azure" in model_lower:
-            return "azure"
-
-        return None
-
-    @staticmethod
     def _build_llm_span_name(operation: str, model_name: str | None) -> str:
         """Format a span name following the OTel semantic convention ``"{operation} {model}"``.
 
@@ -148,6 +100,12 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """
         return f"{operation} {model_name}" if model_name else operation
 
+    @staticmethod
+    def _is_graph_interrupt(error: BaseException) -> bool:
+        # Why: LangGraph raises GraphInterrupt/GraphBubbleUp when a node pauses for human input
+        # (HITL tool approval); that is a normal suspension, not a failure, so it must not error the span.
+        return any(cls.__name__ in {"GraphInterrupt", "GraphBubbleUp", "Interrupt"} for cls in type(error).__mro__)
+
     def _handle_error(self, run_id: UUID, error: BaseException) -> None:
         """End a span with an error and clean up the run.
 
@@ -158,7 +116,7 @@ class NativeCallbackHandler(BaseCallbackHandler):
         latency_ms = self._calculate_latency(run_id)
         self.tracer.end_langchain_span(
             span_id=span_id,
-            error=str(error),
+            error=None if self._is_graph_interrupt(error) else str(error),
             latency_ms=latency_ms,
         )
         self._cleanup_run(run_id)
@@ -177,9 +135,9 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when LLM starts running."""
         span_id = self._get_span_id(run_id)
         operation = self._extract_name(serialized, "LLM")
-        model_name = self._extract_llm_model_name(kwargs)
+        model_name = extract_llm_model_name(kwargs)
         name = self._build_llm_span_name(operation, model_name)
-        provider = self._detect_provider_from_model(model_name)
+        provider = detect_provider_from_model(model_name)
 
         self.tracer.add_langchain_span(
             span_id=span_id,
@@ -205,9 +163,9 @@ class NativeCallbackHandler(BaseCallbackHandler):
         """Called when chat model starts running."""
         span_id = self._get_span_id(run_id)
         operation = self._extract_name(serialized, "ChatModel")
-        model_name = self._extract_llm_model_name(kwargs)
+        model_name = extract_llm_model_name(kwargs)
         name = self._build_llm_span_name(operation, model_name)
-        provider = self._detect_provider_from_model(model_name)
+        provider = detect_provider_from_model(model_name)
 
         # BaseMessage objects are not JSON-serializable; extract only the fields the UI needs.
         formatted_messages = [
@@ -249,68 +207,22 @@ class NativeCallbackHandler(BaseCallbackHandler):
         )
         self._cleanup_run(run_id)
 
-    def _extract_token_usage(self, response: LLMResult):
-        """Parse token counts from an LLMResult, trying multiple locations for cross-provider compatibility."""
-        llm_output = getattr(response, "llm_output", None) or {}
-        token_usage = llm_output.get("token_usage", {}) if isinstance(llm_output, dict) else {}
-        prompt_tokens = token_usage.get("prompt_tokens")
-        completion_tokens = token_usage.get("completion_tokens")
-        total_tokens = token_usage.get("total_tokens")
+    def _extract_token_usage(self, response: LLMResult) -> tuple[int | None, int | None, int | None]:
+        """Parse token counts from an LLMResult.
 
-        # llm_output is the legacy location; newer LangChain versions moved usage into generations.
-        if not total_tokens:
-            generations = getattr(response, "generations", []) or []
-            for gen_list in generations:
-                for gen in gen_list:
-                    # langchain-core standardized location — preferred when available.
-                    message = getattr(gen, "message", None)
-                    if message is not None:
-                        usage = getattr(message, "usage_metadata", None)
-                        if usage:
-                            _get = usage.get if isinstance(usage, dict) else lambda k, d=None, u=usage: getattr(u, k, d)
-                            prompt_tokens = _get("input_tokens") or prompt_tokens
-                            completion_tokens = _get("output_tokens") or completion_tokens
-                            total_tokens = _get("total_tokens") or total_tokens
+        Delegates to the shared extract_usage_from_llm_result() which handles all
+        extraction strategies (llm_output, usage_metadata, response_metadata, generation_info).
 
-                        # Provider-specific fallback (e.g. OpenAI puts usage in response_metadata).
-                        if not total_tokens:
-                            resp_meta = getattr(message, "response_metadata", None) or {}
-                            if isinstance(resp_meta, dict):
-                                usage_dict = resp_meta.get("token_usage") or resp_meta.get("usage", {})
-                                if isinstance(usage_dict, dict):
-                                    prompt_tokens = (
-                                        usage_dict.get("prompt_tokens")
-                                        or usage_dict.get("input_tokens")
-                                        or prompt_tokens
-                                    )
-                                    completion_tokens = (
-                                        usage_dict.get("completion_tokens")
-                                        or usage_dict.get("output_tokens")
-                                        or completion_tokens
-                                    )
-                                    total_tokens = usage_dict.get("total_tokens") or total_tokens
+        Returns a (prompt_tokens, completion_tokens, total_tokens) tuple to preserve
+        the existing interface with end_langchain_span().
+        """
+        # Deferred import: avoids circular imports at module level.
+        from lfx.schema.token_usage import extract_usage_from_llm_result
 
-                    # Some providers (e.g. Anthropic via older adapters) put usage in generation_info.
-                    if not total_tokens:
-                        gen_info = getattr(gen, "generation_info", None) or {}
-                        if isinstance(gen_info, dict):
-                            usage_dict = gen_info.get("token_usage") or gen_info.get("usage", {})
-                            if isinstance(usage_dict, dict):
-                                prompt_tokens = (
-                                    usage_dict.get("prompt_tokens") or usage_dict.get("input_tokens") or prompt_tokens
-                                )
-                                completion_tokens = (
-                                    usage_dict.get("completion_tokens")
-                                    or usage_dict.get("output_tokens")
-                                    or completion_tokens
-                                )
-                                total_tokens = usage_dict.get("total_tokens") or total_tokens
-
-                    if total_tokens:
-                        break
-                if total_tokens:
-                    break
-        return prompt_tokens, completion_tokens, total_tokens
+        usage = extract_usage_from_llm_result(response)
+        if usage is None:
+            return None, None, None
+        return usage.input_tokens, usage.output_tokens, usage.total_tokens
 
     def _extract_generations(self, response: LLMResult):
         """Serialize LLMResult generations to a JSON-safe dict for storage in the span outputs field."""

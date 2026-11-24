@@ -1,4 +1,5 @@
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import type { FlowVersionEntry } from "@/types/flow/version";
@@ -16,6 +17,7 @@ export default function DeleteConfirmDialog({
   onConfirm,
   isDeleting,
 }: DeleteConfirmDialogProps) {
+  const { t } = useTranslation();
   if (!entry) return null;
 
   return createPortal(
@@ -26,11 +28,14 @@ export default function DeleteConfirmDialog({
             name="Trash2"
             className="h-5 w-5 text-destructive"
           />
-          <span className="text-lg font-semibold">Delete Version</span>
+          <span className="text-lg font-semibold">
+            {t("flowVersion.deleteDialogTitle")}
+          </span>
         </div>
         <p className="text-sm text-muted-foreground">
-          This will permanently delete <strong>{entry.version_tag}</strong>.
-          This can't be undone.
+          {t("flowVersion.deleteConfirmText", {
+            versionTag: entry.version_tag,
+          })}
         </p>
         <div className="flex justify-end gap-2">
           <Button
@@ -39,7 +44,7 @@ export default function DeleteConfirmDialog({
             onClick={onClose}
             disabled={isDeleting}
           >
-            Cancel
+            {t("deleteModal.cancel")}
           </Button>
           <Button
             variant="destructive"
@@ -47,7 +52,7 @@ export default function DeleteConfirmDialog({
             onClick={() => onConfirm(entry)}
             loading={isDeleting}
           >
-            Delete
+            {t("deleteModal.delete")}
           </Button>
         </div>
       </div>

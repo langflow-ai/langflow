@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import BaseModal from "../../../modals/baseModal";
 import type { fetchErrorComponentType } from "../../../types/components";
 import IconComponent from "../genericIconComponent";
@@ -9,6 +10,7 @@ export default function FetchErrorComponent({
   setRetry,
   isLoadingHealth,
 }: fetchErrorComponentType) {
+  const { t } = useTranslation();
   return (
     <>
       <BaseModal
@@ -33,7 +35,7 @@ export default function FetchErrorComponent({
 
         <BaseModal.Footer
           submit={{
-            label: "Retry",
+            label: t("common.retry"),
             loading: isLoadingHealth,
             onClick: () => {
               setRetry();

@@ -1,6 +1,7 @@
 import asyncio
 import json
 from collections.abc import Sequence
+from contextlib import suppress
 from uuid import UUID
 
 from langchain_core.chat_history import BaseChatMessageHistory
@@ -12,8 +13,92 @@ from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.schema.message import Message
-from langflow.services.database.models.message.model import MessageRead, MessageTable
+from langflow.services.database.models.message.model import (
+    ALLOWED_MESSAGE_ORDER_FIELDS,
+    MessageRead,
+    MessageTable,
+)
 from langflow.services.deps import session_scope
+
+
+def _message_scope(
+    flow_id: str | UUID | None,
+    user_id: str | UUID | None,
+) -> tuple[UUID | None, UUID | None]:
+    """Resolve both message predicates without letting a graph caller widen them."""
+    from lfx.memory.flow_context import (
+        coerce_flow_id,
+        get_current_flow_id,
+        get_current_message_executor_id,
+        get_current_message_owner_id,
+        has_current_flow_scope,
+    )
+
+    requested_flow = coerce_flow_id(flow_id)
+    requested_owner = coerce_flow_id(user_id)
+    if has_current_flow_scope():
+        graph_flow = coerce_flow_id(get_current_flow_id())
+        graph_owner = get_current_message_owner_id()
+        if graph_flow is None or graph_owner is None:
+            return None, None
+        # Saved Message Store components pass graph.user_id (the service account)
+        # even when an identified serving run's message owner is its end user.
+        # Treat only that trusted executor ID as a legacy hint, then query the
+        # effective owner. Arbitrary supplied identities still fail closed.
+        legacy_executor = get_current_message_executor_id()
+        owner_matches = (
+            user_id is None
+            or requested_owner == graph_owner
+            or (requested_owner is not None and requested_owner == legacy_executor)
+        )
+        if (flow_id is not None and requested_flow != graph_flow) or not owner_matches:
+            return None, None
+        return graph_flow, graph_owner
+    return requested_flow, requested_owner
+
+
+def _write_message_scope(
+    flow_id: str | UUID | None,
+    user_id: str | UUID | None,
+) -> tuple[str | UUID | None, str | UUID | None]:
+    """Stamp graph writes with the trusted flow and owner, including frozen legacy code."""
+    from lfx.memory.flow_context import has_current_flow_scope
+
+    if not has_current_flow_scope():
+        return flow_id, user_id
+    trusted_flow, trusted_owner = _message_scope(flow_id, user_id)
+    if trusted_flow is None or trusted_owner is None:
+        msg = "A valid matching flow and message owner are required to store chat history."
+        raise ValueError(msg)
+    return trusted_flow, trusted_owner
+
+
+def _bound_message_scope() -> tuple[UUID, UUID] | None:
+    """Return the graph's required scope, or None for a trusted non-graph caller."""
+    from lfx.memory.flow_context import has_current_flow_scope
+
+    if not has_current_flow_scope():
+        return None
+    flow_id, user_id = _message_scope(None, None)
+    if flow_id is None or user_id is None:
+        msg = "A valid flow and message owner are required for graph message operations."
+        raise ValueError(msg)
+    return flow_id, user_id
+
+
+async def _validate_message_executor(session: AsyncSession) -> None:
+    from lfx.memory.flow_context import (
+        get_current_message_execution_principal,
+        get_current_message_executor_id,
+        has_current_flow_scope,
+    )
+
+    if has_current_flow_scope():
+        from langflow.services.deps import get_auth_service
+
+        await get_auth_service().validate_execution_user(
+            get_current_message_executor_id(), principal=get_current_message_execution_principal(), db=session
+        )
 
 
 def _get_variable_query(
@@ -23,8 +108,9 @@ def _get_variable_query(
     context_id: str | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
-    flow_id: UUID | None = None,
+    flow_id: str | UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ):
     stmt = select(MessageTable).where(MessageTable.error == False)  # noqa: E712
     if sender:
@@ -37,7 +123,23 @@ def _get_variable_query(
         stmt = stmt.where(MessageTable.context_id == context_id)
     if flow_id:
         stmt = stmt.where(MessageTable.flow_id == flow_id)
+    if user_id:
+        # Runtime callers (e.g. _safe_graph_user_id -> graph.user_id) supply user_id as a str,
+        # but MessageTable.user_id is UUID-typed: on SQLite the Uuid bind processor calls
+        # ``value.hex`` and raises ``'str' object has no attribute 'hex'`` for a raw string.
+        # Coerce to UUID so the owner predicate is built consistently with the write path
+        # (MessageTable.from_message), rather than crashing authenticated retrieval.
+        if isinstance(user_id, str):
+            try:
+                user_id = UUID(user_id)
+            except ValueError as exc:
+                msg = f"User ID {user_id} is not a valid UUID"
+                raise ValueError(msg) from exc
+        stmt = stmt.where(MessageTable.user_id == user_id)
     if order_by:
+        if order_by not in ALLOWED_MESSAGE_ORDER_FIELDS:
+            msg = f"Invalid order_by field: {order_by}"
+            raise ValueError(msg)
         col = getattr(MessageTable, order_by).desc() if order == "DESC" else getattr(MessageTable, order_by).asc()
         stmt = stmt.order_by(col)
     if limit:
@@ -52,8 +154,9 @@ def get_messages(
     context_id: str | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
-    flow_id: UUID | None = None,
+    flow_id: str | UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """DEPRECATED - Retrieves messages from the monitor service based on the provided filters.
 
@@ -68,6 +171,7 @@ def get_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): Message owner; required with flow_id outside a graph.
 
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
@@ -82,6 +186,7 @@ def get_messages(
             order,
             flow_id,
             limit,
+            user_id=user_id,
         )
     )
 
@@ -93,8 +198,9 @@ async def aget_messages(
     context_id: str | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
-    flow_id: UUID | None = None,
+    flow_id: str | UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """Retrieves messages from the monitor service based on the provided filters.
 
@@ -107,25 +213,43 @@ async def aget_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): Message owner; required with flow_id outside a graph.
 
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
+    # Session and context IDs are caller-controlled and may collide across users.
+    # Frozen saved components also call this function without either scope.
+    flow_id, user_id = _message_scope(flow_id, user_id)
+    if flow_id is None or user_id is None:
+        return []
     async with session_scope() as session:
-        stmt = _get_variable_query(sender, sender_name, session_id, context_id, order_by, order, flow_id, limit)
+        stmt = _get_variable_query(
+            sender, sender_name, session_id, context_id, order_by, order, flow_id, limit, user_id=user_id
+        )
         messages = await session.exec(stmt)
         return [await Message.create(**d.model_dump()) for d in messages]
 
 
-def add_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
+def add_messages(
+    messages: Message | list[Message],
+    flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
+):
     """DEPRECATED - Add a message to the monitor service.
 
     DEPRECATED: Use `aadd_messages` instead.
     """
-    return run_until_complete(aadd_messages(messages, flow_id=flow_id))
+    return run_until_complete(aadd_messages(messages, flow_id=flow_id, run_id=run_id, user_id=user_id))
 
 
-async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID | None = None):
+async def aadd_messages(
+    messages: Message | list[Message],
+    flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
+):
     """Add a message to the monitor service."""
     if not isinstance(messages, list):
         messages = [messages]
@@ -141,8 +265,11 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
             msg = f"The messages must be instances of Message. Found: {types}"
             raise ValueError(msg)
 
+    flow_id, user_id = _write_message_scope(flow_id, user_id)
     try:
-        messages_models = [MessageTable.from_message(msg, flow_id=flow_id) for msg in messages]
+        messages_models = [
+            MessageTable.from_message(msg, flow_id=flow_id, run_id=run_id, user_id=user_id) for msg in messages
+        ]
         async with session_scope() as session:
             messages_models = await aadd_messagetables(messages_models, session)
         return [await Message.create(**message.model_dump()) for message in messages_models]
@@ -154,13 +281,31 @@ async def aadd_messages(messages: Message | list[Message], flow_id: str | UUID |
 async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
     if not isinstance(messages, list):
         messages = [messages]
+    graph_scope = _bound_message_scope()
 
     async with session_scope() as session:
+        await _validate_message_executor(session)
         updated_messages: list[MessageTable] = []
         for message in messages:
-            msg = await session.get(MessageTable, message.id)
+            if graph_scope is None:
+                msg = await session.get(MessageTable, message.id)
+            else:
+                stmt = select(MessageTable).where(
+                    MessageTable.id == UUID(str(message.id)),
+                    MessageTable.flow_id == graph_scope[0],
+                    MessageTable.user_id == graph_scope[1],
+                )
+                msg = (await session.exec(stmt)).first()
             if msg:
-                msg = msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+                updates = message.model_dump(exclude_unset=True, exclude_none=True)
+                if graph_scope is not None:
+                    # Refuse scope changes and preserve the selected row's owner.
+                    if _message_scope(updates.get("flow_id"), updates.get("user_id")) != graph_scope:
+                        msg = "Message scope does not match the executing graph."
+                        raise ValueError(msg)
+                    updates.pop("flow_id", None)
+                    updates.pop("user_id", None)
+                msg = msg.sqlmodel_update(updates)
                 # Convert flow_id to UUID if it's a string preventing error when saving to database
                 if msg.flow_id and isinstance(msg.flow_id, str):
                     msg.flow_id = UUID(msg.flow_id)
@@ -176,59 +321,68 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
-async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession, retry_count: int = 0):
-    """Add messages to the database with retry logic for CancelledError.
+def _expires_on_commit(session) -> bool:
+    """Whether committing drops the loaded attributes (sessions without the flag: assume it does)."""
+    return bool(getattr(getattr(session, "sync_session", session), "expire_on_commit", True))
+
+
+async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
+    """Add messages to the database.
 
     Args:
         messages: List of MessageTable objects to add
         session: Database session
-        retry_count: Internal retry counter (max 3 retries to prevent infinite loops)
-
-    This function includes a workaround for CancelledError that can occur during
-    session.commit() when called from build_public_tmp but not from build_flow.
-    The retry mechanism has a limit to prevent infinite recursion.
     """
-    max_retries = 3
     try:
-        try:
-            for message in messages:
-                result = session.add(message)
-                if asyncio.iscoroutine(result):
-                    await result
-            await session.commit()
-            # This is a hack.
-            # We are doing this because build_public_tmp causes the CancelledError to be raised
-            # while build_flow does not.
-        except asyncio.CancelledError:
-            await session.rollback()
-            if retry_count >= max_retries:
-                await logger.awarning(
-                    f"Max retries ({max_retries}) reached for aadd_messagetables due to CancelledError"
-                )
-                error_msg = "Add Message operation cancelled after multiple retries"
-                raise ValueError(error_msg) from None
-            return await aadd_messagetables(messages, session, retry_count + 1)
+        await _validate_message_executor(session)
         for message in messages:
-            await session.refresh(message)
-    except asyncio.CancelledError as e:
-        await logger.aexception(e)
-        error_msg = "Operation cancelled"
-        raise ValueError(error_msg) from e
+            result = session.add(message)
+            if asyncio.iscoroutine(result):
+                await result
+        await session.commit()
+        # Every column is set in Python before the INSERT (the id and timestamp
+        # included; the table has no server-side defaults), so reading the rows
+        # back would only cost a SELECT per message. A session that expires on
+        # commit has dropped those values, so it still needs the refresh.
+        if _expires_on_commit(session):
+            for message in messages:
+                await session.refresh(message)
+    except asyncio.CancelledError:
+        try:
+            await session.rollback()
+        except Exception as rollback_error:  # noqa: BLE001
+            with suppress(Exception):
+                await logger.aexception(
+                    "Failed to roll back session after add-message cancellation",
+                    error=str(rollback_error),
+                )
+        raise
     except Exception as e:
         await logger.aexception(e)
         raise
 
     new_messages = []
     for msg in messages:
-        msg.properties = json.loads(msg.properties) if isinstance(msg.properties, str) else msg.properties  # type: ignore[arg-type]
-        msg.content_blocks = [json.loads(j) if isinstance(j, str) else j for j in msg.content_blocks]  # type: ignore[arg-type]
-        msg.category = msg.category or ""
+        # Assign only what needs converting: each assignment marks the row dirty,
+        # and the caller's commit then checks out a connection to flush a no-op.
+        if isinstance(msg.properties, str):
+            msg.properties = json.loads(msg.properties)
+        if any(isinstance(j, str) for j in msg.content_blocks):
+            msg.content_blocks = [json.loads(j) if isinstance(j, str) else j for j in msg.content_blocks]  # type: ignore[arg-type]
+        if msg.category is None:
+            msg.category = ""
         new_messages.append(msg)
 
     return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
 
 
-def delete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
+def delete_messages(
+    session_id: str | None = None,
+    context_id: str | None = None,
+    *,
+    flow_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
+) -> None:
     """DEPRECATED - Delete messages from the monitor service based on the provided session ID.
 
     DEPRECATED: Use `adelete_messages` instead.
@@ -236,22 +390,36 @@ def delete_messages(session_id: str | None = None, context_id: str | None = None
     Args:
         session_id (str): The session ID associated with the messages to delete.
         context_id (str): The context ID associated with the messages to delete.
+        flow_id (str | UUID): The trusted flow scope outside a graph run.
+        user_id (str | UUID): The trusted message owner outside a graph run.
     """
-    return run_until_complete(adelete_messages(session_id, context_id))
+    return run_until_complete(adelete_messages(session_id, context_id, flow_id=flow_id, user_id=user_id))
 
 
-async def adelete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
+async def adelete_messages(
+    session_id: str | None = None,
+    context_id: str | None = None,
+    *,
+    flow_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
+) -> None:
     """Delete messages from the monitor service based on the provided session ID.
 
     Args:
         session_id (str): The session ID associated with the messages to delete.
         context_id (str): The context ID associated with the messages to delete.
+        flow_id (str | UUID): The trusted flow scope outside a graph run.
+        user_id (str | UUID): The trusted message owner outside a graph run.
     """
-    async with session_scope() as session:
-        if not session_id and not context_id:
-            msg = "Either session_id or context_id must be provided to delete messages."
-            raise ValueError(msg)
+    if not session_id and not context_id:
+        msg = "Either session_id or context_id must be provided to delete messages."
+        raise ValueError(msg)
+    flow_id, user_id = _message_scope(flow_id, user_id)
+    if flow_id is None or user_id is None:
+        msg = "A valid flow and message owner are required to delete chat history."
+        raise ValueError(msg)
 
+    async with session_scope() as session:
         # Determine which field to filter by
         filter_column = MessageTable.context_id if context_id else MessageTable.session_id
         filter_value = context_id if context_id else session_id
@@ -259,6 +427,8 @@ async def adelete_messages(session_id: str | None = None, context_id: str | None
         stmt = (
             delete(MessageTable)
             .where(col(filter_column) == filter_value)
+            .where(MessageTable.flow_id == flow_id)
+            .where(MessageTable.user_id == user_id)
             .execution_options(synchronize_session="fetch")
         )
         await session.exec(stmt)
@@ -270,8 +440,23 @@ async def delete_message(id_: str) -> None:
     Args:
         id_ (str): The ID of the message to delete.
     """
+    from lfx.memory.flow_context import should_persist_messages
+
+    # An ephemeral message ID exists only for stream correlation, not in the DB.
+    if not should_persist_messages():
+        return
+
+    graph_scope = _bound_message_scope()
     async with session_scope() as session:
-        message = await session.get(MessageTable, id_)
+        if graph_scope is None:
+            message = await session.get(MessageTable, id_)
+        else:
+            stmt = select(MessageTable).where(
+                MessageTable.id == UUID(str(id_)),
+                MessageTable.flow_id == graph_scope[0],
+                MessageTable.user_id == graph_scope[1],
+            )
+            message = (await session.exec(stmt)).first()
         if message:
             await session.delete(message)
 
@@ -279,6 +464,8 @@ async def delete_message(id_: str) -> None:
 def store_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """DEPRECATED: Stores a message in the memory.
 
@@ -288,6 +475,8 @@ def store_message(
         message (Message): The message to store.
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -295,12 +484,14 @@ def store_message(
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
-    return run_until_complete(astore_message(message, flow_id=flow_id))
+    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id, user_id=user_id))
 
 
 async def astore_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,
 ) -> list[Message]:
     """Stores a message in the memory.
 
@@ -308,6 +499,8 @@ async def astore_message(
         message (Message): The message to store.
         flow_id (Optional[str]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list of data containing the stored message.
@@ -319,22 +512,47 @@ async def astore_message(
         await logger.awarning("No message provided.")
         return []
 
+    # Serving-plane ephemeral runs (anonymous end-user) must not persist chat
+    # memory. The flag is bound per component execution in get_instance_results
+    # from graph.persist_messages, so this is a no-op for every normal run (the
+    # default is True) and returns the message unpersisted for an anonymous one.
+    from lfx.memory.flow_context import has_current_flow_scope, should_persist_messages
+
+    if not should_persist_messages():
+        return [message]
     if not message.session_id or not message.sender or not message.sender_name:
         msg = (
             f"All of session_id, sender, and sender_name must be provided. Session ID: {message.session_id},"
             f" Sender: {message.sender}, Sender Name: {message.sender_name}"
         )
         raise ValueError(msg)
+    flow_id, user_id = _write_message_scope(flow_id, user_id)
     if hasattr(message, "id") and message.id:
-        # if message has an id and exist in the database, update it
-        # if not raise an error and add the message to the database
-        try:
-            return await aupdate_messages([message])
-        except ValueError as e:
-            await logger.aerror(e)
+        # An existing ID may come from a nested flow's Chat Output. Its parent
+        # must get a fresh row, while the child row remains untouched.
+        in_graph = has_current_flow_scope()
+        copy_from_child = False
+        if in_graph:
+            async with session_scope() as session:
+                original = await session.get(MessageTable, UUID(str(message.id)))
+                copy_from_child = (
+                    original is not None
+                    and original.flow_id is not None
+                    and original.flow_id != flow_id
+                    and original.user_id == user_id
+                )
+        # Inside a graph, unknown and different-owner IDs use the scoped
+        # update path and produce the same not-found error. Outside a graph,
+        # trusted callers retain the legacy missing-ID insert behavior.
+        if not copy_from_child:
+            try:
+                return await aupdate_messages([message])
+            except ValueError:
+                if in_graph:
+                    raise
     if flow_id and not isinstance(flow_id, UUID):
         flow_id = UUID(flow_id)
-    return await aadd_messages([message], flow_id=flow_id)
+    return await aadd_messages([message], flow_id=flow_id, run_id=run_id, user_id=user_id)
 
 
 class LCBuiltinChatMemory(BaseChatMessageHistory):
@@ -345,42 +563,74 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         flow_id: str,
         session_id: str,
         context_id: str | None = None,
+        user_id: str | UUID | None = None,
     ) -> None:
-        self.flow_id = flow_id
+        self.flow_id = UUID(str(flow_id))
         self.session_id = session_id
         self.context_id = context_id
+        self.user_id = user_id
+
+    def _require_scope(self) -> tuple[UUID, UUID]:
+        from lfx.memory.flow_context import (
+            coerce_flow_id,
+            get_current_flow_id,
+            get_current_message_owner_id,
+            has_current_flow_scope,
+        )
+
+        flow_id = coerce_flow_id(get_current_flow_id())
+        user_id = get_current_message_owner_id()
+        if (
+            not has_current_flow_scope()
+            or flow_id is None
+            or user_id is None
+            or coerce_flow_id(self.flow_id) != flow_id
+        ):
+            msg = "Chat memory requires the executing flow and message owner."
+            raise ValueError(msg)
+        return flow_id, user_id
 
     @property
     def messages(self) -> list[BaseMessage]:
+        flow_id, user_id = self._require_scope()
         messages = get_messages(
             session_id=self.session_id,
             context_id=self.context_id,
+            flow_id=flow_id,
+            user_id=user_id,
         )
         return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
     async def aget_messages(self) -> list[BaseMessage]:
+        flow_id, user_id = self._require_scope()
         messages = await aget_messages(
             session_id=self.session_id,
             context_id=self.context_id,
+            flow_id=flow_id,
+            user_id=user_id,
         )
         return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
     def add_messages(self, messages: Sequence[BaseMessage]) -> None:
+        flow_id, user_id = self._require_scope()
         for lc_message in messages:
             message = Message.from_lc_message(lc_message)
             message.session_id = self.session_id
             message.context_id = self.context_id
-            store_message(message, flow_id=self.flow_id)
+            store_message(message, flow_id=flow_id, user_id=user_id)
 
     async def aadd_messages(self, messages: Sequence[BaseMessage]) -> None:
+        flow_id, user_id = self._require_scope()
         for lc_message in messages:
             message = Message.from_lc_message(lc_message)
             message.session_id = self.session_id
             message.context_id = self.context_id
-            await astore_message(message, flow_id=self.flow_id)
+            await astore_message(message, flow_id=flow_id, user_id=user_id)
 
     def clear(self) -> None:
-        delete_messages(self.session_id, self.context_id)
+        flow_id, user_id = self._require_scope()
+        delete_messages(self.session_id, self.context_id, flow_id=flow_id, user_id=user_id)
 
     async def aclear(self) -> None:
-        await adelete_messages(self.session_id, self.context_id)
+        flow_id, user_id = self._require_scope()
+        await adelete_messages(self.session_id, self.context_id, flow_id=flow_id, user_id=user_id)

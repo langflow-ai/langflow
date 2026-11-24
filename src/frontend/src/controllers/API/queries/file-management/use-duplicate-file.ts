@@ -1,6 +1,7 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import type { useMutationFunctionType } from "@/types/api";
+import type { FileType } from "@/types/file_management";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -13,11 +14,13 @@ interface DuplicateFileQueryParams {
 
 export const useDuplicateFileV2: useMutationFunctionType<
   DuplicateFileQueryParams,
-  void
+  void,
+  FileType,
+  Error
 > = (params, options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const duplicateFileFn = async (): Promise<any> => {
+  const duplicateFileFn = async (): Promise<FileType> => {
     // First download the file
     const response = await fetch(
       `${getURL("FILE_MANAGEMENT", { id: params.id }, true)}`,
@@ -39,7 +42,7 @@ export const useDuplicateFileV2: useMutationFunctionType<
     const formData = new FormData();
     formData.append("file", file);
 
-    const uploadResponse = await api.post<any>(
+    const uploadResponse = await api.post<FileType>(
       `${getURL("FILE_MANAGEMENT", {}, true)}/`,
       formData,
     );
@@ -47,15 +50,15 @@ export const useDuplicateFileV2: useMutationFunctionType<
     return uploadResponse.data;
   };
 
-  const mutation: UseMutationResult<any, any, void> = mutate(
+  const mutation: UseMutationResult<FileType, Error, void> = mutate(
     ["useDuplicateFileV2"],
     duplicateFileFn,
     {
-      onSettled: (data, error, variables, context) => {
+      onSettled: (...args) => {
         queryClient.invalidateQueries({
           queryKey: ["useGetFilesV2"],
         });
-        options?.onSettled?.(data, error, variables, context);
+        options?.onSettled?.(...args);
       },
       ...options,
     },

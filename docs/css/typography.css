@@ -1,0 +1,201 @@
+p {
+  text-align: start;
+}
+
+body {
+  font-size: 16px;
+}
+
+/* Typography */
+.markdown h1 {
+  font-size: 2.25rem; /* 36px */
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.75rem;
+}
+
+.markdown h2 {
+  font-size: 1.5rem; /* 24px */
+  font-weight: 650;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  margin-top: 2rem;
+  margin-bottom: 0.75rem;
+}
+
+.markdown h3 {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 650;
+  line-height: 1.4;
+  margin-top: 1.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.markdown h4 {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 650;
+  line-height: 1.45;
+  margin-top: 1.25rem;
+  margin-bottom: 0.4rem;
+}
+
+.docsearch-logo {
+  color: #21243d;
+}
+
+.apply-button:hover {
+  color: #fff;
+}
+
+/*
+ * Inline Lucide icons in body copy (<Icon /> in MDX).
+ * Default lucide-react size is 24px, which reads huge next to Geist body text.
+ * Scale to the font (and keep card / explicit sizes overridable below).
+ */
+.markdown p svg.lf-inline-icon,
+.markdown li svg.lf-inline-icon,
+.markdown td svg.lf-inline-icon,
+.markdown th svg.lf-inline-icon,
+.markdown blockquote svg.lf-inline-icon {
+  width: 1em !important;
+  height: 1em !important;
+  min-width: 0.875em;
+  min-height: 0.875em;
+  vertical-align: -0.14em;
+}
+
+/* Card grid: keep icons tied to card title scale, not body 1em */
+.lf-card-icon svg.lf-inline-icon {
+  width: 1.25rem !important;
+  height: 1.25rem !important;
+  vertical-align: middle;
+}
+
+/* Images */
+.image-rendering-crisp {
+  image-rendering: crisp-edges;
+
+  /* alias for google chrome */
+  image-rendering: -webkit-optimize-contrast;
+}
+
+.image-rendering-pixel {
+  image-rendering: pixelated;
+}
+
+.img-center {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+/* Add comprehensive image control */
+.markdown img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 1rem auto;
+  max-height: 600px;
+  object-fit: contain;
+}
+
+/* Default size for most images — min() ensures container is always respected */
+.markdown img:not(.resized-image) {
+  max-width: min(100%, 600px);
+  width: auto;
+}
+
+.resized-image {
+  width: 300px;
+  max-height: 500px;
+}
+
+/* Responsive images on mobile devices */
+@media (max-width: 768px) {
+  .markdown img:not(.resized-image) {
+    max-width: 100%;
+    max-height: 500px;
+  }
+
+  .resized-image {
+    width: 100%;
+    max-width: 300px;
+    max-height: 400px;
+  }
+}
+
+/* Component details styling */
+.markdown details {
+  width: 100%;
+  background: var(--ifm-background-color);
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  margin-bottom: 1rem;
+}
+
+.markdown details summary {
+  display: flex;
+  align-items: center;
+  gap: 0.5em;
+  list-style: none;
+  outline: none;
+  cursor: pointer;
+}
+
+.markdown details summary:focus-visible {
+  outline: 2px solid var(--ifm-color-primary, #a855f7);
+  outline-offset: 2px;
+}
+
+.markdown details [class^="collapsibleContent"] {
+  border-top: none !important;
+  padding: 0;
+}
+
+/* Breadcrumbs - Langfuse style */
+.breadcrumbs__link {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 0.875rem;
+  color: #44444d;
+}
+
+.breadcrumbs__link:hover {
+  background: none;
+  color: var(--ifm-color-primary);
+}
+
+.breadcrumbs__item--active .breadcrumbs__link {
+  background: none;
+  color: #2f2f35;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .breadcrumbs__link {
+  color: #c7c7d0;
+}
+
+[data-theme="dark"] .breadcrumbs__item--active .breadcrumbs__link {
+  color: #e5e5ec;
+}
+
+/* Style the native Docusaurus breadcrumb separator */
+.breadcrumbs__item--separator {
+  font-size: 0.75rem;
+  color: var(--ifm-color-emphasis-400);
+  margin: 0 0.25rem;
+  opacity: 0.6;
+}
+
+/* Center columns whose header matches "Format" or "Default" (class set by rehype plugin) */
+.markdown table td.col-center,
+.markdown table th.col-center {
+  text-align: center;
+}
+
+/* Left-align text in the Description column (always last, unless it's a centered column) */
+.markdown table td:last-child:not(.col-center) {
+  text-align: left;
+}

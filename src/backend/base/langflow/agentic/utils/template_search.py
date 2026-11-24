@@ -7,6 +7,18 @@ from typing import Any
 import orjson
 from lfx.log.logger import logger
 
+from langflow.services.deps import get_catalog_policy_service
+from langflow.services.integration_policy_discovery import template_integration_filter
+from langflow.utils.i18n_keys import safe_flow_key
+
+
+def _is_template_allowed(template_data: dict[str, Any], blocked_template_keys: frozenset[str]) -> bool:
+    """Return whether the template is visible under the request's catalog snapshot."""
+    template_name = template_data.get("name")
+    if not isinstance(template_name, str) or not template_name:
+        return True
+    return safe_flow_key(template_name) not in blocked_template_keys
+
 
 def list_templates(
     query: str | None = None,
@@ -56,7 +68,9 @@ def list_templates(
         msg = f"Starter projects directory not found: {starter_projects_dir}"
         raise FileNotFoundError(msg)
 
+    blocked_template_keys = get_catalog_policy_service().snapshot.blocked_template_keys
     results = []
+    result_nodes: list[list] = []
 
     # Iterate through all JSON files in the directory
     for template_file in starter_projects_dir.glob("*.json"):
@@ -64,6 +78,9 @@ def list_templates(
             # Load the template
             with Path(template_file).open(encoding="utf-8") as f:
                 template_data = json.load(f)
+
+            if not _is_template_allowed(template_data, blocked_template_keys):
+                continue
 
             # Apply search filter if provided
             if query:
@@ -91,12 +108,20 @@ def list_templates(
                 filtered_data = template_data
 
             results.append(filtered_data)
+            result_nodes.append(template_data.get("data", {}).get("nodes", []))
 
         except (json.JSONDecodeError, orjson.JSONDecodeError) as e:
             # Log and skip invalid JSON files
             logger.warning(f"Failed to parse {template_file}: {e}")
             continue
 
+    # Integration governance (INT-7) mirrors the catalog filter above: a
+    # template whose integration node could never run is not offered.
+    blocked_positions = template_integration_filter(
+        [(index, nodes) for index, nodes in enumerate(result_nodes)],
+    )
+    if blocked_positions:
+        return [result for position, result in enumerate(results) if position not in blocked_positions]
     return results
 
 
@@ -126,12 +151,13 @@ def get_template_by_id(
     else:
         starter_projects_dir = Path(__file__).parent.parent.parent / "initial_setup" / "starter_projects"
 
+    blocked_template_keys = get_catalog_policy_service().snapshot.blocked_template_keys
     for template_file in starter_projects_dir.glob("*.json"):
         try:
             with Path(template_file).open(encoding="utf-8") as f:
                 template_data = json.load(f)
 
-            if template_data.get("id") == template_id:
+            if template_data.get("id") == template_id and _is_template_allowed(template_data, blocked_template_keys):
                 if fields:
                     return {field: template_data.get(field) for field in fields if field in template_data}
                 return template_data
@@ -160,17 +186,21 @@ def get_all_tags(starter_projects_path: str | Path | None = None) -> list[str]:
         starter_projects_dir = Path(starter_projects_path)
     else:
         starter_projects_dir = Path(__file__).parent.parent.parent / "initial_setup" / "starter_projects"
+    blocked_template_keys = get_catalog_policy_service().snapshot.blocked_template_keys
     all_tags = set()
 
     for template_file in starter_projects_dir.glob("*.json"):
         try:
             template_data = orjson.loads(Path(template_file).read_text(encoding="utf-8"))
 
+            if not _is_template_allowed(template_data, blocked_template_keys):
+                continue
+
             tags = template_data.get("tags", [])
             all_tags.update(tags)
 
         except (json.JSONDecodeError, orjson.JSONDecodeError) as e:
-            logger.aexception(f"Error loading template {template_file}: {e}")
+            logger.exception(f"Error loading template {template_file}: {e}")
             continue
 
     return sorted(all_tags)
@@ -189,4 +219,6 @@ def get_templates_count(starter_projects_path: str | Path | None = None) -> int:
         starter_projects_dir = Path(starter_projects_path)
     else:
         starter_projects_dir = Path(__file__).parent.parent.parent / "initial_setup" / "starter_projects"
-    return len(list(starter_projects_dir.glob("*.json")))
+    if not starter_projects_dir.exists():
+        return 0
+    return len(list_templates(fields=["id"], starter_projects_path=starter_projects_dir))

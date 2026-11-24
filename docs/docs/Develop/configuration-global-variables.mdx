@@ -79,6 +79,20 @@ You can declare additional variables in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONM
 For example, `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=WATSONX_PROJECT_ID,WATSONX_API_KEY` creates global variables named `WATSONX_PROJECT_ID` and `WATSONX_API_KEY` in Langflow's database.
 Then, you can use these variables wherever they are needed in your component settings.
 
+With the default database variable store (`LANGFLOW_VARIABLE_STORE=db`) and `LANGFLOW_STORE_ENVIRONMENT_VARIABLES=True`, server startup attempts to import configured environment variables for all existing users, including SSO users.
+A successful Gunicorn master import is inherited by its workers. Import failures are logged and do not block server startup; other users' imports continue after an individual user fails.
+Service initialization for commands such as `langflow migration --test` does not run this all-user import.
+Account creation and password sign-in also import variables for that user.
+
+Imports use nonblank environment values with surrounding whitespace removed. Model-provider policy can exclude provider variables, and provider secret values equal to `dummy` (case-insensitive) are skipped.
+Environment-managed credentials follow subsequent environment value changes. Unchanged values do not rewrite stored credentials.
+Saving a value yourself, renaming the variable, or changing its type makes it user-owned; changing only **Apply to fields** retains environment management.
+
+After upgrading, a legacy credential is adopted for environment management only when its stored value already matches the environment.
+Matching legacy values can include an earlier user override that happens to equal the environment; future rotations update adopted values.
+Differing legacy values are preserved. Explicit user overrides saved after upgrading are never automatically adopted, even if their value matches the environment.
+To rotate a differing legacy value, its owner can update it in **Settings** > **Global Variables**.
+
 <Tabs>
 <TabItem value="local" label="Local" default>
 
@@ -164,6 +178,106 @@ You can edit the variables in your Langflow **Settings** if you want to configur
 Global variables sourced from the environment are assigned the **Credential** type, which masks the values in the visual editor.
 However, Langflow automatically encrypts _all_ global variables stored in the database.
 
+## Store global variables in Kubernetes secrets {#kubernetes-secrets}
+
+By default, Langflow stores global variables encrypted in its database at `langflow.db`.
+When running Langflow in Kubernetes, you can switch to storing global variables in [Kubernetes Secrets](https://kubernetes.io/docs/concepts/configuration/secret/), to keep sensitive credentials out of the Langflow database entirely.
+
+When Kubernetes secrets are enabled, each user's global variables are stored in a dedicated `Opaque` Secret in the `langflow` namespace, named after the user's UUID.
+Credentials are stored with a `credential_` prefix on the secret key.
+
+### Prerequisites
+
+* Langflow running inside a Kubernetes cluster. See [Kubernetes deployment](/deployment-kubernetes-dev).
+
+### Grant Langflow permission to manage Kubernetes Secrets
+
+:::tip
+If you're deploying with the [Langflow Helm chart](https://github.com/langflow-ai/langflow-helm-charts), the chart creates a `ServiceAccount` automatically. Skip the `ServiceAccount` block above, and set `subjects[0].name` in the `RoleBinding` to the name of the Helm-generated `ServiceAccount` instead. To find the `ServiceAccount` name, run `kubectl get serviceaccount -n langflow`.
+:::
+
+1. Create a manifest for the `ServiceAccount`, `Role`, and `RoleBinding` resources, and save it as `langflow-rbac.yaml`:
+
+   ```yaml
+   apiVersion: v1
+   kind: ServiceAccount
+   metadata:
+     name: langflow
+     namespace: langflow
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: Role
+   metadata:
+     name: langflow-secret-manager
+     namespace: langflow
+   rules:
+     - apiGroups: [""]
+       resources: ["secrets"]
+       verbs: ["get", "create", "update", "patch", "delete"]
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: RoleBinding
+   metadata:
+     name: langflow-secret-manager
+     namespace: langflow
+   subjects:
+     - kind: ServiceAccount
+       name: langflow
+       namespace: langflow
+   roleRef:
+     kind: Role
+     name: langflow-secret-manager
+     apiGroup: rbac.authorization.k8s.io
+   ```
+
+2. Apply the resources to your cluster:
+   ```bash
+   kubectl apply -f langflow-rbac.yaml
+   ```
+
+3. Set `serviceAccountName` and the `LANGFLOW_VARIABLE_STORE` environment variable in your Deployment:
+
+   ```yaml
+   spec:
+     serviceAccountName: langflow
+     containers:
+       - name: langflow
+         image: langflowai/langflow:latest
+         env:
+           - name: LANGFLOW_VARIABLE_STORE
+             value: "kubernetes"
+   ```
+
+4. To apply the updated Deployment, and then confirm the pod found the service account, run:
+
+   ```bash
+   kubectl apply -f langflow-deployment.yaml
+   kubectl describe pod -n langflow -l app.kubernetes.io/name=langflow | grep "Service Account"
+   ```
+
+5. Log in to Langflow, navigate to **Settings** > **Global Variables**, and then create a global variable.
+
+6. To confirm that Langflow created a corresponding Kubernetes Secret, run:
+
+    ```bash
+    kubectl get secrets -n langflow
+    ```
+
+    The output should include a Secret named after the user's UUID.
+
+7. Inspect the Secret's keys to confirm your variable was stored, replacing **YOUR_USER_ID** with the user's UUID:
+
+    ```bash
+    kubectl get secret uuid-YOUR_USER_ID -n langflow -o jsonpath='{.data}' | python3 -m json.tool
+    ```
+
+    Credential-type variables appear with a `credential_` prefix.
+    Generic-type variables use the variable name directly as the key.
+
+    :::warning
+    Do not read or modify Secret values directly with `kubectl`. Editing Secrets outside of Langflow can cause variables to become unreadable.
+    :::
+
 ## Disallow global variables from the environment
 
 If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES=False` in your `.env` file.
@@ -183,3 +297,18 @@ WATSONX_API_KEY=your_api_key
 
 When you run the flow, if there is no global variable named `WATSONX_API_KEY`, Langflow looks for an environment variable named `WATSONX_API_KEY`.
 In this example, Langflow uses the `WATSONX_API_KEY` value from the `.env` to run the flow.
+
+## Request-scoped variables and connection credentials {#request-scoped-variables}
+
+Headless runtimes have two channels that never touch Langflow's database, and both are documented in [Resolve connections in headless LFX](../Lfx/lfx-connections.mdx).
+
+`LANGFLOW_REQUEST_VARIABLES` holds a JSON-encoded string of variables for the current request; a decoded value that is not an object is logged and ignored.
+`lfx serve` populates the same scope from a request body's `global_vars`.
+Request-scoped values are consulted before any environment value, so a credential the caller sends for one request always beats a same-named variable left in the worker's environment.
+
+`LF_CONNECTION__<PROVIDER>__<NAME>` is the reserved family that carries connection credentials, one key per connection reference stored in a flow.
+For example, the handle `google/work` resolves from `LF_CONNECTION__GOOGLE__WORK`.
+The value is a short-lived access token or a credential JSON object; long-lived secrets such as `refresh_token` are rejected.
+
+`LANGFLOW_FALLBACK_TO_ENV_VAR` and the serve-only `--no-env-fallback` flag are different switches.
+The first decides whether a *global variable* falls back to a same-named environment variable; the second removes the environment from request-scoped resolution entirely, so a served flow can only use credentials its caller supplied.

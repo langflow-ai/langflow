@@ -113,6 +113,53 @@ async def test_enabled_providers_after_credential_creation(client: AsyncClient, 
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_models_reuses_enabled_provider_status(client: AsyncClient, logged_in_headers):
+    """The models response should not query provider configuration twice."""
+    provider_result = {"enabled_providers": [], "provider_status": {}}
+    with mock.patch(
+        "langflow.api.v1.models._get_enabled_providers_result",
+        new_callable=mock.AsyncMock,
+        return_value=provider_result,
+    ) as get_enabled_providers:
+        response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    get_enabled_providers.assert_awaited_once()
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_undecryptable_credential_does_not_configure_provider_or_trigger_live_discovery(
+    client: AsyncClient, openai_credential, logged_in_headers
+):
+    """A credential encrypted with another secret key must behave as unavailable."""
+    all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
+    openai_var_name = _provider_variable_mapping.get("OpenAI")
+    for var in all_vars.json():
+        if var.get("name") == openai_var_name:
+            await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
+
+    variable_payload = _create_variable_payload(openai_credential["provider"], openai_credential["value"])
+    with mock.patch("langflow.api.v1.variable.validate_model_provider_key", return_value=None):
+        create_response = await client.post("api/v1/variables/", json=variable_payload, headers=logged_in_headers)
+    assert create_response.status_code == status.HTTP_201_CREATED
+
+    with (
+        mock.patch("langflow.services.auth.utils.decrypt_api_key", return_value=""),
+        mock.patch("lfx.base.models.model_utils.get_live_models_for_provider") as live_models,
+    ):
+        enabled_response = await client.get("api/v1/models/enabled_providers", headers=logged_in_headers)
+        models_response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert enabled_response.status_code == status.HTTP_200_OK
+    assert enabled_response.json()["provider_status"]["OpenAI"] is False
+    assert "OpenAI" not in enabled_response.json()["enabled_providers"]
+    assert models_response.status_code == status.HTTP_200_OK
+    openai = next(provider for provider in models_response.json() if provider["provider"] == "OpenAI")
+    assert openai["is_configured"] is False
+    live_models.assert_not_called()
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_enabled_providers_multiple_credentials(
     client: AsyncClient, openai_credential, anthropic_credential, google_credential, logged_in_headers
 ):
@@ -366,6 +413,19 @@ async def test_enabled_providers_reflects_models_endpoint(client: AsyncClient, o
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_cannot_enable_deprecated_model(client: AsyncClient, logged_in_headers):
+    """Deprecated models cannot be persisted as explicitly enabled."""
+    response = await client.post(
+        "api/v1/models/enabled_models",
+        json=[{"provider": "OpenAI", "model_id": "gpt-3.5-turbo", "enabled": True}],
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json()["detail"] == "Cannot enable deprecated model: gpt-3.5-turbo"
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_security_credential_value_never_exposed_in_variables_endpoint(
     client: AsyncClient, openai_credential, logged_in_headers
 ):
@@ -516,7 +576,7 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
 
     with (
         mock.patch(
-            "langflow.api.v1.models.get_enabled_providers",
+            "langflow.api.v1.models._get_enabled_providers_result",
             side_effect=mock_get_enabled_providers,
         ),
         mock.patch(
@@ -537,6 +597,53 @@ async def test_list_models_returns_live_ollama_models_when_configured(client: As
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_list_models_marks_live_only_provider_enabled(client: AsyncClient, logged_in_headers):
+    """A configured live-only provider with a fully-deprecated static catalog stays enabled.
+
+    IBM WatsonX must still report is_enabled=True from /models. WatsonX never appears in the
+    non-deprecated static catalog, so it is only added by replace_with_live_models. If is_enabled
+    is computed before that append, the WatsonX entry is returned without an is_enabled flag and the
+    Assistant filters it out, showing "No Model Provider Configured" (GitHub #13735).
+    """
+    live_watsonx_models = [
+        {"name": "ibm/granite-4-h-small", "icon": "IBM", "tool_calling": True, "default": True},
+        {"name": "meta-llama/llama-3-3-70b-instruct", "icon": "IBM", "tool_calling": True, "default": True},
+    ]
+
+    async def mock_get_enabled_providers(*_args, **_kwargs):
+        return {
+            "enabled_providers": ["IBM WatsonX"],
+            "provider_status": {"IBM WatsonX": True},
+        }
+
+    def mock_get_live_models(_user_id, provider, model_type="llm"):
+        if provider == "IBM WatsonX" and model_type == "llm":
+            return live_watsonx_models
+        return []
+
+    with (
+        mock.patch(
+            "langflow.api.v1.models._get_enabled_providers_result",
+            side_effect=mock_get_enabled_providers,
+        ),
+        mock.patch(
+            "lfx.base.models.model_utils.get_live_models_for_provider",
+            side_effect=mock_get_live_models,
+        ),
+    ):
+        response = await client.get("api/v1/models", headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    watsonx_provider = next((p for p in data if p.get("provider") == "IBM WatsonX"), None)
+    assert watsonx_provider is not None, "WatsonX should be present via live-model append"
+    model_names = [m["model_name"] for m in watsonx_provider["models"]]
+    assert set(model_names) == {"ibm/granite-4-h-small", "meta-llama/llama-3-3-70b-instruct"}
+    assert watsonx_provider.get("is_enabled") is True
+    assert watsonx_provider.get("is_configured") is True
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: AsyncClient, logged_in_headers):
     """When Ollama is configured but live fetch returns no models, Ollama should have no models (no static fallback)."""
 
@@ -548,7 +655,7 @@ async def test_list_models_ollama_empty_when_live_fetch_returns_empty(client: As
 
     with (
         mock.patch(
-            "langflow.api.v1.models.get_enabled_providers",
+            "langflow.api.v1.models._get_enabled_providers_result",
             side_effect=mock_get_enabled_providers,
         ),
         mock.patch(

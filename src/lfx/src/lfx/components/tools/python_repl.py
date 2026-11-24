@@ -1,8 +1,4 @@
-import importlib
-
-from langchain.tools import StructuredTool
-from langchain_core.tools import ToolException
-from langchain_experimental.utilities import PythonREPL
+from langchain_core.tools import StructuredTool, ToolException
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -10,6 +6,13 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.utils.python_repl_security import (
+    ensure_code_execution_enabled,
+    import_allowed_module,
+    safe_builtins,
+    validate_code_safety,
+)
+from lfx.utils.sandbox import is_sandbox_enabled, run_code_in_sandbox, sanitize_code
 
 
 class PythonREPLToolComponent(LCToolComponent):
@@ -18,7 +21,7 @@ class PythonREPLToolComponent(LCToolComponent):
     name = "PythonREPLTool"
     icon = "Python"
     legacy = True
-    replacement = ["processing.PythonREPLComponent"]
+    replacement = ["utilities.PythonREPLComponent"]
 
     inputs = [
         StrInput(
@@ -38,16 +41,37 @@ class PythonREPLToolComponent(LCToolComponent):
         StrInput(
             name="global_imports",
             display_name="Global Imports",
-            info="A comma-separated list of modules to import globally, e.g. 'math,numpy'.",
+            info=(
+                "A comma-separated list of modules to import globally. Without a sandbox, only math, json, "
+                "and statistics are supported. Other modules, including numpy and pandas, require an isolated "
+                "sandbox configured by the server administrator."
+            ),
             value="math",
         ),
         StrInput(
-            name="code",
+            name="python_code",
             display_name="Python Code",
             info="The Python code to execute.",
             value="print('Hello, World!')",
         ),
     ]
+
+    @staticmethod
+    def _normalize_legacy_code_input(params: dict) -> dict:
+        # `code` is reserved for the component's source. Preserve programmatic
+        # callers that used the old input name while serializing the value separately.
+        if "code" in params:
+            params.setdefault("python_code", params.pop("code"))
+        return params
+
+    def set(self, **kwargs):
+        return super().set(**self._normalize_legacy_code_input(kwargs))
+
+    def set_attributes(self, params: dict) -> None:
+        super().set_attributes(self._normalize_legacy_code_input(params))
+
+    def set_input_value(self, name: str, value) -> None:
+        super().set_input_value("python_code" if name == "code" else name, value)
 
     class PythonREPLSchema(BaseModel):
         code: str = Field(..., description="The Python code to execute.")
@@ -64,27 +88,79 @@ class PythonREPLToolComponent(LCToolComponent):
 
         for module in modules:
             try:
-                imported_module = importlib.import_module(module)
-                global_dict[imported_module.__name__] = imported_module
+                # Inject a sandbox-safe proxy, not the real module object: a module
+                # exposes its transitive import graph publicly (json.codecs.sys),
+                # which reaches sys.modules["os"] past the AST gate.
+                module_name, safe_module = import_allowed_module(module)
+                global_dict[module_name] = safe_module
             except ImportError as e:
                 msg = f"Could not import module {module}"
                 raise ImportError(msg) from e
+        # Restrict builtins so the import allow-list cannot be silently bypassed
+        # (e.g. __import__("subprocess")). Without this, exec() auto-injects the full
+        # builtins module, leaving __import__/open/eval/exec reachable.
+        global_dict["__builtins__"] = safe_builtins()
         return global_dict
 
-    def build_tool(self) -> Tool:
-        globals_ = self.get_globals(self.global_imports)
-        python_repl = PythonREPL(_globals=globals_)
+    def _get_input_value(self, key: str) -> str | None:
+        """Return the value of the input named ``key``, ignoring shadowing class attributes."""
+        value = self._attributes.get(key)
+        if not value and key in self._inputs:
+            value = self._inputs[key].value
+        if value is None or isinstance(value, str):
+            return value
+        # StrInput only warns on non-string values, so a non-string can reach here;
+        # StructuredTool.from_function requires string metadata (it strips the
+        # description), so coerce instead of crashing deep inside langchain-core.
+        return str(value)
 
+    def build_tool(self) -> Tool:
         def run_python_code(code: str) -> str:
             try:
-                return python_repl.run(code)
+                # Refuse to run user code when allow_custom_components is disabled
+                # (GHSA-8qpj-27x8-pwpq).
+                ensure_code_execution_enabled()
+
+                # Opt-in microVM isolation (LANGFLOW_SANDBOX_BACKEND, issue
+                # #12029): the VM boundary replaces the in-process import
+                # allow-list / AST mitigations below. Sandbox errors
+                # (including configured-but-unavailable) surface as
+                # ToolException — never fall back to in-process exec.
+                if is_sandbox_enabled():
+                    result = run_code_in_sandbox(sanitize_code(code), global_imports=self.global_imports)
+                    if not result.success:
+                        # Parity with the in-process path: PythonREPL.run()
+                        # RETURNS user-code errors as the observation string
+                        # (so agents can read the traceback and self-correct)
+                        # rather than raising. Only sandbox infrastructure
+                        # errors raise (via run_code_in_sandbox above).
+                        return result.error_message()
+                    return result.stdout
+                # Validate the exact (sanitized) code that will run, rejecting inline
+                # imports and escape gadgets; combined with the restricted builtins in
+                # get_globals(). A fresh globals namespace is built per invocation so
+                # state does not leak across tool calls.
+                from langchain_experimental.utilities import PythonREPL
+
+                cleaned_code = PythonREPL.sanitize_input(code)
+                validate_code_safety(cleaned_code)
+                python_repl = PythonREPL(_globals=self.get_globals(self.global_imports))
+                return python_repl.run(cleaned_code)
             except Exception as e:
                 logger.debug("Error running Python code", exc_info=True)
                 raise ToolException(str(e)) from e
 
+        # The StrInputs named "name" and "description" are shadowed by this class's
+        # own `name`/`description` attributes — Component.__getattr__ only fires when
+        # normal lookup fails, so self.name/self.description always resolve to the
+        # class attributes. Read the input values explicitly, keeping the class
+        # attributes as fallback when the inputs are empty.
+        tool_name = self._get_input_value("name") or type(self).name
+        tool_description = self._get_input_value("description") or type(self).description
+
         tool = StructuredTool.from_function(
-            name=self.name,
-            description=self.description,
+            name=tool_name,
+            description=tool_description,
             func=run_python_code,
             args_schema=self.PythonREPLSchema,
         )
@@ -93,6 +169,8 @@ class PythonREPLToolComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Execute the configured Python code with workflow callbacks and return its output."""
         tool = self.build_tool()
-        result = tool.run(self.code)
+        code_input = "" if self.python_code is None else self.python_code
+        result = tool.run({"code": code_input}, callbacks=self.get_langchain_callbacks())
         return [Data(data={"result": result})]

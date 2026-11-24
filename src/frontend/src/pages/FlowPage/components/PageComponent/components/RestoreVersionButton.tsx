@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -18,6 +19,7 @@ export default function RestoreVersionButton({
   versionId,
   versionTag,
 }: RestoreVersionButtonProps) {
+  const { t } = useTranslation();
   const { restore, isRestoring } = useRestoreVersion(flowId);
   const { setActiveSection } = useSidebar();
 
@@ -41,7 +43,7 @@ export default function RestoreVersionButton({
     <>
       <CanvasBanner
         icon="RotateCcw"
-        title="Restore this version of your flow"
+        title={t("flow.restoreVersion")}
         description={
           <>
             Replace the current draft with{" "}
@@ -67,7 +69,9 @@ export default function RestoreVersionButton({
                   name="RotateCcw"
                   className="h-5 w-5 text-primary"
                 />
-                <span className="text-lg font-semibold">Restore Version</span>
+                <span className="text-lg font-semibold">
+                  {t("modal.restoreVersion")}
+                </span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Restore <strong>{versionTag}</strong>? This will replace your

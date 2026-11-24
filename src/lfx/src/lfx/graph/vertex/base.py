@@ -20,7 +20,9 @@ from lfx.log.logger import logger
 from lfx.schema.artifact import ArtifactType
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.schema.properties import Usage
 from lfx.schema.schema import INPUT_FIELD_NAME, OutputValue, build_output_logs
+from lfx.utils.flow_validation import explain_restricted_component_mismatch
 from lfx.utils.schemas import ChatOutputResponse
 from lfx.utils.util import sync_to_async
 
@@ -71,6 +73,8 @@ class Vertex:
         self._is_loop = None
         self.has_session_id = None
         self.custom_component = None
+        # Runtime-only metadata used to mask downstream display results without changing edge values.
+        self._upstream_secret_values: set[str] = set()
         self.has_external_input = False
         self.has_external_output = False
         self.graph = graph
@@ -226,6 +230,8 @@ class Vertex:
     def __getstate__(self):
         state = self.__dict__.copy()
         state["_lock"] = None  # Locks are not serializable
+        state["custom_component"] = None  # Component instances are rebuilt and may hold non-serializable runtime state
+        state["_upstream_secret_values"] = set()  # Never persist raw secrets carried between components
         state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
         state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
         return state
@@ -233,6 +239,7 @@ class Vertex:
     def __setstate__(self, state):
         self.__dict__.update(state)
         self._lock = asyncio.Lock()  # Reinitialize the lock
+        self._upstream_secret_values = state.get("_upstream_secret_values", set())
         self.built_object = state.get("built_object") or UnbuiltObject()
         self.built_result = state.get("built_result") or UnbuiltResult()
 
@@ -353,7 +360,7 @@ class Vertex:
         self.load_from_db_fields = load_from_db_fields
         self.raw_params = self.params.copy()
 
-    def update_raw_params(self, new_params: Mapping[str, str | list[str]], *, overwrite: bool = False) -> None:
+    def update_raw_params(self, new_params: Mapping[str, Any], *, overwrite: bool = False) -> None:
         """Update the raw parameters of the vertex with the given new parameters.
 
         Args:
@@ -369,19 +376,55 @@ class Vertex:
             return
         if any(isinstance(self.raw_params.get(key), Vertex) for key in new_params):
             return
+        params_to_update = dict(new_params)
         if not overwrite:
-            for key in new_params.copy():  # type: ignore[attr-defined]
+            for key in params_to_update.copy():
                 if key not in self.raw_params:
-                    new_params.pop(key)  # type: ignore[attr-defined]
-        self.raw_params.update(new_params)
+                    params_to_update.pop(key)
+        params_to_update = ParameterHandler(self, storage_service=None).process_runtime_params(params_to_update)
+        self.raw_params.update(params_to_update)
         self.params = self.raw_params.copy()
         self.updated_raw_params = True
 
-    def instantiate_component(self, user_id=None) -> None:
+    def instantiate_component(self, user_id=None, event_manager: EventManager | None = None) -> None:
         if not self.custom_component:
             self.custom_component, _ = initialize.loading.instantiate_class(
                 user_id=user_id,
                 vertex=self,
+                event_manager=event_manager,
+            )
+
+    def _bind_restored_component_user(self, user_id=None) -> None:
+        """Restore the runtime user dropped from checkpointed component state."""
+        if (
+            user_id is not None
+            and self.custom_component is not None
+            and getattr(self.custom_component, "_user_id", None) is None
+        ):
+            self.custom_component._user_id = user_id  # noqa: SLF001
+
+    def require_model_provider_policy(self, user_id=None) -> None:
+        """Synchronously authorize a model vertex for compatibility-only callers."""
+        if not self.custom_component:
+            self.instantiate_component(user_id=user_id)
+        self._bind_restored_component_user(user_id)
+        if self.custom_component:
+            from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+            self.custom_component.require_model_provider_policy(ModelProviderPolicyPurpose.USE)
+
+    async def arequire_model_provider_policy(self, user_id=None, event_manager: EventManager | None = None) -> None:
+        """Authorize runtime use through the hierarchy-refreshing async policy hook."""
+        if not self.custom_component:
+            self.instantiate_component(user_id=user_id, event_manager=event_manager)
+        self._bind_restored_component_user(user_id)
+        if self.custom_component:
+            from lfx.services.model_provider_policy import ModelProviderPolicyPurpose
+
+            await self.custom_component.arequire_model_provider_policy(
+                ModelProviderPolicyPurpose.USE,
+                user_id=user_id,
+                parameters=self.params,
             )
 
     async def _build(
@@ -392,6 +435,10 @@ class Vertex:
     ) -> None:
         """Initiate the build process."""
         await logger.adebug(f"Building {self.display_name}")
+        # Upstream parameters may themselves hydrate load_from_db credentials.
+        # Preflight the target model before building any input vertex so a
+        # scoped denial cannot observe either upstream or local secrets.
+        await self.arequire_model_provider_policy(user_id=user_id, event_manager=event_manager)
         await self._build_each_vertex_in_params_dict()
         if self.base_type is None:
             msg = f"Base type for vertex {self.display_name} not found"
@@ -403,9 +450,16 @@ class Vertex:
             )
         else:
             custom_component = self.custom_component
+            # A checkpoint-restored component (HITL resume) loses _user_id, which
+            # load_from_db fields (API keys) need; re-apply without overriding.
+            self._bind_restored_component_user(user_id)
             if hasattr(self.custom_component, "set_event_manager"):
                 self.custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
+            custom_params.pop("code", None)
+
+        if hasattr(custom_component, "_secret_values"):
+            custom_component._secret_values.update(self._upstream_secret_values)  # noqa: SLF001
 
         await self._build_results(
             custom_component=custom_component,
@@ -457,6 +511,70 @@ class Vertex:
 
         return messages
 
+    def _get_all_upstream_vertices(self) -> list[Vertex]:
+        """Walk all upstream vertices using edges, deduplicating by ID."""
+        visited: set[str] = set()
+        result: list[Vertex] = []
+        stack = [edge.source_id for edge in self.graph.edges if edge.target_id == self.id]
+
+        while stack:
+            vid = stack.pop()
+            if vid in visited:
+                continue
+            visited.add(vid)
+            vertex = self.graph.get_vertex(vid)
+            result.append(vertex)
+            stack.extend(edge.source_id for edge in self.graph.edges if edge.target_id == vid)
+
+        return result
+
+    def _accumulate_upstream_token_usage(self) -> Usage | None:
+        """Accumulate token usage from all upstream vertices.
+
+        Walks all recursive predecessors via edges, deduplicates by vertex ID,
+        and sums their token usage into a single total.
+        """
+        predecessors = self._get_all_upstream_vertices()
+        total_input = 0
+        total_output = 0
+        has_data = False
+
+        for predecessor in predecessors:
+            if predecessor.result and predecessor.result.token_usage:
+                usage = predecessor.result.token_usage
+                total_input += usage.input_tokens or 0
+                total_output += usage.output_tokens or 0
+                has_data = True
+
+        # Include own token usage if present
+        if self.custom_component:
+            own_usage = self.custom_component._token_usage  # noqa: SLF001
+            if own_usage:
+                total_input += own_usage.input_tokens or 0
+                total_output += own_usage.output_tokens or 0
+                has_data = True
+
+        if not has_data:
+            return None
+
+        return Usage(
+            input_tokens=total_input,
+            output_tokens=total_output,
+            total_tokens=total_input + total_output,
+        )
+
+    def _extract_token_usage(self) -> Usage | None:
+        """Extract token usage from the custom component if available.
+
+        Output vertices don't show token usage on the node badge because
+        the accumulated total is displayed on the chat message instead.
+        """
+        if self.is_output:
+            return None
+        if self.custom_component and self.custom_component._token_usage:  # noqa: SLF001
+            return self.custom_component._token_usage  # noqa: SLF001
+        return None
+
     def finalize_build(self) -> None:
         result_dict = self.get_built_result()
         # We need to set the artifacts to pass information
@@ -464,6 +582,7 @@ class Vertex:
         self.set_artifacts()
         artifacts = self.artifacts_raw
         messages = self.extract_messages_from_artifacts(artifacts) if isinstance(artifacts, dict) else []
+        token_usage = self._extract_token_usage()
         result_dict = ResultData(
             results=result_dict,
             artifacts=artifacts,
@@ -472,6 +591,7 @@ class Vertex:
             messages=messages,
             component_display_name=self.display_name,
             component_id=self.id,
+            token_usage=token_usage,
         )
         self.set_result(result_dict)
 
@@ -486,7 +606,7 @@ class Vertex:
                     key,
                     value,
                 )
-            elif isinstance(value, list) and self._is_list_of_vertices(value):
+            elif isinstance(value, list) and (not value or any(self._is_vertex(item) for item in value)):
                 await self._build_list_of_vertices_and_update_params(key, value)
             elif isinstance(value, dict):
                 await self._build_dict_and_update_params(
@@ -518,20 +638,30 @@ class Vertex:
         """Checks if the provided value is an instance of Vertex."""
         return isinstance(value, Vertex)
 
-    def _is_list_of_vertices(self, value):
-        """Checks if the provided value is a list of Vertex instances."""
-        return all(self._is_vertex(vertex) for vertex in value)
-
-    async def get_result(self, requester: Vertex, target_handle_name: str | None = None) -> Any:
+    async def get_result(
+        self,
+        requester: Vertex,
+        target_handle_name: str | None = None,
+        source_handle_name: str | None = None,
+    ) -> Any:
         """Retrieves the result of the vertex.
 
         This is a read-only method so it raises an error if the vertex has not been built yet.
+        The optional source handle selects an output when several feed the same input.
 
         Returns:
             The result of the vertex.
         """
         async with self.lock:
-            return await self._get_result(requester, target_handle_name)
+            result = await self._get_result(requester, target_handle_name, source_handle_name)
+            requester._inherit_secret_values(self)
+            return result
+
+    def _inherit_secret_values(self, source_vertex: Vertex) -> None:
+        """Track secrets carried by an upstream component so displayed results stay masked."""
+        source_component = source_vertex.custom_component
+        if source_component is not None:
+            self._upstream_secret_values.update(getattr(source_component, "_secret_values", set()))
 
     async def _log_transaction_async(
         self,
@@ -555,12 +685,13 @@ class Vertex:
         try:
             await log_transaction(flow_id, source, status, target, error, outputs)
         except Exception as exc:  # noqa: BLE001
-            logger.debug(f"Error logging transaction: {exc!s}")
+            logger.debug("Error logging transaction", exc_info=exc)
 
     async def _get_result(
         self,
         requester: Vertex,  # noqa: ARG002
         target_handle_name: str | None = None,  # noqa: ARG002
+        source_handle_name: str | None = None,  # noqa: ARG002
     ) -> Any:
         """Retrieves the result of the built component.
 
@@ -586,12 +717,32 @@ class Vertex:
     async def _build_list_of_vertices_and_update_params(
         self,
         key,
-        vertices: list[Vertex],
+        vertices: list[Any],
     ) -> None:
-        """Iterates over a list of vertices, builds each and updates the params dictionary."""
+        """Iterates over a list of vertices, builds each and updates the params dictionary.
+
+        Preserve plain values alongside vertices, including items injected by a Loop.
+        """
         self.params[key] = []
+        # Each repeated source vertex corresponds to its next incoming edge.
+        source_handles: dict[str, list[str]] = {}
+        for edge in self.incoming_edges:
+            if edge.target_param == key:
+                source_handles.setdefault(edge.source_id, []).append(edge.source_handle.name)
         for vertex in vertices:
-            result = await vertex.get_result(self, target_handle_name=key)
+            if not self._is_vertex(vertex):
+                self.params[key].append(vertex)
+                continue
+            handles = source_handles.get(vertex.id)
+            source_handle_name = handles.pop(0) if handles else None
+            # A conditionally-excluded predecessor that never built contributes nothing to a
+            # list input. Pulling a result for it would return this input's template default
+            # (e.g. an empty Message) and inject a stray element next to the real branch's
+            # value -- ``ComponentVertex._get_result`` returns that default for the
+            # single-value case, which is wrong for a merged list.
+            if not vertex.built and vertex.id in self.graph.conditionally_excluded_vertices:
+                continue
+            result = await vertex.get_result(self, target_handle_name=key, source_handle_name=source_handle_name)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code
             if not isinstance(self.params[key], list):
@@ -606,12 +757,30 @@ class Vertex:
 
                     self.params[key].append(result)
                 except AttributeError as e:
-                    await logger.aexception(e)
+                    await logger.aexception("Failed to append a result to a list parameter")
                     msg = (
                         f"Params {key} ({self.params[key]}) is not a list and cannot be extended with {result}"
                         f"Error building Component {self.display_name}: \n\n{e}"
                     )
                     raise ValueError(msg) from e
+        self._resolve_duplicate_tool_names(key)
+
+    def _resolve_duplicate_tool_names(self, key: str) -> None:
+        """Keep every tool on a Tool list input individually addressable.
+
+        A tool's name comes from its component's class and output method, so two
+        nodes of the same type wired into one agent arrive under the same name
+        and the model cannot tell them apart: every call lands on whichever one
+        won the collision. This runs engine-side on purpose -- a saved flow
+        carries its own frozen copy of the consuming component's code, so a fix
+        made there would never reach the flows already hitting this.
+        """
+        field = self.data.get("node", {}).get("template", {}).get(key) or {}
+        if "Tool" not in (field.get("input_types") or []):
+            return
+        from lfx.base.tools.component_tool import disambiguate_tool_names
+
+        self.params[key] = disambiguate_tool_names(self.params[key])
 
     def _handle_func(self, key, result) -> None:
         """Handles 'func' key by checking if the result is a function and setting it as coroutine."""
@@ -653,7 +822,7 @@ class Vertex:
             self._update_built_object_and_artifacts(result)
         except Exception as exc:
             tb = traceback.format_exc()
-            await logger.aexception(exc)
+            await logger.aexception("Vertex build failed")
             # Log transaction error
             flow_id = self.graph.flow_id
             if flow_id:
@@ -661,6 +830,13 @@ class Vertex:
                     str(flow_id), source=self, target=None, status="error", error=str(exc)
                 )
             msg = f"Error building Component {self.display_name}: \n\n{exc}"
+            # In restricted mode this vertex may have been rebuilt with this server's component
+            # code rather than the code saved in the flow. When the saved component does not
+            # match the one that actually ran, say so: otherwise the policy that discarded it is
+            # invisible and only the substituted component's own complaint reaches the user.
+            mismatch = explain_restricted_component_mismatch(self.data.get("type"), self.data.get("node"))
+            if mismatch:
+                msg = f"{msg}\n\n{mismatch}"
             raise ComponentBuildError(msg, tb) from exc
 
     def _update_built_object_and_artifacts(self, result: Any | tuple[Any, dict] | tuple[Component, Any, dict]) -> None:
@@ -742,10 +918,12 @@ class Vertex:
             # because they need to iterate through their data
             is_loop_component = self.display_name == "Loop" or self.is_loop
             if self.frozen and self.built and not is_loop_component:
+                await self.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 return await self.get_requester_result(requester)
             if self.built and requester is not None:
                 # This means that the vertex has already been built
                 # and we are just getting the result for the requester
+                await self.arequire_model_provider_policy(user_id, event_manager=event_manager)
                 return await self.get_requester_result(requester)
             self._reset()
 

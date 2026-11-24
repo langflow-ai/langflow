@@ -10,71 +10,146 @@ import pytest
 from lfx.utils.util_strings import is_valid_database_url, sanitize_database_url
 from pydantic import ValidationError
 
+# Database URLs the settings validator rejects, paired with the credential fragments
+# that must never be rendered. Short URLs matter: pydantic truncates long
+# ``input_value`` reprs in the middle, which can hide a leak by accident.
+REJECTED_DATABASE_URLS = [
+    pytest.param(
+        "postgres://user:hunter2@db.example:5432/langflow",  # pragma: allowlist secret
+        ["hunter2"],  # pragma: allowlist secret
+        id="legacy-postgres-scheme",
+    ),
+    pytest.param(
+        "postgresql+nosuchdriver://user:hunter2@db/lf",  # pragma: allowlist secret
+        ["hunter2"],  # pragma: allowlist secret
+        id="unknown-driver",
+    ),
+    pytest.param(
+        "notadialect://user:hunter2@db/lf",  # pragma: allowlist secret
+        ["hunter2"],  # pragma: allowlist secret
+        id="unknown-dialect",
+    ),
+    pytest.param(
+        "postgresql://user:hunter2@db:notaport/lf",  # pragma: allowlist secret
+        ["hunter2"],  # pragma: allowlist secret
+        id="non-numeric-port",
+    ),
+    pytest.param(
+        "user:hunter2@db.example:5432/langflow",  # pragma: allowlist secret
+        ["hunter2"],  # pragma: allowlist secret
+        id="missing-scheme",
+    ),
+    pytest.param(
+        "postgres://user:hun@ter2@db.example/lf",  # pragma: allowlist secret
+        ["hun@ter2", "ter2"],  # pragma: allowlist secret
+        id="unescaped-at-in-password",
+    ),
+    pytest.param(
+        "postgres://db.example/lf?user=u&password=hunter2",  # pragma: allowlist secret
+        ["hunter2"],  # pragma: allowlist secret
+        id="password-in-query",
+    ),
+    pytest.param(
+        "postgresql://db:notaport/lf?p%61ssword=hunter2",  # pragma: allowlist secret
+        ["hunter2"],  # pragma: allowlist secret
+        id="percent-encoded-query-key",
+    ),
+    pytest.param(
+        "postgresql+psycopg://myuser:mysecretpassword@127.0.0.1::5432/mydb?sslmode=disable",  # pragma: allowlist secret
+        ["myuser", "mysecretpassword"],  # pragma: allowlist secret
+        id="double-colon-port",
+    ),
+    pytest.param(
+        "invaliddriver://adminuser:secretpass123@localhost:5432/production",  # pragma: allowlist secret
+        ["adminuser", "secretpass123"],  # pragma: allowlist secret
+        id="invalid-driver",
+    ),
+    pytest.param(
+        "notavaliddb://rootuser:rootpassword@host/badformat",  # pragma: allowlist secret
+        ["rootuser", "rootpassword"],  # pragma: allowlist secret
+        id="malformed",
+    ),
+]
+
+
+def _assert_no_credentials(exc: ValidationError, credentials: list[str]) -> None:
+    rendered = {
+        "str": str(exc),
+        "repr": repr(exc),
+        "errors": str(exc.errors(include_input=False, include_url=False)),
+    }
+    for where, text in rendered.items():
+        for credential in credentials:
+            assert credential not in text, f"Credential {credential!r} leaked via {where}:\n{text}"
+
 
 class TestDatabaseUrlCredentialExposure:
-    """Test that database credentials are NOT exposed in error messages."""
+    """Test that database credentials are NOT exposed by settings validation errors."""
 
-    @pytest.mark.parametrize(
-        ("invalid_url", "credentials_that_must_not_appear"),
-        [
-            # PostgreSQL with INVALID port syntax (double colon - the actual bug from screenshot)
-            (
-                "postgresql+psycopg://myuser:mysecretpassword@127.0.0.1::5432/mydb?sslmode=disable",
-                ["myuser", "mysecretpassword"],
-            ),
-            # Invalid dialect/driver combination
-            (
-                "invaliddriver://adminuser:secretpass123@localhost:5432/production",
-                ["adminuser", "secretpass123"],
-            ),
-            # Malformed URL with credentials
-            (
-                "notavaliddb://rootuser:rootpassword@host/badformat",
-                ["rootuser", "rootpassword"],
-            ),
-        ],
-    )
+    @pytest.mark.parametrize(("invalid_url", "credentials_that_must_not_appear"), REJECTED_DATABASE_URLS)
     def test_should_not_expose_credentials_when_database_url_is_invalid(
         self,
         invalid_url: str,
         credentials_that_must_not_appear: list[str],
         monkeypatch,
+        tmp_path,
     ):
-        """Test that invalid database URL errors do not expose credentials.
+        """A rejected database URL must not leak credentials through the ValidationError.
 
-        SECURITY: This test validates that when a database URL validation fails,
-        our custom error message does NOT contain the username or password.
-
-        Note: Pydantic's ValidationError includes input_value in its metadata,
-        which we cannot control. We focus on sanitizing our error message text.
+        Pydantic renders ``input_value=<raw input>`` in ``str(exc)``/``repr(exc)`` unless the
+        model hides inputs, so masking only the message text is not enough.
         """
-        # Arrange - Settings class reads from environment variables
         monkeypatch.setenv("LANGFLOW_DATABASE_URL", invalid_url)
-        monkeypatch.setenv("LANGFLOW_CONFIG_DIR", "/tmp/test_config")
+        monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(tmp_path))
 
         from lfx.services.settings.base import Settings
 
-        # Act & Assert
         with pytest.raises(ValidationError) as exc_info:
             Settings()
 
-        # Get only the first error's message (our controlled text)
-        errors = exc_info.value.errors()
-        assert len(errors) > 0
+        _assert_no_credentials(exc_info.value, credentials_that_must_not_appear)
+        assert "input_value" not in str(exc_info.value)
 
-        # Extract our custom error message - it's in the 'msg' field
-        error_msg = errors[0].get("msg", "")
+        # The message stays actionable: it names the problem and shows the masked URL.
+        error_msg = exc_info.value.errors()[0]["msg"]
+        assert "Invalid database_url provided" in error_msg
+        assert "***" in error_msg
 
-        # Assert: Credentials MUST NOT appear in OUR error message
-        for credential in credentials_that_must_not_appear:
-            assert credential not in error_msg, (
-                f"SECURITY VULNERABILITY: Credential '{credential}' was exposed!\nError message: {error_msg}"
-            )
+    @pytest.mark.parametrize(("invalid_url", "credentials_that_must_not_appear"), REJECTED_DATABASE_URLS)
+    def test_should_not_expose_credentials_when_database_url_is_assigned(
+        self,
+        invalid_url: str,
+        credentials_that_must_not_appear: list[str],
+        monkeypatch,
+        tmp_path,
+    ):
+        """``Settings`` validates on assignment, so the same guarantee must hold for setattr."""
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{tmp_path / 'langflow.db'}")
+        monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(tmp_path))
 
-        # Assert: Masked credentials MUST appear in our message
-        assert "***" in error_msg, (
-            f"Sanitized credentials (***) not found in error message!\nError message: {error_msg}"
-        )
+        from lfx.services.settings.base import Settings
+
+        settings = Settings()
+        with pytest.raises(ValidationError) as exc_info:
+            settings.database_url = invalid_url
+
+        _assert_no_credentials(exc_info.value, credentials_that_must_not_appear)
+
+    def test_should_keep_masked_host_and_database_in_message(self, monkeypatch, tmp_path):
+        """Hiding the input must not strip the context an operator needs to fix the URL."""
+        invalid_url = "postgres://user:hunter2@db.example:5432/langflow"  # pragma: allowlist secret
+        monkeypatch.setenv("LANGFLOW_DATABASE_URL", invalid_url)
+        monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(tmp_path))
+
+        from lfx.services.settings.base import Settings
+
+        with pytest.raises(ValidationError) as exc_info:
+            Settings()
+
+        message = str(exc_info.value)
+        assert "database_url" in message
+        assert "postgres://" in message
+        assert "db.example:5432/langflow" in message
 
 
 class TestSanitizeDatabaseUrl:
@@ -144,6 +219,54 @@ class TestSanitizeDatabaseUrl:
         # Assert
         assert "password123" not in sanitized, f"Password was not masked in: {sanitized}"
         assert "***" in sanitized
+
+    def test_should_mask_credentials_when_scheme_is_missing(self):
+        """The unparseable-URL fallback must not require ``://`` to find credentials."""
+        sanitized = sanitize_database_url("user:hunter2@db.example:5432/langflow")  # pragma: allowlist secret
+
+        assert "hunter2" not in sanitized  # pragma: allowlist secret
+        assert sanitized == "***:***@db.example:5432/langflow"
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            # SQLAlchemy parses this, but splits the password at the first "@".
+            "postgres://user:hun@ter2@db.example/lf",  # pragma: allowlist secret
+            # SQLAlchemy cannot parse this (non-numeric port), so the fallback runs.
+            "postgresql://user:hun@ter2@db.example:notaport/lf",  # pragma: allowlist secret
+        ],
+    )
+    def test_should_mask_whole_password_containing_unescaped_at(self, url: str):
+        """Passwords with an unescaped ``@`` must be masked up to the last ``@``."""
+        sanitized = sanitize_database_url(url)
+
+        assert "ter2" not in sanitized, f"Password tail leaked in: {sanitized}"  # pragma: allowlist secret
+        assert "user" not in sanitized
+        assert "***:***@db.example" in sanitized
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "postgres://db.example/lf?user=u&password=hunter2&sslmode=disable",  # pragma: allowlist secret
+            "notadialect://db.example:bad/lf?sslmode=disable&sslpassword=hunter2",  # pragma: allowlist secret
+            # Percent-encoded keys that decode to a sensitive name, on both parse paths.
+            "postgres://db.example/lf?sslmode=disable&p%61ssword=hunter2",  # pragma: allowlist secret
+            "postgresql://db.example:notaport/lf?p%61ssword=hunter2&sslmode=disable",  # pragma: allowlist secret
+            "postgresql://db.example:notaport/lf?sslmode=disable&sslp%61ssw%6Frd=hunter2",  # pragma: allowlist secret
+        ],
+    )
+    def test_should_mask_sensitive_query_parameters(self, url: str):
+        """libpq-style ``password``/``sslpassword`` query parameters are credentials too."""
+        sanitized = sanitize_database_url(url)
+
+        assert "hunter2" not in sanitized  # pragma: allowlist secret
+        assert "sslmode=disable" in sanitized
+
+    def test_should_keep_encoded_query_key_when_masking_unparsed_url(self):
+        """The fallback masks the value of an encoded sensitive key but leaves the key as written."""
+        sanitized = sanitize_database_url("postgresql://db:notaport/lf?p%61ssword=hunter2")  # pragma: allowlist secret
+
+        assert sanitized == "postgresql://db:notaport/lf?p%61ssword=***"
 
     def test_should_handle_empty_url(self):
         """Test that empty URL returns empty string."""

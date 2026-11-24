@@ -1,7 +1,9 @@
+import { getNodeScopedDomId } from "../../helpers/get-node-scoped-dom-id";
 import type { InputProps } from "../../types";
 
 export function EmptyParameterComponent({
   id,
+  nodeId,
   value,
   editNode,
   handleOnNewValue,
@@ -11,5 +13,5 @@ export function EmptyParameterComponent({
   if (!showParameter) {
     return null;
   }
-  return <div id={id}></div>;
+  return <div id={getNodeScopedDomId(id, nodeId)}></div>;
 }

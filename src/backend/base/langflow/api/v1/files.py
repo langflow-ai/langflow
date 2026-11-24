@@ -1,4 +1,5 @@
 import hashlib
+import os
 from datetime import datetime, timezone
 from http import HTTPStatus
 from io import BytesIO
@@ -10,15 +11,76 @@ import anyio
 from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
+from lfx.utils.file_path_security import flow_storage_scope
 from lfx.utils.helpers import build_content_type_from_extension
 
-from langflow.api.utils import CurrentActiveUser, DbSession, ValidatedFileName
+from langflow.api.utils import (
+    CurrentActiveUser,
+    DbSession,
+    ValidatedFileName,
+    ValidatedFolderName,
+    build_content_disposition,
+)
 from langflow.api.v1.schemas import UploadFileResponse
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 
 router = APIRouter(tags=["Files"], prefix="/files")
+
+
+async def _get_file_with_legacy_fallback(
+    storage_service: StorageService,
+    *,
+    namespace: str,
+    legacy_namespace: str,
+    file_name: str,
+) -> bytes:
+    """Read a typed object first, then its pre-typing legacy location."""
+    try:
+        return await storage_service.get_file(flow_id=namespace, file_name=file_name)
+    except FileNotFoundError:
+        return await storage_service.get_file(flow_id=legacy_namespace, file_name=file_name)
+
+
+async def _legacy_flow_storage_allowed(session: DbSession, flow_id: UUID) -> bool:
+    """Return whether a flow's raw legacy namespace cannot be a user's namespace."""
+    return await session.get(User, flow_id) is None
+
+
+async def _get_flow_file(
+    storage_service: StorageService, flow_id: UUID, file_name: str, *, allow_legacy: bool = True
+) -> bytes:
+    if not allow_legacy:
+        return await storage_service.get_file(flow_id=flow_storage_scope(flow_id), file_name=file_name)
+    return await _get_file_with_legacy_fallback(
+        storage_service,
+        namespace=flow_storage_scope(flow_id),
+        legacy_namespace=str(flow_id),
+        file_name=file_name,
+    )
+
+
+async def _list_flow_files(storage_service: StorageService, flow_id: UUID, *, allow_legacy: bool = True) -> list[str]:
+    """List new and legacy flow attachments, preferring the typed copy of a duplicate name."""
+    typed_files = await storage_service.list_files(flow_id=flow_storage_scope(flow_id))
+    legacy_files = await storage_service.list_files(flow_id=str(flow_id)) if allow_legacy else []
+    return list(dict.fromkeys([*typed_files, *legacy_files]))
+
+
+async def _delete_flow_file(
+    storage_service: StorageService, flow_id: UUID, file_name: str, *, allow_legacy: bool = True
+) -> None:
+    """Delete from the namespace that contains the attachment, leaving any other copy intact."""
+    namespace = flow_storage_scope(flow_id)
+    try:
+        await storage_service.get_file_size(flow_id=namespace, file_name=file_name)
+    except FileNotFoundError:
+        if allow_legacy:
+            namespace = str(flow_id)
+    await storage_service.delete_file(flow_id=namespace, file_name=file_name)
 
 
 def _get_allowed_profile_picture_folders(settings_service: SettingsService) -> set[str]:
@@ -72,14 +134,33 @@ async def get_flow(
     return flow
 
 
+async def get_flow_for_image(flow_id: str, current_user: CurrentActiveUser, session: DbSession):
+    try:
+        parsed_flow_id = UUID(flow_id.removeprefix("flow-"))
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail="Flow not found") from exc
+    return await get_flow(parsed_flow_id, current_user, session)
+
+
 @router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
 async def upload_file(
     *,
     file: UploadFile,
     flow: Annotated[Flow, Depends(get_flow)],
+    current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
+    # Writing a file to a flow's storage is a flow mutation: enforce WRITE so
+    # the external access ceiling (e.g. a "viewer") cannot upload via this route.
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.WRITE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as e:
@@ -96,7 +177,7 @@ async def upload_file(
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         full_file_name = f"{timestamp}_{file_name}"
-        folder = str(flow.id)
+        folder = flow_storage_scope(flow.id)
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
         return UploadFileResponse(flow_id=str(flow.id), file_path=f"{folder}/{full_file_name}")
     except Exception as e:
@@ -107,10 +188,11 @@ async def upload_file(
 async def download_file(
     file_name: ValidatedFileName,
     flow: Annotated[Flow, Depends(get_flow)],
+    *,
+    session: DbSession = None,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     # Authorization handled by get_flow dependency
-    flow_id_str = str(flow.id)
     extension = file_name.split(".")[-1]
 
     if not extension:
@@ -124,9 +206,10 @@ async def download_file(
         raise HTTPException(status_code=500, detail=f"Content type not found for extension {extension}")
 
     try:
-        file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
+        allow_legacy = session is not None and await _legacy_flow_storage_allowed(session, flow.id)
+        file_content = await _get_flow_file(storage_service, flow.id, file_name, allow_legacy=allow_legacy)
         headers = {
-            "Content-Disposition": f"attachment; filename={file_name} filename*=UTF-8''{file_name}",
+            "Content-Disposition": build_content_disposition(file_name),
             "Content-Type": "application/octet-stream",
             "Content-Length": str(len(file_content)),
         }
@@ -138,12 +221,14 @@ async def download_file(
 @router.get("/images/{flow_id}/{file_name}")
 async def download_image(
     file_name: ValidatedFileName,
-    flow_id: UUID,
+    # Security: resolve flow through get_flow so image access requires authentication and owner match.
+    flow: Annotated[Flow, Depends(get_flow_for_image)],
+    *,
+    session: DbSession = None,
+    storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Download image from storage for browser rendering."""
-    storage_service = get_storage_service()
     extension = file_name.split(".")[-1]
-    flow_id_str = str(flow_id)
 
     if not extension:
         raise HTTPException(status_code=500, detail=f"Extension not found for file {file_name}")
@@ -158,16 +243,25 @@ async def download_image(
         raise HTTPException(status_code=500, detail=f"Content type {content_type} is not an image")
 
     try:
-        file_content = await storage_service.get_file(flow_id=flow_id_str, file_name=file_name)
-        return StreamingResponse(BytesIO(file_content), media_type=content_type)
+        allow_legacy = session is not None and await _legacy_flow_storage_allowed(session, flow.id)
+        file_content = await _get_flow_file(storage_service, flow.id, file_name, allow_legacy=allow_legacy)
+        # Defense-in-depth: a tenant-uploaded SVG/HTML served inline with a renderable content type
+        # would execute scripts in the app origin if opened directly. nosniff stops MIME sniffing
+        # and Content-Disposition: attachment forces a download on direct navigation (so any script
+        # cannot run in-origin). <img>/blob embedding -- the intended use -- is unaffected.
+        return StreamingResponse(
+            BytesIO(file_content),
+            media_type=content_type,
+            headers={"X-Content-Type-Options": "nosniff", "Content-Disposition": "attachment"},
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.get("/profile_pictures/{folder_name}/{file_name}")
 async def download_profile_picture(
-    folder_name: str,
-    file_name: str,
+    folder_name: ValidatedFolderName,
+    file_name: ValidatedFileName,
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
     """Download profile picture from local filesystem.
@@ -176,53 +270,44 @@ async def download_profile_picture(
     then fallback to the package's bundled profile_pictures directory.
     """
     try:
-        # SECURITY: Validate inputs to prevent path traversal attacks
-        # Reject any path components that contain directory traversal sequences
-        if ".." in folder_name or ".." in file_name:
-            raise HTTPException(
-                status_code=400, detail="Path traversal patterns ('..') are not allowed in folder or file names"
-            )
-
         # Only allow specific folder names (dynamic from config + package)
         allowed_folders = _get_allowed_profile_picture_folders(settings_service)
         if folder_name not in allowed_folders:
             raise HTTPException(status_code=400, detail=f"Folder must be one of: {', '.join(sorted(allowed_folders))}")
 
-        # Validate file name contains no path separators
-        if "/" in file_name or "\\" in file_name:
-            raise HTTPException(status_code=400, detail="File name cannot contain path separators ('/' or '\\')")
+        # SECURITY: Extract only the final path component to prevent path traversal.
+        # This is defense-in-depth on top of ValidatedFileName/ValidatedFolderName.
+        safe_folder = Path(folder_name).name
+        safe_file = Path(file_name).name
 
-        extension = file_name.split(".")[-1]
+        extension = safe_file.split(".")[-1]
         config_dir = settings_service.settings.config_dir
-        config_path = Path(config_dir).resolve()  # type: ignore[arg-type]
 
-        # Construct the file path
-        file_path = (config_path / "profile_pictures" / folder_name / file_name).resolve()
-
-        # SECURITY: Verify the resolved path is still within the allowed directory
-        # This prevents path traversal even if symbolic links are involved
-        allowed_base = (config_path / "profile_pictures").resolve()
-        if not str(file_path).startswith(str(allowed_base)):
-            # Return 404 to prevent path traversal attempts from revealing system structure
+        # SECURITY: use os.path.realpath + startswith — the sanitiser pattern
+        # recognised by CodeQL's py/path-injection analysis. realpath canonicalises
+        # the path and resolves symlinks, so the subsequent startswith check is
+        # robust against both traversal sequences and symlink-based escapes.
+        # os.path.join is deliberate here (PTH118) to match CodeQL's sanitiser model.
+        allowed_base = os.path.realpath(os.path.join(str(config_dir), "profile_pictures"))  # noqa: PTH118
+        candidate = os.path.realpath(os.path.join(allowed_base, safe_folder, safe_file))  # noqa: PTH118
+        if candidate != allowed_base and not candidate.startswith(allowed_base + os.sep):
             raise HTTPException(status_code=404, detail="Profile picture not found")
+        file_path = Path(candidate)
 
         # Fallback to package bundled profile pictures if not found in config_dir
         if not file_path.exists():
             from langflow.initial_setup import setup
 
-            package_base = Path(setup.__file__).parent / "profile_pictures"
-            package_path = (package_base / folder_name / file_name).resolve()
-
-            # SECURITY: Verify package path is also within allowed directory
-            allowed_package_base = package_base.resolve()
-            if not str(package_path).startswith(str(allowed_package_base)):
-                # Return 404 to prevent path traversal attempts from revealing system structure
+            package_base = os.path.realpath(str(Path(setup.__file__).parent / "profile_pictures"))
+            package_candidate = os.path.realpath(os.path.join(package_base, safe_folder, safe_file))  # noqa: PTH118
+            if package_candidate != package_base and not package_candidate.startswith(package_base + os.sep):
                 raise HTTPException(status_code=404, detail="Profile picture not found")
 
+            package_path = Path(package_candidate)
             if package_path.exists():
                 file_path = package_path
             else:
-                raise HTTPException(status_code=404, detail=f"Profile picture {folder_name}/{file_name} not found")
+                raise HTTPException(status_code=404, detail=f"Profile picture {safe_folder}/{safe_file} not found")
 
         content_type = build_content_type_from_extension(extension)
         # Read file directly from local filesystem using async file operations
@@ -277,10 +362,13 @@ async def list_profile_pictures(
 @router.get("/list/{flow_id}")
 async def list_files(
     flow: Annotated[Flow, Depends(get_flow)],
+    *,
+    session: DbSession = None,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        files = await storage_service.list_files(flow_id=str(flow.id))
+        allow_legacy = session is not None and await _legacy_flow_storage_allowed(session, flow.id)
+        files = await _list_flow_files(storage_service, flow.id, allow_legacy=allow_legacy)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -291,10 +379,24 @@ async def list_files(
 async def delete_file(
     file_name: ValidatedFileName,
     flow: Annotated[Flow, Depends(get_flow)],
+    *,
+    session: DbSession = None,
+    current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
+    # Deleting a file from a flow's storage mutates the flow's attachments;
+    # enforce WRITE so the external access ceiling (e.g. a "viewer") is honored.
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.WRITE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     try:
-        await storage_service.delete_file(flow_id=str(flow.id), file_name=file_name)
+        allow_legacy = session is not None and await _legacy_flow_storage_allowed(session, flow.id)
+        await _delete_flow_file(storage_service, flow.id, file_name, allow_legacy=allow_legacy)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 

@@ -4,10 +4,16 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
+import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { waitForMainPageReady } from "../../utils/flow/wait-for-main-page-ready";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
-  closeAdvancedOptions,
-  openAdvancedOptions,
+  addParameterToNode,
+  closeParametersPanel,
 } from "../../utils/open-advanced-options";
 
 // Run tests in this file serially to avoid database conflicts with shared file state
@@ -29,29 +35,18 @@ test(
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
     const fileContent = fs.readFileSync(testFilePath);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("file");
-
-    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 10000,
+    await addComponentFromSidebar(page, {
+      search: "file",
+      testId: "files_and_knowledgeRead File",
+      hoverAdd: true,
     });
-
-    await page
-      .getByTestId("files_and_knowledgeRead File")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await expect(
+      page.getByRole("application", { name: "Read File node" }),
+    ).toHaveCount(1);
     await adjustScreenView(page);
     await page.waitForTimeout(2000);
     const fileManagement = await page
@@ -85,16 +80,14 @@ test(
         ),
       ).toBeVisible();
 
-      await page.getByText("My Files").first().hover();
+      await page.getByText(TEXTS.labelMyFiles).first().hover();
       await page.waitForTimeout(500);
 
       await expect(page.getByText(`${sourceFileName}.txt`).last()).toBeVisible({
         timeout: 5000,
       });
 
-      await expect(
-        page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
+      await ensureFileSelected(page);
 
       // Create DataTransfer object and file
       const dataTransfer = await page.evaluateHandle((jsonFileName) => {
@@ -128,16 +121,16 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked", { timeout: 1000 });
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       // Test checkbox
 
       await expect(
         page.getByTestId(`checkbox-${sourceFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await expect(
         page.getByTestId(`checkbox-${jsonFileName}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await page.getByTestId(`checkbox-${sourceFileName}`).last().click();
       await page.getByTestId(`checkbox-${jsonFileName}`).last().click();
 
@@ -238,10 +231,10 @@ test(
 
       await expect(
         page.getByTestId(`checkbox-${renamedTxtFile}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
       await expect(
         page.getByTestId(`checkbox-${renamedJsonFile}`).last(),
-      ).toHaveAttribute("data-state", "checked");
+      ).toHaveAttribute("data-state", "checked", { timeout: 5000 });
 
       await page.getByTestId("select-files-modal-button").click();
 
@@ -272,7 +265,7 @@ test(
     }
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page
       .getByTestId("input_outputChat Output")
@@ -290,7 +283,13 @@ test(
       .first()
       .click();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await expect(page.locator(".react-flow__edge")).toHaveCount(1, {
+      timeout: 10000,
+    });
+
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     // Create a new session first
     await page.getByTestId("new-chat").click();
@@ -300,12 +299,19 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).last().click();
 
-    await expect(page.getByText("this is a test file")).toBeVisible({
+    // Scoped to the output table cell: the chat transcript is mirrored into an
+    // sr-only live region for screen readers, so a page-wide getByText would
+    // match the reply twice.
+    await expect(
+      page.getByRole("cell", { name: "this is a test file" }),
+    ).toBeVisible({
       timeout: 10000,
     });
 
     if (fileManagement) {
-      await expect(page.getByText('{"test":"content"}')).toBeVisible({
+      await expect(
+        page.getByRole("cell", { name: '{"test":"content"}' }),
+      ).toBeVisible({
         timeout: 10000,
       });
       await page.getByTestId("playground-close-button").click();
@@ -328,7 +334,19 @@ test(
         return data;
       }, newTxtFile);
 
-      // Trigger drag events
+      // Trigger drag events. We wait for the POST /files response so that
+      // the optimistic "temp" cache entry has been replaced with the real
+      // server path before we close the modal. On slower runners (Windows
+      // CI), closing the modal before the cache settles causes the new
+      // file's server path to be missing from useGetFilesV2 when the
+      // parent node re-renders, so the file never appears in the node.
+      const uploadResponsePromise = page.waitForResponse(
+        (response) =>
+          response.url().includes("/api/v2/files") &&
+          response.request().method() === "POST" &&
+          response.status() === 201,
+        { timeout: 30000 },
+      );
       await page.dispatchEvent(
         '[data-testid="drag-files-component"]',
         "dragover",
@@ -339,13 +357,18 @@ test(
       await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
         dataTransfer,
       });
+      await uploadResponsePromise;
       await expect(page.getByText(`${newTxtFile}.txt`).last()).toBeVisible({
-        timeout: 1000,
+        timeout: 10000,
       });
 
       await expect(
         page.getByTestId(`checkbox-${newTxtFile}`).last(),
       ).toHaveAttribute("data-state", "checked", { timeout: 10000 });
+
+      // Wait for any in-flight files refetch triggered by the upload's
+      // onSettled invalidate before closing the modal.
+      await page.waitForLoadState("networkidle");
 
       await page.getByTestId("select-files-modal-button").click();
       await expect(page.getByText(`${renamedJsonFile}.txt`).first()).toBeHidden(
@@ -354,7 +377,7 @@ test(
         },
       );
       await expect(page.getByText(`${newTxtFile}.txt`).first()).toBeVisible({
-        timeout: 10000,
+        timeout: 30000,
       });
       await page.getByTestId(`remove-file-button-${renamedTxtFile}`).click();
 
@@ -369,7 +392,7 @@ test(
         .click();
 
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       // Use the chat header more menu to clear chat (stays in fullscreen)
       await page
@@ -398,13 +421,21 @@ test(
         timeout: 180000,
       });
 
-      await expect(page.getByText("this is a test file")).toBeHidden({
+      await expect(
+        page.getByRole("cell", { name: "this is a test file" }),
+      ).toBeHidden({
         timeout: 10000,
       });
-      await expect(page.getByText('{ "test": "content" }')).toBeHidden({
+      await expect(
+        page.getByRole("cell", { name: '{ "test": "content" }' }),
+      ).toBeHidden({
         timeout: 10000,
       });
-      await expect(page.getByText("this is a new test")).toBeVisible({
+      // The .txt output renders as message text rather than a table, so scope
+      // to the transcript to stay clear of the sr-only live region outside it.
+      await expect(
+        page.getByRole("log").getByText("this is a new test").first(),
+      ).toBeVisible({
         timeout: 10000,
       });
     }
@@ -427,228 +458,233 @@ test(
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
     const _fileContent = fs.readFileSync(testFilePath);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await addLegacyComponents(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("file");
-
-    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 10000,
+    await addComponentFromSidebar(page, {
+      search: "file",
+      testId: "files_and_knowledgeRead File",
+      hoverAdd: true,
     });
-
-    await page
-      .getByTestId("files_and_knowledgeRead File")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await expect(
+      page.getByRole("application", { name: "Read File node" }),
+    ).toHaveCount(1);
     await adjustScreenView(page);
 
-    // Check if file management button is visible
-    const fileManagement = await page
-      .getByTestId("button_open_file_management")
-      ?.isVisible();
+    const fileManagement = page.getByTestId("button_open_file_management");
+    await expect(fileManagement).toBeVisible();
+    await fileManagement.click();
 
-    if (fileManagement) {
-      // Open file management modal
-      await page.getByTestId("button_open_file_management").click();
+    // Upload 5 files for testing shift-click selection
+    // Upload file 1
+    const createFileTransfer = async (
+      filename: string,
+      content: string,
+      type: string,
+    ) => {
+      return page.evaluateHandle(
+        (params) => {
+          const data = new DataTransfer();
+          const file = new File(
+            [params.content],
+            `${params.filename}.${params.type}`,
+            { type: params.mimeType },
+          );
+          data.items.add(file);
+          return data;
+        },
+        {
+          filename,
+          content,
+          type,
+          mimeType: type === "txt" ? "text/plain" : "application/json",
+        },
+      );
+    };
 
-      // Upload 5 files for testing shift-click selection
-      // Upload file 1
-      const createFileTransfer = async (
-        filename: string,
-        content: string,
-        type: string,
-      ) => {
-        return page.evaluateHandle(
-          (params) => {
-            const data = new DataTransfer();
-            const file = new File(
-              [params.content],
-              `${params.filename}.${params.type}`,
-              { type: params.mimeType },
-            );
-            data.items.add(file);
-            return data;
-          },
-          {
-            filename,
-            content,
-            type,
-            mimeType: type === "txt" ? "text/plain" : "application/json",
-          },
-        );
-      };
+    // Upload five files
+    const files = [
+      { name: file1, content: "file content 1", type: "txt" },
+      { name: file2, content: "file content 2", type: "txt" },
+      { name: file3, content: "file content 3", type: "txt" },
+      { name: file4, content: "file content 4", type: "txt" },
+      { name: file5, content: "file content 5", type: "txt" },
+    ];
 
-      // Upload five files
-      const files = [
-        { name: file1, content: "file content 1", type: "txt" },
-        { name: file2, content: "file content 2", type: "txt" },
-        { name: file3, content: "file content 3", type: "txt" },
-        { name: file4, content: "file content 4", type: "txt" },
-        { name: file5, content: "file content 5", type: "txt" },
-      ];
+    for (const file of files) {
+      const dataTransfer = await createFileTransfer(
+        file.name,
+        file.content,
+        file.type,
+      );
 
-      for (const file of files) {
-        const dataTransfer = await createFileTransfer(
-          file.name,
-          file.content,
-          file.type,
-        );
+      // Trigger drag events
+      await page.dispatchEvent(
+        '[data-testid="drag-files-component"]',
+        "dragover",
+        { dataTransfer },
+      );
+      await page.dispatchEvent('[data-testid="drag-files-component"]', "drop", {
+        dataTransfer,
+      });
 
-        // Trigger drag events
-        await page.dispatchEvent(
-          '[data-testid="drag-files-component"]',
-          "dragover",
-          { dataTransfer },
-        );
-        await page.dispatchEvent(
-          '[data-testid="drag-files-component"]',
-          "drop",
-          { dataTransfer },
-        );
-
-        // Verify file was uploaded
-        await expect(
-          page.getByText(`${file.name}.${file.type}`).last(),
-        ).toBeVisible({
-          timeout: 1000,
-        });
-      }
-
-      // Unselect all files first
-      for (const file of files) {
-        if (
-          (await page
-            .getByTestId(`checkbox-${file.name}`)
-            .last()
-            .getAttribute("data-state")) === "checked"
-        ) {
-          await page.getByTestId(`checkbox-${file.name}`).last().click();
-          await page.waitForTimeout(500);
-        }
-      }
-
-      // Test 1: Select first file, then shift-click the third file
-      // First file
-      await page.getByTestId(`checkbox-${file1}`).last().click();
-      await page.waitForTimeout(500);
-
-      // Hold shift and click third file
-      await page.keyboard.down("Shift");
-      await page.getByTestId(`checkbox-${file3}`).last().click();
-      await page.waitForTimeout(500);
-      await page.keyboard.up("Shift");
-      await page.waitForTimeout(500);
-
-      // Verify files 1, 2, and 3 are selected
+      // Verify file was uploaded
       await expect(
-        page.getByTestId(`checkbox-${file1}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file2}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file3}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file4}`).last(),
-      ).toHaveAttribute("data-state", "unchecked");
-      await expect(
-        page.getByTestId(`checkbox-${file5}`).last(),
-      ).toHaveAttribute("data-state", "unchecked");
-
-      // Test 2: Shift-click to extend selection to file 5
-      await page.keyboard.down("Shift");
-      await page.getByTestId(`checkbox-${file5}`).last().click();
-      await page.keyboard.up("Shift");
-
-      // Verify all files are selected
-      await expect(
-        page.getByTestId(`checkbox-${file1}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file2}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file3}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file4}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file5}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-
-      // Test 3: Unselect a range with shift-click
-      // First select only file 2
-      for (const file of files) {
-        if (
-          (await page
-            .getByTestId(`checkbox-${file.name}`)
-            .last()
-            .getAttribute("data-state")) === "checked"
-        ) {
-          await page.getByTestId(`checkbox-${file.name}`).last().click();
-        }
-      }
-      await page.getByTestId(`checkbox-${file2}`).last().click();
-
-      // Select file 2 through 4
-      await page.keyboard.down("Shift");
-      await page.getByTestId(`checkbox-${file4}`).last().click();
-      await page.keyboard.up("Shift");
-
-      // Verify files 2, 3, and 4 are selected
-      await expect(
-        page.getByTestId(`checkbox-${file1}`).last(),
-      ).toHaveAttribute("data-state", "unchecked");
-      await expect(
-        page.getByTestId(`checkbox-${file2}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file3}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file4}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file5}`).last(),
-      ).toHaveAttribute("data-state", "unchecked");
-
-      // Now use shift-click on an already selected range to deselect
-      await page.keyboard.down("Shift");
-      await page.getByTestId(`checkbox-${file2}`).last().click();
-      await page.keyboard.up("Shift");
-
-      // Verify the range is now deselected
-      await expect(
-        page.getByTestId(`checkbox-${file1}`).last(),
-      ).toHaveAttribute("data-state", "unchecked");
-      await expect(
-        page.getByTestId(`checkbox-${file2}`).last(),
-      ).toHaveAttribute("data-state", "checked");
-      await expect(
-        page.getByTestId(`checkbox-${file3}`).last(),
-      ).toHaveAttribute("data-state", "unchecked");
-      await expect(
-        page.getByTestId(`checkbox-${file4}`).last(),
-      ).toHaveAttribute("data-state", "unchecked");
-      await expect(
-        page.getByTestId(`checkbox-${file5}`).last(),
-      ).toHaveAttribute("data-state", "unchecked");
-
-      // Close the modal
-      await page.getByTestId("select-files-modal-button").click();
+        page.getByText(`${file.name}.${file.type}`).last(),
+      ).toBeVisible({
+        timeout: 1000,
+      });
     }
+
+    // Unselect all files first
+    for (const file of files) {
+      if (
+        (await page
+          .getByTestId(`checkbox-${file.name}`)
+          .last()
+          .getAttribute("data-state")) === "checked"
+      ) {
+        const checkbox = page.getByTestId(`checkbox-${file.name}`).last();
+        await checkbox.click();
+        await expect(checkbox).toHaveAttribute("data-state", "unchecked");
+      }
+    }
+
+    // Test 1: Select first file, then shift-click the third file
+    // First file
+    const firstCheckbox = page.getByTestId(`checkbox-${file1}`).last();
+    await firstCheckbox.click();
+    await expect(firstCheckbox).toHaveAttribute("data-state", "checked");
+
+    // Hold shift and click third file
+    await page.keyboard.down("Shift");
+    await page.getByTestId(`checkbox-${file3}`).last().click();
+    await page.keyboard.up("Shift");
+
+    // Verify files 1, 2, and 3 are selected
+    await expect(page.getByTestId(`checkbox-${file1}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file2}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file3}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file4}`).last()).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+    await expect(page.getByTestId(`checkbox-${file5}`).last()).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+
+    // Test 2: Shift-click to extend selection to file 5
+    await page.keyboard.down("Shift");
+    await page.getByTestId(`checkbox-${file5}`).last().click();
+    await page.keyboard.up("Shift");
+
+    // Verify all files are selected
+    await expect(page.getByTestId(`checkbox-${file1}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file2}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file3}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file4}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file5}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+
+    // Test 3: Unselect a range with shift-click
+    // First select only file 2
+    for (const file of files) {
+      if (
+        (await page
+          .getByTestId(`checkbox-${file.name}`)
+          .last()
+          .getAttribute("data-state")) === "checked"
+      ) {
+        const checkbox = page.getByTestId(`checkbox-${file.name}`).last();
+        await checkbox.click();
+        await expect(checkbox).toHaveAttribute("data-state", "unchecked");
+      }
+    }
+    const secondCheckbox = page.getByTestId(`checkbox-${file2}`).last();
+    await secondCheckbox.click();
+    await expect(secondCheckbox).toHaveAttribute("data-state", "checked");
+
+    // Select file 2 through 4
+    await page.keyboard.down("Shift");
+    await page.getByTestId(`checkbox-${file4}`).last().click();
+    await page.keyboard.up("Shift");
+
+    // Verify files 2, 3, and 4 are selected
+    await expect(page.getByTestId(`checkbox-${file1}`).last()).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+    await expect(page.getByTestId(`checkbox-${file2}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file3}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file4}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file5}`).last()).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+
+    // Now use shift-click on an already selected range to deselect
+    await page.keyboard.down("Shift");
+    await page.getByTestId(`checkbox-${file2}`).last().click();
+    await page.keyboard.up("Shift");
+
+    // Verify the range is now deselected
+    await expect(page.getByTestId(`checkbox-${file1}`).last()).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+    await expect(page.getByTestId(`checkbox-${file2}`).last()).toHaveAttribute(
+      "data-state",
+      "checked",
+    );
+    await expect(page.getByTestId(`checkbox-${file3}`).last()).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+    await expect(page.getByTestId(`checkbox-${file4}`).last()).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+    await expect(page.getByTestId(`checkbox-${file5}`).last()).toHaveAttribute(
+      "data-state",
+      "unchecked",
+    );
+
+    // Close the modal
+    await page.getByTestId("select-files-modal-button").click();
   },
 );
 
@@ -676,12 +712,13 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
 
     // Navigate to My Files page
-    await page.getByText("My Files").first().click();
+    await page.getByText(TEXTS.labelMyFiles).first().click();
 
-    // Check if we're on the files page
-    await page.waitForSelector('[data-testid="mainpage_title"]');
-    const title = await page.getByTestId("mainpage_title");
-    expect(await title.textContent()).toContain("Files");
+    // Check if we're on the files page. Asserting on the text rather than the
+    // selector alone: the page we are leaving has a mainpage_title too, and
+    // react-router v7 keeps it mounted long enough for a one-shot read to
+    // return "Starter Project".
+    await waitForMainPageReady(page, "Files");
 
     // Upload the PSD file
     const fileChooserPromisePsd = page.waitForEvent("filechooser", {
@@ -747,25 +784,20 @@ test(
 
     await addLegacyComponents(page);
 
-    // Add a file component to the flow
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("file");
-
-    await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 10000,
+    await addComponentFromSidebar(page, {
+      search: "file",
+      testId: "files_and_knowledgeRead File",
+      hoverAdd: true,
     });
-
-    await page
-      .getByTestId("files_and_knowledgeRead File")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
+    await expect(
+      page.getByRole("application", { name: "Read File node" }),
+    ).toHaveCount(1);
     await adjustScreenView(page);
 
     // Open the file management modal
-    await page.getByTestId("button_open_file_management").click();
-    console.warn(psdFileName);
+    const fileManagement = page.getByTestId("button_open_file_management");
+    await expect(fileManagement).toBeVisible();
+    await fileManagement.click();
 
     // Check if the PNG file has the disabled class (greyed out)
     await expect(page.getByTestId(`file-item-${psdFileName}`)).toHaveClass(
@@ -821,12 +853,12 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Read File");
     await page.waitForSelector('[data-testid="files_and_knowledgeRead File"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     // Get flow ID from URL
     const url = page.url();
-    const flowId = url.split("/").slice(-1)[0];
+    const _flowId = url.split("/").slice(-1)[0];
 
     await page
       .getByTestId("files_and_knowledgeRead File")
@@ -835,15 +867,12 @@ test(
     await page.mouse.up();
     await page.mouse.down();
 
-    await openAdvancedOptions(page);
-
-    await openAdvancedOptions(page);
-
-    await page.getByTestId("showfile_path").click();
-
-    await closeAdvancedOptions(page);
-
     await adjustScreenView(page);
+    // LE-1810: add the hidden Server File Path field to the node through the
+    // parameters panel so its input handle becomes connectable.
+    await page.getByTestId("title-Read File").click();
+    await addParameterToNode(page, "file_path");
+    await closeParametersPanel(page);
 
     // Upload Files
     await page.getByTestId("button_open_file_management").click();
@@ -870,19 +899,46 @@ test(
     await expect(page.getByText("Files uploaded successfully")).toBeVisible();
     await page.getByTestId("select-files-modal-button").click();
 
-    await adjustScreenView(page);
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
+    const singleFileOutputRefresh = page.waitForResponse(
+      (response) => {
+        if (
+          response.request().method() !== "POST" ||
+          new URL(response.url()).pathname !== "/api/v1/custom_component/update"
+        ) {
+          return false;
+        }
+        const requestBody = response.request().postDataJSON();
+        return (
+          requestBody.field === "path" &&
+          Array.isArray(requestBody.field_value) &&
+          requestBody.field_value.length === 1
+        );
+      },
+      { timeout: 30000 },
+    );
     await page.getByTestId(`remove-file-button-${file2}`).click();
+    const refreshResponse = await singleFileOutputRefresh;
+    expect(
+      refreshResponse.ok(),
+      `Refreshing Read File outputs returned ${refreshResponse.status()} ${refreshResponse.statusText()}`,
+    ).toBeTruthy();
+    await refreshResponse.finished();
 
     await page.getByTestId("dropdown-output-file").click();
-    await page.getByTestId("dropdown-item-output-file-file path").click();
+    const filePathOutput = page.getByTestId(
+      "dropdown-item-output-file-file path",
+    );
+    await expect(filePathOutput).toBeVisible({ timeout: 10000 });
+    await filePathOutput.click();
     await page.getByTestId("button_run_read file").click();
     await expect(page.getByText("Built successfully")).toBeVisible({
       timeout: 30000,
     });
     await page.getByTestId("output-inspection-file path-file").click();
     const filePaths = await page.getByTestId("textarea").textContent();
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     const cleanPath = filePaths
       ?.replace(/"/g, "")
@@ -898,7 +954,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -911,6 +967,11 @@ test(
     await page.mouse.up();
     await page.mouse.down();
     await adjustScreenView(page);
+
+    // Text Input is legacy; its "Legacy" warning bar increases node height and
+    // can overlap the Read File handle. Dismiss the bars so the layout stays
+    // compact and the handles are clickable.
+    await dismissLegacyWarnings(page);
 
     // Connect first Text Input to Read File
     const targetHandle = page.getByTestId(
@@ -928,7 +989,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Text Input");
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
@@ -942,6 +1003,9 @@ test(
     await page.mouse.down();
     await adjustScreenView(page);
 
+    // Dismiss the second Text Input's legacy bar before connecting it.
+    await dismissLegacyWarnings(page);
+
     // Connect second Text Input to Read File
     const sourceHandle2 = page
       .getByTestId("handle-textinput-shownode-output text-right")
@@ -954,7 +1018,7 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("Chat Output");
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
-      timeout: 1000,
+      timeout: 10000,
     });
     await page
       .getByTestId("input_outputChat Output")
@@ -977,7 +1041,9 @@ test(
     await textInputs.first().fill(`${folderId}/${file1}.txt`);
     await textInputs.last().fill(`${folderId}/${file2}.txt`);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,
@@ -985,20 +1051,20 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).last().click();
 
-    // Verify
-    await expect(page.getByText(fileContent1)).toBeVisible();
-    await expect(page.getByText(fileContent2)).toBeVisible();
+    // Verify — scoped to the transcript: the reply is also mirrored into an
+    // sr-only live region that sits outside the role="log" region.
+    const transcript = page.getByRole("log");
+    await expect(transcript.getByText(fileContent1).first()).toBeVisible();
+    await expect(transcript.getByText(fileContent2).first()).toBeVisible();
 
-    await page
-      .getByRole("button", { name: "Playground", exact: true })
-      .click({ force: true });
+    await page.getByTestId("playground-close-button").click();
 
     // Test Case 2: Single File (clear second input, use only first)
     await textInputs.last().fill("");
     await textInputs.first().fill(`${folderId}/${file1}.txt`);
 
     await page
-      .getByRole("button", { name: "Playground", exact: true })
+      .getByRole("button", { name: TEXTS.playground, exact: true })
       .click({ force: true });
 
     await page.waitForSelector("text=Run Flow", {
@@ -1007,6 +1073,6 @@ test(
 
     await page.getByText("Run Flow", { exact: true }).last().click();
 
-    await expect(page.getByText(fileContent1).last()).toBeVisible();
+    await expect(transcript.getByText(fileContent1).first()).toBeVisible();
   },
 );

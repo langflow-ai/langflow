@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import inspect
 import json
 import time
@@ -11,6 +12,7 @@ from fastapi.encoders import jsonable_encoder
 from typing_extensions import Protocol
 
 from lfx.log.logger import logger
+from lfx.serialization.serialization import serialize
 
 if TYPE_CHECKING:
     # Lightweight type stub for log types
@@ -29,6 +31,10 @@ class EventManager:
     def __init__(self, queue):
         self.queue = queue
         self.events: dict[str, PartialEventCallback] = {}
+        try:
+            self._loop: asyncio.AbstractEventLoop | None = asyncio.get_running_loop()
+        except RuntimeError:
+            self._loop = None
 
     @staticmethod
     def _validate_callback(callback: EventCallback) -> None:
@@ -65,21 +71,48 @@ class EventManager:
 
     def send_event(self, *, event_type: str, data: LoggableType):
         try:
-            # Simple event creation without heavy dependencies
-            if isinstance(data, dict) and event_type in {"message", "error", "warning", "info", "token"}:
-                # For lfx, keep it simple without playground event creation
-                pass
-        except Exception:  # noqa: BLE001
-            logger.debug(f"Error processing event: {event_type}")
-        jsonable_data = jsonable_encoder(data)
+            jsonable_data = jsonable_encoder(data)
+        except (ValueError, TypeError) as exc:
+            # Component payloads can contain objects that FastAPI's jsonable_encoder
+            # cannot serialize — e.g. a vector-DB client holding a ``threading.Lock``
+            # surfaced through a Loop's per-iteration build events (issue #12591).
+            # jsonable_encoder's last-resort fallback raises ``ValueError([TypeError, ...])``
+            # there, which would otherwise abort the entire flow build. Degrade to the
+            # fail-safe serializer, which converts unknown objects to a string
+            # representation instead of crashing.
+            logger.debug(f"jsonable_encoder failed for event '{event_type}'; using safe serializer: {exc}")
+            jsonable_data = serialize(data, to_str=True)
         json_data = {"event": event_type, "data": jsonable_data}
         event_id = f"{event_type}-{uuid.uuid4()}"
         str_data = json.dumps(json_data) + "\n\n"
         if self.queue:
             try:
-                self.queue.put_nowait((event_id, str_data.encode("utf-8"), time.time()))
+                item = (event_id, str_data.encode("utf-8"), time.time())
+                try:
+                    asyncio.get_running_loop()
+                    in_event_loop = True
+                except RuntimeError:
+                    in_event_loop = False
+
+                if in_event_loop:
+                    # Called from within the event loop — safe to call directly
+                    self.queue.put_nowait(item)
+                elif self._loop is not None and self._loop.is_running():
+                    # Called from a thread outside the event loop (e.g. sync tool in executor)
+                    # Use call_soon_threadsafe so asyncio wakes up the queue getter properly
+                    try:
+                        self._loop.call_soon_threadsafe(self.queue.put_nowait, item)
+                    except RuntimeError:
+                        logger.warning(
+                            "Event loop stopped before event could be scheduled; event_type=%s dropped", event_type
+                        )
+                else:
+                    # Sync context with no event loop — call directly (e.g. unit tests)
+                    self.queue.put_nowait(item)
+            except asyncio.QueueFull:
+                logger.warning("Event queue full; dropping event_type=%s", event_type)
             except Exception:  # noqa: BLE001
-                logger.debug("Queue not available for event")
+                logger.error("Unexpected error dispatching event_type=%s", event_type, exc_info=True)
 
     def noop(self, *, data: LoggableType) -> None:
         pass
@@ -99,6 +132,7 @@ def create_default_event_manager(queue=None):
     manager.register_event("on_end_vertex", "end_vertex")
     manager.register_event("on_build_start", "build_start")
     manager.register_event("on_build_end", "build_end")
+    manager.register_event("on_log", "log")
     return manager
 
 
@@ -111,4 +145,5 @@ def create_stream_tokens_event_manager(queue=None):
     manager.register_event("on_error", "error")
     manager.register_event("on_build_start", "build_start")
     manager.register_event("on_build_end", "build_end")
+    manager.register_event("on_log", "log")
     return manager

@@ -1,18 +1,25 @@
+import { useQueryClient } from "@tanstack/react-query";
 import { cloneDeep } from "lodash";
 import { useParams } from "react-router-dom";
 import { UUID_PARSING_ERROR } from "@/constants/constants";
+import { getGlobalVariablesQueryKey } from "@/controllers/API/helpers/global-variable-scope";
+import { getSettledSuccessfulQueryData } from "@/controllers/API/helpers/query-cache";
 import { usePostAddFlow } from "@/controllers/API/queries/flows/use-post-add-flow";
 import { usePostFolders } from "@/controllers/API/queries/folders";
+import { fetchGlobalVariables } from "@/controllers/API/queries/variables/use-get-global-variables";
+import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAlertStore from "@/stores/alertStore";
 import useAuthStore from "@/stores/authStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
+import getUnavailableFields from "@/stores/globalVariablesStore/utils/get-unavailable-fields";
 import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
+import type { GlobalVariable } from "@/types/global_variables";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { getFolderScopedDuplicateName } from "@/utils/flow-naming";
 import {
-  addVersionToDuplicates,
   createNewFlow,
   extractFieldsFromComponenents,
   processDataFromFlow,
@@ -23,10 +30,9 @@ import useDeleteFlow from "./use-delete-flow";
 
 const FLOW_CREATION_ERROR = "Flow creation error";
 const FOLDER_NOT_FOUND_ERROR = "Folder not found. Redirecting to flows...";
-const FLOW_CREATION_ERROR_MESSAGE =
-  "An unexpected error occurred, please try again";
 const REDIRECT_DELAY = 3000;
 const useAddFlow = () => {
+  const navigate = useCustomNavigate();
   const flows = useFlowsManagerStore((state) => state.flows);
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const { deleteFlow } = useDeleteFlow();
@@ -36,6 +42,7 @@ const useAddFlow = () => {
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
   const setMyCollectionId = useFolderStore((state) => state.setMyCollectionId);
+  const queryClient = useQueryClient();
 
   const userData = useAuthStore((state) => state.userData);
   const hideGettingStartedProgress = useUtilityStore(
@@ -43,14 +50,6 @@ const useAddFlow = () => {
   );
   const isOnboarding =
     !hideGettingStartedProgress && !userData?.optins?.dialog_dismissed;
-
-  const unavailableFields = useGlobalVariablesStore(
-    (state) => state.unavailableFields,
-  );
-  const globalVariablesEntries = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
-  );
-
   const { mutate: postAddFlow } = usePostAddFlow();
   const { mutateAsync: postAddFolder } = usePostFolders();
 
@@ -63,14 +62,6 @@ const useAddFlow = () => {
     const flowData = flow
       ? await processDataFromFlow(flow)
       : { nodes: [], edges: [], viewport: { zoom: 1, x: 0, y: 0 } };
-    flowData?.nodes.forEach((node) => {
-      updateGroupRecursion(
-        node,
-        flowData?.edges,
-        unavailableFields,
-        globalVariablesEntries,
-      );
-    });
     // Create a new flow with a default name if no flow is provided.
     if (params?.override && flow) {
       const flowId = flows?.find((f) => f.name === flow.name);
@@ -100,11 +91,49 @@ const useAddFlow = () => {
       }
     }
 
-    const flowsToCheckNames = flows?.filter(
-      (f) => f.folder_id === myCollectionId,
+    // Only validate stored references against a snapshot fetched for the
+    // exact target project. If that snapshot is not ready (or a project was
+    // just created), preserving the reference is safer than treating a global
+    // or sibling-project list as authoritative and silently clearing it.
+    let cleanupVariables = folder_id
+      ? getSettledSuccessfulQueryData<GlobalVariable[]>(
+          queryClient,
+          getGlobalVariablesQueryKey({ projectId: folder_id }),
+        )
+      : undefined;
+    if (folder_id && cleanupVariables === undefined) {
+      try {
+        cleanupVariables = await queryClient.fetchQuery({
+          queryKey: getGlobalVariablesQueryKey({ projectId: folder_id }),
+          queryFn: () => fetchGlobalVariables({ projectId: folder_id }),
+        });
+      } catch {
+        // Preserve stored references when the exact project policy snapshot
+        // cannot be loaded; a missing snapshot must never act like an empty one.
+        cleanupVariables = undefined;
+      }
+    }
+    const unavailableFields = cleanupVariables
+      ? getUnavailableFields(cleanupVariables)
+      : undefined;
+    const globalVariablesEntries = cleanupVariables?.map(
+      (variable) => variable.name,
     );
+    flowData?.nodes.forEach((node) => {
+      updateGroupRecursion(
+        node,
+        flowData?.edges,
+        unavailableFields,
+        globalVariablesEntries,
+      );
+    });
+
     const newFlow = createNewFlow(flowData!, folder_id, flow);
-    const newName = addVersionToDuplicates(newFlow, flowsToCheckNames ?? []);
+    const newName = getFolderScopedDuplicateName(
+      newFlow,
+      flows ?? [],
+      myCollectionId,
+    );
     newFlow.name = newName;
     newFlow.folder_id = folder_id;
 
@@ -128,28 +157,23 @@ const useAddFlow = () => {
           resolve(createdFlow.id);
         },
         onError: (error) => {
-          if (error?.response?.data?.detail[0]?.type === UUID_PARSING_ERROR) {
+          const detail = error?.response?.data?.detail;
+          if (Array.isArray(detail) && detail[0]?.type === UUID_PARSING_ERROR) {
             setNoticeData({
               title: FOLDER_NOT_FOUND_ERROR,
             });
             setTimeout(() => {
-              window.location.href = `/flows`;
+              navigate("/flows", { replace: true });
             }, REDIRECT_DELAY);
 
+            reject(error);
             return;
           }
 
-          if (error.response?.data?.detail) {
-            useAlertStore.getState().setErrorData({
-              title: FLOW_CREATION_ERROR,
-              list: [error.response?.data?.detail],
-            });
-          } else {
-            useAlertStore.getState().setErrorData({
-              title: FLOW_CREATION_ERROR,
-              list: [error.message ?? FLOW_CREATION_ERROR_MESSAGE],
-            });
-          }
+          useAlertStore.getState().setErrorData({
+            title: FLOW_CREATION_ERROR,
+            list: extractApiErrorMessages(error),
+          });
           reject(error); // Re-throw the error so the caller can handle it if needed},
         },
       });

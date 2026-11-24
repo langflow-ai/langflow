@@ -1,0 +1,223 @@
+"""Streamable-HTTP transport for the ``langflow-mcp`` (lfx) FastMCP server.
+
+Exposes the single Langflow MCP toolkit — flow authoring, execution, and
+``run_assistant`` — at ``/api/v1/agentic/mcp`` so external MCP clients can
+reach the running Langflow server without spawning a local stdio process.
+
+The mounted server is ``lfx.mcp.server``: the same tool definitions the local
+``lfx-mcp`` stdio bridge ships, so there is exactly one MCP toolkit. Every tool
+call goes through the REST API in loopback with the caller's own credentials
+(taken from the authenticated request), so authorization is enforced by the API on
+every operation and no tool ever touches the database directly. The ``login``
+tool is excluded over HTTP: the caller is already authenticated, and accepting
+credentials/server URLs from tool arguments would be a credential-forwarding
+surface.
+
+The mount itself is NOT gated on ``agentic_experience``. Every tool here is a
+REST call the API already authorizes, and the ``lfx-mcp`` stdio bridge serves
+the same toolkit ungated -- gating the whole mount would hold 32 ungated tools
+hostage to the one tool that needs the gate, and make HTTP arbitrarily weaker
+than stdio for no security gain. Instead ``run_assistant`` alone is excluded
+while the gate is off, since it is the only tool that reaches the assistant's
+code-generating endpoints.
+"""
+
+from contextvars import ContextVar
+from http.cookies import SimpleCookie
+from typing import Any
+
+import httpx
+from fastapi import APIRouter, HTTPException, Request, Response
+from lfx.log.logger import logger
+from lfx.mcp.client import LangflowClient
+from lfx.mcp.server import client_scope
+from lfx.mcp.server import mcp as lfx_mcp
+from lfx.utils.ssrf_transport import pin_host_for_url
+from mcp import types
+from mcp.server import Server
+
+from langflow.api.utils import CurrentActiveMCPUser, DbSession
+from langflow.api.v1.mcp import ResponseNoOp, StreamableHTTP
+from langflow.services.auth.cookies import auth_cookie_name
+from langflow.services.auth.utils import oauth2_login
+from langflow.services.deps import get_settings_service
+
+router = APIRouter(prefix="/agentic/mcp", tags=["agentic-mcp"], include_in_schema=False)
+
+# login() would accept credentials and an arbitrary server_url from tool
+# arguments; the route already authenticates the caller, so keep it stdio-only.
+_HTTP_EXCLUDED_TOOLS = frozenset({"login"})
+
+# run_assistant drives the assistant's codegen endpoints, which agentic_experience gates.
+_AGENTIC_GATED_TOOLS = frozenset({"run_assistant"})
+
+
+def _excluded_tools() -> frozenset[str]:
+    """Tools hidden from this transport for the current request."""
+    if get_settings_service().settings.agentic_experience:
+        return _HTTP_EXCLUDED_TOOLS
+    return _HTTP_EXCLUDED_TOOLS | _AGENTIC_GATED_TOOLS
+
+
+current_loopback_client_ctx: ContextVar[LangflowClient | None] = ContextVar("current_loopback_client_ctx", default=None)
+
+server: Server = Server("langflow-mcp")
+
+
+async def _loopback_client(request: Request) -> LangflowClient:
+    """Build a REST client using the same credentials as MCP authentication.
+
+    Tokens (Bearer, cookie, or external) take precedence over API keys, and
+    query API keys take precedence over header keys. Never inherit the server's
+    process API key when the request has no key of its own.
+    """
+    token = await oauth2_login(request)
+    api_key = None if token else request.query_params.get("x-api-key") or request.headers.get("x-api-key")
+    settings_service = get_settings_service()
+    # Preserve credential channels so native verification and external fallback
+    # see the same request. Forward only the configured authentication fields.
+    auth_headers = {}
+    if authorization := request.headers.get("Authorization"):
+        auth_headers["Authorization"] = authorization
+    cookie_names = {auth_cookie_name("access_token_lf", request)}
+    auth_settings = settings_service.auth_settings
+    if auth_settings.EXTERNAL_AUTH_ENABLED:
+        if (header_name := auth_settings.EXTERNAL_AUTH_TOKEN_HEADER) and (value := request.headers.get(header_name)):
+            if header_name.lower() == "authorization":
+                header_name = "Authorization"
+            auth_headers[header_name] = value
+        if cookie_name := auth_settings.EXTERNAL_AUTH_TOKEN_COOKIE:
+            cookie_names.add(cookie_name)
+    cookies = SimpleCookie()
+    for name in cookie_names:
+        if value := request.cookies.get(name):
+            cookies[name] = value
+    if cookies:
+        auth_headers["Cookie"] = cookies.output(header="", sep=";").strip()
+    # The ASGI server address comes from the listener, never the request headers.
+    settings = settings_service.settings
+    host, port = request.scope.get("server") or (settings.host, settings.runtime_port or settings.port)
+    host = {"0.0.0.0": "127.0.0.1", "::": "::1"}.get(host, host)  # noqa: S104
+    scheme = "https" if settings.ssl_cert_file and settings.ssl_key_file else "http"
+    # Verify the operator's certificate name while connecting to the listener.
+    # Without an override, the certificate must cover the listener address.
+    tls_host = settings.ssl_cert_hostname if scheme == "https" else None
+    server_url = httpx.URL(
+        scheme=scheme,
+        host=tls_host or host,
+        port=port,
+        path=settings.root_path.rstrip("/"),
+    )
+    return LangflowClient(
+        server_url=str(server_url),
+        api_key=api_key,
+        auth_headers=auth_headers,
+        use_env_api_key=False,
+        use_env_proxies=False,
+        pinned_ips={pin_host_for_url(str(server_url)): [host]},
+    )
+
+
+@server.list_prompts()
+async def handle_list_prompts() -> list[types.Prompt]:
+    return []
+
+
+@server.list_resources()
+async def handle_list_resources() -> list[types.Resource]:
+    return []
+
+
+@server.list_tools()
+async def handle_list_tools() -> list[types.Tool]:
+    excluded = _excluded_tools()
+    return [tool for tool in await lfx_mcp.list_tools() if tool.name not in excluded]
+
+
+def _ensure_tool_allowed(name: str) -> None:
+    if name in _HTTP_EXCLUDED_TOOLS:
+        msg = f"Tool '{name}' is not available over HTTP"
+        raise ValueError(msg)
+    if name in _excluded_tools():
+        msg = (
+            f"Tool '{name}' requires the Langflow Assistant, which is disabled on this server "
+            "(LANGFLOW_AGENTIC_EXPERIENCE is not enabled). The other tools remain available."
+        )
+        raise ValueError(msg)
+
+
+@server.call_tool(validate_input=False)
+async def handle_call_tool(name: str, arguments: dict[str, Any]) -> Any:
+    """Delegate to the lfx FastMCP server with the caller's loopback client bound.
+
+    ``validate_input=False`` mirrors FastMCP's own transport registration;
+    FastMCP still validates the final arguments via pydantic. The shared
+    lowlevel ``request_ctx`` contextvar makes FastMCP's Context (progress/log
+    notifications) work through this delegation unchanged.
+    """
+    _ensure_tool_allowed(name)
+    if name == "batch" and isinstance(arguments.get("actions"), list):
+        for action in arguments["actions"]:
+            if isinstance(action, dict):
+                _ensure_tool_allowed(action.get("tool", ""))
+    client = current_loopback_client_ctx.get()
+    if client is None:
+        msg = "Authenticated client is unavailable for this MCP request"
+        raise ValueError(msg)
+    async with client_scope(client):
+        return await lfx_mcp.call_tool(name, arguments)
+
+
+_streamable_http = StreamableHTTP(server)
+
+
+async def stop_agentic_streamable_http_manager() -> None:
+    await _streamable_http.stop()
+
+
+streamable_http_route_config = {
+    "methods": ["GET", "POST", "DELETE"],
+    "response_class": ResponseNoOp,
+}
+
+
+@router.head("")
+async def agentic_mcp_health() -> Response:
+    return Response()
+
+
+@router.api_route("", **streamable_http_route_config)
+@router.api_route("/", **streamable_http_route_config)
+async def handle_agentic_streamable_http(
+    request: Request, current_user: CurrentActiveMCPUser, db: DbSession
+) -> Response:
+    """Dispatch one MCP request, with the caller's loopback client bound.
+
+    ``current_user`` only enforces authentication -- the loopback client carries the caller's
+    own credentials, so every tool call re-authenticates at the REST API.
+
+    ``db`` is the very session the auth dependency opened (same cached dependency), and FastAPI
+    would hold it open for the whole request, tool call included. Every tool then issues a
+    loopback REST call that needs its own connection, and on SQLite it waits on the one this
+    request is still holding until ``busy_timeout`` (30s) kills it -- so the mount deadlocks on
+    the default database. Authentication is finished by now and nothing below reads the session,
+    so release it before dispatching.
+    """
+    del current_user
+    await db.close()
+    # start() is idempotent; called here so the session manager only runs once the endpoint is used.
+    await _streamable_http.start()
+    client = await _loopback_client(request)
+    context_token = current_loopback_client_ctx.set(client)
+    try:
+        manager = _streamable_http.get_manager()
+        await manager.handle_request(request.scope, request.receive, request._send)  # noqa: SLF001
+    except HTTPException:
+        raise
+    except Exception as exc:
+        await logger.aexception(f"Error handling agentic MCP Streamable HTTP request: {exc!s}")
+        raise HTTPException(status_code=500, detail="Internal server error in agentic MCP transport") from exc
+    finally:
+        current_loopback_client_ctx.reset(context_token)
+        await client.aclose()
+    return ResponseNoOp()

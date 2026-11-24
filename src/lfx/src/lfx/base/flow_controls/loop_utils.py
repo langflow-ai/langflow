@@ -1,8 +1,10 @@
 """Utility functions for loop component execution."""
 
 from collections import deque
+from contextlib import aclosing
 from typing import TYPE_CHECKING
 
+from lfx.execution import aget_default_coordinator
 from lfx.schema.data import Data
 
 if TYPE_CHECKING:
@@ -205,6 +207,8 @@ async def execute_loop_body(
     start_edge,
     end_vertex_id: str | None,
     event_manager=None,
+    *,
+    user_id: str | None = None,
 ) -> list[Data]:
     """Execute loop body for each data item.
 
@@ -215,16 +219,45 @@ async def execute_loop_body(
         graph: The graph containing the loop
         data_list: List of Data objects to iterate over
         loop_body_vertex_ids: Set of vertex IDs that form the loop body
-        start_vertex_id: The vertex ID of the first vertex in the loop body
-        start_edge: The edge connecting loop's item output to start vertex (contains target param info)
+        start_vertex_id: The vertex ID of the first vertex in the loop body. Only checked for presence;
+            injection targets come from every edge sharing start_edge's source output
+        start_edge: One edge out of the loop's item output. Its source vertex and output name are used
+            to find every edge from that output, so all fan-out branches receive the item
         end_vertex_id: The vertex ID that feeds back to the loop's item input
         event_manager: Optional event manager to pass to subgraph execution for UI events
+        user_id: The caller executing the Loop component and its body.
 
     Returns:
         List of Data objects containing results from each iteration
     """
     if not loop_body_vertex_ids:
         return []
+
+    # Loop.item can fan out to several branches, so inject into every edge that
+    # shares start_edge's source output, not only the one passed in.
+    injections: list[tuple[str, str]] = []
+    # Keep sources in edge order, using None for the current loop item.
+    list_sources: dict[tuple[str, str], list[str | None]] = {}
+    if start_vertex_id and start_edge:
+        loop_vertex = graph.get_vertex(start_edge.source_id)
+        for edge in loop_vertex.outgoing_edges:
+            if edge.source_handle.name != start_edge.source_handle.name:
+                continue
+            if not hasattr(edge.target_handle, "field_name"):
+                msg = f"Edge target_handle missing field_name attribute for loop item injection: {edge}"
+                raise ValueError(msg)
+            injections.append((edge.target_id, edge.target_handle.field_name))
+        for target_id, target_param in injections:
+            sources: list[str | None] = []
+            for edge in graph.get_vertex(target_id).incoming_edges:
+                if getattr(edge.target_handle, "field_name", None) != target_param:
+                    continue
+                if edge.source_id == loop_vertex.id and edge.source_handle.name == start_edge.source_handle.name:
+                    sources.append(None)
+                elif edge.source_id in loop_body_vertex_ids:
+                    sources.append(edge.source_id)
+            if len(sources) > 1:
+                list_sources[(target_id, target_param)] = sources
 
     aggregated_results = []
 
@@ -235,22 +268,12 @@ async def execute_loop_body(
         async with graph.create_subgraph(loop_body_vertex_ids) as iteration_subgraph:
             # Inject current item into vertex data BEFORE preparing the subgraph.
             # This ensures components have data during build/validation.
-            if start_vertex_id and start_edge:
-                # Get the target parameter name from the edge
-                if not hasattr(start_edge.target_handle, "field_name"):
-                    msg = f"Edge target_handle missing field_name attribute for loop item injection: {start_edge}"
-                    raise ValueError(msg)
-                target_param = start_edge.target_handle.field_name
-
-                # Find and update the start vertex's frontend data before components are built
-                for vertex_data in iteration_subgraph._vertices:  # noqa: SLF001
-                    if vertex_data.get("id") == start_vertex_id:
-                        # Inject the loop item into the vertex's template data
-                        if "data" in vertex_data and "node" in vertex_data["data"]:
-                            template = vertex_data["data"]["node"].get("template", {})
-                            if target_param in template:
-                                template[target_param]["value"] = item
-                        break
+            for vertex_data in iteration_subgraph._vertices:  # noqa: SLF001
+                for target_id, target_param in injections:
+                    if vertex_data.get("id") == target_id and "data" in vertex_data and "node" in vertex_data["data"]:
+                        template = vertex_data["data"]["node"].get("template", {})
+                        if target_param in template:
+                            template[target_param]["value"] = item
 
             # Prepare the subgraph - components will be built with the injected data
             iteration_subgraph.prepare()
@@ -259,19 +282,33 @@ async def execute_loop_body(
             # Fields with type="other" (like HandleInput) are skipped during field param processing
             # They normally get values from edges, but we filtered out the Loop->Parser edge
             # So we must inject the value directly into raw_params
-            if start_vertex_id and start_edge:
-                start_vertex = iteration_subgraph.get_vertex(start_vertex_id)
-                start_vertex.update_raw_params({target_param: item}, overwrite=True)
+            # Preserve the other sources when the item feeds a list input.
+            for target_id, target_param in injections:
+                sources = list_sources.get((target_id, target_param))
+                value = (
+                    item
+                    if sources is None
+                    else [
+                        item if source_id is None else iteration_subgraph.get_vertex(source_id) for source_id in sources
+                    ]
+                )
+                iteration_subgraph.get_vertex(target_id).update_raw_params({target_param: value}, overwrite=True)
 
             # Execute subgraph and collect results
             # Pass event_manager so UI receives events from subgraph execution
             results = []
-            async for result in iteration_subgraph.async_start(event_manager=event_manager):
-                results.append(result)
-                # Stop all on error (as per design decision)
-                if hasattr(result, "valid") and not result.valid:
-                    msg = f"Error in loop iteration: {result}"
-                    raise RuntimeError(msg)
+            # aclosing guarantees the stream is finalized even when we raise mid-iteration
+            # on an invalid result, so the underlying subgraph generator's cleanup runs.
+            coordinator = await aget_default_coordinator()
+            async with aclosing(
+                coordinator.stream(iteration_subgraph, user_id=user_id, event_manager=event_manager)
+            ) as stream:
+                async for result in stream:
+                    results.append(result)
+                    # Stop all on error (as per design decision)
+                    if hasattr(result, "valid") and not result.valid:
+                        msg = f"Error in loop iteration: {result}"
+                        raise RuntimeError(msg)
 
             # Extract output from final result
             output = extract_loop_output(results, end_vertex_id)

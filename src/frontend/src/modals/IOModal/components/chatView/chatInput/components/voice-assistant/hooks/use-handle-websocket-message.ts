@@ -1,4 +1,6 @@
 import { BuildStatus } from "@/constants/enums";
+import i18n from "@/i18n";
+import type { VertexBuildTypeAPI } from "@/types/api";
 import { base64ToFloat32Array } from "../helpers/utils";
 
 export const useHandleWebsocketMessage = (
@@ -16,7 +18,7 @@ export const useHandleWebsocketMessage = (
   setStatus: React.Dispatch<React.SetStateAction<string>>,
   messagesStore,
   setEdges,
-  addDataToFlowPool: (data: any, nodeId: string) => void,
+  addDataToFlowPool: (data: VertexBuildTypeAPI, nodeId: string) => void,
   updateEdgesRunningByNodes: (nodeIds: string[], isRunning: boolean) => void,
   updateBuildStatus: (nodeIds: string[], status: BuildStatus) => void,
   hasOpenAIAPIKey: boolean,
@@ -37,7 +39,7 @@ export const useHandleWebsocketMessage = (
           data.response?.status_details?.error?.code?.replaceAll("_", " ");
         setStatus(`API key error: ${errorCode}`);
         showErrorAlert("API key error: " + errorCode, [
-          "Please check your API key and try again",
+          i18n.t("voiceAssistant.apiKeyError"),
         ]);
       }
       break;
@@ -123,14 +125,14 @@ export const useHandleWebsocketMessage = (
       if (data.code === "api_key_missing") {
         setStatus("Error: " + "API key is missing");
         showErrorAlert("API key not valid", [
-          "Please check your API key and try again",
+          i18n.t("voiceAssistant.apiKeyError"),
         ]);
         return;
       }
       if (data.error.message.toLowerCase().includes("api key")) {
         setStatus("Error: " + "API key is missing");
         showErrorAlert("API key not valid", [
-          "Please check your API key and try again",
+          i18n.t("voiceAssistant.apiKeyError"),
         ]);
         return;
       }

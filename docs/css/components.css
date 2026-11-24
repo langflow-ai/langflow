@@ -1,0 +1,369 @@
+/* Tabs Styling */
+.tabs-container {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: var(--ifm-global-radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tabs {
+  margin-bottom: 1rem;
+}
+
+.tabs__item {
+  border: none;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  margin-right: 0rem;
+  padding-bottom: 0.5rem;
+  border-radius: 0;
+}
+
+.tabs__item:hover {
+  background-color: var(--ifm-hover-overlay);
+}
+
+.tabs__item--active {
+  border-bottom-color: var(--ifm-tabs-color-active);
+}
+
+/* Dark Mode - Cards & surfaces */
+[data-theme="dark"] .markdown details {
+  background: var(--ifm-card-background-color, #232328);
+  border-color: var(--ifm-card-border-color, #303038);
+}
+
+[data-theme="dark"] .tabs-container {
+  border-color: var(--ifm-card-border-color, #303038);
+  background: var(--ifm-card-background-color, #232328);
+}
+
+/* Admonitions - subtle, muted style */
+.admonition {
+  border-radius: 8px;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-left-width: 3px;
+  font-size: 0.9375rem;
+}
+
+[data-theme="dark"] .admonition {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: #303038;
+  border-left-color: var(--ifm-color-primary);
+}
+
+[data-theme="dark"] .admonition .admonition-heading h5 {
+  color: #a0a0a8;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ========================================
+   Steps Component
+   ======================================== */
+
+.steps-container {
+  counter-reset: step-counter;
+  padding-left: 0;
+}
+
+.step-item {
+  counter-increment: step-counter;
+  position: relative;
+  padding-left: 3rem;
+  padding-bottom: 2rem;
+  border-left: 2px solid var(--ifm-color-emphasis-200);
+  margin-left: 0.875rem;
+}
+
+.step-item:last-child {
+  border-left-color: transparent;
+  padding-bottom: 0;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 0.75rem;
+}
+
+.step-number {
+  position: absolute;
+  left: -0.875rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--ifm-color-primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-number::before {
+  content: counter(step-counter);
+}
+
+.step-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.75rem;
+}
+
+.step-content {
+  color: var(--ifm-color-emphasis-800);
+}
+
+[data-theme="dark"] .step-item {
+  border-left-color: var(--ifm-card-border-color, #303038);
+}
+
+[data-theme="dark"] .step-item:last-child {
+  border-left-color: transparent;
+}
+
+/* ========================================
+   Cards Component
+   ======================================== */
+
+.lf-cards {
+  display: grid;
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+@media (max-width: 768px) {
+  .lf-cards {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+.lf-card-link {
+  text-decoration: none !important;
+  color: inherit !important;
+  display: flex;
+}
+
+.lf-card {
+  position: relative;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-global-radius);
+  background: var(--ifm-background-surface-color);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.lf-card:hover {
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 0 0 1px var(--ifm-color-primary);
+}
+
+.lf-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.lf-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  color: var(--ifm-color-primary);
+  flex-shrink: 0;
+}
+
+.lf-card-title {
+  font-size: 1.0625rem;
+  font-weight: 600;
+  margin: 0 !important;
+  line-height: 1.4;
+  min-width: 0;
+  flex: 1;
+}
+
+.lf-card-body {
+  font-size: 0.9375rem;
+  color: var(--ifm-color-emphasis-700);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.lf-card-body ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+}
+
+.lf-card-body li {
+  margin-bottom: 0.25rem;
+}
+
+.lf-card-arrow {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  color: var(--ifm-color-emphasis-400);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.lf-card:hover .lf-card-arrow {
+  color: var(--ifm-color-primary);
+  transform: translateX(2px);
+}
+
+[data-theme="dark"] .lf-card {
+  background: var(--ifm-card-background-color, #232328);
+  border-color: var(--ifm-card-border-color, #303038);
+}
+
+/* ========================================
+   Frame Component
+   ======================================== */
+
+.lf-frame {
+  margin: 1.5rem 0;
+}
+
+.lf-frame-content {
+  border: 1px solid var(--ifm-color-emphasis-200);
+  border-radius: var(--ifm-global-radius);
+  overflow: hidden;
+  background: var(--ifm-color-emphasis-100);
+}
+
+.lf-frame-content img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: none;
+  max-width: none;
+  margin: 0;
+}
+
+/* Light/dark image variants */
+[data-theme="light"] .lf-frame-img--dark {
+  display: none;
+}
+
+[data-theme="dark"] .lf-frame-img--light {
+  display: none;
+}
+
+.lf-frame-caption {
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--ifm-color-emphasis-600);
+  margin-top: 0.5rem;
+}
+
+[data-theme="dark"] .lf-frame-content {
+  border-color: var(--ifm-card-border-color, #303038);
+  background: #111;
+}
+
+/* ========================================
+   Video Component
+   ======================================== */
+
+.lf-video {
+  margin: 1.5rem 0;
+}
+
+.lf-video-wrapper {
+  position: relative;
+  padding-top: 56.25%; /* 16:9 */
+  border-radius: var(--ifm-global-radius);
+  overflow: hidden;
+  border: 1px solid var(--ifm-color-emphasis-200);
+}
+
+[data-theme="dark"] .lf-video-wrapper {
+  border-color: var(--ifm-card-border-color, #303038);
+}
+
+/* ========================================
+   Callout Component
+   ======================================== */
+
+.lf-callout {
+  padding: 1rem 1.25rem;
+  border-radius: var(--ifm-global-radius);
+  margin: 1.5rem 0;
+  border: 1px solid var(--ifm-color-emphasis-200);
+}
+
+.lf-callout-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.375rem;
+}
+
+.lf-callout-emoji {
+  font-size: 1rem;
+}
+
+.lf-callout-title {
+  font-weight: 600;
+  font-size: 0.9375rem;
+}
+
+.lf-callout-body {
+  font-size: 0.9375rem;
+  color: var(--ifm-color-emphasis-800);
+  line-height: 1.6;
+}
+
+.lf-callout--info {
+  background: rgba(59, 130, 246, 0.05);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.lf-callout--warning {
+  background: rgba(245, 158, 11, 0.05);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.lf-callout--tip {
+  background: rgba(34, 197, 94, 0.05);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.lf-callout--note {
+  background: rgba(168, 85, 247, 0.05);
+  border-color: rgba(168, 85, 247, 0.2);
+}
+
+[data-theme="dark"] .lf-callout {
+  border-color: var(--ifm-card-border-color, #303038);
+}
+
+[data-theme="dark"] .lf-callout--info {
+  background: rgba(59, 130, 246, 0.08);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+[data-theme="dark"] .lf-callout--warning {
+  background: rgba(245, 158, 11, 0.08);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+[data-theme="dark"] .lf-callout--tip {
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+[data-theme="dark"] .lf-callout--note {
+  background: rgba(168, 85, 247, 0.08);
+  border-color: rgba(168, 85, 247, 0.2);
+}

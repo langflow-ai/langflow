@@ -42,7 +42,7 @@ class TestBuildModelConfig:
         result = _build_model_config("Google Generative AI", "gemini-flash")
 
         config = result[0]
-        assert config["metadata"]["model_class"] == "ChatGoogleGenerativeAI"
+        assert config["metadata"]["model_class"] == "ChatGoogleGenerativeAIFixed"
 
     def test_should_build_config_for_groq(self):
         """Should build correct config for Groq."""
@@ -193,7 +193,7 @@ class TestGetGraph:
             mock_input_instance.set.assert_called_once()
             set_call = mock_input_instance.set.call_args
             assert set_call[1]["sender"] == "User"
-            assert set_call[1]["should_store_message"] is True
+            assert set_call[1]["should_store_message"] is False
 
     def test_should_configure_chat_output(self):
         """Should configure ChatOutput with correct settings."""
@@ -254,14 +254,11 @@ class TestTranslationPrompt:
 
     def test_should_contain_examples(self):
         """Should contain classification examples."""
-        # Should have examples showing both intents
         assert "generate_component" in TRANSLATION_PROMPT
         assert "question" in TRANSLATION_PROMPT
 
     def test_should_distinguish_how_to_from_create(self):
         """Should explain difference between 'how to create' and 'create'."""
-        # The prompt should explain that "how to create" is a question
-        # while "create a component that" is a generation request
         prompt_lower = TRANSLATION_PROMPT.lower()
         assert "how" in prompt_lower
         assert "create" in prompt_lower or "build" in prompt_lower or "generate" in prompt_lower

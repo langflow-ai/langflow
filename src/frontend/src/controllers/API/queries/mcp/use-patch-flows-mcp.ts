@@ -42,10 +42,10 @@ export const usePatchFlowsMCP: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     PatchFlowMCPResponse,
-    any,
+    unknown,
     PatchFlowMCPRequest
   > = mutate(["usePatchFlowsMCP", params.project_id], patchFlowMCP, {
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       const authSettings = (variables as unknown as PatchFlowMCPRequest)
         .auth_settings;
       // Update the auth settings cache immediately to prevent race conditions
@@ -68,7 +68,7 @@ export const usePatchFlowsMCP: useMutationFunctionType<
 
       // Call the original onSuccess if provided
       if (options?.onSuccess) {
-        options.onSuccess(data, variables, context);
+        options.onSuccess(data, variables, onMutateResult, context);
       }
     },
     onSettled: () => {

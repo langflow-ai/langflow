@@ -12,6 +12,7 @@ export interface IApiKeysDataArray {
   api_key: string;
   user_id: string;
   created_at: string;
+  expires_at: string | null;
 }
 
 interface IApiQueryResponse {

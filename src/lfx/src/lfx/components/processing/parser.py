@@ -1,3 +1,5 @@
+import pandas as pd
+
 from lfx.custom.custom_component.component import Component
 from lfx.helpers.data import safe_convert
 from lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput, MultilineInput, TabInput
@@ -5,6 +7,15 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
+
+
+class _DefaultDict(dict):
+    def __init__(self, data_item: Data):
+        super().__init__(data_item.data)
+        self.default_value = data_item.default_value
+
+    def __missing__(self, key):
+        return self.default_value if self.default_value is not None else ""
 
 
 class ParserComponent(Component):
@@ -18,7 +29,7 @@ class ParserComponent(Component):
             name="input_data",
             display_name="JSON or Table",
             input_types=["DataFrame", "Table", "Data", "JSON"],
-            info="Accepts either a DataFrame or a Data object.",
+            info="Accepts a DataFrame, a Data object, or a list of Data objects.",
             required=True,
         ),
         TabInput(
@@ -83,14 +94,13 @@ class ParserComponent(Component):
 
         return build_config
 
-    def _clean_args(self):
+    def _clean_args(self) -> tuple[DataFrame | None, Data | list[Data] | None]:
         """Prepare arguments based on input type."""
         input_data = self.input_data
 
         match input_data:
             case list() if all(isinstance(item, Data) for item in input_data):
-                msg = "List of Data objects is not supported."
-                raise ValueError(msg)
+                return None, input_data
             case DataFrame():
                 return input_data, None
             case Data():
@@ -105,7 +115,7 @@ class ParserComponent(Component):
                     msg = f"Invalid structured input provided: {e!s}"
                     raise ValueError(msg) from e
             case _:
-                msg = f"Unsupported input type: {type(input_data)}. Expected DataFrame or Data."
+                msg = f"Unsupported input type: {type(input_data)}. Expected DataFrame, Data, or list[Data]."
                 raise ValueError(msg)
 
     def parse_combined_text(self) -> Message:
@@ -118,17 +128,23 @@ class ParserComponent(Component):
 
         lines = []
         if df is not None:
-            for _, row in df.iterrows():
-                formatted_text = self.pattern.format(**row.to_dict())
+            legacy_rows = iter(df.iterrows()) if df.isna().to_numpy().any() else None
+            # Preserve column types and keep zero-column rows by iterating with the index.
+            for row in df.itertuples(name=None):
+                legacy_row = next(legacy_rows)[1] if legacy_rows is not None else None
+                values = dict(zip(df.columns, row[1:], strict=True))
+                if legacy_row is not None and any(value is pd.NA for value in values.values()):
+                    # iterrows coerces pd.NA to nan in numeric rows and None otherwise.
+                    # Retain that row-dtype-dependent rendering only for patch compatibility.
+                    legacy_values = legacy_row.to_dict()
+                    values = {key: legacy_values[key] if value is pd.NA else value for key, value in values.items()}
+                formatted_text = self.pattern.format(**values)
                 lines.append(formatted_text)
         elif data is not None:
-            # Use format_map with a dict that returns default_value for missing keys
-            class DefaultDict(dict):
-                def __missing__(self, key):
-                    return data.default_value or ""
-
-            formatted_text = self.pattern.format_map(DefaultDict(data.data))
-            lines.append(formatted_text)
+            data_items = data if isinstance(data, list) else [data]
+            for data_item in data_items:
+                formatted_text = self.pattern.format_map(_DefaultDict(data_item))
+                lines.append(formatted_text)
 
         combined_text = self.sep.join(lines)
         self.status = combined_text
@@ -136,11 +152,11 @@ class ParserComponent(Component):
 
     def convert_to_string(self) -> Message:
         """Convert input data to string with proper error handling."""
-        result = ""
+        clean_data = getattr(self, "clean_data", False)
         if isinstance(self.input_data, list):
-            result = "\n".join([safe_convert(item, clean_data=self.clean_data or False) for item in self.input_data])
+            result = "\n".join(safe_convert(item, clean_data=clean_data) for item in self.input_data)
         else:
-            result = safe_convert(self.input_data or False)
+            result = safe_convert(self.input_data, clean_data=clean_data)
         self.log(f"Converted to string with length: {len(result)}")
 
         message = Message(text=result)

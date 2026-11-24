@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import GlobalVariableDeleteConfirmation from "@/components/core/globalVariableDeleteConfirmation";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
 import { getPlaceholder } from "@/components/core/parameterRenderComponent/helpers/get-placeholder-disabled";
 import { Button } from "@/components/ui/button";
@@ -10,12 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
-import { usePatchGlobalVariables } from "@/controllers/API/queries/variables";
+import {
+  useGetGlobalVariables,
+  usePatchGlobalVariables,
+} from "@/controllers/API/queries/variables";
 import { useGetVoiceList } from "@/controllers/API/queries/voice/use-get-voice-list";
 import { useDebounce } from "@/hooks/use-debounce";
-import GeneralDeleteConfirmationModal from "@/shared/components/delete-confirmation-modal";
 import GeneralGlobalVariableModal from "@/shared/components/global-variable-modal";
-import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVariables";
 import { useVoiceStore } from "@/stores/voiceStore";
 import { getLocalStorage, setLocalStorage } from "@/utils/local-storage-util";
 import AudioSettingsHeader from "./components/header";
@@ -24,6 +27,7 @@ import MicrophoneSelect from "./components/microphone-select";
 import VoiceSelect from "./components/voice-select";
 
 interface SettingsVoiceModalProps {
+  flowId: string;
   children?: React.ReactNode;
   userOpenaiApiKey?: string;
   userElevenLabsApiKey?: string;
@@ -43,6 +47,7 @@ interface SettingsVoiceModalProps {
 }
 
 const SettingsVoiceModal = ({
+  flowId,
   children,
   userOpenaiApiKey,
   userElevenLabsApiKey,
@@ -55,6 +60,7 @@ const SettingsVoiceModal = ({
   setIsEditingOpenAIKey,
   isPlayingRef,
 }: SettingsVoiceModalProps) => {
+  const { t } = useTranslation();
   const popupRef = useRef<HTMLDivElement>(null);
   const [voice, setVoice] = useState<string>("alloy");
   const [open, setOpen] = useState<boolean>(false);
@@ -67,12 +73,11 @@ const SettingsVoiceModal = ({
     userElevenLabsApiKey ?? "",
   );
 
-  const globalVariables = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntries,
-  );
-
-  const globalVariablesEntities = useGlobalVariablesStore(
-    (state) => state.globalVariablesEntities,
+  const { data: globalVariablesEntities = [] } = useGetGlobalVariables({
+    flowId,
+  });
+  const globalVariables = globalVariablesEntities.map(
+    (variable) => variable.name,
   );
 
   const openaiVoices = useVoiceStore((state) => state.openaiVoices);
@@ -190,7 +195,7 @@ const SettingsVoiceModal = ({
 
   useEffect(() => {
     if (!hasOpenAIAPIKey) {
-      setOpen(true);
+      onOpenChangeDropdownMenu(true);
     }
   }, [hasOpenAIAPIKey]);
 
@@ -245,6 +250,7 @@ const SettingsVoiceModal = ({
         name: "ELEVENLABS_API_KEY",
         value: value,
         id: globalVariable.id,
+        flowId,
       });
     }
   }, 2000);
@@ -274,9 +280,9 @@ const SettingsVoiceModal = ({
               <div className="w-full space-y-4 p-4">
                 <div className="grid w-full items-center gap-2">
                   <span className="flex items-center text-sm">
-                    OpenAI API Key
+                    {t("voice.openaiApiKeyLabel")}
                     <span className="ml-1 text-destructive">*</span>
-                    <ShadTooltip content="OpenAI API key is required to use the voice assistant.">
+                    <ShadTooltip content={t("voice.openaiKeyTooltip")}>
                       <div>
                         <IconComponent
                           name="Info"
@@ -296,19 +302,29 @@ const SettingsVoiceModal = ({
                         popoverWidth="16rem"
                         placeholder={getPlaceholder(
                           false,
-                          "Enter your OpenAI API key",
+                          t("voice.openaiApiKeyPlaceholder"),
                         )}
                         id="openai-api-key"
                         options={
                           globalVariables?.map((variable) => variable) ?? []
                         }
-                        optionsPlaceholder={"Global Variables"}
+                        optionsPlaceholder={t("voice.globalVariables")}
                         optionsIcon="Globe"
-                        optionsButton={<GeneralGlobalVariableModal />}
+                        optionsButton={
+                          <GeneralGlobalVariableModal
+                            providerScope={{ flowId }}
+                          />
+                        }
                         optionButton={(option) => (
-                          <GeneralDeleteConfirmationModal
+                          <GlobalVariableDeleteConfirmation
                             option={option}
+                            variableId={
+                              globalVariablesEntities.find(
+                                (variable) => variable.name === option,
+                              )?.id
+                            }
                             onConfirmDelete={() => {}}
+                            providerScope={{ flowId }}
                           />
                         )}
                         value={openaiApiKey}
@@ -331,7 +347,7 @@ const SettingsVoiceModal = ({
                         onClick={() => setIsEditingOpenAIKey(true)}
                         size="md"
                       >
-                        Edit
+                        {t("admin.editTitle")}
                       </Button>
                     </>
                   )}
@@ -346,7 +362,7 @@ const SettingsVoiceModal = ({
                       className="w-full"
                       data-testid="voice-assistant-settings-modal-cancel-button"
                     >
-                      Cancel
+                      {t("modal.cancelButton")}
                     </Button>
                     <Button
                       onClick={() => handleClickSaveApiKey(openaiApiKey)}
@@ -355,7 +371,9 @@ const SettingsVoiceModal = ({
                       size="md"
                       data-testid="voice-assistant-settings-modal-save-button"
                     >
-                      {isEditingOpenAIKey ? "Update" : "Save"}
+                      {isEditingOpenAIKey
+                        ? t("deployments.update")
+                        : t("settings.saveButton")}
                     </Button>
                   </div>
                 )}
@@ -364,8 +382,8 @@ const SettingsVoiceModal = ({
                   <>
                     <div className="grid w-full items-center gap-2">
                       <span className="flex items-center text-sm">
-                        ElevenLabs API Key
-                        <ShadTooltip content="If you have an ElevenLabs API key, you can select ElevenLabs voices.">
+                        {t("voice.elevenLabsApiKeyLabel")}
+                        <ShadTooltip content={t("voice.elevenLabsKeyTooltip")}>
                           <div>
                             <IconComponent
                               name="Info"
@@ -383,19 +401,29 @@ const SettingsVoiceModal = ({
                         popoverWidth="16rem"
                         placeholder={getPlaceholder(
                           false,
-                          "Enter your ElevenLabs API key",
+                          t("voice.elevenLabsApiKeyPlaceholder"),
                         )}
                         id="eleven-labs-api-key"
                         options={
                           globalVariables?.map((variable) => variable) ?? []
                         }
-                        optionsPlaceholder={"Global Variables"}
+                        optionsPlaceholder={t("voice.globalVariables")}
                         optionsIcon="Globe"
-                        optionsButton={<GeneralGlobalVariableModal />}
+                        optionsButton={
+                          <GeneralGlobalVariableModal
+                            providerScope={{ flowId }}
+                          />
+                        }
                         optionButton={(option) => (
-                          <GeneralDeleteConfirmationModal
+                          <GlobalVariableDeleteConfirmation
                             option={option}
+                            variableId={
+                              globalVariablesEntities.find(
+                                (variable) => variable.name === option,
+                              )?.id
+                            }
                             onConfirmDelete={() => {}}
+                            providerScope={{ flowId }}
                           />
                         )}
                         value={elevenLabsApiKey}

@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
 import { useLoginUser } from "@/controllers/API/queries/auth";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
-import { SIGNIN_ERROR_ALERT } from "../../../constants/alerts_constants";
 import { CONTROL_LOGIN_STATE } from "../../../constants/constants";
 import { AuthContext } from "../../../contexts/authContext";
 import useAlertStore from "../../../stores/alertStore";
@@ -17,6 +18,8 @@ import type {
 export default function LoginAdminPage() {
   const [inputState, setInputState] =
     useState<loginInputStateType>(CONTROL_LOGIN_STATE);
+  const { t } = useTranslation();
+  useDocumentTitle(t("auth.adminTitle"));
   const { login } = useContext(AuthContext);
   const queryClient = useQueryClient();
   const { password, username } = inputState;
@@ -42,7 +45,7 @@ export default function LoginAdminPage() {
       },
       onError: (error) => {
         setErrorData({
-          title: SIGNIN_ERROR_ALERT,
+          title: t("errors.signin"),
           list: [error["response"]["data"]["detail"]],
         });
       },
@@ -50,24 +53,35 @@ export default function LoginAdminPage() {
   }
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
+    <main className="flex h-full w-full flex-col items-center justify-center bg-muted">
       <div className="flex w-72 flex-col items-center justify-center gap-2">
-        <LangflowLogo title="Langflow logo" className="h-10 w-10 scale-[1.5]" />
-        <span className="mb-6 text-2xl font-semibold text-primary">Admin</span>
+        <LangflowLogo
+          title={t("common.langflowLogo")}
+          className="h-10 w-10 scale-[1.5]"
+        />
+        <span className="mb-6 text-2xl font-semibold text-primary">
+          {t("auth.adminTitle")}
+        </span>
         <Input
+          allowAutofill
+          name="username"
+          value={username}
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "username", value } });
           }}
           className="bg-background"
-          placeholder="Username"
+          placeholder={t("auth.usernamePlaceholder")}
         />
         <Input
           type="password"
+          allowAutofill
+          name="password"
+          value={password}
           onChange={({ target: { value } }) => {
             handleInput({ target: { name: "password", value } });
           }}
           className="bg-background"
-          placeholder="Password"
+          placeholder={t("auth.passwordPlaceholder")}
         />
         <Button
           onClick={() => {
@@ -76,9 +90,9 @@ export default function LoginAdminPage() {
           variant="default"
           className="w-full"
         >
-          Login
+          {t("auth.adminLoginButton")}
         </Button>
       </div>
-    </div>
+    </main>
   );
 }

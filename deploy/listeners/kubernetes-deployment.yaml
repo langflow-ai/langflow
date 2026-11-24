@@ -1,0 +1,136 @@
+# Langflow trigger listeners (TRG-3) as a Kubernetes Deployment.
+#
+# This is the supported shape for multi-replica deployments. The API Deployment
+# keeps serving HTTP and running the trigger dispatcher; this Deployment holds
+# the outbound provider connections (Slack Socket Mode, Microsoft Graph delta
+# polling, Gmail Pub/Sub pull) and writes events to the same ledger.
+#
+# Apply after the API has started against this database: the listener never runs
+# migrations, and it exits with an explicit message if the trigger tables are
+# missing.
+#
+#   kubectl apply -f deploy/listeners/kubernetes-deployment.yaml
+#
+# Sizing. A `trigger_listener_lease` row elects one owner per connection, with a
+# few seconds of overlap permitted during a handover (an expired lease means the
+# previous owner stopped heartbeating, not that its socket closed; the ledger's
+# dedupe key collapses the duplicates). One replica is the right starting point for most
+# installs; scale out when a single process cannot keep up with the number of
+# armed connections, not to gain redundancy - a dead replica's leases are taken
+# over within two lease TTLs (60s at the defaults) whether or not another
+# replica was already running.
+#
+# Raising `replicas` on a loaded Deployment does rebalance: each replica
+# announces itself, works out its share as ceil(armed connections / live
+# replicas), and releases whatever it holds above it for the others to claim.
+# Expect convergence within a few reconcile intervals, and note that `Recreate`
+# below means a *rollout* still replaces pods one generation at a time.
+#
+# There is no Service and no Ingress on purpose. The listener accepts no
+# inbound traffic; the health port exists for probes only.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langflow-listeners
+  labels:
+    app.kubernetes.io/name: langflow
+    app.kubernetes.io/component: listeners
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: langflow
+      app.kubernetes.io/component: listeners
+  strategy:
+    # Stop the old pod before starting the new one. Two pods overlapping is
+    # tolerated - leases elect one owner per connection and the ledger's dedupe
+    # key collapses whatever a bounded handover overlap emits twice - but
+    # pointless: the newcomer would idle until the outgoing pod released its
+    # leases.
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: langflow
+        app.kubernetes.io/component: listeners
+    spec:
+      # Long enough for SIGTERM to stop every adapter and release every lease.
+      terminationGracePeriodSeconds: 60
+      containers:
+        - name: listeners
+          image: langflowai/langflow:latest
+          args: ["langflow", "listeners"]
+          env:
+            # The same database and the same secret key as the API: the listener
+            # reads the same connection rows and decrypts the same tokens.
+            - name: LANGFLOW_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-secrets
+                  key: database-url
+            - name: LANGFLOW_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-secrets
+                  key: secret-key
+            # Required when any connection was authorized through OAuth. The
+            # listener refreshes access tokens in this process rather than
+            # calling the API, so without the API's registrations every refresh
+            # fails locally - hours after the deploy looked healthy, and without
+            # one request reaching the provider. Optional so a deployment with
+            # no OAuth connections needs no such key.
+            - name: LANGFLOW_CONNECTION_OAUTH_REGISTRATIONS
+              valueFrom:
+                secretKeyRef:
+                  name: langflow-secrets
+                  key: connection-oauth-registrations
+                  optional: true
+            # Probes reach the pod on its pod IP, so the health server cannot
+            # stay on loopback here.
+            - name: LANGFLOW_LISTENERS_HEALTH_HOST
+              value: "0.0.0.0"
+            - name: LANGFLOW_LISTENERS_HEALTH_PORT
+              value: "7861"
+          ports:
+            - name: health
+              containerPort: 7861
+          livenessProbe:
+            # The process is up and its reconcile task is alive.
+            httpGet:
+              path: /health
+              port: health
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            failureThreshold: 3
+          readinessProbe:
+            # The database answers, the reconcile loop is fresh, and no lease
+            # renewal has failed inside the last TTL.
+            httpGet:
+              path: /healthz
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            failureThreshold: 3
+          resources:
+            # A listener holds connections and normalizes small payloads; it
+            # does not execute flows. Flow execution stays on the API/worker
+            # side, which is why these requests are modest.
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              memory: 1Gi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            # `runAsNonRoot` alone is not enough: the image's USER is the name
+            # `user`, and the kubelet cannot prove a name is not root, so the
+            # container never starts (`CreateContainerConfigError: image has
+            # non-numeric user`). 1000 is that user's uid in both Dockerfiles.
+            # Its group is left to the image - gid 0, which is what owns /app
+            # under UBI. On OpenShift, drop `runAsUser` and let the SCC assign
+            # one instead.
+            runAsUser: 1000
+            capabilities:
+              drop: ["ALL"]

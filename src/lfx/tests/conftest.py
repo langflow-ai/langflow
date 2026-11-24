@@ -25,6 +25,14 @@ def setup_structlog():
     )
 
 
+@pytest.fixture(autouse=True)
+def allow_custom_components_by_default(monkeypatch):
+    """Keep LFX tests aligned with the documented default unless a test opts out."""
+    from lfx.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+
 # Set up test data paths
 def pytest_configure(config):  # noqa: ARG001
     """Configure pytest with data paths and check prerequisites."""

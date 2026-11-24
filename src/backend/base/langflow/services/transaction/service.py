@@ -11,7 +11,7 @@ from lfx.services.interfaces import TransactionServiceProtocol
 
 from langflow.services.base import Service
 from langflow.services.database.models.transactions.crud import log_transaction as crud_log_transaction
-from langflow.services.database.models.transactions.model import TransactionBase
+from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 
 if TYPE_CHECKING:
     from langflow.services.settings.service import SettingsService
@@ -33,6 +33,9 @@ class TransactionService(Service, TransactionServiceProtocol):
             settings_service: The settings service for checking if transactions are enabled.
         """
         self.settings_service = settings_service
+        # Latch so the "writer enabled but not running, using legacy path" log
+        # fires once per process instead of spamming on every transaction.
+        self._legacy_fallback_logged: bool = False
 
     async def log_transaction(
         self,
@@ -43,6 +46,9 @@ class TransactionService(Service, TransactionServiceProtocol):
         status: str,
         target_id: str | None = None,
         error: str | None = None,
+        *,
+        user_id: UUID | None = None,
+        session_id: str | None = None,
     ) -> None:
         """Log a transaction record for a vertex execution.
 
@@ -54,6 +60,8 @@ class TransactionService(Service, TransactionServiceProtocol):
             status: Execution status (success/error)
             target_id: Optional target vertex ID
             error: Optional error message
+            user_id: Message owner of the run (the end user when one is known)
+            session_id: Session of the run
         """
         if not self.is_enabled():
             return
@@ -69,7 +77,29 @@ class TransactionService(Service, TransactionServiceProtocol):
                 status=status,
                 error=error,
                 flow_id=flow_uuid,
+                user_id=user_id,
+                session_id=session_id,
             )
+
+            # When the telemetry writer is enabled and started, hand the row off
+            # to its disk-backed outbox and return immediately — no DB connection
+            # is acquired from the request pool. Falls through to the legacy
+            # direct-write path when the writer isn't ready (e.g. very early in
+            # lifespan) or has been disabled.
+            if getattr(self.settings_service.settings, "telemetry_writer_enabled", False):
+                from langflow.services.deps import get_telemetry_writer_service
+
+                writer = get_telemetry_writer_service()
+                if writer is not None and writer.is_running():
+                    table = TransactionTable(**transaction.model_dump())
+                    if writer.enqueue_transaction(table.model_dump(mode="python")):
+                        return
+                elif not self._legacy_fallback_logged:
+                    self._legacy_fallback_logged = True
+                    logger.warning(
+                        "telemetry_writer_enabled=True but writer is not running; "
+                        "falling back to legacy direct-write path for transactions"
+                    )
 
             async with session_scope() as session:
                 await crud_log_transaction(session, transaction)

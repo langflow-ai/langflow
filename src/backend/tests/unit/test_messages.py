@@ -1,7 +1,12 @@
+import asyncio
+import base64
 from datetime import datetime, timezone
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
 import pytest
+from langflow import memory as memory_module
 from langflow.memory import (
     aadd_messages,
     aadd_messagetables,
@@ -15,7 +20,7 @@ from langflow.memory import (
 )
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.content_types import TextContent, ToolContent
-from langflow.schema.message import Message
+from langflow.schema.message import MAX_ATTACHMENT_SIZE_BYTES, Message
 from langflow.schema.properties import Properties, Source
 
 # Assuming you have these imports available
@@ -49,14 +54,19 @@ async def created_messages(async_session):  # noqa: ARG001
 
 @pytest.mark.usefixtures("client")
 def test_get_messages():
+    flow_id, user_id = uuid4(), uuid4()
     add_messages(
         [
             Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-        ]
+        ],
+        flow_id=flow_id,
+        user_id=user_id,
     )
     limit = 2
-    messages = get_messages(sender="User", session_id="session_id2", limit=limit)
+    messages = get_messages(
+        sender="User", session_id="session_id2", flow_id=flow_id, user_id=user_id, limit=limit, order="ASC"
+    )
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -64,14 +74,19 @@ def test_get_messages():
 
 @pytest.mark.usefixtures("client")
 async def test_aget_messages():
+    flow_id, user_id = uuid4(), uuid4()
     await aadd_messages(
         [
             Message(text="Test message 1", sender="User", sender_name="User", session_id="session_id2"),
             Message(text="Test message 2", sender="User", sender_name="User", session_id="session_id2"),
-        ]
+        ],
+        flow_id=flow_id,
+        user_id=user_id,
     )
     limit = 2
-    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit)
+    messages = await aget_messages(
+        sender="User", session_id="session_id2", flow_id=flow_id, user_id=user_id, limit=limit, order="ASC"
+    )
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -94,6 +109,21 @@ async def test_aadd_messages():
 
 
 @pytest.mark.usefixtures("client")
+async def test_aadd_messages_persists_run_id():
+    run_id = uuid4()
+    message = Message(
+        text="New Test message",
+        sender="User",
+        sender_name="User",
+        session_id="new_session_id_run_id",
+        run_id=str(run_id),
+    )
+    messages = await aadd_messages(message)
+    assert len(messages) == 1
+    assert str(messages[0].run_id) == str(run_id)
+
+
+@pytest.mark.usefixtures("client")
 async def test_aadd_messagetables(async_session):
     messages = [MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")]
     added_messages = await aadd_messagetables(messages, async_session)
@@ -101,36 +131,188 @@ async def test_aadd_messagetables(async_session):
     assert added_messages[0].text == "New Test message"
 
 
+@pytest.mark.parametrize("expire_on_commit", [False, True])
+async def test_aadd_messagetables_reads_back_only_when_commit_expires(expire_on_commit):
+    """The rows are not read back unless the session dropped their values on commit.
+
+    The returned message matches the stored row either way, and a later commit
+    of the same session has nothing left to flush.
+    """
+    from sqlalchemy import event
+    from sqlalchemy.ext.asyncio import create_async_engine
+    from sqlalchemy.pool import StaticPool
+    from sqlmodel import SQLModel
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    engine = create_async_engine("sqlite+aiosqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    statements: list[str] = []
+    event.listen(engine.sync_engine, "before_cursor_execute", lambda _c, _cu, stmt, *_: statements.append(stmt))
+    try:
+        message = MessageTable.from_message(
+            Message(text="stored", sender="User", sender_name="User", session_id="s1"), flow_id=uuid4()
+        )
+        async with AsyncSession(engine, expire_on_commit=expire_on_commit) as session:
+            added = await aadd_messagetables([message], session)
+            assert not session.dirty
+            await session.commit()
+
+        verbs = [stmt.split(None, 1)[0].upper() for stmt in statements]
+        assert verbs == (["INSERT", "SELECT"] if expire_on_commit else ["INSERT"])
+
+        async with AsyncSession(engine) as session:
+            stored = await session.get(MessageTable, added[0].id)
+        assert added[0].id == stored.id
+        assert added[0].text == stored.text == "stored"
+        assert added[0].flow_id == stored.flow_id
+        assert added[0].properties == MessageRead.model_validate(stored, from_attributes=True).properties
+        assert added[0].timestamp.replace(tzinfo=None) == stored.timestamp.replace(tzinfo=None)
+    finally:
+        await engine.dispose()
+
+
+async def test_aadd_messagetables_propagates_cancelled_error_from_commit():
+    cancellation = asyncio.CancelledError("commit cancelled")
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=cancellation),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+
+
+async def test_aadd_messagetables_propagates_cancelled_error_from_refresh():
+    cancellation = asyncio.CancelledError("refresh cancelled")
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(),
+        refresh=AsyncMock(side_effect=cancellation),
+        rollback=AsyncMock(),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.refresh.assert_awaited_once_with(message)
+    session.rollback.assert_awaited_once()
+
+
+async def test_aadd_messagetables_preserves_cancellation_when_rollback_and_logging_fail(monkeypatch):
+    cancellation = asyncio.CancelledError("commit cancelled")
+    log_exception = AsyncMock(side_effect=RuntimeError("logging failed"))
+    monkeypatch.setattr(memory_module, "logger", SimpleNamespace(aexception=log_exception))
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=cancellation),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=RuntimeError("rollback failed")),
+    )
+
+    with pytest.raises(asyncio.CancelledError) as exc_info:
+        await aadd_messagetables([message], session)
+
+    assert exc_info.value is cancellation
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+    log_exception.assert_awaited_once()
+
+
+async def test_aadd_messagetables_allows_cancellation_to_interrupt_rollback():
+    commit_started = asyncio.Event()
+    rollback_started = asyncio.Event()
+    rollback_cancelled = asyncio.Event()
+    wait_forever = asyncio.Event()
+
+    async def commit():
+        commit_started.set()
+        await wait_forever.wait()
+
+    async def rollback():
+        rollback_started.set()
+        try:
+            await wait_forever.wait()
+        except asyncio.CancelledError:
+            rollback_cancelled.set()
+            raise
+
+    message = MessageTable(text="New Test message", sender="User", sender_name="User", session_id="new_session_id")
+    session = SimpleNamespace(
+        add=lambda _message: None,
+        commit=AsyncMock(side_effect=commit),
+        refresh=AsyncMock(),
+        rollback=AsyncMock(side_effect=rollback),
+    )
+    add_task = asyncio.create_task(aadd_messagetables([message], session))
+
+    try:
+        await asyncio.wait_for(commit_started.wait(), timeout=1)
+        add_task.cancel()
+        await asyncio.wait_for(rollback_started.wait(), timeout=1)
+        add_task.cancel()
+
+        done, _ = await asyncio.wait({add_task}, timeout=1)
+        assert add_task in done
+        with pytest.raises(asyncio.CancelledError):
+            add_task.result()
+    finally:
+        wait_forever.set()
+        if not add_task.done():
+            await asyncio.gather(add_task, return_exceptions=True)
+
+    assert rollback_cancelled.is_set()
+    session.commit.assert_awaited_once()
+    session.rollback.assert_awaited_once()
+    session.refresh.assert_not_awaited()
+
+
 @pytest.mark.usefixtures("client")
 def test_delete_messages():
     session_id = "new_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
-    add_messages([message])
-    messages = get_messages(sender="User", session_id=session_id)
+    add_messages([message], flow_id=flow_id, user_id=user_id)
+    messages = get_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 1
-    delete_messages(session_id)
-    messages = get_messages(sender="User", session_id=session_id)
+    delete_messages(session_id, flow_id=flow_id, user_id=user_id)
+    messages = get_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 async def test_adelete_messages():
     session_id = "new_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="New Test message", sender="User", sender_name="User", session_id=session_id)
-    await aadd_messages([message])
-    messages = await aget_messages(sender="User", session_id=session_id)
+    await aadd_messages([message], flow_id=flow_id, user_id=user_id)
+    messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 1
-    await adelete_messages(session_id)
-    messages = await aget_messages(sender="User", session_id=session_id)
+    await adelete_messages(session_id, flow_id=flow_id, user_id=user_id)
+    messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(messages) == 0
 
 
 @pytest.mark.usefixtures("client")
 async def test_store_message():
     session_id = "stored_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    await astore_message(message)
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    await astore_message(message, flow_id=flow_id, user_id=user_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
@@ -138,9 +320,10 @@ async def test_store_message():
 @pytest.mark.usefixtures("client")
 async def test_astore_message():
     session_id = "stored_session_id"
+    flow_id, user_id = uuid4(), uuid4()
     message = Message(text="Stored message", sender="User", sender_name="User", session_id=session_id)
-    await astore_message(message)
-    stored_messages = await aget_messages(sender="User", session_id=session_id)
+    await astore_message(message, flow_id=flow_id, user_id=user_id)
+    stored_messages = await aget_messages(sender="User", session_id=session_id, flow_id=flow_id, user_id=user_id)
     assert len(stored_messages) == 1
     assert stored_messages[0].text == "Stored message"
 
@@ -169,6 +352,126 @@ def test_convert_to_langchain(method_name):
     assert lc_message.type == "ai"
     expected_len = 2
     assert len(list(iterator)) == expected_len
+
+
+@pytest.fixture
+def attachment_upload_dir(tmp_path, monkeypatch):
+    """Exercise attachment parsing inside an authorized local upload namespace."""
+    from langflow.services.deps import get_settings_service
+    from lfx.services.storage.local import LocalStorageService
+    from lfx.utils.file_path_security import file_access_scope
+    from lfx.utils.image import create_image_content_dict
+
+    storage_dir = tmp_path / "storage"
+    scope_id = str(uuid4())
+    upload_dir = storage_dir / scope_id
+    upload_dir.mkdir(parents=True)
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "storage_type", "local")
+    monkeypatch.setattr(settings_service.settings, "restrict_local_file_access", True)
+    monkeypatch.setattr(settings_service.settings, "config_dir", str(storage_dir))
+    storage = LocalStorageService(session_service=None, settings_service=settings_service)
+    monkeypatch.setattr("lfx.schema.image.get_storage_service", lambda: storage)
+    monkeypatch.setattr("lfx.utils.image.get_storage_service", lambda: storage)
+    create_image_content_dict.cache_clear()
+    with file_access_scope((scope_id,)):
+        yield upload_dir
+    create_image_content_dict.cache_clear()
+
+
+def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch, attachment_upload_dir):
+    events: list[str] = []
+
+    def record(event: str, **_kwargs):
+        events.append(event)
+
+    monkeypatch.setattr(
+        "lfx.schema.message.logger",
+        SimpleNamespace(debug=record, warning=record, error=lambda *_args, **_kwargs: None),
+    )
+
+    unsupported_path = attachment_upload_dir / "file.unsupported"
+    unsupported_path.write_bytes(b"\x00unsupported attachment canary")
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(unsupported_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert lc_message.content == [{"type": "text", "text": "Hello"}]
+    assert any("Skipping attachment during message conversion" in event for event in events)
+
+
+def test_to_lc_message_keeps_supported_csv_attachments_as_text(attachment_upload_dir):
+    csv_path = attachment_upload_dir / "table.csv"
+    csv_path.write_text("name,role\nAda,Engineer\n", encoding="utf-8")
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(csv_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert isinstance(lc_message.content, list)
+    assert lc_message.content[0] == {"type": "text", "text": "Hello"}
+    assert lc_message.content[1]["type"] == "text"
+    assert "File 'table.csv' contents:" in lc_message.content[1]["text"]
+    assert "name,role" in lc_message.content[1]["text"]
+
+
+def test_to_lc_message_keeps_supported_image_attachments(attachment_upload_dir):
+    image_path = attachment_upload_dir / "image.png"
+    image_content = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAACklEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg=="
+    )
+    image_path.write_bytes(image_content)
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(image_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert isinstance(lc_message.content, list)
+    assert lc_message.content[0] == {"type": "text", "text": "Hello"}
+    assert lc_message.content[1]["type"] == "image_url"
+
+
+def test_to_lc_message_skips_oversized_file_attachments(attachment_upload_dir):
+    big_path = attachment_upload_dir / "big.txt"
+
+    big_size = MAX_ATTACHMENT_SIZE_BYTES + 1
+    with big_path.open("wb") as handle:
+        handle.seek(big_size - 1)
+        handle.write(b"\0")
+
+    message = Message(
+        text="Hello",
+        sender="User",
+        sender_name="User",
+        session_id="session-id",
+        files=[str(big_path)],
+    )
+
+    lc_message = message.to_lc_message()
+
+    assert lc_message.type == "human"
+    assert lc_message.content == [{"type": "text", "text": "Hello"}]
 
 
 @pytest.mark.usefixtures("client")
@@ -295,27 +598,30 @@ async def test_aupdate_message_with_content_blocks(created_message):
     assert updated[0].text == "Message with content blocks"
     assert len(updated[0].content_blocks) == 1
 
-    # Verify the content block structure
+    # MessageRead renders content_blocks as the legacy v1 shape: plain dicts,
+    # a single group {title, contents, allow_markdown, media_url} whose leaves
+    # carry no id/contents. The setter-appended top-level text is carried by
+    # ``text`` (dropped from content_blocks, since the group is not "Agent Steps").
     updated_block = updated[0].content_blocks[0]
-    assert updated_block.title == "Test Block"
+    assert updated_block["title"] == "Test Block"
     expected_len = 2
-    assert len(updated_block.contents) == expected_len
+    assert len(updated_block["contents"]) == expected_len
 
     # Verify text content
-    text_content = updated_block.contents[0]
-    assert text_content.type == "text"
-    assert text_content.text == "Test content"
+    text_content = updated_block["contents"][0]
+    assert text_content["type"] == "text"
+    assert text_content["text"] == "Test content"
     duration = 5
-    assert text_content.duration == duration
-    assert text_content.header["title"] == "Test Header"
+    assert text_content["duration"] == duration
+    assert text_content["header"]["title"] == "Test Header"
 
     # Verify tool content
-    tool_content = updated_block.contents[1]
-    assert tool_content.type == "tool_use"
-    assert tool_content.name == "test_tool"
-    assert tool_content.tool_input == {"param": "value"}
+    tool_content = updated_block["contents"][1]
+    assert tool_content["type"] == "tool_use"
+    assert tool_content["name"] == "test_tool"
+    assert tool_content["tool_input"] == {"param": "value"}
     duration = 10
-    assert tool_content.duration == duration
+    assert tool_content["duration"] == duration
 
 
 @pytest.mark.usefixtures("client")
@@ -364,9 +670,111 @@ async def test_aupdate_message_with_nested_properties(created_message):
     assert updated[0].properties.targets == []
 
 
+@pytest.mark.usefixtures("client")
+async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
+    """Regression test: a Table/DataFrame leaked into a ContentBlock should not break persistence.
+
+    When a flow wires a Memory Base (or any component that emits a Table) through
+    a Parser into an Agent, the raw Table can be captured by message tracking
+    and reach the SQL UPDATE before the consumer converts it to text. The
+    persistence layer must coerce the Table — and the numpy scalars it carries
+    — to JSON-native types rather than failing the message save.
+    """
+    import json
+
+    import numpy as np
+    import pandas as pd
+
+    table = pd.DataFrame([{"chunk": "hello world", "_score": 0.9}, {"chunk": "another row", "_score": 0.8}])
+
+    tool_content = ToolContent(
+        type="tool_use",
+        name="MemoryBase",
+        tool_input={"search_query": "hello"},
+        output=table,
+        duration=12,
+    )
+    content_block = ContentBlock(title="Agent Steps", contents=[tool_content])
+
+    created_message.content_blocks = [content_block]
+    created_message.text = "Agent response after Memory Base retrieval"
+
+    updated = await aupdate_messages(created_message)
+
+    assert len(updated) == 1
+    assert updated[0].text == "Agent response after Memory Base retrieval"
+    assert len(updated[0].content_blocks) == 1
+
+    # MessageRead renders the legacy v1 shape (plain dicts). For an "Agent Steps"
+    # group the answer is folded back in as a trailing Output leaf, so the tool
+    # stays at contents[0].
+    stored_tool = updated[0].content_blocks[0]["contents"][0]
+    assert stored_tool["type"] == "tool_use"
+    assert stored_tool["name"] == "MemoryBase"
+
+    # The output must be free of pandas / numpy types and fully JSON-encodable.
+    def _assert_json_native(value):
+        if isinstance(value, dict):
+            for v in value.values():
+                _assert_json_native(v)
+        elif isinstance(value, list):
+            for v in value:
+                _assert_json_native(v)
+        else:
+            assert not isinstance(value, np.generic), f"numpy scalar leaked: {value!r}"
+            assert not isinstance(value, pd.DataFrame), "DataFrame leaked into persisted output"
+
+    _assert_json_native(stored_tool["output"])
+    # Strict JSON dump must succeed without a fallback encoder.
+    json.dumps(stored_tool["output"], allow_nan=False)
+
+
 # =============================================================================
 # Tests for MessageBase.from_message file path handling
 # =============================================================================
+
+
+class TestMessageBaseFromMessageAgentInit:
+    """Regression: in-flight agent Message must survive the no_content check.
+
+    The agent now initializes with flat ``content_blocks=[]`` (the wrapping
+    ``ContentBlock('Agent Steps', ...)`` is gone) and uses ``text=""`` as
+    the "intentionally created, content will arrive" sentinel. If either
+    side regresses, the build dies with "The message does not have the
+    required fields (text, sender, sender_name)." before any agent event
+    can populate the content_blocks list.
+    """
+
+    def test_from_message_accepts_in_flight_agent_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Mirrors what AgentComponent / LCToolsAgentComponent / altk build.
+        message = Message(
+            text="",
+            sender="Machine",
+            sender_name="Agent",
+            content_blocks=[],
+            session_id="test-session",
+            properties={"icon": "Bot", "state": "partial"},
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.sender == "Machine"
+        assert result.sender_name == "Agent"
+        assert result.text == ""
+
+    def test_from_message_rejects_truly_empty_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Explicit text=None with no stream and no content_blocks is the
+        # genuinely-empty signal that must be rejected. (A bare message with no
+        # text argument seeds data["text"]="" -- the intentional-empty ChatInput
+        # convention -- and is accepted, like an in-flight agent message.)
+        message = Message(sender="Machine", sender_name="Agent", text=None, content_blocks=[])
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageTable.from_message(message, flow_id=uuid4())
 
 
 class TestMessageBaseFromMessageFilePaths:
@@ -393,6 +801,51 @@ class TestMessageBaseFromMessageFilePaths:
 
         assert len(result.files) == 1
         assert result.files[0] == f"{session_id}/image.png"
+
+    def test_from_message_preserves_typed_flow_namespace(self):
+        """Keep the typed flow prefix when normalizing an uploaded image path."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        session_id = "785c90a9-37bd-4aae-b873-447772a33893"
+        file_path = f"/uploads/flow-{session_id}/image.png"
+        message = Message(
+            text="Test message",
+            sender="User",
+            sender_name="User",
+            session_id=session_id,
+            files=[Image(path=file_path)],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.files == [f"flow-{session_id}/image.png"]
+
+    @pytest.mark.parametrize(
+        "storage_root",
+        ["/srv/langflow/data", r"C:\langflow\data"],
+        ids=["posix", "windows"],
+    )
+    def test_from_message_keeps_the_flow_namespace_when_the_session_is_another_id(self, storage_root):
+        """A shareable playground runs under a per-visitor session; its uploads live in the source flow."""
+        from langflow.services.database.models.message.model import MessageTable
+        from lfx.schema.image import Image
+
+        source_flow_id = "f23a147e-5f12-4a4e-a9db-cf9f6283718c"
+        visitor_session = "5ff65175-ab01-539f-81d9-cb5601855d08"
+        separator = "\\" if "\\" in storage_root else "/"
+        file_path = separator.join([storage_root, f"flow-{source_flow_id}", "2026-11-11_09-07-43_chart.png"])
+        message = Message(
+            text="see the chart",
+            sender="User",
+            sender_name="User",
+            session_id=visitor_session,
+            files=[Image(path=file_path)],
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.files == [f"flow-{source_flow_id}/2026-11-11_09-07-43_chart.png"]
 
     def test_from_message_with_session_id_not_in_file_path(self):
         """Test that file paths NOT containing session_id are preserved as-is."""
@@ -980,6 +1433,23 @@ class TestMessageEdgeCases:
 
         assert str(result.flow_id) == flow_id_str
 
+    def test_from_message_uses_message_run_id_when_explicit_run_id_missing(self):
+        """Test from_message falls back to message.run_id."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        run_id = uuid4()
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            run_id=str(run_id),
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.run_id == run_id
+
     def test_from_message_with_iterator_text(self):
         """Test from_message handles iterator text gracefully."""
         from langflow.services.database.models.message.model import MessageTable
@@ -1216,21 +1686,18 @@ class TestSanitizeJson:
         assert MessageTable._sanitize_json(None) is None
 
     def test_sanitize_decimal_nan(self):
-        """Decimal('NaN') should be handled gracefully.
+        """Decimal('NaN') is normalized to None via the JSON-encoder fallback.
 
-        Decimal NaN is neither a float nor passes math.isnan/isinf, so the
-        current implementation passes it through as-is (it is not a float).
-        This test documents the current behaviour; if Decimal support is added
-        later (as suggested in review), update this test accordingly.
+        Decimal NaN is not directly JSON-encodable and would otherwise reach
+        the jsonb column unchanged. The fallback path converts it to a float
+        NaN, which is then sanitized to None like any other non-finite float.
         """
         import decimal
 
         from langflow.services.database.models.message.model import MessageTable
 
         d = decimal.Decimal("NaN")
-        # Current implementation: non-float types are returned unchanged
-        result = MessageTable._sanitize_json(d)
-        assert result is d  # passed through unchanged
+        assert MessageTable._sanitize_json(d) is None
 
     # ------------------------------------------------------------------
     # Integration: validator strips NaN before reaching the DB layer

@@ -1,4 +1,5 @@
-import { ENABLE_VOICE_ASSISTANT } from "@/customization/feature-flags";
+import { useTranslation } from "react-i18next";
+import { ENABLE_FILES_ON_PLAYGROUND } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
 import FilePreviewDisplay from "../../utils/file-preview-display";
 import type { AudioRecordingState } from "../hooks/use-audio-recording";
@@ -13,7 +14,7 @@ interface InputWrapperProps {
   send: () => void;
   noInput: boolean;
   chatValue: string;
-  inputRef: React.RefObject<HTMLTextAreaElement>;
+  inputRef: React.RefObject<HTMLTextAreaElement | null>;
   files: FilePreviewType[];
   isDragging: boolean;
   handleDeleteFile: (file: FilePreviewType) => void;
@@ -44,11 +45,14 @@ const InputWrapper = ({
   onStopRecording,
   isAudioSupported,
 }: InputWrapperProps) => {
-  const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
+  const { t } = useTranslation();
+  // Padding reserves room for the delete button, which overhangs each
+  // thumbnail and would otherwise be clipped by the scroll container.
+  const classNameFilePreview = `flex w-full items-center gap-3 overflow-auto px-2 pb-2 pt-3`;
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (target.closest("textarea,button,input,[role='button']")) {
       return;
     }
     inputRef.current?.focus();
@@ -60,7 +64,7 @@ const InputWrapper = ({
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (target.closest("textarea,button,input,[role='button']")) {
       return;
     }
     e.stopPropagation();
@@ -71,14 +75,16 @@ const InputWrapper = ({
       {/* Input container */}
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border border-input bg-muted p-3 cursor-text hover:border-muted-foreground focus-within:border-primary"
+        className="flex w-full flex-col rounded-md border border-control bg-muted p-3 cursor-text hover:border-muted-foreground focus-within:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
+        role="group"
+        aria-label={t("playgroundComponent.focusChatInput")}
       >
         {/* Text input area */}
         <div className="w-full">
           <TextAreaWrapper
-            CHAT_INPUT_PLACEHOLDER={"Send a message"}
+            CHAT_INPUT_PLACEHOLDER={t("chat.inputPlaceholderSend")}
             isBuilding={isBuilding}
             checkSendingOk={checkSendingOk}
             send={send}
@@ -112,12 +118,14 @@ const InputWrapper = ({
         {/* Buttons row */}
         <div className="flex items-center justify-between w-full pt-3">
           <div className="flex-shrink-0">
-            <UploadFileButton
-              isBuilding={isBuilding}
-              fileInputRef={fileInputRef}
-              handleFileChange={handleFileChange}
-              handleButtonClick={handleButtonClick}
-            />
+            {ENABLE_FILES_ON_PLAYGROUND && (
+              <UploadFileButton
+                isBuilding={isBuilding}
+                fileInputRef={fileInputRef}
+                handleFileChange={handleFileChange}
+                handleButtonClick={handleButtonClick}
+              />
+            )}
           </div>
 
           <div className="flex items-center gap-2 flex-shrink-0">

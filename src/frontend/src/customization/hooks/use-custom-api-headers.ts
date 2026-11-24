@@ -1,5 +1,8 @@
-export function useCustomApiHeaders() {
-  const customHeaders = {};
+import { useTranslation } from "react-i18next";
 
-  return customHeaders;
+export function useCustomApiHeaders() {
+  const { i18n } = useTranslation();
+  return {
+    "Accept-Language": i18n.language || "en",
+  };
 }

@@ -34,6 +34,16 @@ def getattr_return_bool(value):
     return None
 
 
+def getattr_return_true(value):
+    """Serialize an opt-in capability only when it is enabled.
+
+    Returning None for the default keeps the flag out of every template that
+    never opts in (FrontendNode.to_dict excludes None), so the component index
+    only grows an entry for the components that actually set it.
+    """
+    return True if value is True else None
+
+
 def getattr_return_int(value):
     if isinstance(value, int):
         return value
@@ -43,6 +53,10 @@ def getattr_return_int(value):
 def getattr_return_list_of_str(value):
     if isinstance(value, list):
         return [str(val) for val in value]
+    # A bare string (``replacement = "category.Name"``) is a one-item list;
+    # dropping it would silently hide the value.
+    if isinstance(value, str) and value:
+        return [value]
     return []
 
 
@@ -84,4 +98,5 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "inputs": getattr_return_list_of_object,
     "metadata": getattr_return_dict,
     "tool_mode": getattr_return_bool,
+    "add_tool_output": getattr_return_true,
 }

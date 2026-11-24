@@ -2,6 +2,9 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.litellm.litellm_proxy import LiteLLMProxyComponent
 from lfx.inputs.inputs import IntInput, SecretStrInput, SliderInput, StrInput
 from pydantic.v1 import SecretStr
@@ -41,6 +44,10 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
+    @pytest.fixture
+    def skipped_outputs(self):
+        return dict.fromkeys(["model_output", "text_output"], "connects to a running LiteLLM proxy")
+
     def test_initialization(self, component_class):
         component = component_class()
         assert component.display_name == "LiteLLM Proxy"
@@ -72,7 +79,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
 
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             return_value=_mock_models_response(),
         )
         mock_chat_openai = mocker.patch(
@@ -98,7 +105,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
 
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             return_value=_mock_models_response(),
         )
         mock_chat_openai = mocker.patch(
@@ -116,7 +123,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         component = component_class(**default_kwargs)
 
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             return_value=_mock_models_response(),
         )
         mock_chat_openai = mocker.patch(
@@ -133,7 +140,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     def test_validate_proxy_connection_success(self, component_class, default_kwargs, mocker):
         component = component_class(**default_kwargs)
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             return_value=_mock_models_response(),
         )
         # Should not raise
@@ -142,7 +149,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     def test_validate_proxy_connection_auth_failure(self, component_class, default_kwargs, mocker):
         component = component_class(**default_kwargs)
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             return_value=_mock_models_response(status_code=401),
         )
         with pytest.raises(ValueError, match="Authentication failed"):
@@ -152,7 +159,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         default_kwargs["model_name"] = "invalid-model-name"
         component = component_class(**default_kwargs)
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             return_value=_mock_models_response(models=[{"id": "gpt-4o"}]),
         )
         with pytest.raises(ValueError, match=r"invalid-model-name.*not found"):
@@ -161,7 +168,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     def test_validate_proxy_connection_connect_error(self, component_class, default_kwargs, mocker):
         component = component_class(**default_kwargs)
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             side_effect=httpx.ConnectError("Connection refused"),
         )
         with pytest.raises(ValueError, match="Could not connect"):
@@ -170,7 +177,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     def test_validate_proxy_connection_timeout(self, component_class, default_kwargs, mocker):
         component = component_class(**default_kwargs)
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             side_effect=httpx.TimeoutException("Timed out"),
         )
         with pytest.raises(ValueError, match="timed out"):
@@ -179,7 +186,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
     def test_validate_proxy_connection_empty_models_list(self, component_class, default_kwargs, mocker):
         component = component_class(**default_kwargs)
         mocker.patch(
-            "lfx.components.litellm.litellm_proxy.httpx.get",
+            "lfx.components.litellm.litellm_proxy.ssrf_safe_httpx_get",
             return_value=_mock_models_response(models=[]),
         )
         # Empty models list should not raise (proxy may not report models)
@@ -238,3 +245,7 @@ class TestLiteLLMProxyComponent(ComponentTestBaseWithoutClient):
         with patch.dict("sys.modules", {"openai": None}):
             message = component._get_exception_message(Exception("test"))
             assert message is None
+
+    @pytest.fixture(autouse=True)
+    def disable_ssrf_protection(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SSRF_PROTECTION_ENABLED", "false")

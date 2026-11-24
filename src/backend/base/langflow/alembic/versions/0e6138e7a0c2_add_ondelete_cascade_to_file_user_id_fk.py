@@ -6,12 +6,12 @@ Create Date: 2026-03-11 13:28:25.239444
 
 Phase: EXPAND
 """
+
 from collections.abc import Sequence
 
 import sqlalchemy as sa
 from alembic import op
 from langflow.utils import migration
-
 
 # revision identifiers, used by Alembic.
 revision: str = "0e6138e7a0c2"  # pragma: allowlist secret
@@ -38,16 +38,12 @@ def upgrade() -> None:
     fk_name = _get_fk_constraint_name(conn, "file", "user_id")
 
     if fk_name is None:
-        with op.batch_alter_table('file', schema=None) as batch_op:
-            batch_op.create_foreign_key(
-                "fk_file_user_id_user", 'user', ['user_id'], ['id'], ondelete='CASCADE'
-            )
+        with op.batch_alter_table("file", schema=None) as batch_op:
+            batch_op.create_foreign_key("fk_file_user_id_user", "user", ["user_id"], ["id"], ondelete="CASCADE")
     else:
-        with op.batch_alter_table('file', schema=None) as batch_op:
-            batch_op.drop_constraint(fk_name, type_='foreignkey')
-            batch_op.create_foreign_key(
-                "fk_file_user_id_user", 'user', ['user_id'], ['id'], ondelete='CASCADE'
-            )
+        with op.batch_alter_table("file", schema=None) as batch_op:
+            batch_op.drop_constraint(fk_name, type_="foreignkey")
+            batch_op.create_foreign_key("fk_file_user_id_user", "user", ["user_id"], ["id"], ondelete="CASCADE")
 
 
 def downgrade() -> None:
@@ -61,8 +57,6 @@ def downgrade() -> None:
     if fk_name is None:
         return
 
-    with op.batch_alter_table('file', schema=None) as batch_op:
-        batch_op.drop_constraint(fk_name, type_='foreignkey')
-        batch_op.create_foreign_key(
-            "fk_file_user_id_user", 'user', ['user_id'], ['id']
-        )
+    with op.batch_alter_table("file", schema=None) as batch_op:
+        batch_op.drop_constraint(fk_name, type_="foreignkey")
+        batch_op.create_foreign_key("fk_file_user_id_user", "user", ["user_id"], ["id"])

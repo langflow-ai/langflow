@@ -1,16 +1,14 @@
-FROM --platform=linux/amd64 python:3.10-slim
-
+FROM --platform=linux/amd64 registry.access.redhat.com/ubi10/python-314-minimal:10.3-1795234906
+USER root
 WORKDIR /app
 
 # Install Poetry
-RUN apt-get update \
-    && apt-get upgrade -y \
-    && apt-get install gcc g++ curl build-essential postgresql-server-dev-all -y \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+RUN microdnf install -y python3.14-devel tar xz gcc gcc-c++ make curl postgresql-devel \
+    && microdnf clean all
 RUN curl -sSL https://install.python-poetry.org | python3 -
 # # Add Poetry to PATH
 ENV PATH="${PATH}:/root/.local/bin"
+ENV LANGFLOW_AUTO_LOGIN=false
 # # Copy the pyproject.toml and poetry.lock files
 COPY poetry.lock pyproject.toml ./
 # Copy the rest of the application codes

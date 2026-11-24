@@ -15,7 +15,7 @@ const FilePreview = ({ file, loading, error, onDelete }: FilePreviewProps) => {
   return (
     <div
       className={cn(
-        "relative flex h-16 w-16 items-center justify-center rounded-md border bg-muted",
+        "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-primary-foreground shadow-sm",
         error && "border-error",
       )}
     >
@@ -25,10 +25,12 @@ const FilePreview = ({ file, loading, error, onDelete }: FilePreviewProps) => {
         <img
           src={URL.createObjectURL(file)}
           alt={file.name}
-          className="h-full w-full rounded-md object-cover"
+          className="h-full w-full rounded-xl object-cover p-1"
         />
       ) : (
-        <ForwardedIconComponent name="File" className="h-6 w-6" />
+        <div className="p-3">
+          <ForwardedIconComponent name="File" className="h-6 w-6" />
+        </div>
       )}
 
       <button

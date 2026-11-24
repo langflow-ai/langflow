@@ -10,13 +10,12 @@ from lfx.components.data_source.url import URLComponent
 from lfx.components.flow_controls import LoopComponent
 from lfx.components.input_output import ChatOutput
 from lfx.components.llm_operations import StructuredOutputComponent
+from lfx.components.models import LanguageModelComponent
 from lfx.components.models_and_agents import PromptComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.processing import ParserComponent, SplitTextComponent
 from lfx.graph import Graph
 from lfx.schema.data import Data
 
-from tests.api_keys import get_openai_api_key, has_api_key
 from tests.base import ComponentTestBaseWithClient
 from tests.unit.build_utils import build_flow, get_build_events
 
@@ -42,14 +41,9 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "data": [[Data(text="Hello World")]],
+            "data": [Data(text="Hello World")],
             "loop_input": [Data(text=TEXT)],
         }
-
-    def test_latest_version(self, component_class, default_kwargs) -> None:
-        """Test that the component works with the latest version."""
-        result = component_class(**default_kwargs)
-        assert result is not None, "Component returned None for the latest version."
 
     async def _create_flow(self, client, json_loop_test, logged_in_headers):
         vector_store = orjson.loads(json_loop_test)
@@ -57,10 +51,11 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         vector_store = FlowCreate(name="Flow", description="description", data=data, endpoint_name="f")
         response = await client.post("api/v1/flows/", json=vector_store.model_dump(), headers=logged_in_headers)
         response.raise_for_status()
-        return response.json()["id"]
+        flow = response.json()
+        return flow["id"], flow["user_id"]
 
-    async def check_messages(self, flow_id):
-        messages = await aget_messages(flow_id=UUID(flow_id), order="ASC")
+    async def check_messages(self, flow_id, user_id):
+        messages = await aget_messages(flow_id=UUID(flow_id), user_id=UUID(user_id), order="ASC")
         assert len(messages) == 1
         assert messages[0].session_id == flow_id
         assert messages[0].sender == "Machine"
@@ -68,10 +63,11 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(messages[0].text) > 0
         return messages
 
+    @pytest.mark.usefixtures("administrator_user")
     async def test_build_flow_loop(self, client, json_loop_test, logged_in_headers):
         """Test building a flow with a loop component."""
         # Create the flow
-        flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)
+        flow_id, user_id = await self._create_flow(client, json_loop_test, logged_in_headers)
 
         # Start the build and get job_id
         build_response = await build_flow(client, flow_id, logged_in_headers)
@@ -94,7 +90,7 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
             # Process events if needed
             # We could add specific assertions here for loop-related events
         assert chat_output is not None
-        messages = await self.check_messages(flow_id)
+        messages = await self.check_messages(flow_id, user_id)
         ai_message = messages[0].text
         json_data = orjson.loads(ai_message)
 
@@ -109,8 +105,9 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
             )
             found.append(expected_text)
 
+    @pytest.mark.usefixtures("administrator_user")
     async def test_run_flow_loop(self, client: AsyncClient, created_api_key, json_loop_test, logged_in_headers):
-        flow_id = await self._create_flow(client, json_loop_test, logged_in_headers)
+        flow_id, _ = await self._create_flow(client, json_loop_test, logged_in_headers)
         headers = {"x-api-key": created_api_key.api_key}
         payload = {
             "input_value": TEXT,
@@ -126,7 +123,6 @@ class TestLoopComponentWithAPI(ComponentTestBaseWithClient):
         assert len(data["outputs"][-1]["outputs"]) > 0
 
 
-@pytest.mark.skipif(not has_api_key("OPENAI_API_KEY"), reason="OPENAI_API_KEY is not set")
 def loop_flow():
     """Complete loop flow that processes multiple URLs through a loop."""
     # Create URL component to fetch content from multiple sources
@@ -161,18 +157,14 @@ def loop_flow():
         input_text=parser_component.parse_combined_text,
     )
 
-    # Create OpenAI model component for processing
-    openai_component = OpenAIModelComponent()
-    openai_component.set(
-        api_key=get_openai_api_key(),
-        model_name="gpt-4.1-mini",
-        temperature=0.7,
-    )
+    # Create a generic language model component for processing.
+    language_model_component = LanguageModelComponent()
+    language_model_component.set(temperature=0.7)
 
     # Create StructuredOutput component to process content
     structured_output = StructuredOutputComponent()
     structured_output.set(
-        llm=openai_component.build_model,
+        llm=language_model_component.build_model,
         input_value=prompt_component.build_prompt,
         schema_name="ProcessedContent",
         system_prompt=(  # Added missing system_prompt - this was causing the "Multiple structured outputs" error
@@ -216,7 +208,7 @@ async def test_loop_flow():
         "LoopComponent",
         "ParserComponent",
         "PromptComponent",
-        "OpenAIModelComponent",
+        "LanguageModelComponent",
         "StructuredOutputComponent",
         "ChatOutput",
     }
@@ -224,7 +216,7 @@ async def test_loop_flow():
     assert all(vertex.id.split("-")[0] in expected_vertices for vertex in flow.vertices)
 
     expected_execution_order = [
-        "OpenAIModelComponent",
+        "LanguageModelComponent",
         "URLComponent",
         "SplitTextComponent",
         "LoopComponent",
@@ -389,7 +381,7 @@ class TestLoopComponentSubgraphExecution:
         event_manager_received = []
 
         # Create an async generator that yields mock results
-        async def mock_async_start(event_manager=None):
+        async def mock_async_start(event_manager=None, **_kwargs):
             event_manager_received.append(event_manager)
             yield MagicMock(valid=True, result_dict={"outputs": {}})
 

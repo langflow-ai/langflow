@@ -27,6 +27,25 @@ describe("dateTime", () => {
       const result = parseApiTimestamp("2024-01-02T03:04:05+02:00");
       expect(result?.toISOString()).toBe("2024-01-02T01:04:05.000Z");
     });
+
+    it("parses the backend space-separated UTC format as a UTC instant", () => {
+      expect(
+        parseApiTimestamp("2024-01-02 03:04:05.571339 UTC")?.toISOString(),
+      ).toBe("2024-01-02T03:04:05.571Z");
+      expect(parseApiTimestamp("2024-01-02 03:04:05 UTC")?.toISOString()).toBe(
+        "2024-01-02T03:04:05.000Z",
+      );
+    });
+
+    it("does not treat the T inside a UTC suffix as an ISO marker", () => {
+      expect(parseApiTimestamp("2024-01-02 03:04:05 UTC")).not.toBeNull();
+    });
+
+    it("appends Z only to a date-anchored ISO string without a timezone", () => {
+      expect(parseApiTimestamp("2024-01-02T03:04:05")?.toISOString()).toBe(
+        "2024-01-02T03:04:05.000Z",
+      );
+    });
   });
 
   describe("formatSmartTimestamp", () => {

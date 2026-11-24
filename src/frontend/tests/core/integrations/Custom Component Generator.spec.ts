@@ -1,24 +1,15 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { getAllResponseMessage } from "../../utils/get-all-response-message";
-import { selectAnthropicModel } from "../../utils/select-anthropic-model";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Custom Component Generator",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    await seedLoopbackProvider(page);
     await page.goto("/");
 
     await awaitBootstrapTest(page);
@@ -29,7 +20,7 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await selectAnthropicModel(page);
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -42,16 +33,19 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
-    await page.waitForTimeout(1000);
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
+    await stopButton.waitFor({ state: "hidden", timeout: 90_000 });
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
-    await stopButton.waitFor({ state: "hidden", timeout: 30000 * 3 });
-
-    const textContents = await getAllResponseMessage(page);
+    // The agent answers through content blocks, so the bubble body renders
+    // empty and reading the bubble alone finds nothing. The chat log holds
+    // the whole reply, code block included, which is what this asserts about.
+    const chatLog = page.getByRole("log", { name: /chat messages/i });
+    await expect(chatLog.getByText(/langflow/i).first()).toBeVisible({
+      timeout: 30_000,
+    });
+    const textContents = ((await chatLog.textContent()) ?? "").toLowerCase();
     expect(textContents.length).toBeGreaterThan(100);
-    expect(await page.getByTestId("chat-code-tab").last().isVisible()).toBe(
-      true,
-    );
+    await expect(page.getByTestId("chat-code-tab").last()).toBeVisible();
     expect(textContents.toLowerCase()).toContain("langflow");
   },
 );

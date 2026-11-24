@@ -6,21 +6,47 @@ from uuid import UUID
 
 from fastapi import HTTPException
 from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
-from lfx.base.mcp.util import sanitize_mcp_name
+from lfx.base.mcp.util import project_mcp_server_name, sanitize_mcp_name
+from lfx.base.mcp.uvx import mcp_sdk_constraint_args
 from lfx.log import logger
 from lfx.services.deps import get_settings_service
+from sqlalchemy import or_
 from sqlmodel import select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
+from langflow.api.v1.auth_helpers import get_default_project_auth_settings
 from langflow.api.v2.mcp import get_server_list, update_server
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
+from langflow.services.auth.utils import decrypt_api_key
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.api_key.crud import create_api_key
-from langflow.services.database.models.api_key.model import ApiKeyCreate
+from langflow.services.database.models.api_key.crud import _is_expired, create_api_key, hash_api_key
+from langflow.services.database.models.api_key.model import ApiKey, ApiKeyCreate
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_storage_service
 
 ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
+
+
+def mcp_server_config_uses_current_uvx_constraint(server_config: dict, package: str) -> bool:
+    """Return whether a generated uvx config uses the current SDK constraint and package."""
+    if server_config.get("command") != "uvx":
+        return False
+
+    args = server_config.get("args")
+    if not isinstance(args, list):
+        return False
+
+    expected_prefix = [*mcp_sdk_constraint_args(), package]
+    return args[: len(expected_prefix)] == expected_prefix
+
+
+def mcp_server_config_has_project_api_key(args: list[str]) -> bool:
+    """Return whether the server args include the generated Langflow API key header."""
+    return any(
+        arg == "--headers" and index + 2 < len(args) and args[index + 1] == "x-api-key"
+        for index, arg in enumerate(args)
+    )
 
 
 class MCPServerValidationResult:
@@ -87,6 +113,48 @@ class MCPServerValidationResult:
         return not self.server_exists or self.project_id_matches
 
 
+PROJECT_SERVER_ID_SUFFIX_LENGTH = 8
+
+
+def project_mcp_server_name_candidates(project_id: UUID, project_name: str) -> list[str]:
+    """Return the MCP server names a project may be registered under, most preferred first.
+
+    The base name is truncated, so distinct project names can derive the same one. The
+    id-suffixed fallback keeps those projects apart without renaming servers that already exist.
+    Sanitized names never contain hyphens, so the fallback cannot equal another project's base name.
+    """
+    base_name = project_mcp_server_name(project_name)
+    id_suffix = UUID(str(project_id)).hex[:PROJECT_SERVER_ID_SUFFIX_LENGTH]
+    prefix_length = MAX_MCP_SERVER_NAME_LENGTH - 4 - PROJECT_SERVER_ID_SUFFIX_LENGTH - 1
+    stem = base_name.removeprefix("lf-")
+    return [base_name, f"lf-{stem[:prefix_length].rstrip('_')}-{id_suffix}"]
+
+
+async def _server_config_targets_project(server_config: dict, project_id: UUID) -> bool:
+    existing_urls = await extract_urls_from_strings(server_config.get("args") or [])
+    return any(str(project_id) in url for url in existing_urls)
+
+
+def _conflict_message(server_name: str, project_name: str, project_id: UUID, operation: str) -> str:
+    if operation == "create":
+        return (
+            f"MCP server name conflict: '{server_name}' already exists "
+            f"for a different project. Cannot create MCP server for project "
+            f"'{project_name}' (ID: {project_id})"
+        )
+    if operation == "update":
+        return (
+            f"MCP server name conflict: '{server_name}' exists for a different project. "
+            f"Cannot update MCP server for project '{project_name}' (ID: {project_id})"
+        )
+    if operation == "delete":
+        return (
+            f"MCP server '{server_name}' exists for a different project. "
+            f"Cannot delete MCP server for project '{project_name}' (ID: {project_id})"
+        )
+    return ""
+
+
 async def validate_mcp_server_for_project(
     project_id: UUID,
     project_name: str,
@@ -97,6 +165,10 @@ async def validate_mcp_server_for_project(
     operation: str = "create",
 ) -> MCPServerValidationResult:
     """Validate MCP server for a project operation.
+
+    A server already registered for this project under any candidate name wins; otherwise the
+    first unused candidate is returned. A conflict is reported only when every candidate is taken
+    by a different project.
 
     Args:
         project_id: The project UUID
@@ -110,62 +182,51 @@ async def validate_mcp_server_for_project(
     Returns:
         MCPServerValidationResult with validation details
     """
-    # Generate server name that would be used for this project
-    server_name = f"lf-{sanitize_mcp_name(project_name)[: (MAX_MCP_SERVER_NAME_LENGTH - 4)]}"
+    candidate_names = project_mcp_server_name_candidates(project_id, project_name)
+    server_name = candidate_names[0]
 
     try:
-        existing_servers = await get_server_list(user, session, storage_service, settings_service)
+        existing_servers = (await get_server_list(user, session, storage_service, settings_service)).get(
+            "mcpServers", {}
+        )
 
-        if server_name not in existing_servers.get("mcpServers", {}):
-            # Server doesn't exist
+        for candidate_name in candidate_names:
+            candidate_config = existing_servers.get(candidate_name)
+            if candidate_config is not None and await _server_config_targets_project(candidate_config, project_id):
+                return MCPServerValidationResult(
+                    server_exists=True,
+                    project_id_matches=True,
+                    server_name=candidate_name,
+                    existing_config=candidate_config,
+                )
+
+        # A row stored under an older naming scheme (every CJK name used to collapse to
+        # lf-unnamed) matches no candidate. Registration and deletion adopt it so they neither
+        # duplicate nor orphan it; a rename keeps deriving from names so the row still moves.
+        if operation in {"create", "delete"}:
+            for stored_name, stored_config in existing_servers.items():
+                if stored_name.startswith("lf-") and await _server_config_targets_project(stored_config, project_id):
+                    return MCPServerValidationResult(
+                        server_exists=True,
+                        project_id_matches=True,
+                        server_name=stored_name,
+                        existing_config=stored_config,
+                    )
+
+        free_name = next((name for name in candidate_names if name not in existing_servers), None)
+        if free_name is not None:
             return MCPServerValidationResult(
                 project_id_matches=False,
                 server_exists=False,
-                server_name=server_name,
+                server_name=free_name,
             )
-
-        # Server exists - check if project ID matches
-        existing_server_config = existing_servers["mcpServers"][server_name]
-        existing_args = existing_server_config.get("args", [])
-        project_id_matches = False
-
-        if existing_args:
-            # SSE URL is typically the last argument
-            # TODO: Better way Required to check the postion of the SSE URL in the args
-            existing_sse_urls = await extract_urls_from_strings(existing_args)
-            for existing_sse_url in existing_sse_urls:
-                if str(project_id) in existing_sse_url:
-                    project_id_matches = True
-                    break
-        else:
-            project_id_matches = False
-
-        # Generate appropriate conflict message based on operation
-        conflict_message = ""
-        if not project_id_matches:
-            if operation == "create":
-                conflict_message = (
-                    f"MCP server name conflict: '{server_name}' already exists "
-                    f"for a different project. Cannot create MCP server for project "
-                    f"'{project_name}' (ID: {project_id})"
-                )
-            elif operation == "update":
-                conflict_message = (
-                    f"MCP server name conflict: '{server_name}' exists for a different project. "
-                    f"Cannot update MCP server for project '{project_name}' (ID: {project_id})"
-                )
-            elif operation == "delete":
-                conflict_message = (
-                    f"MCP server '{server_name}' exists for a different project. "
-                    f"Cannot delete MCP server for project '{project_name}' (ID: {project_id})"
-                )
 
         return MCPServerValidationResult(
             server_exists=True,
-            project_id_matches=project_id_matches,
+            project_id_matches=False,
             server_name=server_name,
-            existing_config=existing_server_config,
-            conflict_message=conflict_message,
+            existing_config=existing_servers[server_name],
+            conflict_message=_conflict_message(server_name, project_name, project_id, operation),
         )
 
     except Exception as e:  # noqa: BLE001
@@ -222,20 +283,67 @@ async def _get_project_base_url_components() -> tuple[str, int]:
     return host, server_port
 
 
+async def _get_project_base_url() -> tuple[str, str | None, int | None]:
+    """Return ``(base_url, host, port)`` for building MCP project URLs.
+
+    When ``LANGFLOW_MCP_BASE_URL`` is set it is the authoritative externally-reachable origin
+    (scheme + host + optional path) and is used verbatim; ``host``/``port`` come back ``None`` so
+    callers skip OS/WSL rewriting of an operator-supplied URL. This is what lets a pod bind to
+    ``0.0.0.0`` while advertising a routable gateway/service address — ``host`` alone cannot do both
+    (it is also the uvicorn bind address, and the builder rewrites ``0.0.0.0`` to ``localhost``).
+
+    With the setting empty (the default) behaviour is unchanged: build ``http://{host}:{port}`` from
+    ``host``/``port`` and keep WSL handling. Backwards compatible.
+    """
+    settings_service = get_settings_service()
+    configured = (getattr(settings_service.settings, "mcp_base_url", "") or "").strip().rstrip("/")
+    if configured:
+        return configured, None, None
+    host, port = await _get_project_base_url_components()
+    return f"http://{host}:{port}".rstrip("/"), host, port
+
+
+async def _build_project_url(project_id: UUID, suffix: str) -> str:
+    """Build the client-facing project URL, honouring an operator-supplied base URL."""
+    base_url, host, port = await _get_project_base_url()
+    project_url = f"{base_url}/api/v1/mcp/project/{project_id}/{suffix}"
+    # An explicit LANGFLOW_MCP_BASE_URL is used as-is; only host/port-derived URLs get WSL rewriting.
+    if host is None or port is None:
+        return project_url
+    return await get_url_by_os(host, port, project_url)
+
+
+async def _build_local_project_url(project_id: UUID, suffix: str) -> str:
+    """Build the pod-local project URL, always from the bind host/port."""
+    host, port = await _get_project_base_url_components()
+    project_url = f"http://{host}:{port}/api/v1/mcp/project/{project_id}/{suffix}"
+    return await get_url_by_os(host, port, project_url)
+
+
 async def get_project_streamable_http_url(project_id: UUID) -> str:
     """Generate the Streamable HTTP endpoint for a project (no /sse suffix)."""
-    host, port = await _get_project_base_url_components()
-    base_url = f"http://{host}:{port}".rstrip("/")
-    project_url = f"{base_url}/api/v1/mcp/project/{project_id}/streamable"
-    return await get_url_by_os(host, port, project_url)
+    return await _build_project_url(project_id, "streamable")
 
 
 async def get_project_sse_url(project_id: UUID) -> str:
     """Generate the legacy SSE URL for a project, including WSL handling."""
-    host, port = await _get_project_base_url_components()
-    base_url = f"http://{host}:{port}".rstrip("/")
-    project_sse_url = f"{base_url}/api/v1/mcp/project/{project_id}/sse"
-    return await get_url_by_os(host, port, project_sse_url)
+    return await _build_project_url(project_id, "sse")
+
+
+async def get_project_local_streamable_http_url(project_id: UUID) -> str:
+    """Streamable HTTP endpoint as reachable from inside this process.
+
+    MCP Composer runs as a subprocess here and dials the project endpoint as an upstream
+    member server, so it needs the address that resolves locally. ``LANGFLOW_MCP_BASE_URL``
+    names where *clients* should connect; routing pod-local traffic through that gateway
+    would leave the pod and, behind a load balancer, come back to a different one.
+    """
+    return await _build_local_project_url(project_id, "streamable")
+
+
+async def get_project_local_sse_url(project_id: UUID) -> str:
+    """Legacy SSE endpoint as reachable from inside this process. See the streamable variant."""
+    return await _build_local_project_url(project_id, "sse")
 
 
 async def _get_mcp_composer_auth_config(project: Folder) -> dict:
@@ -263,6 +371,37 @@ async def get_composer_streamable_http_url(project: Folder) -> str:
         raise ValueError(error_msg)
     composer_url = f"http://{composer_host}:{composer_port}"
     return await get_url_by_os(composer_host, int(composer_port), composer_url)  # type: ignore[arg-type]
+
+
+async def _get_starter_project_api_key(
+    session: AsyncSession, user_id: UUID, api_key_name: str, configured_key: str | None
+) -> str | None:
+    """Reuse a valid owner credential before creating another starter-project key."""
+    configured_hash = hash_api_key(configured_key) if configured_key else None
+    keys = (
+        await session.exec(
+            select(ApiKey)
+            .where(
+                ApiKey.user_id == user_id,
+                ApiKey.is_active.is_(True),
+                or_(ApiKey.name == api_key_name, ApiKey.api_key_hash == configured_hash),
+            )
+            .order_by(ApiKey.created_at.desc(), ApiKey.id)
+        )
+    ).all()
+    valid_keys = [key for key in keys if not _is_expired(key.expires_at)]
+    for key in valid_keys:
+        if configured_key and key.api_key_hash == configured_hash:
+            return configured_key
+    for key in valid_keys:
+        if key.name != api_key_name:
+            continue
+        candidate = decrypt_api_key(key.api_key)
+        if not candidate and key.api_key.startswith("sk-"):
+            candidate = key.api_key
+        if candidate and (key.api_key_hash is None or hash_api_key(candidate) == key.api_key_hash):
+            return candidate
+    return None
 
 
 async def auto_configure_starter_projects_mcp(session):
@@ -344,6 +483,13 @@ async def auto_configure_starter_projects_mcp(session):
                 if flows_configured > 0:
                     await logger.adebug(f"Enabled MCP for {flows_configured} starter flows for user {user.username}")
 
+                default_auth = user_starter_folder.auth_settings or get_default_project_auth_settings(
+                    settings_service.auth_settings, user
+                )
+                if not user_starter_folder.auth_settings and default_auth["auth_type"] == "apikey":
+                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
+                requires_api_key = default_auth.get("auth_type") == "apikey"
+
                 # Validate MCP server for this starter projects folder
                 validation_result = await validate_mcp_server_for_project(
                     user_starter_folder.id,
@@ -355,15 +501,36 @@ async def auto_configure_starter_projects_mcp(session):
                     operation="create",
                 )
 
-                # Skip if server already exists for this starter projects folder
+                existing_config = validation_result.existing_config or {}
+                existing_args = existing_config.get("args", [])
+                configured_key = next(
+                    (
+                        existing_args[index + 2]
+                        for index, arg in enumerate(existing_args)
+                        if arg == "--headers"
+                        and existing_args[index + 1 : index + 2] == ["x-api-key"]
+                        and index + 2 < len(existing_args)
+                    ),
+                    None,
+                )
+                api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
+                reusable_key = (
+                    await _get_starter_project_api_key(session, user.id, api_key_name, configured_key)
+                    if requires_api_key
+                    else None
+                )
+
+                # Reconcile credentials before accepting an existing generated config.
                 if validation_result.should_skip:
-                    # Check if the URL needs updating (e.g., server port changed at restart)
                     expected_url = await get_project_streamable_http_url(user_starter_folder.id)
-                    existing_config = validation_result.existing_config or {}
-                    existing_args = existing_config.get("args", [])
                     existing_urls = await extract_urls_from_strings(existing_args)
 
-                    if any(expected_url == url for url in existing_urls):
+                    if (
+                        mcp_server_config_uses_current_uvx_constraint(existing_config, "mcp-proxy")
+                        and any(expected_url == url for url in existing_urls)
+                        and mcp_server_config_has_project_api_key(existing_args) == requires_api_key
+                        and (not requires_api_key or (configured_key == reusable_key and reusable_key is not None))
+                    ):
                         await logger.adebug(
                             f"MCP server '{validation_result.server_name}' already exists and is correctly "
                             f"configured for user {user.username}'s starter projects (project ID: "
@@ -371,54 +538,31 @@ async def auto_configure_starter_projects_mcp(session):
                         )
                         continue  # Skip this user since server already exists for the same project
 
-                    # URL has changed (e.g., server restarted on a different port), fall through to update
                     await logger.adebug(
                         f"MCP server '{validation_result.server_name}' exists for user {user.username}'s "
-                        f"starter projects but URL has changed (was: {existing_urls}, now: {expected_url}), updating"
+                        f"starter projects but its generated configuration is stale "
+                        f"(URLs: {existing_urls}, expected URL: {expected_url}), updating"
                     )
 
                 server_name = validation_result.server_name
-
-                # Set up THIS USER'S starter folder authentication (same as new projects)
-                # If AUTO_LOGIN is false, automatically enable API key authentication
-                default_auth = {"auth_type": "none"}
-                await logger.adebug(f"Settings service auth settings: {settings_service.auth_settings}")
-                await logger.adebug(f"User starter folder auth settings: {user_starter_folder.auth_settings}")
-                if (
-                    not user_starter_folder.auth_settings
-                    and settings_service.auth_settings.AUTO_LOGIN
-                    and not settings_service.auth_settings.SUPERUSER
-                ):
-                    default_auth = {"auth_type": "apikey"}
-                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
-                    await logger.adebug(
-                        "AUTO_LOGIN enabled without SUPERUSER; forcing API key auth for starter folder %s",
-                        user.username,
-                    )
-                elif not settings_service.auth_settings.AUTO_LOGIN and not user_starter_folder.auth_settings:
-                    default_auth = {"auth_type": "apikey"}
-                    user_starter_folder.auth_settings = encrypt_auth_settings(default_auth)
-                    await logger.adebug(f"Set up auth settings for user {user.username}'s starter folder")
-                elif user_starter_folder.auth_settings:
-                    default_auth = user_starter_folder.auth_settings
-
-                # Create API key for this user to access their own starter projects
-                api_key_name = f"MCP Project {DEFAULT_FOLDER_NAME} - {user.username}"
-                unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
 
                 # Build connection URLs for THIS USER'S starter folder (unique ID per user)
                 streamable_http_url = await get_project_streamable_http_url(user_starter_folder.id)
 
                 # Prepare server config (similar to new project creation)
-                if default_auth.get("auth_type", "none") == "apikey":
+                if requires_api_key:
+                    if reusable_key is None:
+                        unmasked_api_key = await create_api_key(session, ApiKeyCreate(name=api_key_name), user.id)
+                        reusable_key = unmasked_api_key.api_key
                     command = "uvx"
                     args = [
+                        *mcp_sdk_constraint_args(),
                         "mcp-proxy",
                         "--transport",
                         "streamablehttp",
                         "--headers",
                         "x-api-key",
-                        unmasked_api_key.api_key,
+                        reusable_key,
                         streamable_http_url,
                     ]
                 elif default_auth.get("auth_type", "none") == "oauth":
@@ -429,6 +573,7 @@ async def auto_configure_starter_projects_mcp(session):
                     # No authentication - direct connection
                     command = "uvx"
                     args = [
+                        *mcp_sdk_constraint_args(),
                         "mcp-proxy",
                         "--transport",
                         "streamablehttp",

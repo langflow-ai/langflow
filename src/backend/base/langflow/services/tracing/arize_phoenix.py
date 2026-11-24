@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import json
 import math
 import os
@@ -28,7 +29,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
     from uuid import UUID
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_core.callbacks.base import BaseCallbackHandler
     from lfx.graph.vertex.base import Vertex
     from opentelemetry.propagators.textmap import CarrierT
     from opentelemetry.util.types import AttributeValue
@@ -79,10 +80,11 @@ class ArizePhoenixTracer(BaseTracer):
         self.project_name = project_name
         self.trace_id = trace_id
         self.session_id = session_id
-        self.flow_name = trace_name.split(" - ")[0]
-        self.flow_id = trace_name.split(" - ")[-1]
+        self.flow_name = trace_name.split(" - ", maxsplit=1)[0]
+        self.flow_id = trace_name.rsplit(" - ", maxsplit=1)[-1]
         self.chat_input_value = ""
         self.chat_output_value = ""
+        self.langchain_callback: BaseCallbackHandler | None = None
 
         try:
             self._ready = self.setup_arize_phoenix()
@@ -206,15 +208,18 @@ class ArizePhoenixTracer(BaseTracer):
             return False
 
         try:
-            from openinference.instrumentation.langchain import LangChainInstrumentor
-
-            LangChainInstrumentor().instrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
+            self.langchain_callback = self._create_langchain_callback()
         except ImportError:
             logger.exception(
-                "[Arize/Phoenix] Could not import LangChainInstrumentor."
+                "[Arize/Phoenix] Could not import LangChain instrumentation."
                 "Please install it with `pip install openinference-instrumentation-langchain`."
             )
             return False
+
+        # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().enable(self.tracer_provider)
 
         return True
 
@@ -257,7 +262,7 @@ class ArizePhoenixTracer(BaseTracer):
         if vertex and vertex.id is not None:
             child_span.set_attribute("vertex_id", vertex.id)
 
-        component_name = trace_id.split("-")[0]
+        component_name = trace_id.split("-", maxsplit=1)[0]
         if component_name == "ChatInput":
             self.chat_input_value = processed_inputs["input_value"]
         elif component_name == "ChatOutput":
@@ -321,15 +326,10 @@ class ArizePhoenixTracer(BaseTracer):
 
             self._set_span_status(self.root_span, error)
             self.root_span.end(end_time=self._get_current_timestamp())
-        try:
-            from openinference.instrumentation.langchain import LangChainInstrumentor
 
-            LangChainInstrumentor().uninstrument(tracer_provider=self.tracer_provider, skip_dep_check=True)
-        except ImportError:
-            logger.exception(
-                "[Arize/Phoenix] Could not import LangChainInstrumentor."
-                "Please install it with `pip install openinference-instrumentation-langchain`."
-            )
+        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
+
+        get_http_instrumentation_manager().disable()
 
     def _convert_to_arize_phoenix_types(self, io_dict: dict[str | Any, Any]) -> dict[str, Any]:
         """Converts data types to Arize/Phoenix compatible formats."""
@@ -349,7 +349,8 @@ class ArizePhoenixTracer(BaseTracer):
             value = value.text
 
         elif isinstance(value, Data):
-            value = value.get_text()
+            data = value.data
+            value = self._convert_to_arize_phoenix_type(data) if isinstance(data, (dict, list)) else value.get_text()
 
         elif isinstance(value, (BaseMessage | HumanMessage | SystemMessage)):
             value = value.content
@@ -357,7 +358,7 @@ class ArizePhoenixTracer(BaseTracer):
         elif isinstance(value, Document):
             value = value.page_content
 
-        elif isinstance(value, (types.GeneratorType | types.NoneType)):
+        elif isinstance(value, (types.GeneratorType, type(None))):
             value = str(value)
 
         elif isinstance(value, float) and not math.isfinite(value):
@@ -410,8 +411,30 @@ class ArizePhoenixTracer(BaseTracer):
 
     @override
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
-        """Returns the LangChain callback handler if applicable."""
-        return None
+        """Returns the OpenInference callback handler bound to this tracer's provider."""
+        return self.langchain_callback
+
+    def _create_langchain_callback(self) -> BaseCallbackHandler:
+        """Creates a LangChain callback handler bound to this tracer's span provider.
+
+        ``LangChainInstrumentor`` is a process-wide singleton: instrumenting it once per
+        workflow routes every concurrent workflow's spans to whichever provider registered
+        first, and uninstrumenting tears it down while other workflows are still running
+        (see https://github.com/langflow-ai/langflow/issues/15555). Building a handler bound
+        to this workflow's provider and handing it to the run through
+        ``get_langchain_callback`` keeps each workflow's spans isolated.
+        """
+        from openinference.instrumentation import OITracer, TraceConfig
+        from openinference.instrumentation.langchain._tracer import OpenInferenceTracer
+
+        tracer = OITracer(
+            self.tracer_provider.get_tracer(__name__),
+            config=TraceConfig(),
+        )
+        # Versions before 0.1.38 inherit runtime context without this keyword.
+        if "separate_trace_from_runtime_context" in inspect.signature(OpenInferenceTracer).parameters:
+            return OpenInferenceTracer(tracer, separate_trace_from_runtime_context=False)
+        return OpenInferenceTracer(tracer)
 
     def close(self):
         """Flush tracer provider spans safely before shutdown."""

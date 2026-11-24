@@ -61,6 +61,7 @@ def _load_module_from_script(script_path: Path) -> Any:
 def _validate_graph_instance(graph_obj: Any) -> "Graph":
     """Extract information from a graph object."""
     from lfx.graph import Graph
+    from lfx.utils.flow_validation import validate_flow_for_current_settings
 
     if not isinstance(graph_obj, Graph):
         msg = f"Graph object is not a LFX Graph instance: {type(graph_obj)}"
@@ -79,6 +80,8 @@ def _validate_graph_instance(graph_obj: Any) -> "Graph":
     if "Chat Output" not in display_names:
         msg = f"Graph does not contain any ChatOutput component. Vertices: {display_names}"
         raise ValueError(msg)
+
+    validate_flow_for_current_settings(graph_obj)
 
     return graph_obj
 
@@ -116,6 +119,12 @@ async def load_graph_from_script(script_path: Path) -> "Graph":
             msg = "No 'graph' variable or 'get_graph()' function found in the executed script"
             raise ValueError(msg)
 
+        # Programmatic Graph construction does not pass through the JSON flow
+        # loader's warm-up. Active catalog rules need the same canonical
+        # identity index before synchronous graph validation runs below.
+        from lfx.utils.flow_validation import ensure_component_hash_lookups_loaded
+
+        await ensure_component_hash_lookups_loaded()
         return _validate_graph_instance(graph_obj)
 
     except (

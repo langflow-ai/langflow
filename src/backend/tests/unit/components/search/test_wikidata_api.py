@@ -4,6 +4,9 @@ import httpx
 import pytest
 from langchain_core.tools import ToolException
 from langflow.custom import Component
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.wikipedia import WikidataComponent
 from lfx.custom.utils import build_custom_component_template
 
@@ -21,6 +24,12 @@ class TestWikidataComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
+
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "dataframe": "queries the live Wikidata API",
+        }
 
     @pytest.fixture
     def mock_query(self):

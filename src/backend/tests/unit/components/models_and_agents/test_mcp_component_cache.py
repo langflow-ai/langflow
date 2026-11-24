@@ -7,19 +7,35 @@ This test suite validates the caching behavior of the MCP component:
 - Edge cases: empty cache, invalid servers, error handling
 """
 
+import asyncio
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
+from lfx.base.mcp.util import MCPStreamableHttpClient
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from lfx.schema.dataframe import DataFrame
+from lfx.services.shared_component_cache.service import SharedComponentCacheService
+from mcp.types import CallToolResult, TextContent, Tool
 
 from tests.base import ComponentTestBaseWithoutClient
 
 
 class TestMCPComponentCache(ComponentTestBaseWithoutClient):
+    @pytest.fixture(autouse=True)
+    def isolated_shared_cache(self, monkeypatch):
+        # Share a real cache between instances in this test, without depending
+        # on another test's app startup or retaining its cached tools.
+        cache = SharedComponentCacheService()
+        monkeypatch.setattr(
+            "lfx.custom.custom_component.component_with_cache.get_shared_component_cache_service",
+            lambda: cache,
+        )
+        return cache
+
     @pytest.fixture
     def component_class(self):
         return MCPToolsComponent
@@ -29,10 +45,20 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         return []
 
     @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "component_as_tool": "needs a database user and starts the MCP server in default_kwargs",
+            "response": "calls a tool on the MCP server in default_kwargs",
+        }
+
+    @pytest.fixture
     def default_kwargs(self):
         """Return the default kwargs for the component."""
         return {
-            "mcp_server": {"name": "test_server", "config": {"command": "uvx test-mcp-server"}},
+            "mcp_server": {
+                "name": "test_server",
+                "config": {"command": "uvx", "args": ["test-mcp-server"]},
+            },
             "tool": "",
             "use_cache": False,
         }
@@ -62,11 +88,12 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def mock_server_config(self):
         """Mock server configuration."""
-        return {"command": "uvx test-mcp-server", "args": [], "env": {}}
+        return {"command": "uvx", "args": ["test-mcp-server"], "env": {}}
 
     async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> MCPToolsComponent:
         component_instance = await super().component_setup(component_class, default_kwargs)
         component_instance._user_id = str(uuid4())  # Required for server fetching
+        component_instance._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="test-session"))
         return component_instance
 
     # ========================================
@@ -80,13 +107,16 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert getattr(component, "use_cache", False) is False  # Updated to match actual default
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("administrator_user")
     async def test_cache_stores_tools_when_enabled(
-        self, component_class, default_kwargs, mock_tools_list, mock_server_config
+        self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
         """Test that tools are cached when cache is enabled."""
         component = await self.component_setup(component_class, default_kwargs)
+        component._user_id = str(active_user.id)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Directly test caching by setting up expected data and calling the method
         # Simulate successful tool fetching by manually populating the result
@@ -102,7 +132,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "config": mock_server_config,
         }
         current_servers_cache = safe_cache_get(component._shared_component_cache, "servers", {})
-        current_servers_cache[server_name] = cache_data
+        current_servers_cache[cache_key] = cache_data
         safe_cache_set(component._shared_component_cache, "servers", current_servers_cache)
 
         # Now call update_tool_list which should use the cache
@@ -116,19 +146,22 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
 
         # Verify tools are still cached
         servers_cache = safe_cache_get(component._shared_component_cache, "servers", {})
-        assert server_name in servers_cache
-        cached_data = servers_cache[server_name]
+        assert cache_key in servers_cache
+        cached_data = servers_cache[cache_key]
         assert len(cached_data["tools"]) == 2
         assert cached_data["tool_names"] == ["test_tool", "second_tool"]
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("administrator_user")
     async def test_cache_reuses_cached_tools(
-        self, component_class, default_kwargs, mock_tools_list, mock_server_config
+        self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
         """Test that cached tools are reused on subsequent calls."""
         component = await self.component_setup(component_class, default_kwargs)
+        component._user_id = str(active_user.id)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Pre-populate cache
         cache_data = {
@@ -137,7 +170,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": mock_server_config,
         }
-        safe_cache_set(component._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component._shared_component_cache, "servers", {cache_key: cache_data})
 
         with patch("lfx.base.mcp.util.update_tools") as mock_update_tools:
             # This should NOT be called if cache is working
@@ -394,15 +427,19 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert server_name not in servers_cache
 
     @pytest.mark.asyncio
+    @pytest.mark.usefixtures("administrator_user")
     async def test_cache_persistence_across_instances(
-        self, component_class, default_kwargs, mock_tools_list, mock_server_config
+        self, component_class, default_kwargs, mock_tools_list, mock_server_config, active_user
     ):
         """Test that cache persists across component instances."""
         server_name = "test_server"
+        shared_tenant_id = str(active_user.id)
 
         # First component instance
         component1 = await self.component_setup(component_class, default_kwargs)
+        component1._user_id = shared_tenant_id
         component1.use_cache = True
+        cache_key = component1._mcp_servers_cache_key(server_name)
 
         # Cache some data
         cache_data = {
@@ -411,10 +448,11 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": mock_server_config,
         }
-        safe_cache_set(component1._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component1._shared_component_cache, "servers", {cache_key: cache_data})
 
         # Second component instance
         component2 = await self.component_setup(component_class, default_kwargs)
+        component2._user_id = shared_tenant_id
         component2.use_cache = True
 
         # Should access the same cache
@@ -434,6 +472,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         component = await self.component_setup(component_class, default_kwargs)
         component.use_cache = True
         server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
 
         # Pre-populate cache
         cache_data = {
@@ -442,7 +481,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
             "tool_cache": {"test_tool": mock_tools_list[0]},
             "config": {"command": "test"},
         }
-        safe_cache_set(component._shared_component_cache, "servers", {server_name: cache_data})
+        safe_cache_set(component._shared_component_cache, "servers", {cache_key: cache_data})
 
         build_config = {
             "mcp_server": {"value": {"name": server_name}},
@@ -460,9 +499,175 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         assert "test_tool" in updated_config["tool"]["options"]
         assert "second_tool" in updated_config["tool"]["options"]
 
+    @pytest.mark.asyncio
+    async def test_unauthenticated_build_config_skips_shared_servers_cache(self, component_class, default_kwargs):
+        component = await self.component_setup(component_class, default_kwargs)
+        component._user_id = None
+        component._vertex = None
+        component.use_cache = True
+        assert component._mcp_cache_user_id() is None
+
+        server_name = "test_server"
+        cache_key = component._mcp_servers_cache_key(server_name)
+        cached_tool = MagicMock()
+        cached_tool.name = "cached_tool"
+        cached_entry = {
+            "tools": [cached_tool],
+            "tool_names": [cached_tool.name],
+            "tool_cache": {cached_tool.name: cached_tool},
+            "config": {"command": "cached"},
+        }
+        servers_cache = {cache_key: cached_entry}
+        safe_cache_set(component._shared_component_cache, "servers", servers_cache)
+        safe_cache_set(component._shared_component_cache, "last_selected_server", "")
+
+        fresh_tool = MagicMock()
+        fresh_tool.name = "fresh_tool"
+        fresh_server = {"name": server_name, "config": {"command": "fresh"}}
+        build_config = {
+            "mcp_server": {"value": {"name": server_name}},
+            "tool": {"show": False, "options": [], "placeholder": ""},
+            "tool_placeholder": {"tool_mode": False},
+            "tools_metadata": {"show": False},
+        }
+
+        with patch.object(
+            component,
+            "update_tool_list",
+            AsyncMock(return_value=([fresh_tool], fresh_server)),
+        ) as update:
+            updated_config = await component.update_build_config(build_config, {"name": server_name}, "mcp_server")
+
+        update.assert_awaited_once_with(mcp_server_value={"name": server_name})
+        assert updated_config["tool"]["options"] == [fresh_tool.name]
+        assert safe_cache_get(component._shared_component_cache, "servers", {}) == servers_cache
+
     # ========================================
     # Integration Tests
     # ========================================
+
+    @pytest.mark.parametrize(
+        ("session_ids", "callers"),
+        [
+            (("chat-a", "chat-b"), ("caller-a", "caller-a")),
+            (("flow-id", "flow-id"), ("caller-a", "caller-b")),
+            (("", ""), ("caller-a", "caller-a")),
+        ],
+        ids=["different-sessions", "different-callers-with-default-session", "no-session"],
+    )
+    async def test_shared_cache_scopes_discovery_and_tool_calls(self, monkeypatch, session_ids, callers):
+        server_config = {
+            "url": "https://mcp.example.invalid/mcp",
+            "headers": {"Authorization": "Bearer {{TOKEN}}"},
+        }
+        bindings = {}
+
+        async def connect(client, _url, headers, **_kwargs):
+            caller = headers["authorization"].removeprefix("Bearer ")
+            tool_name = f"echo_{len(bindings)}"
+            bindings[client] = caller
+            client._connected = True
+            return [Tool(name=tool_name, inputSchema={"type": "object", "properties": {}})]
+
+        async def run_tool(client, _name, *, arguments):
+            assert arguments == {}
+            return CallToolResult(content=[TextContent(type="text", text=bindings[client])])
+
+        monkeypatch.setattr(MCPStreamableHttpClient, "connect_to_server", connect)
+        monkeypatch.setattr(MCPStreamableHttpClient, "run_tool", run_tool)
+        monkeypatch.setattr("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", MagicMock())
+        monkeypatch.setattr("langflow.api.v2.mcp.get_server", AsyncMock(return_value=server_config))
+        monkeypatch.setattr(
+            "langflow.services.database.models.user.crud.get_user_by_id",
+            AsyncMock(return_value=SimpleNamespace(id="owner")),
+        )
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.session_scope", MagicMock())
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.get_storage_service", MagicMock())
+        monkeypatch.setattr("lfx.services.deps.get_variable_service", lambda: None)
+
+        def component_for(session_id, caller):
+            graph = SimpleNamespace(
+                user_id="owner",
+                flow_id="flow-id",
+                session_id=session_id,
+                context={"request_variables": {"TOKEN": caller}},
+            )
+            component = MCPToolsComponent(mcp_server="srv", use_cache=True)
+            component.set_vertex(SimpleNamespace(graph=graph))
+            component.TOOL_TTL_SECS = 0  # Exercise the shared cache across fresh components.
+            return component
+
+        a, b = (component_for(session, caller) for session, caller in zip(session_ids, callers, strict=True))
+        tools_a, tools_b = await asyncio.gather(a._get_tools(), b._get_tools())
+        assert tools_a[0].name != tools_b[0].name
+        assert len(bindings) == 2
+
+        for session_id, caller, tools in zip(session_ids, callers, (tools_a, tools_b), strict=True):
+            # Fresh components model later requests in the same Langflow session.
+            repeat_tools = await component_for(session_id, caller)._get_tools()
+            assert (repeat_tools[0].name == tools[0].name) == bool(session_id)
+            assert (await repeat_tools[0].coroutine()).content[0].text == caller
+
+        assert len(bindings) == (2 if all(session_ids) else 4)
+
+        # Rediscovery on the same component must leave previously returned tools bound
+        # to the client that discovered them.
+        new_caller = "caller-c"
+        a.graph.context["request_variables"]["TOKEN"] = new_caller
+        new_tools = await a._get_tools()
+        assert (await new_tools[0].coroutine()).content[0].text == new_caller
+        assert (await tools_a[0].coroutine()).content[0].text == callers[0]
+
+    async def test_agents_sharing_a_server_keep_their_own_tool_selection(self, monkeypatch):
+        """Agents on one server share its discovery, and each keeps the tools it enabled."""
+        server_tools = ("search", "read", "create", "update")
+        discoveries = []
+
+        async def connect(client, _url, headers, **_kwargs):
+            discoveries.append(headers.get("x-agent"))
+            client._connected = True
+            return [Tool(name=name, inputSchema={"type": "object", "properties": {}}) for name in server_tools]
+
+        monkeypatch.setattr(MCPStreamableHttpClient, "connect_to_server", connect)
+        monkeypatch.setattr("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", MagicMock())
+        monkeypatch.setattr(
+            "langflow.api.v2.mcp.get_server",
+            AsyncMock(return_value={"url": "https://mcp.example.invalid/mcp"}),
+        )
+        monkeypatch.setattr(
+            "langflow.services.database.models.user.crud.get_user_by_id",
+            AsyncMock(return_value=SimpleNamespace(id="owner")),
+        )
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.session_scope", MagicMock())
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.get_storage_service", MagicMock())
+        monkeypatch.setattr(MCPToolsComponent, "require_integration_policy", MagicMock())
+        graph = SimpleNamespace(user_id="owner", flow_id="flow-id", session_id="chat", context={})
+
+        async def agent_tool_names(enabled, renamed=None, headers=None):
+            component = MCPToolsComponent(mcp_server="srv", use_cache=True, headers=headers or [])
+            component.set_vertex(SimpleNamespace(graph=graph))
+            component.tools_metadata = DataFrame(
+                [
+                    {
+                        "name": (renamed or {}).get(name, name),
+                        "description": "",
+                        "tags": [name],
+                        "status": name in enabled,
+                    }
+                    for name in server_tools
+                ]
+            )
+            return [tool.name for tool in await component.to_toolkit()]
+
+        assert await agent_tool_names({"search", "read"}, renamed={"search": "find"}) == ["find", "read"]
+        assert await agent_tool_names({"create", "update"}) == ["create", "update"]
+        assert await agent_tool_names({"search"}) == ["search"]
+        assert discoveries == [None]
+
+        # A header that identifies the agent to the server gets its own discovery.
+        agent_header = [{"key": "X-Agent", "value": "writer"}]
+        assert await agent_tool_names({"create"}, headers=agent_header) == ["create"]
+        assert discoveries == [None, "writer"]
 
     @pytest.mark.asyncio
     async def test_build_output_with_cached_tools(self, component_class, default_kwargs, mock_tools_list):
@@ -475,6 +680,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
         exec_tool = MagicMock()
         exec_tool.coroutine = AsyncMock()
         mock_result = MagicMock()
+        mock_result.isError = False
         mock_result.content = [MagicMock()]
         mock_result.content[0].model_dump.return_value = {"result": "test_output"}
         exec_tool.coroutine.return_value = mock_result

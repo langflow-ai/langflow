@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
@@ -9,6 +10,10 @@ import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
+import {
+  useIsFlowReadOnly,
+  usePermissions,
+} from "@/contexts/permissionsContext";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
 import { customOpenNewTab } from "@/customization/utils/custom-open-new-tab";
@@ -19,9 +24,13 @@ import { useShortcutsStore } from "@/stores/shortcuts";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { VertexBuildTypeAPI } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
+import { formatTokenCount } from "@/utils/format-token-count";
 import { findLastNode } from "@/utils/reactflowUtils";
 import { classNames, cn } from "@/utils/utils";
 import IconComponent from "../../../../components/common/genericIconComponent";
+import HumanInputNodeBadge, {
+  useAwaitingHumanInput,
+} from "../HumanInputNodeBadge";
 import BuildStatusDisplay from "./components/build-status-display";
 import { normalizeTimeString } from "./utils/format-run-time";
 
@@ -44,7 +53,7 @@ export default function NodeStatus({
   getValidationStatus,
 }: {
   nodeId: string;
-  display_name: string;
+  display_name?: string;
   selected?: boolean;
   setBorderColor: (color: string) => void;
   frozen?: boolean;
@@ -57,6 +66,7 @@ export default function NodeStatus({
   isBreakingChange: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
 }) {
+  const { t } = useTranslation();
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
     : nodeId;
@@ -64,24 +74,30 @@ export default function NodeStatus({
   const [validationStatus, setValidationStatus] =
     useState<VertexBuildTypeAPI | null>(null);
   const [isPolling, setIsPolling] = useState(false);
+  const awaitingHumanInput = useAwaitingHumanInput(nodeId);
 
   const nodeAuth = Object.values(data.node?.template ?? {}).find(
     (value) => value.type === "auth",
   );
 
   const connectionLink = nodeAuth?.value;
-  const apiKeyValue = (data.node?.template as any)?.api_key?.value ?? "";
+  const apiKeyValue =
+    (data.node?.template as Record<string, { value?: string }>)?.api_key
+      ?.value ?? "";
   const isAuthenticated = nodeAuth?.value === "validated";
 
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
   const pollingTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const conditionSuccess =
-    buildStatus === BuildStatus.BUILT ||
-    (buildStatus !== BuildStatus.TO_BUILD && validationStatus?.valid);
-
   const conditionError = buildStatus === BuildStatus.ERROR;
   const conditionInactive = buildStatus === BuildStatus.INACTIVE;
+
+  // A node on a branch that was not taken keeps its last build in flowPool,
+  // so INACTIVE has to win over that stale result.
+  const conditionSuccess =
+    !conditionInactive &&
+    (buildStatus === BuildStatus.BUILT ||
+      (buildStatus !== BuildStatus.TO_BUILD && validationStatus?.valid));
 
   const showNodeStatus =
     conditionSuccess || conditionError || conditionInactive;
@@ -93,6 +109,12 @@ export default function NodeStatus({
   const buildFlow = useFlowStore((state) => state.buildFlow);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const setNode = useFlowStore((state) => state.setNode);
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isReadOnly = useIsFlowReadOnly(currentFlowId);
+  const { can, isLoading: permissionsLoading } = usePermissions();
+  const executeDenied =
+    Boolean(currentFlowId) &&
+    (permissionsLoading || !can(currentFlowId, "execute"));
   const version = useDarkStore((state) => state.version);
   const eventDeliveryConfig = useUtilityStore((state) => state.eventDelivery);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -106,6 +128,7 @@ export default function NodeStatus({
 
   // Start polling when connection is initiated
   const startPolling = () => {
+    if (isReadOnly) return;
     stopPolling();
     setIsPolling(true);
 
@@ -120,8 +143,11 @@ export default function NodeStatus({
         }));
 
         const updatedAuth = Object.values(newNode?.template ?? {}).find(
-          (value: any) => value?.type === "auth",
-        ) as any;
+          (value): value is { type: string; value?: string } =>
+            typeof value === "object" &&
+            value !== null &&
+            (value as { type?: string }).type === "auth",
+        );
         const oauthUrl = updatedAuth?.value;
 
         if (
@@ -170,6 +196,7 @@ export default function NodeStatus({
   }, [isAuthenticated]);
 
   const handleDisconnect = () => {
+    if (isReadOnly) return;
     setIsPolling(true);
     mutateTemplate(
       "disconnect",
@@ -199,7 +226,13 @@ export default function NodeStatus({
   };
 
   function handlePlayWShortcut() {
-    if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
+    if (
+      executeDenied ||
+      buildStatus === BuildStatus.BUILDING ||
+      isBuilding ||
+      !selected
+    )
+      return;
     setValidationStatus(null);
     buildFlow({
       stopNodeId: nodeId,
@@ -263,7 +296,7 @@ export default function NodeStatus({
   ]);
 
   useEffect(() => {
-    if (buildStatus === BuildStatus.BUILT && !isBuilding) {
+    if (buildStatus === BuildStatus.BUILT && !isBuilding && !isReadOnly) {
       setNode(
         nodeId,
         (old) => {
@@ -279,22 +312,26 @@ export default function NodeStatus({
           };
         },
         false,
+        undefined,
+        // Finishing a build is not an edit. Saving here makes merely running a
+        // flow take the writer's turn, so a run with no edits could be refused.
+        { autoSave: false },
       );
     }
-  }, [buildStatus, isBuilding]);
+  }, [buildStatus, isBuilding, isReadOnly, nodeId, setNode, version]);
 
   const [isHovered, setIsHovered] = useState(false);
 
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
 
   const handleClickRun = () => {
-    setFlowPool({});
-
     if (BuildStatus.BUILDING === buildStatus && isHovered) {
       stopBuilding();
       return;
     }
-    if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
+    if (executeDenied || buildStatus === BuildStatus.BUILDING || isBuilding)
+      return;
+    setFlowPool({});
     buildFlow({
       stopNodeId: nodeId,
       eventDelivery: eventDeliveryConfig,
@@ -318,13 +355,13 @@ export default function NodeStatus({
 
   const getTooltipContent = () => {
     if (BuildStatus.BUILDING === buildStatus && isHovered) {
-      return "Stop build";
+      return t("node.stopBuild");
     }
-    return "Run component";
+    return t("node.runComponent");
   };
 
   const handleClickConnect = () => {
-    if (connectionLink === "error") return;
+    if (isReadOnly || connectionLink === "error") return;
     if (isAuthenticated) {
       handleDisconnect();
     } else {
@@ -375,14 +412,18 @@ export default function NodeStatus({
     );
   };
 
+  // A node dropped while the backend was unreachable is persisted with no
+  // display_name; dereferencing it took the whole node tree down with it.
+  const displayNameSlug = (display_name ?? "").toLowerCase();
+
   const getDataTestId = () => {
     if (isAuthenticated && !isPolling) {
-      return `button_connected_${display_name.toLowerCase()}`;
+      return `button_connected_${displayNameSlug}`;
     }
     if (connectionLink === "error") {
-      return `button_error_${display_name.toLowerCase()}`;
+      return `button_error_${displayNameSlug}`;
     }
-    return `button_disconnected_${display_name.toLowerCase()}`;
+    return `button_disconnected_${displayNameSlug}`;
   };
 
   return (
@@ -392,9 +433,9 @@ export default function NodeStatus({
           {showNodeStatus && (
             <ShadTooltip
               styleClasses={cn(
-                "border rounded-xl",
+                "border rounded-xl p-2",
                 conditionSuccess
-                  ? "border-accent-emerald-foreground bg-success-background"
+                  ? "bg-hard-zinc"
                   : "border-destructive bg-error-background",
               )}
               content={
@@ -410,9 +451,27 @@ export default function NodeStatus({
               <div className="cursor-help">
                 {conditionSuccess && validationStatus?.data?.duration ? (
                   <div
-                    className="flex rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
-                    data-testid={`node_duration_` + display_name.toLowerCase()}
+                    className="flex items-center gap-1 rounded-sm px-1 font-mono text-xs text-accent-emerald-foreground transition-colors hover:bg-accent-emerald"
+                    data-testid={`node_duration_` + displayNameSlug}
                   >
+                    {validationStatus?.data?.token_usage && (
+                      <span
+                        className="flex items-center gap-1"
+                        data-testid={`node-token-count-${displayNameSlug}`}
+                      >
+                        <IconComponent
+                          name="Coins"
+                          className="h-3 w-3 text-muted-foreground"
+                          strokeWidth={ICON_STROKE_WIDTH}
+                        />
+                        <span>
+                          {formatTokenCount(
+                            validationStatus.data.token_usage.total_tokens,
+                          )}
+                        </span>
+                        <span className="text-muted-foreground">|</span>
+                      </span>
+                    )}
                     <span>
                       {normalizeTimeString(validationStatus?.data?.duration)}
                     </span>
@@ -421,7 +480,7 @@ export default function NodeStatus({
                   <div
                     data-testid={
                       `node_status_icon_` +
-                      display_name.toLowerCase() +
+                      displayNameSlug +
                       `_` +
                       buildStatus?.toLowerCase()
                     }
@@ -440,6 +499,7 @@ export default function NodeStatus({
                 <Button
                   unstyled
                   disabled={
+                    isReadOnly ||
                     (connectionLink === "" &&
                       (!apiKeyValue || apiKeyValue === "COMPOSIO_API_KEY")) ||
                     connectionLink === "error"
@@ -451,6 +511,7 @@ export default function NodeStatus({
                   )}
                   onClick={handleClickConnect}
                   data-testid={getDataTestId()}
+                  aria-label={nodeAuth.auth_tooltip || "Connect"}
                 >
                   <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
                     <IconComponent
@@ -487,25 +548,34 @@ export default function NodeStatus({
           )}
         </div>
       )}
-      {showNode && (
-        <ShadTooltip content={getTooltipContent()}>
-          <div
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            onClick={handleClickRun}
-            className="-m-0.5"
-          >
-            <Button unstyled className="nodrag button-run-bg group">
-              <div data-testid={`button_run_` + display_name.toLowerCase()}>
-                <IconComponent
-                  name={iconName}
-                  className={iconClasses}
-                  strokeWidth={ICON_STROKE_WIDTH}
-                />
-              </div>
-            </Button>
-          </div>
-        </ShadTooltip>
+      {awaitingHumanInput ? (
+        <HumanInputNodeBadge nodeId={nodeId} />
+      ) : (
+        showNode && (
+          <ShadTooltip content={getTooltipContent()}>
+            <div
+              onMouseEnter={() => setIsHovered(true)}
+              onMouseLeave={() => setIsHovered(false)}
+              onClick={handleClickRun}
+              className="-m-0.5"
+            >
+              <Button
+                unstyled
+                className="nodrag button-run-bg group disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={executeDenied && buildStatus !== BuildStatus.BUILDING}
+                aria-label={getTooltipContent()}
+              >
+                <div data-testid={`button_run_` + displayNameSlug}>
+                  <IconComponent
+                    name={iconName}
+                    className={iconClasses}
+                    strokeWidth={ICON_STROKE_WIDTH}
+                  />
+                </div>
+              </Button>
+            </div>
+          </ShadTooltip>
+        )
       )}
     </div>
   );

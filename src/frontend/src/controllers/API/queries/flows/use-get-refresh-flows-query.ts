@@ -1,5 +1,6 @@
 import type { UseQueryOptions } from "@tanstack/react-query";
-import { AxiosError } from "axios";
+import axios, { AxiosError } from "axios";
+import { useTranslation } from "react-i18next";
 import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -32,16 +33,18 @@ export const useGetRefreshFlowsQuery: useQueryFunctionType<
   GetFlowsParams,
   FlowType[] | PaginatedFlowsType
 > = (params, options) => {
+  const { t } = useTranslation();
   const { query } = UseRequestProcessor();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
   const getFlowsFn = async (
     params: GetFlowsParams,
+    signal?: AbortSignal,
   ): Promise<FlowType[] | PaginatedFlowsType> => {
     try {
       const url = addQueryParams(`${getURL("FLOWS")}/`, params);
-      const { data: dbDataFlows } = await api.get<FlowType[]>(url);
+      const { data: dbDataFlows } = await api.get<FlowType[]>(url, { signal });
 
       if (params.components_only) {
         return dbDataFlows;
@@ -52,6 +55,7 @@ export const useGetRefreshFlowsQuery: useQueryFunctionType<
           components_only: true,
           get_all: true,
         }),
+        { signal },
       );
 
       if (dbDataComponents) {
@@ -75,18 +79,27 @@ export const useGetRefreshFlowsQuery: useQueryFunctionType<
 
       return [];
     } catch (e) {
-      if (e instanceof AxiosError && e.status !== 403) {
+      // Cancellation is not a failure: the fetch was superseded (e.g. a
+      // create fired refetchQueries) or its observers unmounted. Surfacing
+      // a toast for it would flash "could not load flows" on normal
+      // navigation.
+      if (e instanceof AxiosError && e.status !== 403 && !axios.isCancel(e)) {
         setErrorData({
-          title: "Could not load flows from database",
+          title: t("errors.couldNotLoadFlows"),
         });
       }
       throw e;
     }
   };
 
+  // Forward the query's AbortSignal into the HTTP layer. ``setFlows`` above
+  // is a side effect on the global flows store: without the signal, a
+  // superseded fetch keeps running and lands a stale (pre-mutation) flow
+  // list AFTER a create has already navigated to the new flow, which makes
+  // FlowPage's existence guard bounce the user back to the list.
   const queryResult = query(
     ["useGetRefreshFlowsQuery", params],
-    () => getFlowsFn(params || {}),
+    ({ signal }) => getFlowsFn(params || {}, signal),
     options as UseQueryOptions,
   );
 

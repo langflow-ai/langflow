@@ -1,33 +1,29 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { selectStarterTemplate } from "../../utils/flow/select-starter-template";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "should delete rows from table message",
   { tag: ["@release"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await initialGPTsetup(page);
+    await selectStarterTemplate(page, TEXTS.templateBasicPrompting);
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.getByTestId("user-profile-settings").click();
 
     await page.waitForSelector('text="Settings"');
-    await page.getByText("Settings").last().click();
+    await page.getByText(TEXTS.settings).last().click();
 
     await page.waitForSelector('text="Messages"');
     await page.getByText("Messages").last().click();
@@ -39,6 +35,6 @@ test(
     await page.getByTestId("icon-Trash2").first().click();
 
     await page.waitForSelector("text=No Data Available", { timeout: 30000 });
-    await page.getByText("No Data Available").isVisible();
+    await expect(page.getByText("No Data Available")).toBeVisible();
   },
 );

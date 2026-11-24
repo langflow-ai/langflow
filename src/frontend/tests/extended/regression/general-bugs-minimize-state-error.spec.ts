@@ -1,7 +1,10 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
+import { TEXTS } from "../../utils/constants/texts";
 
 async function toggleNodeState(page: Page, action: "minimize" | "expand") {
   const expectedCount = action === "minimize" ? 1 : 0;
@@ -10,6 +13,15 @@ async function toggleNodeState(page: Page, action: "minimize" | "expand") {
   expect(await page.getByTestId("hide-node-content").count()).toBe(
     expectedCount,
   );
+  // Minimizing also hides the node's connection handles via the `.no-show`
+  // class; expanding removes it. (Migrated from the former minimize.spec.ts.)
+  if (action === "minimize") {
+    await expect(page.locator(".react-flow__handle.no-show")).not.toHaveCount(
+      0,
+    );
+  } else {
+    await expect(page.locator(".react-flow__handle.no-show")).toHaveCount(0);
+  }
 }
 
 test(
@@ -19,8 +31,10 @@ test(
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
 
+    await addLegacyComponents(page);
+
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
 
     await page
       .getByTestId("input_outputText Output")

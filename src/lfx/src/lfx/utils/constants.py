@@ -78,12 +78,16 @@ DIRECT_TYPES = [
     "slider",
     "tab",
     "sortableList",
+    "actionPicker",
+    "duration",
     "auth",
     "connect",
+    "connection_ref",
     "query",
     "tools",
     "mcp",
     "model",
+    "data_display",
 ]
 
 

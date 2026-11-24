@@ -1,27 +1,33 @@
 from __future__ import annotations
 
+from importlib.util import find_spec
 from typing import TYPE_CHECKING, Any
 
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
     from lfx.components.models_and_agents.agent import AgentComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
     from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
     from lfx.components.models_and_agents.memory import MemoryComponent
+    from lfx.components.models_and_agents.policies_component import PoliciesComponent
     from lfx.components.models_and_agents.prompt import PromptComponent
 
 _dynamic_imports = {
+    "A2AAgentComponent": "a2a_agent",
     "AgentComponent": "agent",
     "EmbeddingModelComponent": "embedding_model",
     "LanguageModelComponent": "language_model",
     "MCPToolsComponent": "mcp_component",
     "MemoryComponent": "memory",
+    "PoliciesComponent": "policies_component",
     "PromptComponent": "prompt",
 }
 
 __all__ = [
+    "A2AAgentComponent",
     "AgentComponent",
     "EmbeddingModelComponent",
     "LanguageModelComponent",
@@ -29,6 +35,13 @@ __all__ = [
     "MemoryComponent",
     "PromptComponent",
 ]
+
+# ``lfx.components.models`` re-exports this module with ``import *``. Keep the
+# legacy package-level Policies export available when the extension is
+# installed, but do not make a plain LFX/base import resolve the compatibility
+# shim and fail just because ``lfx-toolguard`` is intentionally absent.
+if find_spec("lfx_toolguard") is not None:
+    __all__ += ["PoliciesComponent"]
 
 
 def __getattr__(attr_name: str) -> Any:

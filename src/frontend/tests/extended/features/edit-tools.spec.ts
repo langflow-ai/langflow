@@ -1,16 +1,15 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "user should be able to edit tools",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
 
     await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
@@ -51,23 +50,23 @@ test(
 
     expect(rowsCount).toBeGreaterThan(2);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(0).isChecked(),
-    ).toBe(true);
+    // Scope to the enable ("name") column: the HITL approval_actions column also renders an
+    // eInput checkbox, so a global nth() index would land on it instead of the action toggle.
+    const enableCheckboxes = page.locator(
+      '[col-id="name"] input[data-ref="eInput"]',
+    );
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(true);
+    expect(await enableCheckboxes.nth(0).isChecked()).toBe(true);
 
-    await page.locator('input[data-ref="eInput"]').nth(0).click();
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(true);
+
+    await enableCheckboxes.nth(0).click();
 
     await page.waitForTimeout(500);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(false);
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(false);
 
-    await page.locator('input[data-ref="eInput"]').nth(0).click();
+    await enableCheckboxes.nth(0).click();
 
     await page.waitForTimeout(500);
 
@@ -105,7 +104,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     await page.waitForTimeout(500);
 
@@ -132,9 +131,7 @@ test(
 
     await page.waitForTimeout(500);
 
-    expect(
-      await page.locator('input[data-ref="eInput"]').nth(3).isChecked(),
-    ).toBe(true);
+    expect(await enableCheckboxes.nth(1).isChecked()).toBe(true);
 
     await page.waitForTimeout(500);
 
@@ -188,7 +185,7 @@ test(
       timeout: 3000,
     });
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     expect(
       await page.locator('[data-testid="tool_fetch_content"]').isVisible(),

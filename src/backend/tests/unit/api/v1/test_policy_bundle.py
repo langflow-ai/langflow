@@ -1,0 +1,656 @@
+"""Contract tests for superuser administration of the shared policy bundle."""
+
+from __future__ import annotations
+
+from dataclasses import replace
+from datetime import datetime, timezone
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import ANY, AsyncMock, Mock
+from uuid import uuid4
+
+import pytest
+from fastapi import FastAPI, HTTPException, status
+from fastapi.routing import APIRoute
+from fastapi.testclient import TestClient
+from langflow.api.v1 import policy_bundle as policy_api
+from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.policy_bundle import (
+    PolicyBundleApplicationNotSupportedError,
+    PolicyBundleNotInitializedError,
+    PolicyBundleRevisionConflictError,
+)
+from lfx.extension.loader._types import LoadedIntegration
+from lfx.integrations.capabilities import IntegrationCapabilityManifest
+from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
+from lfx.services.policy_bundle import PolicyBundleSnapshot
+
+
+async def _unused_session():
+    yield SimpleNamespace()
+
+
+def _client(monkeypatch, *, superuser: bool = True):
+    app = FastAPI()
+    app.include_router(policy_api.router, prefix="/api/v1")
+    admin = SimpleNamespace(id=uuid4(), is_superuser=True)
+
+    if superuser:
+        app.dependency_overrides[get_current_active_superuser] = lambda: admin
+    else:
+
+        def reject_non_superuser():
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="The user doesn't have enough privileges",
+            )
+
+        app.dependency_overrides[get_current_active_superuser] = reject_non_superuser
+
+    app.dependency_overrides[injectable_session_scope] = _unused_session
+    app.dependency_overrides[injectable_session_scope_readonly] = _unused_session
+    read_state = AsyncMock()
+    replace_state = AsyncMock()
+    list_history = AsyncMock()
+    rollback_state = AsyncMock()
+    apply_state = Mock()
+    monkeypatch.setattr(policy_api, "get_policy_bundle_state", read_state)
+    monkeypatch.setattr(policy_api, "replace_policy_bundle_state", replace_state)
+    monkeypatch.setattr(policy_api, "list_policy_bundle_history", list_history)
+    monkeypatch.setattr(policy_api, "rollback_policy_bundle_state", rollback_state)
+    monkeypatch.setattr(policy_api, "apply_policy_bundle_state", apply_state)
+    monkeypatch.setattr(policy_api, "_managed_externally", lambda: False)
+    monkeypatch.setattr(policy_api, "ensure_policy_bundle_application_supported", lambda: None)
+    monkeypatch.setattr(policy_api, "audit_decision", AsyncMock())
+    # Whatever bundles this process happened to load must not decide which
+    # action keys a test may block; tests that need a provider install one.
+    monkeypatch.setattr(policy_api, "loaded_integrations", lambda: ())
+    return TestClient(app), admin, read_state, replace_state, list_history, rollback_state, apply_state
+
+
+def _snapshot(*, revision: int, actor_id=None, reason: str | None = None) -> PolicyBundleSnapshot:
+    return PolicyBundleSnapshot(
+        revision=revision,
+        initialized=True,
+        source="api",
+        approved_provider_ids={"openai", "anthropic"},
+        blocked_component_keys={"ZetaComponent", "AlphaComponent"},
+        blocked_template_keys={"template-z", "template-a"},
+        blocked_model_keys={"openai::gpt-blocked", "anthropic::claude-blocked"},
+        approved_integration_provider_ids={"slack", "google"},
+        blocked_integration_action_keys={"integrations.google.drive.delete"},
+        content_hash=f"{revision:064x}",
+        created_at=datetime(2026, 8, 5, 12, 30, tzinfo=timezone.utc),
+        created_by=actor_id,
+        reason=reason,
+        rollback_of_revision=None,
+    )
+
+
+def test_router_exposes_only_the_shared_bundle_administration_contract():
+    routes = [route for route in policy_api.router.routes if isinstance(route, APIRoute)]
+    schema_routes = [route for route in routes if route.include_in_schema]
+
+    assert {(route.path, frozenset(route.methods)) for route in schema_routes} == {
+        ("/policy-bundle", frozenset({"GET"})),
+        ("/policy-bundle", frozenset({"PUT"})),
+        ("/policy-bundle/history", frozenset({"GET"})),
+        ("/policy-bundle/rollback/{revision}", frozenset({"POST"})),
+    }
+    for route in routes:
+        dependency_calls = [dependency.call for dependency in route.dependant.dependencies]
+        assert get_current_active_superuser in dependency_calls
+
+
+@pytest.mark.parametrize(
+    ("method", "path"),
+    [
+        ("get", "/api/v1/policy-bundle"),
+        ("put", "/api/v1/policy-bundle"),
+        ("get", "/api/v1/policy-bundle/history"),
+        ("post", "/api/v1/policy-bundle/rollback/1"),
+    ],
+)
+def test_policy_bundle_routes_reject_non_superusers_without_database_access(monkeypatch, method, path):
+    client, _admin, read_state, replace_state, list_history, rollback_state, apply_state = _client(
+        monkeypatch, superuser=False
+    )
+    payload = {
+        "expected_revision": 1,
+        "approved_provider_ids": [],
+        "blocked_component_keys": [],
+        "blocked_template_keys": [],
+    }
+
+    response = getattr(client, method)(path, **({"json": payload} if method in {"put", "post"} else {}))
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    read_state.assert_not_awaited()
+    replace_state.assert_not_awaited()
+    list_history.assert_not_awaited()
+    rollback_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+def test_get_returns_the_complete_active_bundle_with_stable_sorted_lists(monkeypatch):
+    client, admin, read_state, replace_state, list_history, rollback_state, apply_state = _client(monkeypatch)
+    active = _snapshot(revision=4, actor_id=admin.id, reason="approved rollout")
+    read_state.return_value = active
+
+    response = client.get("/api/v1/policy-bundle")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "revision": 4,
+        "initialized": True,
+        "source": "api",
+        "approved_provider_ids": ["anthropic", "openai"],
+        "blocked_component_keys": ["AlphaComponent", "ZetaComponent"],
+        "blocked_template_keys": ["template-a", "template-z"],
+        "blocked_model_keys": ["anthropic::claude-blocked", "openai::gpt-blocked"],
+        "approved_integration_provider_ids": ["google", "slack"],
+        "blocked_integration_action_keys": ["integrations.google.drive.delete"],
+        "content_hash": f"{4:064x}",
+        "created_by": str(admin.id),
+        "created_at": "2026-08-05T12:30:00Z",
+        "reason": "approved rollout",
+        "rollback_of_revision": None,
+        "managed_externally": False,
+    }
+    read_state.assert_awaited_once_with(ANY)
+    replace_state.assert_not_awaited()
+    list_history.assert_not_awaited()
+    rollback_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+@pytest.mark.parametrize("provider", ["Google", "NotInstalled"])
+def test_put_forwards_one_complete_cas_replacement_and_publishes_committed_snapshot(monkeypatch, provider):
+    client, admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    committed = _snapshot(revision=8, actor_id=admin.id, reason="quarterly policy refresh")
+    replace_state.return_value = committed
+    payload = {
+        "expected_revision": 7,
+        "approved_provider_ids": ["anthropic", "openai"],
+        "blocked_component_keys": ["AlphaComponent", "ZetaComponent"],
+        "blocked_template_keys": ["template-a", "template-z"],
+        "blocked_model_keys": ["OpenAI::gpt-blocked", "openai::gpt-blocked", "claude-blocked"],
+        "approved_integration_provider_ids": ["Slack", "google"],
+        "blocked_integration_action_keys": [f"  Integrations.{provider}.Drive.Delete  "],
+        "reason": "quarterly policy refresh",
+    }
+
+    response = client.put("/api/v1/policy-bundle", json=payload)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["revision"] == 8
+    assert response.json()["reason"] == "quarterly policy refresh"
+    replace_state.assert_awaited_once_with(
+        ANY,
+        expected_revision=7,
+        approved_provider_ids=["anthropic", "openai"],
+        blocked_component_keys=["AlphaComponent", "ZetaComponent"],
+        blocked_template_keys=["template-a", "template-z"],
+        blocked_model_keys=["claude-blocked", "openai::gpt-blocked"],
+        approved_integration_provider_ids=["google", "slack"],
+        blocked_integration_action_keys=[f"integrations.{provider.casefold()}.drive.delete"],
+        actor_user_id=admin.id,
+        reason="quarterly policy refresh",
+    )
+    apply_state.assert_called_once_with(committed)
+    read_state.assert_not_awaited()
+
+
+def test_put_without_integration_fields_governs_no_integration_for_legacy_writers(monkeypatch):
+    """QA: OSS pass-through remains unchanged when no integration policy is set (INT-7)."""
+    client, admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    committed = replace(
+        _snapshot(revision=8, actor_id=admin.id),
+        approved_integration_provider_ids=frozenset(),
+        blocked_integration_action_keys=frozenset(),
+    )
+    replace_state.return_value = committed
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": ["openai"],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "blocked_model_keys": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["approved_integration_provider_ids"] == []
+    assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == []
+    assert response.json()["approved_integration_provider_ids"] == []
+    assert response.json()["blocked_integration_action_keys"] == []
+    apply_state.assert_called_once_with(committed)
+    published = apply_state.call_args.args[0]
+    assert published.approved_integration_provider_ids == frozenset()
+    assert published.blocked_integration_action_keys == frozenset()
+
+
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["google.drive.search"],
+        ["integrations.google"],
+        ["integrations..search"],
+        ["   "],
+    ],
+    ids=["missing-prefix", "no-action-segment", "empty-segment", "blank"],
+)
+def test_put_rejects_malformed_integration_action_keys_without_writing(monkeypatch, invalid_keys):
+    """QA: malformed action keys are rejected before any write (INT-7)."""
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "blocked_integration_action_keys": invalid_keys,
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+_LOADED_PROVIDER = "google"
+_DECLARED_KEYS = ("integrations.google.drive.search", "integrations.google.drive.delete")
+
+
+def _load_provider(monkeypatch, provider_id: str = _LOADED_PROVIDER, keys: tuple[str, ...] = _DECLARED_KEYS) -> None:
+    """Report one loaded integration whose capabilities declare exactly ``keys``."""
+    manifest = IntegrationCapabilityManifest(
+        schema_version=1,
+        provider_id=provider_id,
+        display_name=provider_id.title(),
+        auth_profiles=[
+            {"id": "user", "kind": "oauth2_authorization_code", "identity": "user_delegated", "default_scopes": []}
+        ],
+        capabilities=[
+            {
+                "id": f"{provider_id}.action_{index}",
+                "display_name": f"Action {index}",
+                "auth_profile_id": "user",
+                "identity": "user_delegated",
+                "required_scopes": [],
+                "policy_keys": [key],
+                "substrate": "sdk",
+                "maturity": "ga",
+                "deployment_contexts": ["hosted"],
+                "risk": "read",
+                "component_ref": f"TestAction{index}Component",
+            }
+            for index, key in enumerate(keys)
+        ],
+    )
+    integration = LoadedIntegration(
+        extension_id=f"lfx-{provider_id}-test",
+        extension_version="1.13.0",
+        bundle=f"{provider_id}_test",
+        provider_id=provider_id,
+        manifest_path=Path("capabilities.v1.json"),
+        capability_manifest=manifest,
+    )
+    monkeypatch.setattr(policy_api, "loaded_integrations", lambda: (integration,))
+
+
+def _integration_put(client, blocked_integration_action_keys: list[str], **overrides):
+    return client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "blocked_integration_action_keys": blocked_integration_action_keys,
+            **overrides,
+        },
+    )
+
+
+def test_put_rejects_a_newly_blocked_key_its_loaded_provider_does_not_declare(monkeypatch):
+    """A typo under a loaded provider would never match an action, so it must not persist as dead policy."""
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    read_state.return_value = replace(
+        _snapshot(revision=7), blocked_integration_action_keys=frozenset({"integrations.google.drive.old_typo"})
+    )
+
+    response = _integration_put(
+        client,
+        ["integrations.google.drive.search", "integrations.google.drive.old_typo", "Integrations.Google.Drive.Serch"],
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    detail = response.json()["detail"]
+    assert "integrations.google.drive.serch" in detail
+    assert "'google'" in detail
+    assert all(key in detail for key in _DECLARED_KEYS)
+    # The persisted entry is grandfathered, so the refusal names only what this write introduced.
+    assert "old_typo" not in detail
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+def test_put_accepts_a_declared_key_of_a_loaded_provider_without_reading_the_active_bundle(monkeypatch):
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    replace_state.return_value = _snapshot(revision=8)
+
+    response = _integration_put(client, ["Integrations.Google.Drive.Delete"])
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == ["integrations.google.drive.delete"]
+    read_state.assert_not_awaited()
+    apply_state.assert_called_once()
+
+
+def test_put_accepts_a_key_for_a_provider_that_is_not_loaded(monkeypatch):
+    """Operators may block an action before installing the provider's bundle."""
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, _apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    replace_state.return_value = _snapshot(revision=8)
+
+    response = _integration_put(client, ["integrations.notinstalled.files.delete"])
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == [
+        "integrations.notinstalled.files.delete"
+    ]
+    read_state.assert_not_awaited()
+
+
+def test_put_retains_a_persisted_undeclared_key_on_an_unrelated_save(monkeypatch):
+    """A catalog or model-policy save carries every list through; an old typo must not block it."""
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    persisted = "integrations.google.drive.old_typo"
+    read_state.return_value = replace(_snapshot(revision=7), blocked_integration_action_keys=frozenset({persisted}))
+    replace_state.return_value = _snapshot(revision=8)
+
+    response = _integration_put(client, [persisted], approved_provider_ids=["openai"])
+
+    assert response.status_code == status.HTTP_200_OK
+    assert replace_state.await_args.kwargs["blocked_integration_action_keys"] == [persisted]
+    assert replace_state.await_args.kwargs["approved_provider_ids"] == ["openai"]
+    apply_state.assert_called_once()
+
+
+def test_put_maps_an_uninitialized_bundle_during_key_validation_to_unavailable(monkeypatch):
+    client, _admin, read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    _load_provider(monkeypatch)
+    read_state.side_effect = PolicyBundleNotInitializedError("Active policy bundle is missing")
+
+    response = _integration_put(client, ["integrations.google.drive.serch"])
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+def test_put_without_model_keys_blocks_no_models_for_legacy_writers(monkeypatch):
+    client, admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    committed = _snapshot(revision=8, actor_id=admin.id)
+    replace_state.return_value = committed
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 7,
+            "approved_provider_ids": ["openai"],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    replace_state.assert_awaited_once_with(
+        ANY,
+        expected_revision=7,
+        approved_provider_ids=["openai"],
+        blocked_component_keys=[],
+        blocked_template_keys=[],
+        blocked_model_keys=[],
+        approved_integration_provider_ids=[],
+        blocked_integration_action_keys=[],
+        actor_user_id=admin.id,
+        reason=None,
+    )
+    apply_state.assert_called_once_with(committed)
+
+
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["::claude-blocked"],
+        ["OpenAI::"],
+        ["   "],
+        ["x" * 256],
+        [f"provider::model-{index}" for index in range(1001)],
+    ],
+    ids=["empty-provider", "empty-model", "blank", "key-too-long", "too-many-keys"],
+)
+def test_put_rejects_malformed_model_keys_without_writing(monkeypatch, invalid_keys):
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 1,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+            "blocked_model_keys": invalid_keys,
+        },
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+def test_put_maps_stale_expected_revision_to_conflict_without_runtime_publication(monkeypatch):
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    replace_state.side_effect = PolicyBundleRevisionConflictError(
+        expected_revision=3,
+        active_revision=4,
+    )
+
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 3,
+            "approved_provider_ids": ["openai"],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json()["detail"] == {
+        "message": "Policy bundle revision conflict",
+        "expected_revision": 3,
+        "active_revision": 4,
+    }
+    apply_state.assert_not_called()
+
+
+def test_put_rejects_legacy_catalog_plugin_before_database_write(monkeypatch):
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+
+    def reject_legacy_plugin():
+        msg = "Configured catalog policy service does not support shared policy bundle updates"
+        raise PolicyBundleApplicationNotSupportedError(msg)
+
+    monkeypatch.setattr(policy_api, "ensure_policy_bundle_application_supported", reject_legacy_plugin)
+    response = client.put(
+        "/api/v1/policy-bundle",
+        json={
+            "expected_revision": 3,
+            "approved_provider_ids": ["openai"],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+        },
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert "does not support shared policy bundle updates" in response.json()["detail"]
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {
+            "expected_revision": 1,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+        },
+        {
+            "expected_revision": None,
+            "approved_provider_ids": [],
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+        },
+        {
+            "expected_revision": 1,
+            "approved_provider_ids": "openai",
+            "blocked_component_keys": [],
+            "blocked_template_keys": [],
+        },
+        {
+            "expected_revision": 1,
+            "approved_provider_ids": [],
+            "blocked_component_keys": None,
+            "blocked_template_keys": [],
+        },
+    ],
+)
+def test_put_requires_expected_revision_and_all_three_lists(monkeypatch, payload):
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+
+    response = client.put("/api/v1/policy-bundle", json=payload)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    replace_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+@pytest.mark.parametrize("field_name", ["blocked_component_keys", "blocked_template_keys"])
+@pytest.mark.parametrize(
+    "invalid_keys",
+    [
+        ["x" * 256],
+        [f"catalog-key-{index}" for index in range(1001)],
+    ],
+    ids=["key-too-long", "too-many-keys"],
+)
+def test_put_bounds_each_catalog_key_set_without_writing(monkeypatch, field_name, invalid_keys):
+    client, _admin, _read_state, replace_state, _list_history, _rollback_state, apply_state = _client(monkeypatch)
+    payload = {
+        "expected_revision": 1,
+        "approved_provider_ids": [],
+        "blocked_component_keys": [],
+        "blocked_template_keys": [],
+    }
+    payload[field_name] = invalid_keys
+
+    response = client.put("/api/v1/policy-bundle", json=payload)
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+    replace_state.assert_not_awaited()
+    policy_api.audit_decision.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+def test_history_is_newest_first_and_forwards_pagination(monkeypatch):
+    client, admin, read_state, replace_state, list_history, rollback_state, apply_state = _client(monkeypatch)
+    list_history.return_value = [
+        _snapshot(revision=4, actor_id=admin.id, reason="current"),
+        _snapshot(revision=3, actor_id=admin.id, reason="previous"),
+    ]
+
+    response = client.get("/api/v1/policy-bundle/history?limit=2&before_revision=5")
+
+    assert response.status_code == status.HTTP_200_OK
+    body = response.json()
+    assert [item["revision"] for item in body["items"]] == [4, 3]
+    assert all(item["initialized"] is True for item in body["items"])
+    assert all(item["source"] == "api" for item in body["items"])
+    assert body["next_before_revision"] == 3
+    list_history.assert_awaited_once_with(ANY, limit=2, before_revision=5)
+    read_state.assert_not_awaited()
+    replace_state.assert_not_awaited()
+    rollback_state.assert_not_awaited()
+    apply_state.assert_not_called()
+
+
+def test_rollback_endpoint_creates_and_publishes_a_new_revision(monkeypatch):
+    client, admin, read_state, replace_state, list_history, rollback_state, apply_state = _client(monkeypatch)
+    rolled_back = replace(
+        _snapshot(revision=9, actor_id=admin.id, reason="incident rollback"),
+        source="rollback",
+        rollback_of_revision=3,
+    )
+    rollback_state.return_value = rolled_back
+
+    response = client.post(
+        "/api/v1/policy-bundle/rollback/3",
+        json={"expected_revision": 8, "reason": "incident rollback"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["revision"] == 9
+    assert response.json()["source"] == "rollback"
+    assert response.json()["rollback_of_revision"] == 3
+    rollback_state.assert_awaited_once_with(
+        ANY,
+        expected_revision=8,
+        target_revision=3,
+        actor_user_id=admin.id,
+        reason="incident rollback",
+    )
+    apply_state.assert_called_once_with(rolled_back)
+    read_state.assert_not_awaited()
+    replace_state.assert_not_awaited()
+    list_history.assert_not_awaited()
+
+
+def test_rollback_maps_stale_revision_to_conflict_without_audit_or_publication(monkeypatch):
+    client, _admin, read_state, replace_state, list_history, rollback_state, apply_state = _client(monkeypatch)
+    rollback_state.side_effect = PolicyBundleRevisionConflictError(
+        expected_revision=8,
+        active_revision=9,
+    )
+
+    response = client.post(
+        "/api/v1/policy-bundle/rollback/3",
+        json={"expected_revision": 8, "reason": "incident rollback"},
+    )
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    assert response.json() == {
+        "detail": {
+            "message": "Policy bundle revision conflict",
+            "expected_revision": 8,
+            "active_revision": 9,
+        }
+    }
+    rollback_state.assert_awaited_once()
+    policy_api.audit_decision.assert_not_awaited()
+    apply_state.assert_not_called()
+    read_state.assert_not_awaited()
+    replace_state.assert_not_awaited()
+    list_history.assert_not_awaited()

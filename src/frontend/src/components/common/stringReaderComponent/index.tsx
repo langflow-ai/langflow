@@ -12,7 +12,7 @@ export default function StringReader({
   return (
     <TextModal editable={editable} setValue={setValue} value={string ?? ""}>
       {/* INVISIBLE CHARACTER TO PREVENT AGgrid bug */}
-      <span className="truncate">{string ?? "‎"}</span>
+      <span className="min-w-0 truncate leading-6">{string ?? "‎"}</span>
     </TextModal>
   );
 }

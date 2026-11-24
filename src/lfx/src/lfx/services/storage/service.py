@@ -1,16 +1,38 @@
 from __future__ import annotations
 
+import uuid
 from abc import abstractmethod
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import anyio
 
 from lfx.services.base import Service
+from lfx.services.storage.namespace import validate_namespace
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from lfx.services.settings.service import SettingsService
+
+
+@dataclass(frozen=True)
+class StorageReadiness:
+    """Result of a storage backend readiness probe (used by production preflight).
+
+    Attributes:
+        ok: True when the backend is usable (writable / reachable).
+        backend: The configured backend identifier, e.g. "local" or "s3".
+        detail: Human-readable one-line summary for display.
+        reason: Machine-friendly failure reason when ``ok`` is False
+            (e.g. "no-credentials", "bucket-missing", "access-denied",
+            "unreachable", "unwritable"). Empty on success.
+    """
+
+    ok: bool
+    backend: str
+    detail: str
+    reason: str = ""
 
 
 class StorageService(Service):
@@ -144,6 +166,10 @@ class StorageService(Service):
         for i in range(0, len(content), chunk_size):
             yield content[i : i + chunk_size]
 
+    async def get_file_md5(self, flow_id: str, file_name: str) -> str | None:  # noqa: ARG002
+        """The file's MD5 when the backend already has it, or None when it would have to read the file."""
+        return None
+
     @abstractmethod
     async def list_files(self, flow_id: str) -> list[str]:
         """List all files in a flow's storage namespace.
@@ -187,6 +213,47 @@ class StorageService(Service):
             Should not raise an error if the file doesn't exist
         """
         raise NotImplementedError
+
+    async def delete_namespace(self, namespace: str) -> int:
+        """Delete every object under a flow or user namespace and return how many were removed.
+
+        ``namespace`` must be a UUID string. The default deletes the flat file list;
+        backends that can store nested keys override it.
+        """
+        validated = validate_namespace(namespace)
+        removed = 0
+        for file_name in await self.list_files(validated):
+            await self.delete_file(validated, file_name)
+            removed += 1
+        return removed
+
+    async def check_readiness(self) -> StorageReadiness:
+        """Probe whether this storage backend is usable, for production preflight.
+
+        The default implementation targets a local filesystem ``data_dir``: it
+        creates the directory if needed, writes and deletes a sentinel file to
+        prove the backend is writable. Object-store backends (e.g. S3) override
+        this with a credentials + reachability probe.
+
+        Returns:
+            StorageReadiness: ``ok=True`` when the backend is usable, otherwise a
+            typed failure with a human-readable ``detail`` and a machine ``reason``.
+        """
+        backend = getattr(self.settings_service.settings, "storage_type", "local")
+        try:
+            await self.data_dir.mkdir(parents=True, exist_ok=True)
+            sentinel = self.data_dir / f".langflow-preflight-{uuid.uuid4().hex}"
+            await sentinel.write_bytes(b"ok")
+            await sentinel.unlink()
+        except OSError as exc:
+            reason = getattr(exc, "strerror", None) or str(exc)
+            return StorageReadiness(
+                ok=False,
+                backend=backend,
+                detail=f"{self.data_dir} is not writable ({reason})",
+                reason="unwritable",
+            )
+        return StorageReadiness(ok=True, backend=backend, detail=f"writable ({self.data_dir})")
 
     async def teardown(self) -> None:
         """Perform cleanup operations when the service is being shut down.

@@ -206,6 +206,31 @@ class TestFilterOperations:
         assert len(result) == 2  # John(50k) and Alice(55k)
         assert all(salary < 60000 for salary in result["salary"])
 
+    def test_filter_equals_numeric_column(self, component, sample_dataframe):
+        """Test that a text Filter Value matches a numeric column."""
+        component.df = sample_dataframe
+        component.operation = [{"name": "Filter", "icon": "filter"}]
+        component.column_name = "age"
+        component.filter_operator = "equals"
+        component.filter_value = "30"
+
+        result = component.perform_operation()
+
+        assert result["name"].tolist() == ["Jane Smith"]
+
+    def test_filter_not_equals_numeric_column(self, component, sample_dataframe):
+        """Test that a text Filter Value excludes matching rows of a numeric column."""
+        component.df = sample_dataframe
+        component.operation = [{"name": "Filter", "icon": "filter"}]
+        component.column_name = "age"
+        component.filter_operator = "not equals"
+        component.filter_value = "30"
+
+        result = component.perform_operation()
+
+        assert len(result) == 4
+        assert 30 not in result["age"].tolist()
+
 
 class TestEdgeCases:
     """Test edge cases and error conditions."""
@@ -280,6 +305,8 @@ class TestDynamicUI:
             "replacement_value": {"show": False},
             "merge_on_column": {"show": False},
             "merge_how": {"show": False},
+            "left_dataframe": {"show": False},
+            "right_dataframe": {"show": False},
         }
 
         # Select Filter operation
@@ -307,6 +334,8 @@ class TestDynamicUI:
             "replacement_value": {"show": False},
             "merge_on_column": {"show": False},
             "merge_how": {"show": False},
+            "left_dataframe": {"show": False},
+            "right_dataframe": {"show": False},
         }
 
         # Select Sort operation
@@ -334,6 +363,8 @@ class TestDynamicUI:
             "replacement_value": {"show": True},
             "merge_on_column": {"show": True},
             "merge_how": {"show": True},
+            "left_dataframe": {"show": True},
+            "right_dataframe": {"show": True},
         }
 
         # Deselect operation (empty list)
@@ -356,6 +387,8 @@ class TestDynamicUI:
         assert updated_config["replacement_value"]["show"] is False
         assert updated_config["merge_on_column"]["show"] is False
         assert updated_config["merge_how"]["show"] is False
+        assert updated_config["left_dataframe"]["show"] is False
+        assert updated_config["right_dataframe"]["show"] is False
 
 
 class TestDataTypes:
@@ -441,7 +474,8 @@ class TestMergeOperation:
         df1 = DataFrame(pd.DataFrame({"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"]}))
         df2 = DataFrame(pd.DataFrame({"id": [2, 3, 4], "city": ["NYC", "LA", "Chicago"]}))
 
-        component.df = [df1, df2]
+        component.left_dataframe = df1
+        component.right_dataframe = df2
         component.operation = [{"name": "Merge", "icon": "merge"}]
         component.merge_on_column = "id"
         component.merge_how = "inner"
@@ -457,7 +491,8 @@ class TestMergeOperation:
         df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
         df2 = DataFrame(pd.DataFrame({"id": [2, 3], "city": ["NYC", "LA"]}))
 
-        component.df = [df1, df2]
+        component.left_dataframe = df1
+        component.right_dataframe = df2
         component.operation = [{"name": "Merge", "icon": "merge"}]
         component.merge_on_column = "id"
         component.merge_how = "outer"
@@ -467,38 +502,156 @@ class TestMergeOperation:
         assert len(result) == 3  # ids 1, 2, 3
 
     def test_merge_left_join(self, component):
-        """Test left merge keeps all records from first DataFrame."""
+        """Test left merge keeps all records from left DataFrame."""
         df1 = DataFrame(pd.DataFrame({"id": [1, 2, 3], "name": ["Alice", "Bob", "Charlie"]}))
         df2 = DataFrame(pd.DataFrame({"id": [2, 4], "city": ["NYC", "Chicago"]}))
 
-        component.df = [df1, df2]
+        component.left_dataframe = df1
+        component.right_dataframe = df2
         component.operation = [{"name": "Merge", "icon": "merge"}]
         component.merge_on_column = "id"
         component.merge_how = "left"
 
         result = component.perform_operation()
 
-        assert len(result) == 3  # All from df1
+        assert len(result) == 3  # All from left (df1)
 
     def test_merge_right_join(self, component):
-        """Test right merge keeps all records from second DataFrame."""
+        """Test right merge keeps all records from right DataFrame."""
         df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
         df2 = DataFrame(pd.DataFrame({"id": [2, 3, 4], "city": ["NYC", "LA", "Chicago"]}))
 
-        component.df = [df1, df2]
+        component.left_dataframe = df1
+        component.right_dataframe = df2
         component.operation = [{"name": "Merge", "icon": "merge"}]
         component.merge_on_column = "id"
         component.merge_how = "right"
 
         result = component.perform_operation()
 
-        assert len(result) == 3  # All from df2
+        assert len(result) == 3  # All from right (df2)
+
+    def test_should_preserve_left_rows_when_left_merge_with_explicit_inputs(self, component):
+        """Test that left merge deterministically preserves all rows from the explicit left DataFrame.
+
+        This is the core bug fix test: with overlapping but distinct customer_ids,
+        a left merge must always keep all rows from left_dataframe regardless of
+        connection order.
+        """
+        # Arrange — exact scenario from bug report
+        df_a = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-003", "CUST-004"],
+                    "name": ["Alice", "Bob", "Carol", "David"],
+                }
+            )
+        )
+        df_b = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-005", "CUST-006"],
+                    "product": ["Notebook", "Mouse", "Keyboard", "Monitor"],
+                }
+            )
+        )
+
+        # Act — df_a is explicitly set as left, df_b as right
+        component.left_dataframe = df_a
+        component.right_dataframe = df_b
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "customer_id"
+        component.merge_how = "left"
+
+        result = component.perform_operation()
+
+        # Assert — all 4 rows from left (df_a) must be preserved
+        result_ids = sorted(result["customer_id"].tolist())
+        assert result_ids == ["CUST-001", "CUST-002", "CUST-003", "CUST-004"]
+        assert len(result) == 4
+        # CUST-003 and CUST-004 should have NaN product (not in df_b)
+        assert pd.isna(result.loc[result["customer_id"] == "CUST-003", "product"].iloc[0])
+        assert pd.isna(result.loc[result["customer_id"] == "CUST-004", "product"].iloc[0])
+
+    def test_should_preserve_right_rows_when_right_merge_with_explicit_inputs(self, component):
+        """Test that right merge deterministically preserves all rows from the explicit right DataFrame."""
+        # Arrange — same data, but now we want df_b's rows preserved
+        df_a = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-003", "CUST-004"],
+                    "name": ["Alice", "Bob", "Carol", "David"],
+                }
+            )
+        )
+        df_b = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-005", "CUST-006"],
+                    "product": ["Notebook", "Mouse", "Keyboard", "Monitor"],
+                }
+            )
+        )
+
+        # Act — df_a is left, df_b is right, merge type is "right"
+        component.left_dataframe = df_a
+        component.right_dataframe = df_b
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "customer_id"
+        component.merge_how = "right"
+
+        result = component.perform_operation()
+
+        # Assert — all 4 rows from right (df_b) must be preserved
+        result_ids = sorted(result["customer_id"].tolist())
+        assert result_ids == ["CUST-001", "CUST-002", "CUST-005", "CUST-006"]
+        assert len(result) == 4
+        # CUST-005 and CUST-006 should have NaN name (not in df_a)
+        assert pd.isna(result.loc[result["customer_id"] == "CUST-005", "name"].iloc[0])
+        assert pd.isna(result.loc[result["customer_id"] == "CUST-006", "name"].iloc[0])
+
+    def test_should_swap_results_when_left_right_inputs_are_swapped(self, component):
+        """Test that swapping left/right inputs produces different, deterministic results."""
+        df_a = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-001", "CUST-002", "CUST-003"],
+                    "name": ["Alice", "Bob", "Carol"],
+                }
+            )
+        )
+        df_b = DataFrame(
+            pd.DataFrame(
+                {
+                    "customer_id": ["CUST-002", "CUST-004"],
+                    "city": ["NYC", "Chicago"],
+                }
+            )
+        )
+
+        # Left merge with df_a as left
+        component.left_dataframe = df_a
+        component.right_dataframe = df_b
+        component.operation = [{"name": "Merge", "icon": "merge"}]
+        component.merge_on_column = "customer_id"
+        component.merge_how = "left"
+        result_a_left = component.perform_operation()
+
+        # Left merge with df_b as left (swapped)
+        component.left_dataframe = df_b
+        component.right_dataframe = df_a
+        result_b_left = component.perform_operation()
+
+        # Results must be different — df_a has 3 rows, df_b has 2
+        assert len(result_a_left) == 3  # All from df_a
+        assert len(result_b_left) == 2  # All from df_b
 
     def test_merge_single_dataframe_returns_original(self, component):
-        """Test merge with single DataFrame returns it unchanged."""
+        """Test merge with single left DataFrame and no right returns it unchanged."""
         df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
 
-        component.df = [df1]
+        component.left_dataframe = df1
+        component.right_dataframe = None
         component.operation = [{"name": "Merge", "icon": "merge"}]
         component.merge_on_column = "id"
         component.merge_how = "inner"
@@ -512,20 +665,22 @@ class TestMergeOperation:
         df1 = DataFrame(pd.DataFrame({"id": [1, 2], "name": ["Alice", "Bob"]}))
         df2 = DataFrame(pd.DataFrame({"id": [2, 3], "city": ["NYC", "LA"]}))
 
-        component.df = [df1, df2]
+        component.left_dataframe = df1
+        component.right_dataframe = df2
         component.operation = [{"name": "Merge", "icon": "merge"}]
         component.merge_on_column = "non_existent"
         component.merge_how = "inner"
 
-        with pytest.raises(ValueError, match="not found in first DataFrame"):
+        with pytest.raises(ValueError, match="not found in left DataFrame"):
             component.perform_operation()
 
     def test_merge_same_columns_coalesces_values(self, component):
-        """Test merge with same columns uses coalesce (df1 value or df2 value)."""
+        """Test merge with same columns uses coalesce (left value or right value)."""
         df1 = DataFrame(pd.DataFrame({"id": [1, 2], "value": ["a", "b"]}))
         df2 = DataFrame(pd.DataFrame({"id": [2, 3], "value": ["x", "y"]}))
 
-        component.df = [df1, df2]
+        component.left_dataframe = df1
+        component.right_dataframe = df2
         component.operation = [{"name": "Merge", "icon": "merge"}]
         component.merge_on_column = "id"
         component.merge_how = "outer"
@@ -533,26 +688,12 @@ class TestMergeOperation:
         result = component.perform_operation()
 
         assert len(result) == 3
-        # Check no duplicate columns with _df2 suffix
-        assert "value_df2" not in result.columns
+        # Check no duplicate columns with _right suffix
+        assert "value_right" not in result.columns
         # Verify coalesced values
-        assert result.loc[result["id"] == 1, "value"].iloc[0] == "a"  # from df1
-        assert result.loc[result["id"] == 2, "value"].iloc[0] == "b"  # from df1 (coalesced)
-        assert result.loc[result["id"] == 3, "value"].iloc[0] == "y"  # from df2
-
-    def test_merge_more_than_two_dataframes_raises_error(self, component):
-        """Test merge with more than 2 DataFrames raises ValueError."""
-        df1 = DataFrame(pd.DataFrame({"id": [1], "name": ["A"]}))
-        df2 = DataFrame(pd.DataFrame({"id": [2], "name": ["B"]}))
-        df3 = DataFrame(pd.DataFrame({"id": [3], "name": ["C"]}))
-
-        component.df = [df1, df2, df3]
-        component.operation = [{"name": "Merge", "icon": "merge"}]
-        component.merge_on_column = "id"
-        component.merge_how = "inner"
-
-        with pytest.raises(ValueError, match="Merge requires exactly"):
-            component.perform_operation()
+        assert result.loc[result["id"] == 1, "value"].iloc[0] == "a"  # from left
+        assert result.loc[result["id"] == 2, "value"].iloc[0] == "b"  # from left (coalesced)
+        assert result.loc[result["id"] == 3, "value"].iloc[0] == "y"  # from right
 
 
 class TestListInputHandling:
@@ -591,12 +732,16 @@ class TestMergeDynamicUI:
             "replacement_value": {"show": False},
             "merge_on_column": {"show": False},
             "merge_how": {"show": False},
+            "left_dataframe": {"show": False},
+            "right_dataframe": {"show": False},
         }
 
         updated_config = component.update_build_config(build_config, [{"name": "Merge", "icon": "merge"}], "operation")
 
         assert updated_config["merge_on_column"]["show"] is True
         assert updated_config["merge_how"]["show"] is True
+        assert updated_config["left_dataframe"]["show"] is True
+        assert updated_config["right_dataframe"]["show"] is True
         assert updated_config["column_name"]["show"] is False
 
     def test_concatenate_hides_all_extra_fields(self, component):
@@ -614,6 +759,8 @@ class TestMergeDynamicUI:
             "replacement_value": {"show": True},
             "merge_on_column": {"show": True},
             "merge_how": {"show": True},
+            "left_dataframe": {"show": True},
+            "right_dataframe": {"show": True},
         }
 
         updated_config = component.update_build_config(
@@ -624,6 +771,8 @@ class TestMergeDynamicUI:
         assert updated_config["column_name"]["show"] is False
         assert updated_config["merge_on_column"]["show"] is False
         assert updated_config["merge_how"]["show"] is False
+        assert updated_config["left_dataframe"]["show"] is False
+        assert updated_config["right_dataframe"]["show"] is False
 
 
 # Integration test to verify all operators work together
@@ -661,6 +810,79 @@ def test_all_filter_operators_comprehensive():
         result = component.perform_operation()
 
         assert len(result) == expected_count, f"Failed for {operator} on {column} with value {value}"
+
+
+class TestReplaceValueOperation:
+    """Test replace value operation on various column types."""
+
+    def test_replace_value_integer_column(self, component):
+        """Test replacing integer values where input arrives as text strings."""
+        df = DataFrame(pd.DataFrame({"id": [1, 2, 3], "score": [20, 50, 20]}))
+        component.df = df
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "score"
+        component.replace_value = "20"
+        component.replacement_value = "99"
+
+        result = component.perform_operation()
+
+        assert result["score"].tolist() == [99, 50, 99]
+        assert pd.api.types.is_integer_dtype(result["score"])
+
+    def test_replace_value_float_column(self, component):
+        """Test replacing float values where input arrives as text strings."""
+        df = DataFrame(pd.DataFrame({"id": [1, 2, 3], "ratio": [1.5, 2.5, 3.5]}))
+        component.df = df
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "ratio"
+        component.replace_value = "2.5"
+        component.replacement_value = "9.5"
+
+        result = component.perform_operation()
+
+        assert result["ratio"].tolist() == [1.5, 9.5, 3.5]
+        assert pd.api.types.is_float_dtype(result["ratio"])
+
+    def test_replace_value_string_column(self, component):
+        """Test string/object column replacement remains unchanged."""
+        df = DataFrame(pd.DataFrame({"name": ["apple", "banana", "apple"]}))
+        component.df = df
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "name"
+        component.replace_value = "apple"
+        component.replacement_value = "orange"
+
+        result = component.perform_operation()
+
+        assert result["name"].tolist() == ["orange", "banana", "orange"]
+        assert pd.api.types.is_object_dtype(result["name"]) or pd.api.types.is_string_dtype(result["name"])
+
+    def test_replace_value_non_numeric_replacement_on_numeric_column(self, component):
+        """Test replacing a number with a non-numeric string gracefully casts column."""
+        df = DataFrame(pd.DataFrame({"score": [10, 20, 30]}))
+        component.df = df
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "score"
+        component.replace_value = "20"
+        component.replacement_value = "N/A"
+
+        result = component.perform_operation()
+
+        assert result["score"].tolist() == [10, "N/A", 30]
+        assert result["score"].dtype == object
+
+    def test_replace_value_blank_input_does_not_match_missing_cells(self, component):
+        component.df = DataFrame(pd.DataFrame({"score": [10.0, None, 30.0]}))
+        component.operation = [{"name": "Replace Value", "icon": "replace"}]
+        component.column_name = "score"
+        component.replace_value = ""
+        component.replacement_value = "0"
+
+        result = component.perform_operation()
+
+        assert result["score"].iloc[0] == 10.0
+        assert pd.isna(result["score"].iloc[1])
+        assert result["score"].iloc[2] == 30.0
 
 
 if __name__ == "__main__":

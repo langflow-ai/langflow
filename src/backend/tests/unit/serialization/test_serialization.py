@@ -1,16 +1,24 @@
+from __future__ import annotations
+
+import json
 import math
 from datetime import datetime, timezone
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import pandas as pd
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 from langchain_core.documents import Document
 from langflow.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 from langflow.serialization.serialization import serialize, serialize_or_str
+from lfx.serialization.serialization import serialize as lfx_serialize
 from pydantic import BaseModel as PydanticBaseModel
 from pydantic.v1 import BaseModel as PydanticV1BaseModel
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 # Comprehensive hypothesis strategies
 text_strategy = st.text(min_size=0, max_size=MAX_TEXT_LENGTH * 3)
@@ -99,7 +107,13 @@ class TestSerializationHypothesis:
             assert len(result) == MAX_ITEMS_LENGTH + 1
             assert f"... [truncated {len(lst) - MAX_ITEMS_LENGTH} items]" in result
         else:
-            assert result == lst
+            # NaN/Inf floats are sanitized to None, so compare element-wise
+            assert len(result) == len(lst)
+            for r, v in zip(result, lst, strict=False):
+                if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                    assert r is None
+                else:
+                    assert r == v
 
     @settings(max_examples=100)
     @given(dct=dict_strategy)
@@ -137,8 +151,8 @@ class TestSerializationHypothesis:
     @given(data=st.one_of(st.integers(), st.floats(allow_nan=True), st.booleans(), st.none()))
     def test_primitive_types(self, data: float | bool | None) -> None:  # noqa: FBT001
         result: int | float | bool | None = serialize(data)
-        if isinstance(data, float) and math.isnan(data) and isinstance(result, float):
-            assert math.isnan(result)
+        if isinstance(data, float) and (math.isnan(data) or math.isinf(data)):
+            assert result is None
         else:
             assert result == data
 
@@ -158,7 +172,13 @@ class TestSerializationHypothesis:
     @given(lst=list_strategy)
     def test_max_items_none(self, lst: list) -> None:
         result: list = serialize(lst, max_items=None)
-        assert result == lst
+        # NaN/Inf floats are sanitized to None, so compare element-wise
+        assert len(result) == len(lst)
+        for r, v in zip(result, lst, strict=False):
+            if isinstance(v, float) and (math.isnan(v) or math.isinf(v)):
+                assert r is None
+            else:
+                assert r == v
 
     @settings(max_examples=100)
     @given(obj=st.builds(object))
@@ -193,6 +213,16 @@ class TestSerializationHypothesis:
         instance: TestClass = TestClass(42)
         result: str = serialize(instance)
         assert result == str(instance)
+
+    def test_recursive_string_serialization_returns_sentinel(self) -> None:
+        class RecursiveString:
+            def __str__(self) -> str:
+                return str(self)
+
+        obj = RecursiveString()
+
+        assert serialize(obj) == "[Unserializable Object]"
+        assert serialize_or_str(obj) == "[Unserializable Object]"
 
     def test_pydantic_class_serialization(self) -> None:
         result: str = serialize(ModernModel)
@@ -344,3 +374,119 @@ class TestSerializationHypothesis:
         assert isinstance(result, dict)
         assert len(result) == MAX_ITEMS_LENGTH
         assert all(isinstance(v, int) for v in result.values())
+
+    def test_nan_float_serialized_to_none(self) -> None:
+        """NaN floats must not pass through because they are not JSON-compliant."""
+        assert serialize(float("nan")) is None
+
+    def test_inf_float_serialized_to_none(self) -> None:
+        """Inf floats must not pass through because they are not JSON-compliant."""
+        assert serialize(float("inf")) is None
+        assert serialize(float("-inf")) is None
+
+    def test_nan_inside_dict_serialized_to_none(self) -> None:
+        """NaN values nested in dicts should also be sanitized."""
+        data = {"score": float("nan"), "name": "test", "value": 1.5}
+        result = serialize(data)
+        assert result["score"] is None
+        assert result["name"] == "test"
+        assert result["value"] == 1.5
+
+
+@pytest.mark.parametrize("serializer", [serialize, lfx_serialize], ids=["langflow", "lfx"])
+class TestNonFiniteNumpySerialization:
+    """Keep NumPy and pandas float output compatible with strict JSON encoding."""
+
+    @pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
+    @pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")], ids=["nan", "inf", "negative-inf"])
+    def test_non_finite_numpy_scalar(self, serializer: Callable[..., Any], dtype: Any, value: float) -> None:
+        """Normalize non-finite scalar values regardless of their NumPy dtype."""
+        assert serializer(dtype(value)) is None
+        result = serializer({"score": dtype(value)})
+        assert result == {"score": None}
+        json.dumps(result, allow_nan=False)
+
+    @pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
+    def test_non_finite_numpy_arrays(self, serializer: Callable[..., Any], dtype: Any) -> None:
+        """Sanitize converted arrays while preserving their existing output shapes."""
+        assert serializer(np.array(np.nan, dtype=dtype)) is None
+        assert serializer(np.array([np.inf], dtype=dtype)) is None
+        result = serializer(np.array([[1.5, np.nan], [np.inf, -np.inf]], dtype=dtype))
+        assert result == [[1.5, None], [None, None]]
+        json.dumps(result, allow_nan=False)
+
+    @pytest.mark.parametrize("limits", [{}, {"max_length": 3, "max_items": 1}], ids=["default", "limited"])
+    @pytest.mark.parametrize(
+        ("values", "expected"),
+        [
+            ([np.nan, 1.0, np.inf, -np.inf], [None, 1.0, None, None]),
+            ([[np.float32(np.nan), np.float16(1.5)], [np.inf, "abcdef"]], [[None, 1.5], [None, "abcdef"]]),
+            ([], []),
+        ],
+        ids=["vector", "matrix", "empty"],
+    )
+    def test_non_finite_object_arrays(
+        self, serializer: Callable[..., Any], values: list, expected: list, limits: dict[str, int]
+    ) -> None:
+        """Sanitize object arrays without truncating their dimensions or strings."""
+        result = serializer(np.array(values, dtype=object), **limits)
+        assert isinstance(result, list)
+        assert result == expected
+        json.dumps(result, allow_nan=False)
+
+    def test_nested_object_array(self, serializer: Callable[..., Any]) -> None:
+        """Sanitize nested object-array values while preserving container types."""
+        array = np.array(
+            [{"scores": [np.float32(np.nan), np.float16(1.5)], "bounds": (np.float32(np.inf), -np.inf)}, "abcdef"],
+            dtype=object,
+        )
+        result = serializer(array, max_length=3, max_items=1)
+        assert isinstance(result, list)
+        assert result == [{"scores": [None, 1.5], "bounds": (None, None)}, "abcdef"]
+        json.dumps(result, allow_nan=False)
+
+    @pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
+    def test_non_finite_series(self, serializer: Callable[..., Any], dtype: Any) -> None:
+        """Sanitize Series values using the same float rules as scalar output."""
+        series = pd.Series([1.5, np.nan, np.inf, -np.inf], dtype=dtype)
+        result = serializer(series)
+        assert result == {0: 1.5, 1: None, 2: None, 3: None}
+        json.dumps(result, allow_nan=False)
+
+    def test_nested_object_series(self, serializer: Callable[..., Any]) -> None:
+        """Sanitize floats nested in Series dictionaries, lists, and tuples."""
+        series = pd.Series(
+            [{"scores": [np.float32(np.nan), np.float16(1.5)], "bounds": (np.float32(np.inf), -np.inf)}],
+            dtype=object,
+        )
+        result = serializer(series)
+        assert result == {0: {"scores": [None, 1.5], "bounds": (None, None)}}
+        json.dumps(result, allow_nan=False)
+
+    @pytest.mark.parametrize("dtype", [np.float16, np.float32])
+    def test_finite_numpy_values_in_object_series(self, serializer: Callable[..., Any], dtype: Any) -> None:
+        """Convert finite NumPy floats to native floats for JSON encoding."""
+        result = serializer(pd.Series([dtype(1.5)], dtype=object))
+        assert result == {0: 1.5}
+        assert type(result[0]) is float
+        json.dumps(result, allow_nan=False)
+
+    @pytest.mark.parametrize("dtype", [np.float16, np.float32, np.float64])
+    def test_non_finite_dataframe(self, serializer: Callable[..., Any], dtype: Any) -> None:
+        """Preserve existing DataFrame sanitation for narrow and native floats."""
+        result = serializer(pd.DataFrame({"score": [1.5, np.nan, np.inf, -np.inf]}, dtype=dtype))
+        assert result == [{"score": 1.5}, {"score": None}, {"score": None}, {"score": None}]
+        json.dumps(result, allow_nan=False)
+
+    def test_series_truncation_is_preserved(self, serializer: Callable[..., Any]) -> None:
+        """Keep Series truncation without adding string or list omission markers."""
+        series = pd.Series({"text": "abcdef", "values": [1.5, np.nan, 3.0], "omitted": np.inf})
+        result = serializer(series, max_length=3, max_items=2)
+        assert result == {"text": "abc", "values": [1.5, None]}
+        json.dumps(result, allow_nan=False)
+
+    def test_finite_numpy_array_truncation_is_preserved(self, serializer: Callable[..., Any]) -> None:
+        """Keep the existing NumPy array output without introducing truncation."""
+        result = serializer(np.array([1.5, 2.5, 3.5], dtype=np.float32), max_items=1)
+        assert result == [1.5, 2.5, 3.5]
+        json.dumps(result, allow_nan=False)

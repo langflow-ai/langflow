@@ -1,13 +1,14 @@
 import copy
 import json
+import keyword
 import re
 from contextlib import suppress
 from typing import Any
 
 from composio import Composio
-from composio_langchain import LangchainProvider
 from langchain_core.tools import Tool
 
+from lfx.base.composio.safe_provider import SafeLangchainProvider, _sanitize_schema
 from lfx.base.mcp.util import create_input_schema_from_json_schema
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import (
@@ -437,7 +438,7 @@ class ComposioBaseComponent(Component):
             if not self.api_key:
                 msg = "Composio API Key is required"
                 raise ValueError(msg)
-            return Composio(api_key=self.api_key, provider=LangchainProvider())
+            return Composio(api_key=self.api_key, provider=SafeLangchainProvider())
 
         except ValueError as e:
             logger.error(f"Error building Composio wrapper: {e}")
@@ -639,6 +640,10 @@ class ComposioBaseComponent(Component):
                         # Extract field names and detect file upload fields during parsing
                         raw_action_fields = list(flat_schema.get("properties", {}).keys())
                         action_fields = []
+                        # Maps sanitized component-attribute name -> original Composio schema name.
+                        # Needed so execute_action can send the right key to the API and look up
+                        # the correct schema entry for type coercion / required checks.
+                        field_name_map: dict[str, str] = {}
                         attachment_related_found = False
                         file_upload_fields = set()
 
@@ -677,8 +682,14 @@ class ComposioBaseComponent(Component):
 
                             # Handle reserved attribute name conflicts
                             # Prefix with app name to prevent clashes with component attributes
+                            original_field = clean_field
                             if clean_field in self.RESERVED_ATTRIBUTES:
                                 clean_field = f"{self.app_name}_{clean_field}"
+                                field_name_map[clean_field] = original_field
+                            elif keyword.iskeyword(clean_field):
+                                # Python keywords (e.g. 'from') cannot be used as attribute names.
+                                clean_field = f"{clean_field}_"
+                                field_name_map[clean_field] = original_field
 
                             action_fields.append(clean_field)
 
@@ -709,6 +720,7 @@ class ComposioBaseComponent(Component):
                         self._actions_data[action_key] = {
                             "display_name": display_name,
                             "action_fields": action_fields,
+                            "field_name_map": field_name_map,
                             "file_upload_fields": file_upload_fields,
                             "version": version,
                             "available_versions": available_versions,
@@ -853,6 +865,15 @@ class ComposioBaseComponent(Component):
                     field_schema_copy["description"] = (
                         f"{original_name.replace('_', ' ').title()} for {self.app_name.title()}: {original_description}"
                     ).strip()
+                elif keyword.iskeyword(clean_field_name):
+                    # Python reserved keywords (e.g. 'from') cannot be parameter names.
+                    original_name = clean_field_name
+                    clean_field_name = f"{clean_field_name}_"
+                    field_schema_copy = field_schema.copy()
+                    original_description = field_schema.get("description", "")
+                    field_schema_copy["description"] = (
+                        f"{original_name.replace('_', ' ').title()}: {original_description}"
+                    ).strip()
                 else:
                     # Use the original field schema for all other fields
                     field_schema_copy = field_schema
@@ -873,13 +894,15 @@ class ComposioBaseComponent(Component):
             # Update the flat schema with cleaned field names
             flat_schema["properties"] = cleaned_properties
 
-            # Also update required fields to match cleaned names
+            # Also update required fields to match cleaned (sanitized) names
             if flat_schema.get("required"):
                 cleaned_required = []
                 for field in flat_schema["required"]:
                     base = field.replace("[0]", "")
                     if base in self.RESERVED_ATTRIBUTES:
                         cleaned_required.append(f"{self.app_name}_{base}")
+                    elif keyword.iskeyword(base):
+                        cleaned_required.append(f"{base}_")
                     else:
                         cleaned_required.append(base)
                 flat_schema["required"] = cleaned_required
@@ -2354,6 +2377,14 @@ class ComposioBaseComponent(Component):
             limit = 999
 
         tools = composio.tools.get(user_id=self.entity_id, toolkits=[self.app_name.lower()], limit=limit)
+        # Composio caches a deep copy of each tool's schema in `_tool_schemas` *before* the
+        # provider wraps it, and reuses that copy at execute time for file substitution.
+        # Patch every cached schema so missing JSON Schema "type" keys don't raise
+        # KeyError("type") inside `_substitute_file_uploads_recursively` (issues #12894/#12895).
+        cached_schemas = getattr(composio.tools, "_tool_schemas", None)
+        if isinstance(cached_schemas, dict):
+            for cached_tool in cached_schemas.values():
+                _sanitize_schema(getattr(cached_tool, "input_parameters", None))
         configured_tools = []
         for tool in tools:
             # Set the sanitized name
@@ -2412,7 +2443,11 @@ class ComposioBaseComponent(Component):
 
         try:
             arguments: dict[str, Any] = {}
-            param_fields = self._actions_data.get(action_key, {}).get("action_fields", [])
+            action_data = self._actions_data.get(action_key, {})
+            param_fields = action_data.get("action_fields", [])
+            # Maps sanitized attribute name -> original Composio schema name (built during
+            # _populate_actions_data for RESERVED_ATTRIBUTES prefixes and keyword renames).
+            field_name_map: dict[str, str] = action_data.get("field_name_map", {})
 
             schema_dict = self._action_schemas.get(action_key, {})
             parameters_schema = schema_dict.get("input_parameters", {})
@@ -2426,12 +2461,24 @@ class ComposioBaseComponent(Component):
                     continue
                 value = getattr(self, field)
 
+                # Coerce Langflow rich types to primitives the Composio API can serialise.
+                # A Message connected to a str field (e.g. subject, body) must arrive as
+                # plain text; a Data object should be unwrapped to its dict payload.
+                if isinstance(value, Message):
+                    value = value.text
+                elif isinstance(value, Data):
+                    value = value.data
+
                 # Skip None, empty strings, and empty lists
                 if value is None or value == "" or (isinstance(value, list) and len(value) == 0):
                     continue
 
-                # Determine schema for this field
-                prop_schema = schema_properties.get(field, {})
+                # Resolve the original schema name for this (possibly sanitized) field.
+                # Required, schema properties, and the final argument key all use original names.
+                original_field = field_name_map.get(field, field)
+
+                # Determine schema for this field using the original (unsanitized) name
+                prop_schema = schema_properties.get(original_field, {})
 
                 # Parse JSON for object/array string inputs (applies to required and optional)
                 if isinstance(value, str) and prop_schema.get("type") in {"array", "object"}:
@@ -2444,7 +2491,7 @@ class ComposioBaseComponent(Component):
 
                 # For optional fields, be more strict about including them
                 # Only include if the user has explicitly provided a meaningful value
-                if field not in required_fields:
+                if original_field not in required_fields:
                     # Compare against schema default after normalization
                     schema_default = prop_schema.get("default")
                     if value == schema_default:
@@ -2453,15 +2500,7 @@ class ComposioBaseComponent(Component):
                 if field in self._bool_variables:
                     value = bool(value)
 
-                # Handle renamed fields - map back to original names for API execution
-                final_field_name = field
-                # Check if this is a renamed reserved attribute
-                if field.startswith(f"{self.app_name}_"):
-                    potential_original = field[len(self.app_name) + 1 :]  # Remove app_name prefix
-                    if potential_original in self.RESERVED_ATTRIBUTES:
-                        final_field_name = potential_original
-
-                arguments[final_field_name] = value
+                arguments[original_field] = value
 
             # Get the version from the action data
             version = self._actions_data.get(action_key, {}).get("version")

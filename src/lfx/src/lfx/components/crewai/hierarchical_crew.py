@@ -10,7 +10,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
     documentation: str = "https://docs.crewai.com/how-to/Hierarchical/"
     icon = "CrewAI"
     legacy = True
-    replacement = "agents.Agent"
+    replacement = ["models_and_agents.Agent"]
 
     inputs = [
         *BaseCrewComponent.get_base_inputs(),
@@ -29,6 +29,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
 
         tasks, agents = self.get_tasks_and_agents()
         manager_llm = self.get_manager_llm()
+        manager_agent = self.get_manager_agent()
 
         return Crew(
             agents=agents,
@@ -40,7 +41,7 @@ class HierarchicalCrewComponent(BaseCrewComponent):
             max_rpm=self.max_rpm,
             share_crew=self.share_crew,
             function_calling_llm=self.function_calling_llm,
-            manager_agent=self.manager_agent,
+            manager_agent=manager_agent,
             manager_llm=manager_llm,
             step_callback=self.get_step_callback(),
             task_callback=self.get_task_callback(),

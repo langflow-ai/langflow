@@ -1,0 +1,199 @@
+/* override the infima navbar docs/node_modules/infima/dist/css/default/default.css */
+.navbar {
+  box-shadow: none !important;
+  border-bottom: 1px solid var(--ifm-toc-border-color);
+}
+
+[data-theme="dark"] .navbar {
+  background: #111;
+  border-bottom-color: #2c2c32;
+}
+
+/* Navbar - smaller logo, more padding, compact */
+.navbar__logo {
+  height: 1.5rem; /* Smaller logo */
+}
+
+/* Improve logo grey marks contrast on light background */
+html[data-theme="light"] .navbar__logo {
+  filter: brightness(0.78) contrast(1.05);
+}
+
+.navbar__inner {
+  padding: 0.5rem var(--docs-gutter);
+}
+
+/* Social icons - smaller, muted */
+.header-github-link,
+.header-twitter-link,
+.header-discord-link {
+  opacity: 0.5;
+  transition: opacity 0.15s ease;
+  padding: 0.25rem 0.35rem;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.header-github-link:hover,
+.header-twitter-link:hover,
+.header-discord-link:hover {
+  opacity: 0.8;
+}
+
+.header-github-link:before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  display: flex;
+  background: url("/logos/gitLight.svg") no-repeat;
+  background-size: contain;
+}
+
+[data-theme="dark"] .header-github-link:before {
+  background: url("/logos/gitDark.svg") no-repeat;
+  background-size: contain;
+  width: 18px;
+  height: 18px;
+}
+
+.header-twitter-link::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  display: flex;
+  background: url("/logos/xLight.svg") no-repeat;
+  background-size: contain;
+}
+
+[data-theme="dark"] .header-twitter-link::before {
+  background: url("/logos/xDark.svg") no-repeat;
+  background-size: contain;
+  width: 18px;
+  height: 18px;
+}
+
+.header-discord-link {
+  margin-right: 0.5rem;
+}
+
+.header-discord-link::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  display: flex;
+  background: url("/logos/discordLight.svg") no-repeat;
+  background-size: contain;
+}
+
+[data-theme="dark"] .header-discord-link::before {
+  background: url("/logos/discordDark.svg") no-repeat;
+  background-size: contain;
+  width: 18px;
+  height: 18px;
+}
+
+/* Reduce width on mobile for Mendable Search */
+@media (max-width: 767px) {
+  .mendable-search {
+    width: 200px;
+  }
+}
+
+@media (max-width: 500px) {
+  .mendable-search {
+    width: 150px;
+  }
+}
+
+@media (max-width: 380px) {
+  .mendable-search {
+    width: 140px;
+  }
+}
+
+/* DocSearch Input Styling - wider, muted, blends with theme */
+.DocSearch-Button {
+  border: 1px solid var(--ifm-color-emphasis-200) !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  color: #4b4b55 !important;
+  min-width: 220px !important;
+  padding: 0 1rem !important;
+  height: 2.25rem !important;
+}
+
+/* Shrink search to icon-only as navbar gets tight */
+@media (max-width: 1100px) {
+  .DocSearch-Button {
+    min-width: 160px !important;
+  }
+}
+
+@media (max-width: 996px) {
+  .DocSearch-Button {
+    min-width: 100px !important;
+  }
+
+  .header-github-link,
+  .header-twitter-link,
+  .header-discord-link {
+    display: none;
+  }
+}
+
+@media (max-width: 960px) {
+  .DocSearch-Button {
+    min-width: 0 !important;
+    width: 2.25rem !important;
+    padding: 0 !important;
+    justify-content: center !important;
+  }
+  .DocSearch-Button-Placeholder,
+  .DocSearch-Button-Keys {
+    display: none !important;
+  }
+  .DocSearch-Search-Icon {
+    margin: 0 !important;
+  }
+}
+
+[data-theme="dark"] .DocSearch-Button {
+  border-color: #303038 !important;
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: #c6c6d1 !important;
+}
+
+.DocSearch-Button:hover,
+.DocSearch-Button:focus {
+  border-color: var(--ifm-color-emphasis-400) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .DocSearch-Button:hover {
+  border-color: #454550 !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+.DocSearch-Search-Icon {
+  color: #4b4b55 !important;
+  width: 15px !important;
+  height: 15px !important;
+}
+
+.DocSearch-Button-Placeholder {
+  font-size: 0.8125rem !important;
+  color: inherit !important;
+}
+
+[data-theme="dark"] .DocSearch-Search-Icon {
+  color: #c6c6d1 !important;
+}
+
+[data-theme="dark"] .DocSearch-Button-Keys kbd {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: #383840 !important;
+  color: #6a6a72 !important;
+  box-shadow: none !important;
+}

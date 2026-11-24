@@ -3,17 +3,18 @@ import os
 from pathlib import Path
 from uuid import UUID, uuid4
 
-from aiofile import async_open
+import aiofiles
 from lfx.graph import Graph
 from lfx.graph.vertex.param_handler import ParameterHandler
 from lfx.log.logger import configure, logger
 from lfx.utils.util import update_settings
-from sqlmodel import delete, select, text
+from sqlmodel import delete, select
 
 from langflow.api.utils import cascade_delete_flow
 from langflow.load.utils import replace_tweaks_with_env
 from langflow.processing.process import process_tweaks, run_graph
 from langflow.services.cache.service import AsyncBaseCacheService
+from langflow.services.database.migration import get_current_alembic_heads
 from langflow.services.database.models import Flow, User, Variable
 from langflow.services.database.utils import initialize_database
 from langflow.services.deps import get_auth_service, get_cache_service, get_storage_service, session_scope
@@ -65,7 +66,7 @@ class LangflowRunnerExperimental:
         cache: str | None = None,
         stream: bool = False,
         user_id: str | None = None,
-        generate_user: bool = False,  # If True, generates a new user for the flow
+        generate_user: bool = False,  # Generate a new user even when user_id is supplied
         cleanup: bool = True,  # If True, clears flow state after execution
         tweaks_values: dict | None = None,
     ):
@@ -74,7 +75,7 @@ class LangflowRunnerExperimental:
             await self.init_db_if_needed()
             # Update settings with cache and components path
             await update_settings(cache=cache)
-            if generate_user:
+            if generate_user or user_id is None:
                 user = await self.generate_user()
                 user_id = str(user.id)
             flow_dict = await self.prepare_flow_and_add_to_db(
@@ -146,7 +147,9 @@ class LangflowRunnerExperimental:
                     tweaks[vertex.id][db_field] = field_params[db_field]
         if tweaks is not None:
             tweaks = replace_tweaks_with_env(tweaks=tweaks, env_vars=tweaks_values)
-            flow_dict = process_tweaks(flow_dict, tweaks)
+            # Built here from resolved load_from_db values, not sent by a caller,
+            # so the deployment policy does not judge them. The floor still does.
+            flow_dict = process_tweaks(flow_dict, tweaks, caller_supplied=False)
 
         # Recursively update load_from_db fields
         def update_load_from_db(obj):
@@ -165,9 +168,9 @@ class LangflowRunnerExperimental:
 
     async def generate_user(self) -> User:
         async with session_scope() as session:
-            user_id = str(uuid4())
+            user_id = uuid4()
             hashed = get_auth_service().get_password_hash(str(uuid4()))
-            user = User(id=user_id, username=user_id, password=hashed, is_active=True)
+            user = User(id=user_id, username=str(user_id), password=hashed, is_active=True)
             session.add(user)
             await session.flush()
             await session.refresh(user)
@@ -177,7 +180,10 @@ class LangflowRunnerExperimental:
     async def add_flow_to_db(flow_dict: dict, user_id: str | None):
         async with session_scope() as session:
             flow_db = Flow(
-                name=flow_dict.get("name"), id=UUID(flow_dict["id"]), data=flow_dict.get("data", {}), user_id=user_id
+                name=flow_dict.get("name"),
+                id=UUID(flow_dict["id"]),
+                data=flow_dict.get("data", {}),
+                user_id=UUID(str(user_id)) if user_id else None,
             )
             session.add(flow_db)
 
@@ -214,6 +220,12 @@ class LangflowRunnerExperimental:
 
     @staticmethod
     async def clear_flow_state(flow_dict: dict):
+        from langflow.services.memory_base.flow_cleanup import (
+            FlowMemoryBaseCleanup,
+            finalize_flow_memory_base_cleanup,
+        )
+
+        memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
         cache_service = get_cache_service()
         if isinstance(cache_service, AsyncBaseCacheService):
             await cache_service.clear()
@@ -222,17 +234,28 @@ class LangflowRunnerExperimental:
         async with session_scope() as session:
             flow_id = flow_dict["id"]
             uuid_obj = flow_id if isinstance(flow_id, UUID) else UUID(str(flow_id))
-            await cascade_delete_flow(session, uuid_obj)
+            await cascade_delete_flow(session, uuid_obj, memory_base_cleanups=memory_base_cleanups)
+        # session_scope committed on exit; drop the external resources now.
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
 
     @staticmethod
     async def clear_user_state(user_id: str):
+        from langflow.services.memory_base.flow_cleanup import (
+            FlowMemoryBaseCleanup,
+            finalize_flow_memory_base_cleanup,
+        )
+
+        memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
+        user_uuid = UUID(str(user_id))
         async with session_scope() as session:
-            flows = await session.exec(select(Flow.id).where(Flow.user_id == user_id))
-            flow_ids: list[UUID] = [fid for fid in flows.scalars().all() if fid is not None]
+            flows = await session.exec(select(Flow.id).where(Flow.user_id == user_uuid))
+            flow_ids: list[UUID] = [fid for fid in flows.all() if fid is not None]
             for flow_id in flow_ids:
-                await cascade_delete_flow(session, flow_id)
-            await session.exec(delete(Variable).where(Variable.user_id == user_id))
-            await session.exec(delete(User).where(User.id == user_id))
+                await cascade_delete_flow(session, flow_id, memory_base_cleanups=memory_base_cleanups)
+            await session.exec(delete(Variable).where(Variable.user_id == user_uuid))
+            await session.exec(delete(User).where(User.id == user_uuid))
+        # session_scope committed on exit; drop the external resources now.
+        await finalize_flow_memory_base_cleanup(memory_base_cleanups)
 
     async def init_db_if_needed(self):
         if not await self.database_exists_check() and self.should_initialize_db:
@@ -244,17 +267,12 @@ class LangflowRunnerExperimental:
     @staticmethod
     async def database_exists_check():
         async with session_scope() as session:
-            try:
-                result = await session.exec(text("SELECT version_num FROM public.alembic_version"))
-                return result.first() is not None
-            except Exception as e:  # noqa: BLE001
-                await logger.adebug(f"Database check failed: {e}")
-                return False
+            return bool(await get_current_alembic_heads(session))
 
     @staticmethod
     async def get_flow_dict(flow: Path | str | dict) -> dict:
         if isinstance(flow, str | Path):
-            async with async_open(Path(flow), encoding="utf-8") as f:
+            async with aiofiles.open(Path(flow), encoding="utf-8") as f:
                 content = await f.read()
                 return json.loads(content)
         # If input is a dictionary, assume it's a JSON object

@@ -15,7 +15,7 @@ class MessageStoreComponent(Component):
     icon = "message-square-text"
     name = "StoreMessage"
     legacy = True
-    replacement = ["helpers.Memory"]
+    replacement = ["models_and_agents.Memory"]
 
     inputs = [
         MessageTextInput(
@@ -74,13 +74,19 @@ class MessageStoreComponent(Component):
             if message.sender:
                 stored_messages = [m for m in stored_messages if m.sender == message.sender]
         else:
-            await astore_message(message, flow_id=self.graph.flow_id)
-            stored_messages = (
-                await aget_messages(
-                    session_id=message.session_id, sender_name=message.sender_name, sender=message.sender
+            graph_user_id = getattr(self.graph, "user_id", None)
+            user_id_scope = graph_user_id if graph_user_id and str(graph_user_id) != "None" else None
+            stored_messages = await astore_message(message, flow_id=self.graph.flow_id, user_id=user_id_scope)
+            if stored_messages and stored_messages[0] is not message:
+                stored_messages = (
+                    await aget_messages(
+                        session_id=message.session_id,
+                        sender_name=message.sender_name,
+                        sender=message.sender,
+                        user_id=user_id_scope,
+                    )
+                    or []
                 )
-                or []
-            )
 
         if not stored_messages:
             msg = "No messages were stored. Please ensure that the session ID and sender are properly set."

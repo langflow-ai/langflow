@@ -2,6 +2,28 @@
 title: Get started with the Langflow API
 slug: /api-reference-api-examples
 ---
+import CodeBlock from '@theme/CodeBlock';
+import exampleApiReferenceApiExamplesFormLangflowApiRequests from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/form-langflow-api-requests.sh';
+import exampleApiReferenceApiExamplesSetEnvironmentVariables from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/set-environment-variables.sh';
+import exampleApiReferenceApiExamplesHealthCheck from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/health-check.sh';
+import resultApiReferenceApiExamplesResultHealthCheck from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/result-health-check.json';
+import exampleApiReferenceApiExamplesGetVersion from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/get-version.sh';
+import resultApiReferenceApiExamplesResultGetVersion from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/result-get-version.txt';
+import exampleApiReferenceApiExamplesGetConfiguration from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/get-configuration.sh';
+import resultApiReferenceApiExamplesResultGetConfiguration from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/result-get-configuration.json';
+import exampleApiReferenceApiExamplesGetAllComponents from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-reference-api-examples/get-all-components.sh';
+import examplePythonApiReferenceApiExamplesFormLangflowApiRequests from '!!raw-loader!@site/docs/API-Reference/python-examples/api-reference-api-examples/form-langflow-api-requests.py';
+import exampleJavascriptApiReferenceApiExamplesFormLangflowApiRequests from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-reference-api-examples/form-langflow-api-requests.js';
+import examplePythonApiReferenceApiExamplesHealthCheck from '!!raw-loader!@site/docs/API-Reference/python-examples/api-reference-api-examples/health-check.py';
+import exampleJavascriptApiReferenceApiExamplesHealthCheck from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-reference-api-examples/health-check.js';
+import examplePythonApiReferenceApiExamplesGetVersion from '!!raw-loader!@site/docs/API-Reference/python-examples/api-reference-api-examples/get-version.py';
+import exampleJavascriptApiReferenceApiExamplesGetVersion from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-reference-api-examples/get-version.js';
+import examplePythonApiReferenceApiExamplesGetConfiguration from '!!raw-loader!@site/docs/API-Reference/python-examples/api-reference-api-examples/get-configuration.py';
+import exampleJavascriptApiReferenceApiExamplesGetConfiguration from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-reference-api-examples/get-configuration.js';
+import examplePythonApiReferenceApiExamplesGetAllComponents from '!!raw-loader!@site/docs/API-Reference/python-examples/api-reference-api-examples/get-all-components.py';
+import exampleJavascriptApiReferenceApiExamplesGetAllComponents from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-reference-api-examples/get-all-components.js';
+
+
 
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
@@ -28,22 +50,23 @@ While individual options vary by endpoint, all Langflow API requests share some 
 
 As an example of a Langflow API request, the following curl command calls the `/v1/run` endpoint, and it passes a runtime override (`tweaks`) to the flow's **Chat Output** component:
 
-```bash
-curl --request POST \
-  --url "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID?stream=false" \
-  --header "Content-Type: application/json" \
-  --header "x-api-key: $LANGFLOW_API_KEY" \
-  --data '{
-  "input_value": "hello world!",
-  "output_type": "chat",
-  "input_type": "chat",
-  "tweaks": {
-    "ChatOutput-6zcZt": {
-      "should_store_message": true
-    }
-  }
-}'
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesFormLangflowApiRequests}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesFormLangflowApiRequests}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesFormLangflowApiRequests}</CodeBlock>
+
+</TabItem>
+</Tabs>
 
 ### Base URL
 
@@ -89,30 +112,7 @@ You can use any method you prefer to set environment variables, such as `export`
 Then, reference those environment variables in your API requests.
 For example:
 
-```bash
-# Set environment variables
-export LANGFLOW_API_KEY="sk..."
-export LANGFLOW_SERVER_URL="https://localhost:7860"
-export FLOW_ID="359cd752-07ea-46f2-9d3b-a4407ef618da"
-export PROJECT_ID="1415de42-8f01-4f36-bf34-539f23e47466"
-export LANGFLOW_API_KEY="sk-..."
-
-# Use environment variables in API requests
-curl --request POST \
-  --url "$LANGFLOW_SERVER_URL/api/v1/run/$FLOW_ID$?stream=false" \
-  --header "Content-Type: application/json" \
-  --header "x-api-key: $LANGFLOW_API_KEY" \
-  --data '{
-  "input_value": "hello world!",
-  "output_type": "chat",
-  "input_type": "chat",
-  "tweaks": {
-    "ChatOutput-6zcZt": {
-      "should_store_message": true
-    }
-  }
-}'
-```
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesSetEnvironmentVariables}</CodeBlock>
 
 Commonly used values in Langflow API requests include your [Langflow server URL](#base-url), [Langflow API keys](#authentication), flow IDs, and [project IDs](/api-projects#read-projects).
 
@@ -126,22 +126,28 @@ Once you have your Langflow server URL, try calling these endpoints that return 
 
 Returns the health status of the Langflow database and chat services:
 
-```bash
-curl -X GET \
-  "$LANGFLOW_SERVER_URL/health_check" \
-  -H "accept: application/json"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesHealthCheck}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesHealthCheck}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesHealthCheck}</CodeBlock>
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "status": "ok",
-  "chat": "ok",
-  "db": "ok"
-}
-```
+<CodeBlock language="json">{resultApiReferenceApiExamplesResultHealthCheck}</CodeBlock>
 
 </details>
 
@@ -152,22 +158,28 @@ This endpoint is served by uvicorn before Langflow is fully initialized, so it's
 
 Returns the current Langflow API version:
 
-```bash
-curl -X GET \
-  "$LANGFLOW_SERVER_URL/api/v1/version" \
-  -H "accept: application/json"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesGetVersion}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesGetVersion}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesGetVersion}</CodeBlock>
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```text
-{
-    "version": "1.6.0",
-    "main_version": "1.6.0",
-    "package": "Langflow"
-}
-```
+<CodeBlock language="text">{resultApiReferenceApiExamplesResultGetVersion}</CodeBlock>
 
 </details>
 
@@ -176,38 +188,28 @@ curl -X GET \
 Returns configuration details for your Langflow deployment.
 Requires a [Langflow API key](/api-keys-and-authentication).
 
-```bash
-curl -X GET \
-  "$LANGFLOW_SERVER_URL/api/v1/config" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesGetConfiguration}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesGetConfiguration}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesGetConfiguration}</CodeBlock>
+
+</TabItem>
+</Tabs>
 
 <details>
 <summary>Result</summary>
 
-```json
-{
-  "feature_flags": {
-    "mvp_components": false
-  },
-  "serialization_max_items_length": 1000,
-  "serialization_max_text_length": 6000,
-  "frontend_timeout": 0,
-  "auto_saving": true,
-  "auto_saving_interval": 1000,
-  "health_check_max_retries": 5,
-  "max_file_size_upload": 1024,
-  "webhook_polling_interval": 5000,
-  "public_flow_cleanup_interval": 3600,
-  "public_flow_expiration": 86400,
-  "event_delivery": "streaming",
-  "webhook_auth_enable": false,
-  "voice_mode_available": false,
-  "default_folder_name": "Starter Project",
-  "hide_getting_started_progress": false
-}
-```
+<CodeBlock language="json">{resultApiReferenceApiExamplesResultGetConfiguration}</CodeBlock>
 
 </details>
 
@@ -216,12 +218,23 @@ curl -X GET \
 Returns a dictionary of all Langflow components.
 Requires a [Langflow API key](/api-keys-and-authentication).
 
-```bash
-curl -X GET \
-  "$LANGFLOW_SERVER_URL/api/v1/all" \
-  -H "accept: application/json" \
-  -H "x-api-key: $LANGFLOW_API_KEY"
-```
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeBlock language="python">{examplePythonApiReferenceApiExamplesGetAllComponents}</CodeBlock>
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeBlock language="javascript">{exampleJavascriptApiReferenceApiExamplesGetAllComponents}</CodeBlock>
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeBlock language="bash">{exampleApiReferenceApiExamplesGetAllComponents}</CodeBlock>
+
+</TabItem>
+</Tabs>
 
 ## Available endpoints
 
@@ -310,6 +323,12 @@ Other endpoints are helpful for specific use cases, such as administration and f
   * PATCH `/v1/users/{user_id}/reset-password`: Reset own password.
   * DELETE `/v1/users/{user_id}`: Delete a user (cannot delete yourself).
 
+* [Catalog and model policy](./api-governance-policy) (superuser required):
+  * GET `/v1/policy-bundle`: Read the install-wide catalog and model policy.
+  * PUT `/v1/policy-bundle`: Replace the bundle. Requires `expected_revision`.
+  * GET `/v1/catalog-policy/components` and `PUT /v1/catalog-policy/components`: Blocked component keys.
+  * GET `/v1/model-provider-policy` and `PUT /v1/model-provider-policy`: Approved model providers.
+
 * Custom components: You might use these endpoints when developing custom Langflow components for your own use or to share with the Langflow community:
   * GET `/v1/all`: Return all available Langflow component types. See [Get all components](/api-reference-api-examples#get-all-components).
   * POST `/v1/custom_component`: Build a custom component from code and return its node.
@@ -344,7 +363,7 @@ The following endpoints are most often used when contributing to the Langflow co
 * [Monitor endpoints](/api-monitor):
   * GET `/v1/monitor/builds`: Get vertex builds for a flow.
   * DELETE `/v1/monitor/builds`: Delete vertex builds for a flow.
-  * GET `/v1/monitor/messages/sessions`: List message session IDs (auth required).
+  * GET `/v1/monitor/messages/sessions`: List message session IDs, most recently active first (auth required). Returns 100 IDs by default; use `limit` (maximum 200) and `offset` to page through older sessions.
   * GET `/v1/monitor/messages`: List messages with optional filters.
   * DELETE `/v1/monitor/messages`: Delete messages by IDs (auth required).
   * PUT `/v1/monitor/messages/{message_id}`: Update a message.
@@ -358,10 +377,19 @@ The following endpoints are most often used when contributing to the Langflow co
   * PATCH `/v1/variables/{variable_id}`: Update a variable.
   * DELETE `/v1/variables/{variable_id}`: Delete a variable.
 
-* [Use voice mode](/concepts-voice-mode):
-  * WS `/v1/voice/ws/flow_as_tool/{flow_id}`: Bi-directional voice session exposing the flow as a tool.
-  * WS `/v1/voice/ws/flow_as_tool/{flow_id}/{session_id}`: Same as above with explicit session ID.
-  * WS `/v1/voice/ws/flow_tts/{flow_id}`: Voice-to-text session that runs a flow and returns TTS.
+* Connections:
+  * GET `/v1/connections`: List owned, instance-owned, and explicitly shared connection metadata. Use the optional `provider` query parameter to filter the list for a connection picker.
+  * POST `/v1/connections`: Create connection metadata and optionally provide credentials for encrypted storage.
+  * POST `/v1/connections/{connection_id}/test`: Test the stored credential and required scope coverage.
+  * POST `/v1/connections/{connection_id}/health`: Refresh the stored connection health.
+  * PATCH `/v1/connections/{connection_id}`: Change `display_name` or `allow_non_interactive` without re-authorizing the provider. Only the connection owner can enable `allow_non_interactive`; anyone who can modify the connection can disable it.
+  * POST `/v1/connections/{connection_id}/revoke`: Remove stored credentials and mark the connection revoked.
+  * DELETE `/v1/connections/{connection_id}`: Delete a connection.
+
+  Connection responses contain metadata, status, health, granted scopes, and a `has_credentials` flag. They never contain access tokens, refresh tokens, or encrypted credential payloads. A connection with `status: error` can have `status_reason: credential-missing` when its stored credential is gone, or `credential-undecryptable` when the stored credential can't be decrypted with the server's current secret key. A failed OAuth callback records `oauth-denied`, `oauth-expired`, or `oauth-failed` as `status_reason`; a failed reauthorization preserves the status and credentials of an existing usable connection. User-owned connections can be used non-interactively only when `allow_non_interactive` is enabled; connections cannot be shared publicly. Instance connections are visible to every user, but only superusers can create, change, revoke, or delete them.
+
+* [Legacy voice WebSocket endpoints](/concepts-voice-mode#legacy-voice-websocket-endpoints):
+  * WS `/v1/voice/ws/flow_tts/{flow_id}`: Speech-to-text session that runs a flow and returns TTS.
   * WS `/v1/voice/ws/flow_tts/{flow_id}/{session_id}`: Same as above with explicit session ID.
   * GET `/v1/voice/elevenlabs/voice_ids`: List available ElevenLabs voice IDs for the user.
 

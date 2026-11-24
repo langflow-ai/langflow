@@ -1,0 +1,13 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users('me')/messages",
+  "value": [
+    {
+      "id": "AAMkAGI2TG95AAA=",
+      "subject": "Budget review",
+      "receivedDateTime": "2026-08-30T15:41:00Z",
+      "isRead": true,
+      "from": {"emailAddress": {"name": "Alan Turing", "address": "alan@contoso.com"}},
+      "bodyPreview": "Numbers updated."
+    }
+  ]
+}

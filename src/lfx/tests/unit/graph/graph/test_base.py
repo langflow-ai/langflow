@@ -1,12 +1,47 @@
+import contextvars
 from collections import deque
 
 import pytest
 from ag_ui.core import RunFinishedEvent, RunStartedEvent
-from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
+from lfx.components.input_output import ChatInput, ChatOutput, TextInputComponent, TextOutputComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.components.processing.combine_text import CombineTextComponent
+from lfx.custom.custom_component.component import Component
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
+from lfx.io import HandleInput, MessageTextInput, Output, SecretStrInput
+from lfx.schema.message import Message
+from lfx.schema.schema import INPUT_FIELD_NAME
+
+
+class SecretConnectionString(Component):
+    display_name = "Secret Connection String"
+    inputs = [SecretStrInput(name="password", display_name="Password")]
+    outputs = [Output(name="connection_string", method="build_connection_string")]
+
+    def build_connection_string(self) -> Message:
+        return Message(text=f"postgresql://demo:{self.password}@localhost/db")
+
+
+class SecretEcho(Component):
+    display_name = "Secret Echo"
+    inputs = [MessageTextInput(name="value", display_name="Value")]
+    outputs = [Output(name="message", method="echo")]
+
+    def echo(self) -> Message:
+        self.received_value = self.value
+        return Message(text=self.value)
+
+
+class ConcatMessages(Component):
+    """Joins the messages of a list input in the order the input receives them."""
+
+    display_name = "Concat Messages"
+    inputs = [HandleInput(name="messages", display_name="Messages", input_types=["Message"], is_list=True)]
+    outputs = [Output(name="message", method="concat")]
+
+    def concat(self) -> Message:
+        return Message(text="".join(message.text for message in self.messages))
 
 
 @pytest.mark.asyncio
@@ -42,6 +77,37 @@ async def test_graph_with_edge():
 
 
 @pytest.mark.asyncio
+async def test_list_input_gets_values_in_connection_order():
+    """A list input gets the values of its sources in the order they were connected.
+
+    The graph used to collect its edges in a set, whose order changes with each process's hash
+    seed. Eight sources make an accidental pass very unlikely (1 in 40,320).
+    """
+    sources = [TextInputComponent(_id=f"text-{letter}", input_value=letter) for letter in "ABCDEFGH"]
+    concat = ConcatMessages(_id="concat")
+    concat.set(messages=[source.text_response for source in sources])
+
+    graph = Graph(sources[0], concat)
+    [r async for r in graph.async_start()]
+
+    assert graph.get_vertex("concat").built_object["message"].text == "ABCDEFGH"
+
+
+@pytest.mark.asyncio
+async def test_graph_preserves_secret_on_edge_and_masks_terminal_result():
+    """A downstream component receives the secret while public graph results remain masked."""
+    test_secret = "hunter2"  # noqa: S105  # pragma: allowlist secret
+    producer = SecretConnectionString(_id="producer").set(password=test_secret)
+    consumer = SecretEcho(_id="consumer").set(value=producer.build_connection_string)
+    graph = Graph(producer, consumer)
+
+    outputs = await graph.arun(inputs=[{}], outputs=[consumer.get_id()])
+
+    assert consumer.received_value == "postgresql://demo:hunter2@localhost/db"  # pragma: allowlist secret
+    assert outputs[0].outputs[0].outputs["message"]["message"] == "postgresql://demo:**********@localhost/db"
+
+
+@pytest.mark.asyncio
 async def test_graph_functional():
     chat_input = ChatInput(_id="chat_input")
     chat_input.set(should_store_message=False)
@@ -73,6 +139,42 @@ async def test_graph_functional_async_start():
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_chat_input_with_custom_id():
+    chat_input = ChatInput(_id="input_1")
+    chat_output = ChatOutput(_id="output_1")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}])
+
+    assert result[0].outputs[0].results["message"].data["text"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_text_input_with_custom_id():
+    text_input = TextInputComponent(_id="input_1")
+    text_output = TextOutputComponent(_id="output_1")
+    text_output.set(input_value=text_input.text_response)
+    graph = Graph(text_input, text_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}], types=["text"])
+
+    assert result[0].outputs[0].results["text"].data["text"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_custom_id_when_input_component_is_explicit():
+    chat_input = ChatInput(_id="input_1")
+    chat_output = ChatOutput(_id="output_1")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}], inputs_components=[["input_1"]])
+
+    assert result[0].outputs[0].results["message"].data["text"] == "hello"
 
 
 def test_graph_functional_start_end():
@@ -362,3 +464,59 @@ def test_graph_raw_event_metrics_no_optional_fields():
 
     # Assert only timestamp is present (no optional fields)
     assert len(metrics) == 1
+
+
+@pytest.mark.asyncio
+async def test_end_all_traces_in_context_runs_on_python_3_10():
+    """end_all_traces_in_context must work on Python 3.10.
+
+    Regression: the original implementation called
+    ``asyncio.create_task(coro, context=context)``, but the ``context=`` kwarg
+    was added in Python 3.11. On 3.10 it raised ``TypeError``. The fix routes
+    the create_task call through ``context.run`` on 3.10 so the new Task copies
+    the captured context as its current context.
+    """
+    graph = Graph()
+    captured_marker = contextvars.ContextVar("test_marker", default="default")
+
+    seen: dict[str, str] = {}
+
+    async def fake_end_all_traces(outputs=None, error=None):  # noqa: ARG001
+        seen["marker"] = captured_marker.get()
+
+    graph.end_all_traces = fake_end_all_traces  # type: ignore[assignment]
+
+    # Set the contextvar before capturing so the captured context carries it.
+    captured_marker.set("captured_value")
+    callable_ = graph.end_all_traces_in_context()
+
+    # Move to a different value to prove end_all_traces sees the captured one.
+    captured_marker.set("other_value")
+    await callable_()
+
+    assert seen["marker"] == "captured_value"
+
+
+def test_the_sync_start_forwards_an_event_manager_to_the_right_parameter():
+    """``async_start`` takes (inputs, max_iterations, config, event_manager) in that order.
+
+    Passed positionally, the event manager lands in ``config`` and ``__apply_config`` subscripts
+    it. That happens on the worker thread ``start`` spawns, so nothing propagates to the caller:
+    the exception is logged there and the generator simply finishes empty. A run that produces
+    no results and no error is the worst shape for this to fail in, which is why the assertion
+    is on the results rather than on not raising.
+    """
+    import asyncio
+
+    from lfx.events.event_manager import create_default_event_manager
+
+    chat_input = ChatInput(_id="chat-input")
+    chat_input.set(input_value="hello")
+    chat_output = ChatOutput(_id="chat-output")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output, flow_id="11111111-1111-1111-1111-111111111111")
+
+    results = list(graph.start(event_manager=create_default_event_manager(asyncio.Queue())))
+
+    assert results, "the run produced nothing; the event manager was interpreted as config"
+    assert any(result is Finish for result in results) or len(results) > 1, results

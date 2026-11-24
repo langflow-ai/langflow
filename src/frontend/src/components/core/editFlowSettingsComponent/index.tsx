@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import type React from "react";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Switch } from "@/components/ui/switch";
 import type { InputProps } from "../../../types/components";
@@ -13,6 +14,7 @@ export const EditFlowSettings: React.FC<
     submitForm?: () => void;
     locked?: boolean;
     setLocked?: (v: boolean) => void;
+    readOnly?: boolean;
   }
 > = ({
   name,
@@ -26,11 +28,14 @@ export const EditFlowSettings: React.FC<
   submitForm,
   locked = false,
   setLocked,
+  readOnly = false,
 }: InputProps & {
   submitForm?: () => void;
   locked?: boolean;
   setLocked?: (v: boolean) => void;
+  readOnly?: boolean;
 }): JSX.Element => {
+  const { t } = useTranslation();
   const [isMaxLength, setIsMaxLength] = useState(false);
   const [isMaxDescriptionLength, setIsMaxDescriptionLength] = useState(false);
   const [isMinLength, setIsMinLength] = useState(false);
@@ -92,18 +97,23 @@ export const EditFlowSettings: React.FC<
       <Form.Field name="name">
         <div className="edit-flow-arrangement">
           <Form.Label className="text-mmd font-medium">
-            Name{setName ? "" : ":"}
+            {t("flow.nameLabel")}
+            {setName ? "" : ":"}
           </Form.Label>
           {isMaxLength && (
-            <span className="edit-flow-span">Character limit reached</span>
+            <span className="edit-flow-span">
+              {t("flow.characterLimitReached")}
+            </span>
           )}
           {isMinLength && (
             <span className="edit-flow-span">
-              Minimum {minLength} character(s) required
+              {t("flow.minimumCharacters", { count: minLength })}
             </span>
           )}
           {isInvalidName && (
-            <span className="edit-flow-span">Flow name already exists</span>
+            <span className="edit-flow-span">
+              {t("flow.nameAlreadyExists")}
+            </span>
           )}
         </div>
         {setName ? (
@@ -114,7 +124,7 @@ export const EditFlowSettings: React.FC<
               type="text"
               name="name"
               value={name ?? ""}
-              placeholder="Flow name"
+              placeholder={t("flow.namePlaceholder")}
               id="name"
               maxLength={maxLength}
               minLength={minLength}
@@ -122,7 +132,7 @@ export const EditFlowSettings: React.FC<
               onDoubleClickCapture={handleFocus}
               data-testid="input-flow-name"
               autoFocus
-              disabled={locked}
+              disabled={locked || readOnly}
             />
           </Form.Control>
         ) : (
@@ -131,22 +141,25 @@ export const EditFlowSettings: React.FC<
           </span>
         )}
         <Form.Message match="valueMissing" className="field-invalid">
-          Please enter a name
+          {t("flow.pleaseEnterName")}
         </Form.Message>
         <Form.Message
           match={(value) => !!(value && invalidNameList.includes(value))}
           className="field-invalid"
         >
-          Flow name already exists
+          {t("flow.nameAlreadyExists")}
         </Form.Message>
       </Form.Field>
       <Form.Field name="description">
         <div className="edit-flow-arrangement mt-2">
           <Form.Label className="text-mmd font-medium">
-            Description{setDescription ? "" : ":"}
+            {t("flow.descriptionLabel")}
+            {setDescription ? "" : ":"}
           </Form.Label>
           {isMaxDescriptionLength && (
-            <span className="edit-flow-span">Character limit reached</span>
+            <span className="edit-flow-span">
+              {t("flow.characterLimitReached")}
+            </span>
           )}
         </div>
         {setDescription ? (
@@ -156,14 +169,14 @@ export const EditFlowSettings: React.FC<
               id="description"
               onChange={handleDescriptionChange}
               value={description!}
-              placeholder="Flow description"
+              placeholder={t("flow.descriptionPlaceholder")}
               data-testid="input-flow-description"
               className="mt-2 max-h-[250px] resize-none font-normal"
               rows={5}
               maxLength={descriptionMaxLength}
               onDoubleClickCapture={handleFocus}
               onKeyDown={handleDescriptionKeyDown}
-              disabled={locked}
+              disabled={locked || readOnly}
             />
           </Form.Control>
         ) : (
@@ -173,39 +186,45 @@ export const EditFlowSettings: React.FC<
               description === "" ? "font-light italic" : "",
             )}
           >
-            {description === "" ? "No description" : description}
+            {description === "" ? t("flow.noDescription") : description}
           </div>
         )}
         <Form.Message match="valueMissing" className="field-invalid">
-          Please enter a description
+          {t("flow.pleaseEnterDescription")}
         </Form.Message>
-        <div className="mt-3">
-          <div className="flex items-center gap-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <Form.Label className="text-mmd font-medium">
-                  Lock Flow
-                </Form.Label>
+        {/* Callers that only display the flow (no setLocked) would otherwise
+            render a focusable switch that cannot change anything. */}
+        {setLocked && (
+          <div className="mt-3">
+            <div className="flex items-center gap-2">
+              <div>
+                <div className="flex items-center gap-2">
+                  <Form.Label className="text-mmd font-medium">
+                    {t("flow.lockFlow")}
+                  </Form.Label>
 
-                <ForwardedIconComponent
-                  name={locked ? "Lock" : "Unlock"}
-                  className="text-muted-foreground !w-5 !h-5"
-                />
+                  <ForwardedIconComponent
+                    name={locked ? "Lock" : "Unlock"}
+                    className="text-muted-foreground !w-5 !h-5"
+                  />
+                </div>
+
+                <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
+                  {t("flow.lockFlowDescription")}
+                </p>
               </div>
 
-              <p className="text-xs text-muted-foreground/70 mt-1 font-normal">
-                Lock your flow to prevent edits or accidental changes.
-              </p>
+              <Switch
+                checked={!!locked}
+                onCheckedChange={(v) => setLocked(v)}
+                disabled={readOnly}
+                className="data-[state=checked]:bg-primary ml-auto"
+                data-testid="lock-flow-switch"
+                aria-label={t("flow.lockFlowAriaLabel")}
+              />
             </div>
-
-            <Switch
-              checked={!!locked}
-              onCheckedChange={(v) => setLocked?.(v)}
-              className="data-[state=checked]:bg-primary ml-auto"
-              data-testid="lock-flow-switch"
-            />
           </div>
-        </div>
+        )}
       </Form.Field>
     </>
   );

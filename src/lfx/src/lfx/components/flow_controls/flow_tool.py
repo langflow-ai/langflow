@@ -5,7 +5,6 @@ from typing_extensions import override
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.base.tools.flow_tool import FlowTool
 from lfx.field_typing import Tool
-from lfx.graph.graph.base import Graph
 from lfx.helpers import get_flow_inputs
 from lfx.io import BoolInput, DropdownInput, Output, StrInput
 from lfx.log.logger import logger
@@ -20,7 +19,7 @@ class FlowToolComponent(LCToolComponent):
     trace_type = "tool"
     name = "FlowTool"
     legacy: bool = True
-    replacement = ["logic.RunFlow"]
+    replacement = ["flow_controls.RunFlow"]
     icon = "hammer"
 
     async def get_flow_names(self) -> list[str]:
@@ -85,14 +84,17 @@ class FlowToolComponent(LCToolComponent):
         if not flow_data:
             msg = "Flow not found."
             raise ValueError(msg)
-        graph = Graph.from_payload(
-            flow_data.data["data"],
-            user_id=str(self.user_id),
-        )
+        graph = await self.load_flow(str(flow_data.id))
         try:
             graph.set_run_id(self.graph.run_id)
         except Exception:  # noqa: BLE001
             logger.warning("Failed to set run_id", exc_info=True)
+        # The tool's target runs inside THIS execution, so it resolves connections
+        # under the calling graph's principal. A freshly loaded graph carries the
+        # fail-closed ``unknown()``, which would deny every connection in the tool.
+        parent_principal = getattr(self.graph, "execution_principal", None)
+        if parent_principal is not None:
+            graph.execution_principal = parent_principal
         inputs = get_flow_inputs(graph)
         tool_description = self.tool_description.strip() or flow_data.description
         tool = FlowTool(

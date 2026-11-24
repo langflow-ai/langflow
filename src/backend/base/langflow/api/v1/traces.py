@@ -22,7 +22,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlmodel import col, select
 
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, persisted_flow_history_filter
 from langflow.services.database.models.traces.model import (
     SpanStatus,
     TraceListResponse,
@@ -152,7 +152,7 @@ async def delete_trace(
                 select(TraceTable)
                 .join(Flow, col(TraceTable.flow_id) == col(Flow.id))
                 .where(col(TraceTable.id) == trace_id)
-                .where(col(Flow.user_id) == current_user.id)
+                .where(col(Flow.user_id) == current_user.id, persisted_flow_history_filter())
             )
             trace = (await session.exec(stmt)).first()
 
@@ -180,7 +180,11 @@ async def delete_traces_by_flow(
     """
     try:
         async with session_scope() as session:
-            flow_stmt = select(Flow).where(col(Flow.id) == flow_id).where(col(Flow.user_id) == current_user.id)
+            flow_stmt = (
+                select(Flow)
+                .where(col(Flow.id) == flow_id)
+                .where(col(Flow.user_id) == current_user.id, persisted_flow_history_filter())
+            )
             flow = (await session.exec(flow_stmt)).first()
 
             if not flow:

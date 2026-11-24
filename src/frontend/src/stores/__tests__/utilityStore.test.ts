@@ -38,10 +38,12 @@ describe("useUtilityStore", () => {
       featureFlags: {},
       webhookPollingInterval: 5000,
       currentSessionId: "",
-      eventDelivery: EventDeliveryType.POLLING,
+      eventDelivery: EventDeliveryType.STREAMING,
       webhookAuthEnable: true,
       defaultFolderName: "Starter Project",
       hideGettingStartedProgress: false,
+      substituteOutdatedComponentCode: true,
+      catalogGovernanceEnabled: false,
     });
   });
 
@@ -61,10 +63,36 @@ describe("useUtilityStore", () => {
       expect(result.current.featureFlags).toEqual({});
       expect(result.current.webhookPollingInterval).toBe(5000);
       expect(result.current.currentSessionId).toBe("");
-      expect(result.current.eventDelivery).toBe(EventDeliveryType.POLLING);
+      expect(result.current.eventDelivery).toBe(EventDeliveryType.STREAMING);
       expect(result.current.webhookAuthEnable).toBe(true);
       expect(result.current.defaultFolderName).toBe("Starter Project");
       expect(result.current.hideGettingStartedProgress).toBe(false);
+      expect(result.current.substituteOutdatedComponentCode).toBe(true);
+      expect(result.current.catalogGovernanceEnabled).toBe(false);
+    });
+  });
+
+  describe("setSubstituteOutdatedComponentCode", () => {
+    it("should update outdated component substitution state", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setSubstituteOutdatedComponentCode(false);
+      });
+
+      expect(result.current.substituteOutdatedComponentCode).toBe(false);
+    });
+  });
+
+  describe("setCatalogGovernanceEnabled", () => {
+    it("should update catalog governance state", () => {
+      const { result } = renderHook(() => useUtilityStore());
+
+      act(() => {
+        result.current.setCatalogGovernanceEnabled(true);
+      });
+
+      expect(result.current.catalogGovernanceEnabled).toBe(true);
     });
   });
 

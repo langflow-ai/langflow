@@ -482,7 +482,7 @@ class TestEnvironmentVariableIntegration:
 
         asyncio.run(manager.teardown())
 
-    def test_variable_service_uses_env(self, clean_manager):
+    async def test_variable_service_uses_env(self, clean_manager):
         """Test that variable service reads from environment."""
         from lfx.services.variable.service import VariableService
 
@@ -491,12 +491,12 @@ class TestEnvironmentVariableIntegration:
         os.environ["TEST_API_KEY"] = "test_value_123"  # pragma: allowlist secret
         try:
             variables = clean_manager.get(ServiceType.VARIABLE_SERVICE)
-            value = variables.get_variable("TEST_API_KEY")
+            value = await variables.get_variable("TEST_API_KEY")
             assert value == "test_value_123"
         finally:
             del os.environ["TEST_API_KEY"]
 
-    def test_variable_service_in_memory_overrides_env(self, clean_manager):
+    async def test_variable_service_in_memory_overrides_env(self, clean_manager):
         """Test that in-memory variables override environment."""
         from lfx.services.variable.service import VariableService
 
@@ -506,7 +506,7 @@ class TestEnvironmentVariableIntegration:
         try:
             variables = clean_manager.get(ServiceType.VARIABLE_SERVICE)
             variables.set_variable("TEST_VAR", "memory_value")
-            value = variables.get_variable("TEST_VAR")
+            value = await variables.get_variable("TEST_VAR")
             assert value == "memory_value"
         finally:
             del os.environ["TEST_VAR"]

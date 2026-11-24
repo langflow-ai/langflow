@@ -8,7 +8,7 @@ import { useEffect } from "react";
 import { IS_AUTO_LOGIN } from "@/constants/constants";
 import { baseURL } from "@/customization/constants";
 import { useCustomApiHeaders } from "@/customization/hooks/use-custom-api-headers";
-import { customGetAccessToken } from "@/customization/utils/custom-get-access-token";
+import { customShouldSkipAuthRefresh } from "@/customization/utils/custom-should-skip-auth-refresh";
 import {
   getAxiosWithCredentials,
   getFetchCredentials,
@@ -26,6 +26,33 @@ const api: AxiosInstance = axios.create({
   baseURL: baseURL,
   withCredentials: getAxiosWithCredentials(),
 });
+
+// URL fragments for auth-maintenance endpoints. A 401/403 on any of these
+// must NOT trigger the refresh-then-retry branch — that path itself goes
+// through this same axios instance, so retrying would recurse. Exported
+// for unit testing.
+export const AUTH_MAINTENANCE_PATHS = [
+  "/refresh",
+  "/login",
+  "/logout",
+  "/auto_login",
+];
+
+export function isAuthMaintenanceURL(url: string | undefined): boolean {
+  if (!url) return false;
+  return AUTH_MAINTENANCE_PATHS.some((path) => {
+    const idx = url.indexOf(path);
+    if (idx === -1) return false;
+    const charAfter = url[idx + path.length];
+    return (
+      charAfter === undefined ||
+      charAfter === "/" ||
+      charAfter === "?" ||
+      charAfter === "#"
+    );
+  });
+}
+
 function ApiInterceptor() {
   const autoLogin = useAuthStore((state) => state.autoLogin);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -38,7 +65,7 @@ function ApiInterceptor() {
   );
 
   const { mutate: mutationLogout } = useLogout();
-  const { mutate: mutationRenewAccessToken } = useRefreshAccessToken();
+  const { mutateAsync: mutationRenewAccessToken } = useRefreshAccessToken();
   const isLoginPage = location.pathname.includes("login");
   const customHeaders = useCustomApiHeaders();
 
@@ -56,6 +83,11 @@ function ApiInterceptor() {
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
+          // The axios interceptor below sets this too, but the canvas runs flows through
+          // fetch, not axios: AG-UI's HttpAgent issues a raw fetch and never touches the
+          // axios instance. Without this the client attribute is absent on the one surface
+          // it exists to identify. See the axios copy for what the value means.
+          config.headers["x-langflow-client"] = "playground";
         }
 
         return [url, config];
@@ -76,10 +108,25 @@ function ApiInterceptor() {
           (isAuthenticationError && !autoLogin && autoLogin !== undefined);
 
         if (shouldRetryRefresh) {
+          // Edition overlays can mark specific 403s as "authenticated but
+          // gated" (e.g. forced password change) so we don't refresh/logout.
+          if (customShouldSkipAuthRefresh(error)) {
+            return Promise.reject(error);
+          }
           if (
             error?.config?.url?.includes("github") ||
             error?.config?.url?.includes("public")
           ) {
+            return Promise.reject(error);
+          }
+          // Auth-maintenance endpoints must not trigger refresh themselves.
+          // The refresh mutation uses this same axios instance, so if
+          // ``/refresh`` returns 401 (expired refresh token) it would
+          // re-enter this branch and recurse. Same for login/logout/
+          // auto_login. Reject the original failure and let the caller
+          // (typically the refresh mutation's catch block) drive logout.
+          if (isAuthMaintenanceURL(error?.config?.url)) {
+            await clearBuildVerticesState(error);
             return Promise.reject(error);
           }
           const stillRefresh = checkErrorCount();
@@ -87,14 +134,26 @@ function ApiInterceptor() {
             return Promise.reject(error);
           }
 
-          await tryToRenewAccessToken(error);
+          try {
+            await tryToRenewAccessToken(error);
+          } catch {
+            // Refresh failed (already logged + logout dispatched in the
+            // helper). Reject with the original error so callers see a
+            // clean failure instead of a swallowed undefined response.
+            await clearBuildVerticesState(error);
+            return Promise.reject(error);
+          }
+          await clearBuildVerticesState(error);
+          return await remakeRequest(error);
         }
 
         await clearBuildVerticesState(error);
 
-        if (!isAuthenticationError) {
-          return Promise.reject(error);
-        }
+        // Non-recoverable failure path: always reject so callers and
+        // React Query see a real error rather than an undefined response.
+        // This used to silently swallow auth errors under AUTO_LOGIN,
+        // producing infinite "Loading models…" spinners on fresh installs.
+        return Promise.reject(error);
       },
     );
 
@@ -162,6 +221,12 @@ function ApiInterceptor() {
           for (const [key, value] of Object.entries(customHeaders)) {
             config.headers[key] = value;
           }
+          // Tells the backend which client this run came from, for the operator's traces. The
+          // playground calls the same public API a user's own script would, so the route cannot
+          // distinguish them and the caller has to say. Advisory only: it is self-reported and
+          // the server ignores anything outside its known vocabulary, so never rely on it for
+          // access decisions.
+          config.headers["x-langflow-client"] = "playground";
         }
 
         return {
@@ -182,8 +247,8 @@ function ApiInterceptor() {
     };
   }, [accessToken, setErrorData, customHeaders, autoLogin]);
 
-  function checkErrorCount() {
-    if (isLoginPage) return;
+  function checkErrorCount(): boolean {
+    if (isLoginPage) return false;
 
     setAuthenticationErrorCount(authenticationErrorCount + 1);
 
@@ -197,23 +262,24 @@ function ApiInterceptor() {
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
-    if (isLoginPage) return;
+    if (isLoginPage) throw error;
     if (error.config?.headers) {
       for (const [key, value] of Object.entries(customHeaders)) {
         error.config.headers[key] = value;
       }
     }
-    mutationRenewAccessToken(undefined, {
-      onSuccess: async () => {
-        setAuthenticationErrorCount(0);
-        await remakeRequest(error);
-      },
-      onError: (error) => {
-        console.error(error);
+    try {
+      await mutationRenewAccessToken(undefined);
+      setAuthenticationErrorCount(0);
+    } catch (refreshError) {
+      console.error(refreshError);
+      const isNetworkError =
+        (refreshError as AxiosError)?.response === undefined;
+      if (!isNetworkError) {
         mutationLogout();
-        return Promise.reject("Authentication error");
-      },
-    });
+      }
+      throw refreshError;
+    }
   }
 
   async function clearBuildVerticesState(error) {
@@ -229,14 +295,11 @@ function ApiInterceptor() {
   async function remakeRequest(error: AxiosError) {
     const originalRequest = error.config as AxiosRequestConfig;
 
-    try {
-      // Browser automatically sends cookies with the request
-      // No need to manually add Authorization header
-      const response = await axios.request(originalRequest);
-      return response.data;
-    } catch (err) {
-      throw err;
-    }
+    // Return the full AxiosResponse so when this value resolves the
+    // outer interceptor promise, callers see a normal axios response and
+    // can read ``response.data`` as usual. Returning ``response.data``
+    // here would double-unwrap and produce ``undefined`` at the call site.
+    return axios.request(originalRequest);
   }
 
   return null;
@@ -356,13 +419,13 @@ async function performStreamingRequest({
         await onData(data);
       }
     }
-  } catch (e: any) {
+  } catch (e: unknown) {
     if (onNetworkError) {
-      onNetworkError(e);
+      onNetworkError(e as Error);
     } else {
       throw e;
     }
   }
 }
 
-export { api, ApiInterceptor, performStreamingRequest };
+export { ApiInterceptor, api, performStreamingRequest };

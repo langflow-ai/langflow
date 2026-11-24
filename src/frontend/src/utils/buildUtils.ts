@@ -5,10 +5,10 @@ import {
   findLastBotMessage,
   updateMessageProperties,
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
-import { MISSED_ERROR_ALERT } from "@/constants/alerts_constants";
 import { POLLING_MESSAGES } from "@/constants/constants";
-import { api, performStreamingRequest } from "@/controllers/API/api";
-import { getURL } from "@/controllers/API/helpers/constants";
+import { performStreamingRequest } from "@/controllers/API/api";
+import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
+import { transformBuildErrorMessages } from "@/customization/utils/custom-build-error-transform";
 import {
   customBuildUrl,
   customCancelBuildUrl,
@@ -18,8 +18,10 @@ import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-e
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
+import i18n from "../i18n";
 import useAlertStore from "../stores/alertStore";
 import useFlowStore from "../stores/flowStore";
+import { useMessagesStore } from "../stores/messagesStore";
 import type { VertexBuildTypeAPI } from "../types/api";
 import { isErrorLogType } from "../types/utils/typeCheckingUtils";
 import type { VertexLayerElementType } from "../types/zustand/flow";
@@ -28,6 +30,7 @@ import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   input_value?: any; // Replace any with the actual type if it's not any
   files?: string[];
   startNodeId?: string | null; // Assuming nodeId is of type string, and it's optional
@@ -88,6 +91,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   return inactiveVertexData;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 function logFlowLoad(message: string, data?: any) {
   console.warn(`[FlowLoad] ${message}`, data || "");
 }
@@ -117,10 +121,11 @@ export async function updateVerticesOrder(
         edges,
       );
       logFlowLoad("Got vertices order response:", orderResponse);
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (error: any) {
       logFlowLoad("Error getting vertices order:", error);
       setErrorData({
-        title: MISSED_ERROR_ALERT,
+        title: i18n.t("errors.missedFields"),
         list: [error.response?.data?.detail ?? "Unknown Error"],
       });
       useFlowStore.getState().setIsBuilding(false);
@@ -159,6 +164,7 @@ export async function buildFlowVerticesWithFallback(
   try {
     // Use the event_delivery parameter directly
     return await buildFlowVertices({ ...params });
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
   } catch (e: any) {
     if (
       e.message === POLLING_MESSAGES.ENDPOINT_NOT_AVAILABLE ||
@@ -179,6 +185,7 @@ async function pollBuildEvents(
   buildResults: Array<boolean>,
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
     onBuildComplete?: (allNodesValid: boolean) => void;
     onBuildError?: (
@@ -238,7 +245,7 @@ export async function buildFlowVertices({
 
   queryParams.append(
     "event_delivery",
-    eventDelivery ?? EventDeliveryType.POLLING,
+    eventDelivery ?? EventDeliveryType.STREAMING,
   );
 
   if (queryParams.toString()) {
@@ -339,12 +346,21 @@ export async function buildFlowVertices({
       if (buildResponse.status === 404) {
         throw new Error("Flow not found");
       }
-      throw new Error("Error starting build process");
+      let errorDetail = "Error starting build process";
+      try {
+        const errorData = await buildResponse.json();
+        if (errorData.detail) {
+          errorDetail = errorData.detail;
+        }
+      } catch (parseError) {
+        console.debug("Could not parse error response body:", parseError);
+      }
+      throw new Error(errorDetail);
     }
 
     const { job_id } = await buildResponse.json();
 
-    const cancelBuildUrl = customCancelBuildUrl(job_id);
+    const cancelBuildUrl = customCancelBuildUrl(job_id, playgroundPage);
 
     // Get the buildController from flowStore
     const buildController = new AbortController();
@@ -363,7 +379,7 @@ export async function buildFlowVertices({
     });
     useFlowStore.getState().setBuildController(buildController);
     // Then stream the events
-    const eventsUrl = customEventsUrl(job_id);
+    const eventsUrl = customEventsUrl(job_id, playgroundPage);
     const buildResults: Array<boolean> = [];
 
     if (eventDelivery === EventDeliveryType.STREAMING) {
@@ -438,10 +454,12 @@ export async function buildFlowVertices({
  * React 18's synchronous state-update batching).
  */
 export function processEndVertexEvent(
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   data: any,
   buildResults: boolean[],
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
     onBuildError?: (
       title: string,
@@ -470,9 +488,11 @@ export function processEndVertexEvent(
         },
       );
       onBuildError &&
-        onBuildError("Error Building Component", errorMessages, [
-          { id: buildData.id },
-        ]);
+        onBuildError(
+          "Error Building Component",
+          transformBuildErrorMessages(errorMessages),
+          [{ id: buildData.id }],
+        );
       onBuildUpdate(buildData, BuildStatus.ERROR, "");
       buildResults.push(false);
       return false;
@@ -492,23 +512,55 @@ export function processEndVertexEvent(
 
     const found = findLastBotMessage();
     if (found && !found.message.properties?.build_duration) {
+      const updatedProperties = {
+        ...found.message.properties,
+        build_duration: segmentDurationMs,
+      };
+
+      // Update React Query cache
       updateMessageProperties(found.message.id!, found.queryKey, {
         build_duration: segmentDurationMs,
       });
-      api
-        .put(`${getURL("MESSAGES")}/${found.message.id}`, {
-          ...found.message,
+
+      // Update Zustand store (for shareable playground ChatMessage)
+      const storeMsg = useMessagesStore
+        .getState()
+        .messages.find((m) => m.id === found.message.id);
+      if (storeMsg) {
+        useMessagesStore.getState().updateMessage({
+          ...storeMsg,
           properties: {
-            ...found.message.properties,
+            ...storeMsg.properties,
             build_duration: segmentDurationMs,
           },
-        })
-        .catch((err: unknown) => {
-          console.warn("Failed to persist build_duration", {
-            messageId: found.message.id,
-            error: err instanceof Error ? err.message : String(err),
-          });
         });
+      }
+
+      // Persist to DB (routes to correct endpoint automatically)
+      persistMessageProperties(found.message.id!, {
+        ...found.message,
+        properties: updatedProperties,
+      });
+    } else if (!found) {
+      // Fallback: find last bot message in Zustand store (shareable playground)
+      const storeMessages = useMessagesStore.getState().messages;
+      for (let i = storeMessages.length - 1; i >= 0; i--) {
+        const msg = storeMessages[i];
+        if (msg.sender === "Machine" && !msg.properties?.build_duration) {
+          const updatedProperties = {
+            ...msg.properties,
+            build_duration: segmentDurationMs,
+          };
+          useMessagesStore.getState().updateMessage({
+            ...msg,
+            properties: updatedProperties,
+          });
+          if (msg.id) {
+            persistMessageProperties(msg.id, { properties: updatedProperties });
+          }
+          break;
+        }
+      }
     }
 
     flowState.setBuildStartTime(Date.now());
@@ -556,6 +608,7 @@ export async function processBatchedEvents(
   buildResults: boolean[],
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
     onBuildComplete?: (allNodesValid: boolean) => void;
     onBuildError?: (
@@ -568,6 +621,7 @@ export async function processBatchedEvents(
   },
   onEventFallback: (
     type: string,
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     data: any,
     buildResults: boolean[],
     callbacks: object,
@@ -629,12 +683,14 @@ export async function processBatchedEvents(
  * @param {(lock: boolean) => void} [callbacks.setLockChat] - Callback to lock/unlock chat.
  * @returns {Promise<boolean>} Promise that resolves to true if the event was handled successfully.
  */
-async function onEvent(
+export async function onEvent(
   type: string,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   data: any,
   buildResults: boolean[],
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
     onBuildComplete?: (allNodesValid: boolean) => void;
     onBuildError?: (
@@ -741,20 +797,13 @@ async function onEvent(
           updateMessageProperties(found.message.id!, found.queryKey, {
             build_duration: durationMs,
           });
-          api
-            .put(`${getURL("MESSAGES")}/${found.message.id}`, {
-              ...found.message,
-              properties: {
-                ...found.message.properties,
-                build_duration: durationMs,
-              },
-            })
-            .catch((err: unknown) => {
-              console.warn("Failed to persist build_duration", {
-                messageId: found.message.id,
-                error: err instanceof Error ? err.message : String(err),
-              });
-            });
+          persistMessageProperties(found.message.id!, {
+            ...found.message,
+            properties: {
+              ...found.message.properties,
+              build_duration: durationMs,
+            },
+          });
         }
       }
       onBuildComplete && onBuildComplete(allNodesValid);
@@ -771,9 +820,30 @@ async function onEvent(
       buildResults.push(false);
       return true;
     }
-    case "build_end":
+    case "build_end": {
+      if (!data?.id) {
+        console.error("[buildUtils] Received build_end event without id", data);
+        break;
+      }
       useFlowStore.getState().updateBuildStatus([data.id], BuildStatus.BUILT);
       break;
+    }
+    case "log": {
+      const { component_id, output, name, message, type: logType } = data ?? {};
+      if (!component_id || !output) {
+        console.error(
+          "[buildUtils] Received malformed log event; missing component_id or output",
+          data,
+        );
+        break;
+      }
+      useFlowStore.getState().appendLogToFlowPool(component_id, output, {
+        name,
+        message,
+        type: logType,
+      });
+      break;
+    }
     default:
       return true;
   }
@@ -930,6 +1000,7 @@ async function buildVertex({
   id: string;
   input_value: string;
   files?: string[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   onBuildUpdate?: (data: any, status: BuildStatus) => void;
   onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
   verticesIds: string[];
@@ -958,7 +1029,7 @@ async function buildVertex({
         });
         onBuildError!(
           "Error Building Component",
-          errorMessages,
+          transformBuildErrorMessages(errorMessages.flat()),
           verticesIds.map((id) => ({ id })),
         );
         stopBuild();
@@ -971,7 +1042,9 @@ async function buildVertex({
   } catch (error) {
     console.error(error);
     let errorMessage: string | string[] =
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       (error as AxiosError<any>).response?.data?.detail ||
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       (error as AxiosError<any>).response?.data?.message ||
       "An unexpected error occurred while building the Component. Please try again.";
     errorMessage = tryParseJson(errorMessage as string) ?? errorMessage;
@@ -980,7 +1053,7 @@ async function buildVertex({
     }
     onBuildError!(
       "Error Building Component",
-      errorMessage,
+      transformBuildErrorMessages(errorMessage),
       verticesIds.map((id) => ({ id })),
     );
     buildResults.push(false);

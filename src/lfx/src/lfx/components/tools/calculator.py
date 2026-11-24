@@ -1,7 +1,6 @@
 import ast
 import operator
 
-import pytest
 from langchain_core.tools import ToolException
 from pydantic import BaseModel, Field
 
@@ -18,7 +17,7 @@ class CalculatorToolComponent(LCToolComponent):
     icon = "calculator"
     name = "CalculatorTool"
     legacy = True
-    replacement = ["helpers.CalculatorComponent"]
+    replacement = ["utilities.CalculatorComponent"]
 
     inputs = [
         MessageTextInput(
@@ -35,10 +34,7 @@ class CalculatorToolComponent(LCToolComponent):
         return self._evaluate_expression(self.expression)
 
     def build_tool(self) -> Tool:
-        try:
-            from langchain.tools import StructuredTool
-        except Exception:  # noqa: BLE001
-            pytest.skip("langchain is not available")
+        from langchain_core.tools import StructuredTool
 
         return StructuredTool.from_function(
             name="calculator",
@@ -48,8 +44,9 @@ class CalculatorToolComponent(LCToolComponent):
         )
 
     def _eval_expr(self, node):
-        if isinstance(node, ast.Num):
-            return node.n
+        # ast.Num was removed in Python 3.14; ast.Constant covers numeric literals since 3.8.
+        if isinstance(node, ast.Constant) and isinstance(node.value, (int, float)):
+            return node.value
         if isinstance(node, ast.BinOp):
             left_val = self._eval_expr(node.left)
             right_val = self._eval_expr(node.right)
@@ -74,7 +71,7 @@ class CalculatorToolComponent(LCToolComponent):
 
     def _evaluate_expression(self, expression: str) -> list[Data]:
         try:
-            # Parse the expression and evaluate it
+            # Parse the expression and evaluate the safe arithmetic AST.
             tree = ast.parse(expression, mode="eval")
             result = self._eval_expr(tree.body)
 

@@ -1,4 +1,6 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
+import { TIMEOUTS } from "./constants/timeouts";
+import { waitForFlowEditorReady } from "./flow/wait-for-flow-editor-ready";
 
 export const renameFlow = async (
   page: Page,
@@ -7,16 +9,20 @@ export const renameFlow = async (
     flowDescription,
   }: { flowName?: string; flowDescription?: string } = {},
 ) => {
-  await page.getByTestId("flow_name").isVisible({ timeout: 3000 });
-  await page.getByTestId("flow_name").hover({ timeout: 3000 });
-  await page.getByTestId("flow_name").click({ timeout: 3000 });
+  await waitForFlowEditorReady(page);
 
-  await page.waitForTimeout(500);
-  await page.getByTestId("input-flow-name").click({ timeout: 3000 });
+  const flowMenuButton = page.getByTestId("menu_bar_display");
+  await expect(flowMenuButton).toBeVisible({ timeout: TIMEOUTS.standard });
+  await expect(flowMenuButton).toBeEnabled();
+  await flowMenuButton.click();
 
-  const flowNameInput = await page.getByTestId("input-flow-name").inputValue();
+  const flowNameField = page.getByTestId("input-flow-name");
+  await expect(flowNameField).toBeVisible({ timeout: TIMEOUTS.standard });
+  await flowNameField.click();
+
+  const flowNameInput = await flowNameField.inputValue();
   if (flowName) {
-    await page.getByTestId("input-flow-name").fill(flowName);
+    await flowNameField.fill(flowName);
   }
 
   const flowDescriptionInput = await page
@@ -27,35 +33,28 @@ export const renameFlow = async (
     await page.getByTestId("input-flow-description").fill(flowDescription);
   }
 
-  await page.waitForTimeout(500);
-
   if (flowName || flowDescription) {
-    await page.getByTestId("save-flow-settings").isEnabled({ timeout: 3000 });
-    await page.getByTestId("save-flow-settings").click();
-    await page
-      .getByText("Changes saved successfully")
-      .last()
-      .isVisible({ timeout: 3000 });
-    await page.getByText("Changes saved successfully").last().click();
+    const saveButton = page.getByTestId("save-flow-settings");
+    await expect(saveButton).toBeEnabled();
+    await saveButton.click();
+    const savedToast = page.getByText("Changes saved successfully").last();
+    await expect(savedToast).toBeVisible({ timeout: TIMEOUTS.standard });
+    await savedToast.click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
     });
 
     if (flowName) {
-      await page.waitForFunction(
-        (expected) => {
-          const header = document.querySelector('[data-testid="flow_name"]');
-          return header && header.textContent?.trim() === expected;
-        },
-        flowName,
-        { timeout: 30000 },
-      );
+      await expect(page.getByTestId("flow_name")).toHaveText(flowName, {
+        timeout: TIMEOUTS.standard,
+      });
     }
   } else {
-    await page.getByTestId("save-flow-settings").isDisabled({ timeout: 3000 });
-    await page.getByTestId("cancel-flow-settings").isEnabled({ timeout: 3000 });
-    await page.getByTestId("cancel-flow-settings").click();
+    await expect(page.getByTestId("save-flow-settings")).toBeDisabled();
+    const cancelButton = page.getByTestId("cancel-flow-settings");
+    await expect(cancelButton).toBeEnabled();
+    await cancelButton.click();
   }
 
   return {

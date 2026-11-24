@@ -1,0 +1,394 @@
+---
+title: Deploy Langflow with multiple workers
+slug: /deployment-multi-worker
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+By default, Langflow runs with a single worker process and stores build job state in memory.
+
+A single-worker process is fine for development, but it doesn't scale when you run more than one worker.
+A flow build started on worker **A** cannot be polled or streamed from worker **B** because the in-memory job queue is _per-process_.
+
+A multi-worker deployment runs more than one worker process on the same host. Concurrency can be increased by increasing the number of `LANGFLOW_WORKERS`, but each process keeps its own in-memory build queue unless you add a shared store.
+
+A Redis-backed job queue stores build events in [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/), so any worker can pick up and serve any job's events.
+To configure a multi-worker Langflow process, follow the steps to enable the Redis job queue.
+
+After the Redis job queue is configured, you can optionally follow [recommended Gunicorn settings](#recommended-gunicorn-settings) to reduce memory use and keep workers healthy. This tuning applies to Linux production hosts only. On Windows and macOS, `langflow run` uses a single Uvicorn process.
+
+## Prerequisites
+
+- **Redis 6 or later**, reachable from all Langflow worker processes.
+- All workers configured with the same `LANGFLOW_JOB_QUEUE_TYPE`. Mixed-mode deployments (some workers using `asyncio`, others using `redis`) are not supported.
+- A dedicated Redis database index for the job queue. The cache uses DB `0` by default; the job queue defaults to DB `1`. Using the same index for both will cause key collisions.
+
+## Enable the Redis job queue
+
+To enable the Redis job queue, set the following environment variables on all workers:
+
+```text
+LANGFLOW_WORKERS=3  # any value > 1
+LANGFLOW_JOB_QUEUE_TYPE=redis
+LANGFLOW_REDIS_QUEUE_URL=redis://your-redis-host:6379/1
+```
+
+Redis authentication and TLS are only supported through `LANGFLOW_REDIS_QUEUE_URL`.
+The individual host/port settings `LANGFLOW_REDIS_QUEUE_HOST` and `LANGFLOW_REDIS_QUEUE_PORT` create a plain, unauthenticated connection.
+If you use a managed Redis service with auth or TLS, you must use `LANGFLOW_REDIS_QUEUE_URL`.
+
+## Example: multi-worker Docker Compose
+
+This example runs three Langflow workers sharing a Redis job queue and a PostgreSQL database.
+
+To run this example you need:
+
+- [Docker](https://docs.docker.com/get-started/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (or [Podman Desktop](https://podman-desktop.io/))
+- At least 4 GB of memory and 2 CPUs available to the container runtime
+
+:::tip
+If you are using Podman Desktop, the default machine might not have enough resources to run this stack. Before starting, increase the machine's CPU and memory allocation:
+
+```bash
+podman machine stop
+podman machine set --cpus 4 --memory 4096
+podman machine start
+```
+:::
+
+1. Paste the following example into a Docker Compose file named `docker-compose.yml`:
+   ```yaml
+   services:
+     langflow:
+       image: langflowai/langflow:1.10.0
+       pull_policy: always
+       ports:
+         - "7860:7860"
+       depends_on:
+         redis:
+           condition: service_healthy
+         postgres:
+           condition: service_started
+       environment:
+         - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+         - LANGFLOW_CONFIG_DIR=/app/langflow
+         - LANGFLOW_WORKERS=3  # any value > 1
+         - LANGFLOW_GUNICORN_PRELOAD=true
+         - LANGFLOW_JOB_QUEUE_TYPE=redis
+         - LANGFLOW_REDIS_QUEUE_URL=redis://redis:6379/1
+         - LANGFLOW_SUPERUSER=admin
+         - LANGFLOW_SUPERUSER_PASSWORD=changeme
+         - LANGFLOW_AUTO_LOGIN=False
+       volumes:
+         - langflow-data:/app/langflow
+
+     redis:
+       image: redis:7-alpine
+       healthcheck:
+         test: ["CMD", "redis-cli", "ping"]
+         interval: 5s
+         timeout: 3s
+         retries: 5
+
+     postgres:
+       image: postgres:16-trixie
+       environment:
+         POSTGRES_USER: langflow
+         POSTGRES_PASSWORD: langflow
+         POSTGRES_DB: langflow
+       volumes:
+         - langflow-postgres:/var/lib/postgresql/data
+
+   volumes:
+     langflow-postgres:
+     langflow-data:
+   ```
+
+2. Start the services:
+
+   ```bash
+   docker compose up -d
+   ```
+
+3. Watch the logs until Langflow is ready:
+
+   ```bash
+   docker compose logs -f langflow
+   ```
+
+   These lines confirm a successful multi-worker boot:
+
+   ```
+   [preload] initializing services in master
+   [preload] master preload complete; workers will inherit shared state via COW
+   ✓ Launching Langflow...
+   ```
+
+4. Create a superuser token using the `username` and `password` set in the Docker Compose file:
+
+   ```bash
+   TOKEN=$(curl -s -X POST http://localhost:7860/api/v1/login \
+     -H "Content-Type: application/x-www-form-urlencoded" \
+     -d "username=admin&password=changeme" \
+     | python3 -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+   ```
+
+5. In the same terminal session, verify the Redis queue is active:
+
+   ```bash
+   curl -s -H "Authorization: Bearer $TOKEN" \
+     http://localhost:7860/api/v1/monitor/job_queue | python3 -m json.tool
+   ```
+
+    A response looks like the following:
+
+    ```json
+    {
+      "backend": "redis",
+      "active_jobs": 0,
+      "bridge_count": 0,
+      "consumer_wrapper_count": 0,
+      "background_task_count": 0,
+      "cancel_dispatcher_running": true,
+      "cancel_stats": {
+        "published": 0,
+        "marker_hit": 0,
+        "dispatched_owned": 0,
+        "dispatched_foreign": 0,
+        "publish_errors": 0,
+        "dispatcher_reconnects": 0,
+        "dispatcher_internal_errors": 0,
+        "polling_watchdog_kills": 0,
+        "activity_touch_errors": 0,
+        "activity_get_errors": 0,
+        "activity_parse_errors": 0
+      }
+    }
+    ```
+
+    `backend: redis` confirms the queue is using Redis, and `cancel_dispatcher_running: true` confirms the cross-worker cancel channel is active.
+
+6. In the same terminal session, poll the `monitor/job_queue` endpoint:
+
+    ```bash
+    while true; do
+      clear
+      curl -s -H "Authorization: Bearer $TOKEN" \
+        http://localhost:7860/api/v1/monitor/job_queue | python3 -m json.tool
+      sleep 1
+    done
+    ```
+
+7. Open the Langflow UI and build a flow by sending a message to the flow in the **Playground**.
+   The number of `active_jobs` reported by the `monitor/job_queue` endpoint increases, confirming your Redis queue is working.
+
+### Verify cross-worker cancellation
+
+To verify that cancellation works across workers, trigger a build with the API to capture the `job_id` and then cancel it.
+
+1. Use the API to build a flow by its `flow_id`:
+
+   ```bash
+   curl -s -X POST "http://localhost:7860/api/v1/build/af7dc029-279e-4742-8419-1ac23898afdd/flow" \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"inputs": {"input_value": "hello"}, "stream": false}' | python3 -m json.tool
+   ```
+
+   Response:
+
+   ```json
+   {
+       "job_id": "1af960e9-12d5-48ec-9860-8a90a16f0b55"
+   }
+   ```
+
+   The returned `job_id` can be used to cancel build jobs in the queue.
+
+2. To cancel a build job, send a request with the `job_id`:
+
+   ```bash
+   curl -s -X POST http://localhost:7860/api/v1/build/1af960e9-12d5-48ec-9860-8a90a16f0b55/cancel \
+     -H "Authorization: Bearer $TOKEN" | python3 -m json.tool
+   ```
+
+   Response:
+
+   ```json
+   {
+       "success": true,
+       "message": "Flow build cancelled successfully"
+   }
+   ```
+
+3. Confirm the `monitor/job_queue` endpoint reports the cancellation:
+
+   ```json
+   {
+       "backend": "redis",
+       "active_jobs": 0,
+       "bridge_count": 0,
+       "consumer_wrapper_count": 0,
+       "background_task_count": 0,
+       "cancel_dispatcher_running": true,
+       "cancel_stats": {
+           "published": 1,
+           "marker_hit": 0,
+           "dispatched_owned": 0,
+           "dispatched_foreign": 2,
+           "publish_errors": 0,
+           "dispatcher_reconnects": 0,
+           "dispatcher_internal_errors": 0,
+           "polling_watchdog_kills": 0,
+           "activity_touch_errors": 0,
+           "activity_get_errors": 0,
+           "activity_parse_errors": 0
+       }
+   }
+   ```
+
+   `dispatched_foreign` increments when the signal is dispatched to a job owned by a different worker, which confirms the cross-worker cancel path is working.
+
+   For more information, see [Monitor the job queue](#monitor-the-job-queue).
+
+## Troubleshoot
+
+See [Troubleshoot multi-worker deployments](./troubleshoot#multi-worker-deployments).
+
+## Configuration reference
+
+| Variable | Default | Description |
+|---|---|---|
+| `LANGFLOW_JOB_QUEUE_TYPE` | `asyncio` | Job queue backend. Set to `redis` to enable the cross-worker queue. |
+| `LANGFLOW_REDIS_QUEUE_URL` | Not set | Full Redis connection URL. Takes priority over `HOST`/`PORT`/`DB` when set. Use this for any Redis instance that requires authentication or TLS. |
+| `LANGFLOW_REDIS_QUEUE_HOST` | `LANGFLOW_REDIS_HOST` | Redis host for the job queue. Falls back to the general Redis host setting. Does not support auth or TLS (use `LANGFLOW_REDIS_QUEUE_URL` instead for secured instances). |
+| `LANGFLOW_REDIS_QUEUE_PORT` | `LANGFLOW_REDIS_PORT` | Redis port for the job queue. Falls back to the general Redis port setting. |
+| `LANGFLOW_REDIS_QUEUE_DB` | `1` | Redis database index for the job queue. Must differ from the cache database index (default `0`) to avoid key collisions. |
+| `LANGFLOW_REDIS_QUEUE_TTL` | `3600` | TTL in seconds for job stream and ownership keys in Redis. |
+| `LANGFLOW_REDIS_QUEUE_STARTUP_GRACE_S` | `30.0` | Seconds a consumer waits for the producer's first write before treating a missing stream as end-of-stream. Increase this if your workers have slow cold-starts. Setting to `0` removes the grace period so a not-yet-created stream is treated as EOF immediately. |
+| `LANGFLOW_REDIS_QUEUE_CANCEL_CHANNEL_ENABLED` | `True` | When `true`, each worker runs a Redis pub/sub dispatcher so that `POST /build/{id}/cancel` cancels a build on any worker, not just the one that received the request. Closing a browser tab also signals cancel cross-worker. |
+| `LANGFLOW_REDIS_QUEUE_CANCEL_MARKER_TTL` | `60` | TTL in seconds for the cancel-marker key. The marker closes a race where a cancel signal is published before the target worker's dispatcher has subscribed. A non-positive value is rejected at startup. |
+| `LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S` | `90.0` | Seconds without client activity before the watchdog cancels an abandoned polling build. Set to `0` to disable the watchdog entirely. |
+| `LANGFLOW_REDIS_QUEUE_POLLING_WATCHDOG_INTERVAL_S` | `15.0` | How often in seconds the watchdog scans for stale jobs. Lower values reclaim resources faster at the cost of more Redis reads. |
+| `LANGFLOW_GUNICORN_PRELOAD` | `False` | **Experimental.** Loads the app in the Gunicorn master process before workers fork, reducing per-worker startup overhead. Pairs well with `LANGFLOW_WORKERS`. Non-Windows only. |
+
+## Monitor the job queue
+
+The `GET /monitor/job_queue` endpoint returns a metrics snapshot for the running worker. It requires superuser authentication and returns HTTP 403 otherwise.
+
+```bash
+curl -H "Authorization: Bearer $LANGFLOW_SUPERUSER_TOKEN" \
+  http://localhost:7860/api/v1/monitor/job_queue
+```
+
+Example response for the Redis backend:
+
+```json
+{
+  "backend": "redis",
+  "active_jobs": 2,
+  "bridge_count": 1,
+  "consumer_wrapper_count": 1,
+  "background_task_count": 0,
+  "cancel_dispatcher_running": true,
+  "cancel_stats": {
+    "published": 5,
+    "marker_hit": 1,
+    "dispatched_owned": 3,
+    "dispatched_foreign": 2,
+    "publish_errors": 0,
+    "dispatcher_reconnects": 0,
+    "dispatcher_internal_errors": 0,
+    "polling_watchdog_kills": 0,
+    "activity_touch_errors": 0,
+    "activity_get_errors": 0,
+    "activity_parse_errors": 0
+  }
+}
+```
+
+For the in-memory (`asyncio`) backend, only `backend` and `active_jobs` are returned.
+
+### Response body
+
+The Redis backend response includes the following fields:
+
+| Field | Description |
+|---|---|
+| `backend` | The active job queue backend: `redis` or `asyncio`. |
+| `active_jobs` | Number of jobs currently owned by this worker. |
+| `bridge_count` | Number of active Redis stream bridge tasks on this worker. A bridge reads events from the local `asyncio.Queue` and writes them to Redis Streams so any worker can consume them. |
+| `consumer_wrapper_count` | Number of active Redis stream consumer wrappers on this worker. A consumer wrapper reads events from a Redis Stream for cross-worker polling or streaming requests. |
+| `background_task_count` | Number of fire-and-forget background tasks currently running (cancel cleanup, marker checks). |
+| `cancel_dispatcher_running` | Whether the per-worker Redis pub/sub dispatcher is active. If `false`, this worker cannot receive cross-worker cancel signals. The dispatcher reconnects automatically with exponential backoff (capped at 30s), so a brief `false` during a Redis restart is expected. |
+| `cancel_stats.published` | Number of cancel signals published to the Redis pub/sub channel by this worker. |
+| `cancel_stats.marker_hit` | Number of times a cancel marker key was found, catching cancels that raced the dispatcher. |
+| `cancel_stats.dispatched_owned` | Number of cancel signals dispatched to jobs owned by this worker. |
+| `cancel_stats.dispatched_foreign` | Number of cancel signals dispatched to jobs owned by a different worker. A non-zero value confirms cross-worker cancellation is working. |
+| `cancel_stats.publish_errors` | Number of Redis errors on the cancel publish path. Persistent non-zero values indicate a Redis connectivity problem. |
+| `cancel_stats.dispatcher_reconnects` | Number of times the cancel dispatcher has reconnected after a Redis pub/sub error. |
+| `cancel_stats.dispatcher_internal_errors` | Number of unexpected errors inside the cancel dispatcher (not Redis disconnects). Non-zero values indicate a bug; check logs for details. |
+| `cancel_stats.polling_watchdog_kills` | Number of abandoned polling builds reclaimed by the watchdog. Non-zero is normal under load. A very high count may indicate frequent client disconnects (consider increasing `LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S`). |
+| `cancel_stats.activity_touch_errors` | Number of errors writing the client heartbeat key to Redis. |
+| `cancel_stats.activity_get_errors` | Number of errors reading the client heartbeat key from Redis. |
+| `cancel_stats.activity_parse_errors` | Number of malformed heartbeat values encountered by the watchdog. |
+
+## Recommended Gunicorn settings
+
+:::tip
+This tuning is optional, and it applies to Linux only. It does not replace the Redis job queue.
+
+On Windows and macOS, `langflow run` uses one Uvicorn process, so `LANGFLOW_GUNICORN_PRELOAD` and `GUNICORN_CMD_ARGS` have no effect.
+:::
+
+These recommendations are starting points from Langflow engineering benchmarks on Linux multi-worker deployments.
+After you apply these values, monitor performance, and then make adjustments using `htop` or `btop` while you run flows.
+
+Add the starter values to your server's `.env` file after the [Redis job queue](#enable-the-redis-job-queue) settings, then restart Langflow. Copy the block that best matches your server:
+
+<Tabs>
+<TabItem value="small" label="Small / dev (4–8 GB RAM)" default>
+
+Start with fewer workers so Langflow and local databases do not hit OOM.
+
+```text
+LANGFLOW_WORKERS=5
+LANGFLOW_WORKER_TIMEOUT=120
+LANGFLOW_GUNICORN_PRELOAD=true
+GUNICORN_CMD_ARGS="--max-requests 100 --max-requests-jitter 20"
+```
+
+</TabItem>
+<TabItem value="standard" label="Standard API (12 GB RAM)">
+
+A balanced default for a dedicated Langflow host.
+
+```text
+LANGFLOW_WORKERS=15
+LANGFLOW_WORKER_TIMEOUT=300
+LANGFLOW_GUNICORN_PRELOAD=true
+GUNICORN_CMD_ARGS="--max-requests 250 --max-requests-jitter 50"
+```
+
+</TabItem>
+<TabItem value="heavy" label="Heavy multi-agent (24 GB+ RAM)">
+
+Agent loops use more RAM per request, so a lower `--max-requests` value restarts workers more often to keep long-term usage consistent.
+
+```text
+LANGFLOW_WORKERS=30
+LANGFLOW_WORKER_TIMEOUT=600
+LANGFLOW_GUNICORN_PRELOAD=true
+GUNICORN_CMD_ARGS="--max-requests 150 --max-requests-jitter 30"
+```
+
+</TabItem>
+</Tabs>
+
+- **`LANGFLOW_WORKERS`** — How many Gunicorn worker processes run for concurrency.
+- **`LANGFLOW_WORKER_TIMEOUT`** — How long a worker may handle a single request before Gunicorn kills it. Raise it if you expect long agent runs.
+- **`LANGFLOW_GUNICORN_PRELOAD`** — Loads the app once in the Gunicorn master before workers fork so Linux can share memory across workers through Copy-on-Write. Recommended to leave enabled in multi-worker deployments for memory savings. Safe to leave off; behavior matches older releases when `false`.
+- **`GUNICORN_CMD_ARGS`** — Recycles workers after a set number of requests so memory usage growth does not continuously accumulate. `--max-requests` restarts a worker after it processes that many requests; `--max-requests-jitter` adds a random extra 0–N requests on top of that limit for each worker. Spreading restarts over time avoids every worker reloading at once. If RAM usage increases over time, lower `--max-requests` before you lower worker count.
+
+For more information, see the [Scaling Langflow blog post](https://www.langflow.org/blog/scaling-langflow).

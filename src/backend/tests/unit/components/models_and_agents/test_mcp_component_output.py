@@ -95,6 +95,7 @@ class TestMCPComponentOutputProcessing:
         mock_content_item3 = MagicMock()
         mock_content_item3.model_dump.return_value = {"type": "text", "text": "42"}
 
+        mock_result.isError = False
         mock_result.content = [mock_content_item1, mock_content_item2, mock_content_item3]
         mock_tool.coroutine = AsyncMock(return_value=mock_result)
 
@@ -132,6 +133,37 @@ class TestMCPComponentOutputProcessing:
         assert result.iloc[2]["type"] == "text"
 
     @pytest.mark.asyncio
+    async def test_build_output_raises_on_iserror_tool_result(self, component):
+        """A tool result with isError=True is a FAILED call and must raise, not become data.
+
+        The HITL guard (and any MCP server error) reports failure via CallToolResult.isError
+        with the explanation in content; swallowing it returns the error text as a valid
+        DataFrame and the run looks successful.
+        """
+        component.tool = "test_tool"
+        component.tools = []
+
+        error_item = MagicMock()
+        error_item.model_dump.return_value = {
+            "type": "text",
+            "text": "This flow uses Human-in-the-Loop and cannot run as an MCP tool.",
+        }
+        mock_result = MagicMock()
+        mock_result.isError = True
+        mock_result.content = [error_item]
+        mock_tool = MagicMock()
+        mock_tool.coroutine = AsyncMock(return_value=mock_result)
+
+        component._tool_cache = {"test_tool": mock_tool}
+        component.update_tool_list = AsyncMock(return_value=([], None))
+        component.get_inputs_for_all_tools = MagicMock(return_value={"test_tool": []})
+
+        with pytest.raises(ValueError, match="Human-in-the-Loop") as excinfo:
+            await component.build_output()
+
+        assert "test_tool" in str(excinfo.value)
+
+    @pytest.mark.asyncio
     async def test_build_output_with_no_tool_selected(self, component):
         """Test that build_output returns error DataFrame when no tool is selected."""
         component.tool = ""
@@ -142,3 +174,42 @@ class TestMCPComponentOutputProcessing:
         assert isinstance(result, DataFrame)
         assert len(result) == 1
         assert result.iloc[0]["error"] == "You must select a tool"
+
+    @pytest.mark.asyncio
+    async def test_build_output_adds_page_default_for_empty_kwargs(self, component):
+        """Test that build_output calls coroutine with empty kwargs when no params provided.
+
+        With exclude_none in MCP util, optional params (page, page_size) are omitted from
+        the payload sent to the server, allowing the backend to use its defaults.
+        """
+        from pydantic import Field, create_model
+
+        component.tool = "list_tool"
+        component.tools = []
+
+        mock_tool = MagicMock()
+        mock_tool.name = "list_tool"
+        mock_result = MagicMock()
+        mock_result.isError = False
+        mock_result.content = [
+            MagicMock(model_dump=MagicMock(return_value={"type": "text", "text": '{"results": []}'}))
+        ]
+        mock_tool.coroutine = AsyncMock(return_value=mock_result)
+
+        schema = create_model(
+            "ListSchema",
+            page=(int | None, Field(default=None, description="Page")),
+            page_size=(int | None, Field(default=None, description="Page size")),
+        )
+        mock_tool.args_schema = schema
+        mock_tool.args_schema.model_fields = schema.model_fields
+
+        component._tool_cache = {"list_tool": mock_tool}
+        component.update_tool_list = AsyncMock(return_value=([], None))
+        component.get_inputs_for_all_tools = MagicMock(return_value={"list_tool": []})
+
+        await component.build_output()
+
+        mock_tool.coroutine.assert_called_once()
+        call_kwargs = mock_tool.coroutine.call_args[1]
+        assert call_kwargs == {}  # Empty kwargs; exclude_none sends {} to MCP server

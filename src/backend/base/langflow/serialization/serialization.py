@@ -1,3 +1,4 @@
+import math
 from collections.abc import AsyncIterator, Generator, Iterator
 from datetime import datetime, timezone
 from decimal import Decimal
@@ -119,7 +120,11 @@ def _serialize_list_tuple(obj: list | tuple, max_length: int | None, max_items: 
 
 def _serialize_primitive(obj: Any, *_) -> Any:
     """Handle primitive types without conversion."""
-    if obj is None or isinstance(obj, int | float | bool | complex):
+    if obj is None or isinstance(obj, bool | int | complex):
+        return obj
+    if isinstance(obj, float):
+        if math.isnan(obj) or math.isinf(obj):
+            return None
         return obj
     return UNSERIALIZABLE_SENTINEL
 
@@ -152,7 +157,7 @@ def _serialize_series(obj: pd.Series, max_length: int | None, max_items: int | N
     """Serialize pandas Series to a dictionary format."""
     if max_items is not None and len(obj) > max_items:
         obj = obj.head(max_items)
-    return {index: _truncate_value(value, max_length, max_items) for index, value in obj.items()}
+    return {index: _sanitize_non_finite(_truncate_value(value, max_length, max_items)) for index, value in obj.items()}
 
 
 def _is_numpy_type(obj: Any) -> bool:
@@ -160,16 +165,29 @@ def _is_numpy_type(obj: Any) -> bool:
     return hasattr(type(obj), "__module__") and type(obj).__module__ == np.__name__
 
 
+def _sanitize_non_finite(value: Any) -> Any:
+    """Normalize floats while preserving container shapes and truncation."""
+    if isinstance(value, float | np.floating):
+        return _serialize_primitive(float(value))
+    if isinstance(value, list):
+        return [_sanitize_non_finite(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_sanitize_non_finite(item) for item in value)
+    if isinstance(value, dict):
+        return {key: _sanitize_non_finite(item) for key, item in value.items()}
+    return value
+
+
 def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | None) -> Any:
     """Serialize numpy types."""
     try:
         # For single-element arrays
         if obj.size == 1 and hasattr(obj, "item"):
-            return obj.item()
+            return _sanitize_non_finite(obj.item())
 
         # For multi-element arrays
         if np.issubdtype(obj.dtype, np.number):
-            return obj.tolist()  # Convert to Python list
+            return _sanitize_non_finite(obj.tolist())  # Convert to Python list
         if np.issubdtype(obj.dtype, np.bool_):
             return bool(obj)
         if np.issubdtype(obj.dtype, np.complexfloating):
@@ -178,8 +196,8 @@ def _serialize_numpy_type(obj: Any, max_length: int | None, max_items: int | Non
             return _serialize_str(str(obj), max_length, max_items)
         if np.issubdtype(obj.dtype, np.bytes_) and hasattr(obj, "tobytes"):
             return _serialize_bytes(obj.tobytes(), max_length, max_items)
-        if np.issubdtype(obj.dtype, np.object_) and hasattr(obj, "item"):
-            return _serialize_instance(obj.item(), max_length, max_items)
+        if np.issubdtype(obj.dtype, np.object_):
+            return _sanitize_non_finite(obj.tolist())
     except Exception as e:  # noqa: BLE001
         logger.debug(f"Cannot serialize numpy array: {e!s}")
         return UNSERIALIZABLE_SENTINEL
@@ -270,6 +288,18 @@ def serialize(
     """
     if obj is None:
         return None
+
+    # Fast-path common immutable primitives when no truncation/limits requested.
+    # This avoids the relatively expensive dispatcher for the common case.
+    # Non-finite floats (NaN, Inf) are excluded so the dispatcher can sanitize them.
+    no_limits = max_length is None and max_items is None
+    is_simple_primitive = isinstance(obj, (str, int, float, bool))
+
+    if no_limits and not to_str and is_simple_primitive:
+        if isinstance(obj, float) and (math.isnan(obj) or math.isinf(obj)):
+            return None
+        return obj
+
     try:
         # First try type-specific serialization
         result = _serialize_dispatcher(obj, max_length, max_items)
@@ -287,7 +317,7 @@ def serialize(
             try:
                 return repr(obj)
             except Exception as e:  # noqa: BLE001
-                logger.debug(f"Cannot serialize object {obj}: {e!s}")
+                logger.debug(f"Cannot serialize object of type {type(obj).__name__}: {e!s}")
 
         # Fallback to common serialization patterns
         if hasattr(obj, "model_dump"):
@@ -300,7 +330,7 @@ def serialize(
             return str(obj)
 
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"Cannot serialize object {obj}: {e!s}")
+        logger.debug(f"Cannot serialize object of type {type(obj).__name__}: {e!s}")
         return "[Unserializable Object]"
     return obj
 

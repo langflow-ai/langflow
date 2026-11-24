@@ -1,28 +1,75 @@
 import ast
+import asyncio
 import shutil
 import tarfile
+import threading
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING, Any
+from typing import Any, TypeVar
 from zipfile import ZipFile, is_zipfile
 
 import orjson
 import pandas as pd
 
-from lfx.base.data.storage_utils import get_file_size, parse_storage_path, read_file_bytes
+from lfx.base.data.storage_utils import (
+    StorageServiceUnavailableError,
+    get_file_size,
+    get_file_size_async,
+    parse_storage_path,
+    read_file_bytes,
+)
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
-from lfx.services.deps import get_settings_service
-from lfx.utils.async_helpers import run_until_complete
+from lfx.services.deps import get_settings_service, get_storage_service
+from lfx.utils.async_helpers import (
+    acquire_thread_lock,
+    async_delegate_target,
+    delegates_to,
+    run_until_complete,
+)
+from lfx.utils.file_path_security import (
+    StorageNamespaceError,
+    component_authenticated_user_scope,
+    component_file_access_scopes,
+    enforce_local_file_access,
+    storage_scope_id,
+    validate_storage_key,
+)
 from lfx.utils.helpers import build_content_type_from_extension
 
-if TYPE_CHECKING:
-    from collections.abc import Callable
+_T = TypeVar("_T")
+
+# ``load_files_structured`` reads these formats straight into rows. Looked up on ``pd`` at call
+# time rather than bound here, so patching a pandas reader still takes effect.
+_STRUCTURED_READERS = {".csv": "read_csv", ".xlsx": "read_excel", ".parquet": "read_parquet"}
+
+
+def _log_abandoned_file_load(task: asyncio.Task) -> None:
+    """Observe failures from a load that outlived its graph caller."""
+    try:
+        error = task.exception()
+    except asyncio.CancelledError:
+        return
+    if error is not None:
+        logger.error("File loader failed after its graph caller was cancelled", exc_info=error)
+
+
+def _read_structured_rows(source: Any, ext: str, *, encoding: str | None = None) -> list[dict] | None:
+    reader_name = _STRUCTURED_READERS.get(ext)
+    if reader_name is None:
+        # TODO: sqlite and json support?
+        return None
+    reader: Callable[..., pd.DataFrame] = getattr(pd, reader_name)
+    if ext == ".csv" and encoding is not None:
+        return reader(source, encoding=encoding).to_dict("records")
+    return reader(source).to_dict("records")
 
 
 class BaseFileComponent(Component, ABC):
@@ -31,6 +78,15 @@ class BaseFileComponent(Component, ABC):
     This class provides common functionality for resolving, validating, and
     processing file paths. Child classes must define valid file extensions
     and implement the `process_files` method.
+
+    The loader chain (``load_files_*`` -> ``load_files_core`` -> ``load_files_base`` ->
+    ``process_files``) is implemented as coroutines (``aload_files_*``, ``aprocess_files``).
+    Each sync method is a thin ``run_until_complete`` wrapper marked with ``delegates_to``, so
+    callers already on an event loop (graph outputs, the Read File tool) await the coroutines
+    directly. Storage-service IO is awaited; filesystem work and parsing run in worker threads.
+
+    Overriding a sync method remains supported: the async chain notices the override (it no
+    longer carries the ``delegates_to`` marker) and runs it in a worker thread.
 
     # TODO: May want to subclass for local and remote files
     """
@@ -44,11 +100,13 @@ class BaseFileComponent(Component, ABC):
             path: Path,
             *,
             delete_after_processing: bool = False,
+            cleanup_local_file: bool = False,
             silent_errors: bool = False,
         ):
             self._data = data if isinstance(data, list) else [data]
             self.path = path
             self.delete_after_processing = delete_after_processing
+            self.cleanup_local_file = cleanup_local_file
             self._silent_errors = silent_errors
 
         @property
@@ -115,17 +173,31 @@ class BaseFileComponent(Component, ABC):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Dynamically update FileInput to include valid extensions and bundles
-        self.get_base_inputs()[0].file_types = [
+        # Eagerly create the per-instance lock used to serialize load_files_base.
+        # Lazy creation inside load_files_base would itself be racy on the very
+        # first concurrent entry — two threads could each create their own Lock
+        # and bypass serialization on the call this PR is meant to fix.
+        self._load_files_base_lock = threading.Lock()
+        file_types = [
             *self.valid_extensions,
             *self.SUPPORTED_BUNDLE_EXTENSIONS,
         ]
-
-        file_types = ", ".join(self.valid_extensions)
+        supported_file_types = ", ".join(self.valid_extensions)
         bundles = ", ".join(self.SUPPORTED_BUNDLE_EXTENSIONS)
-        self.get_base_inputs()[
-            0
-        ].info = f"Supported file extensions: {file_types}; optionally bundled in file extensions: {bundles}"
+        info = f"Supported file extensions: {supported_file_types}; optionally bundled in file extensions: {bundles}"
+        self._update_file_input_metadata(file_types=file_types, info=info)
+
+    def _update_file_input_metadata(self, *, file_types: list[str], info: str) -> None:
+        for input_ in self.inputs:
+            if isinstance(input_, FileInput) and input_.name == "path":
+                input_.file_types = file_types.copy()
+                input_.info = info
+                break
+
+        mapped_input = self._inputs.get("path")
+        if isinstance(mapped_input, FileInput):
+            mapped_input.file_types = file_types.copy()
+            mapped_input.info = info
 
     _base_inputs = [
         FileInput(
@@ -202,63 +274,271 @@ class BaseFileComponent(Component, ABC):
             list[BaseFile]: A list of BaseFile objects with updated `data`.
         """
 
+    async def aprocess_files(self, file_list: list[BaseFile]) -> list[BaseFile]:
+        """Async entry point for ``process_files``.
+
+        The default runs the sync ``process_files`` in a worker thread. A subclass whose
+        processing is mostly IO can override this natively and mark its ``process_files`` with
+        ``@delegates_to("aprocess_files")``.
+        """
+        return await asyncio.to_thread(self.process_files, file_list)
+
+    async def _adispatch(self, method_name: str, *args: Any) -> Any:
+        """Run the loader step ``method_name`` from async code.
+
+        While the step is still a ``delegates_to`` wrapper, await its coroutine directly. When a
+        subclass overrode the sync method instead (the only extension point before the async
+        chain existed), run that override in a worker thread so it keeps working unchanged.
+        """
+        async_method = async_delegate_target(self, method_name)
+        if async_method is not None:
+            return await async_method(*args)
+        return await asyncio.to_thread(getattr(self, method_name), *args)
+
+    def _run_sync_loader(self, async_method: Callable[..., Awaitable[_T]], *args: Any) -> _T:
+        """Run a sync wrapper, rejecting a lock wait that would freeze its caller's loop."""
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            if self._load_files_base_lock.locked():
+                msg = "A synchronous file loader cannot run on an event loop while a load is in progress"
+                raise RuntimeError(msg)
+        return run_until_complete(async_method(*args))
+
+    def _load_files_paths_cache_key(self) -> tuple:
+        """Build a stable cache key for ``load_files_base`` from the current inputs.
+
+        The key includes both the local ``path`` input and any server file paths from
+        ``file_path``, the text encoding, plus the ``markdown`` flag (which can change which content
+        ``process_files`` produces). It is paths-keyed by design so different
+        component executions or input changes never reuse another call's cache.
+        """
+        path_value = getattr(self, "path", None)
+        if isinstance(path_value, list):
+            paths_part: tuple[str, ...] = tuple(str(p) for p in path_value)
+        elif path_value:
+            paths_part = (str(path_value),)
+        else:
+            paths_part = ()
+
+        file_path_part: tuple[str, ...] = ()
+        try:
+            server_data = self._file_path_as_list()
+        except (ValueError, AttributeError):
+            server_data = []
+        for d in server_data:
+            sp = d.data.get(self.SERVER_FILE_PATH_FIELDNAME) if isinstance(d.data, dict) else None
+            if sp:
+                file_path_part = (*file_path_part, str(sp))
+
+        markdown_flag = getattr(self, "markdown", False)
+        encoding = (getattr(self, "text_encoding", "") or "").strip()
+        return (paths_part, file_path_part, encoding, markdown_flag)
+
+    @delegates_to("aload_files_base")
     def load_files_base(self) -> list[Data]:
         """Loads and parses file(s), including unpacked file bundles.
+
+        Sync wrapper around ``aload_files_base``.
 
         Returns:
             list[Data]: Parsed data from the processed files.
         """
-        self._temp_dirs: list[TemporaryDirectory] = []
-        final_files = []  # Initialize to avoid UnboundLocalError
+        return self._run_sync_loader(self.aload_files_base)
+
+    async def aload_files_base(self) -> list[Data]:
+        """Loads and parses file(s), including unpacked file bundles.
+
+        Concurrent output methods on the same component instance are serialized so
+        that only one performs the actual file read/process/delete; the others see
+        the cached parsed result. This prevents both the spurious ``ValueError``
+        from a deleted server file and the silent data-loss interleaving where a
+        second caller would otherwise pass validation, then find the file gone in
+        ``_filter_and_mark_files`` and produce empty data. The lock is a ``threading.Lock``
+        because callers can arrive from worker threads and from different event loops.
+
+        Path resolution, bundle unpacking and cleanup of local files run in worker threads;
+        ``process_files`` runs through ``aprocess_files``.
+
+        Returns:
+            list[Data]: Parsed data from the processed files.
+        """
+        cache_key = self._load_files_paths_cache_key()
+        paths_subkey = cache_key[:-1]  # source paths and encoding, ignoring markdown flag
+
+        await acquire_thread_lock(self._load_files_base_lock)
+        work = asyncio.create_task(self._aload_files_base_locked(cache_key, paths_subkey))
         try:
-            # Step 1: Validate the provided paths
-            files = self._validate_and_resolve_paths()
+            return await asyncio.shield(work)
+        except asyncio.CancelledError:
+            work.add_done_callback(_log_abandoned_file_load)
+            raise
 
-            # Step 2: Handle bundles recursively
-            all_files = self._unpack_and_collect_files(files)
+    async def _aload_files_base_locked(self, cache_key: tuple, paths_subkey: tuple) -> list[Data]:
+        """Finish processing and cleanup before releasing the per-instance lock."""
+        try:
+            cache: dict = getattr(self, "_load_files_base_processed_cache", None) or {}
 
-            # Step 3: Final validation of file types
-            final_files = self._filter_and_mark_files(all_files)
+            # Exact-key fast path: same inputs already processed once on this
+            # instance — return the cached parsed data and avoid reprocessing
+            # (and re-attempting to read a possibly-deleted server file).
+            if cache_key in cache:
+                return cache[cache_key]
 
-            # Step 4: Process files
-            processed_files = self.process_files(final_files)
+            self._temp_dirs: list[TemporaryDirectory] = []
+            self._validate_skipped_due_to_delete_race = False
+            final_files: list = []
+            try:
+                files = await asyncio.to_thread(self._validate_and_resolve_paths)
 
-            # Extract and flatten Data objects to return
-            return [data for file in processed_files for data in file.data if file.data]
+                # Recovery path: validation skipped a missing server file marked
+                # ``delete_after_processing=True`` (i.e. a prior output call on
+                # this same instance already processed and deleted it). If we
+                # have any cached parsed result for the same source paths, reuse
+                # it so connected outputs see the same content instead of empty
+                # data. We accept that the cached entry may have been produced
+                # under a different ``markdown`` flag; preserving content is
+                # better than silently dropping it.
+                if self._validate_skipped_due_to_delete_race and not files and cache:
+                    for cached_key, cached_value in cache.items():
+                        if cached_key[:-1] == paths_subkey:
+                            self.log(
+                                "Server file already processed and deleted by a prior call "
+                                "on this component instance; reusing cached parsed data."
+                            )
+                            return cached_value
 
+                all_files = await asyncio.to_thread(self._unpack_and_collect_files, files)
+                final_files = await asyncio.to_thread(self._filter_and_mark_files, all_files)
+                processed_files = await self._adispatch("process_files", final_files)
+                result = [data for file in processed_files for data in file.data if file.data]
+
+                # Only cache successful, non-empty results so a legitimate empty
+                # input on a later call cannot be misread as a race-recovery hit.
+                if result:
+                    cache[cache_key] = result
+                    self._load_files_base_processed_cache = cache
+
+                return result
+
+            finally:
+                # Delete temporary directories
+                if self._temp_dirs:
+                    await asyncio.to_thread(self._cleanup_temp_dirs)
+                # Delete files marked for deletion
+                for file in final_files:
+                    await self._adelete_after_processing(file)
         finally:
-            # Delete temporary directories
-            for temp_dir in self._temp_dirs:
-                temp_dir.cleanup()
-            # Delete files marked for deletion
-            for file in final_files:
-                if file.delete_after_processing and file.path.exists():
-                    if file.path.is_dir():
-                        shutil.rmtree(file.path)
-                    else:
-                        file.path.unlink()
+            self._load_files_base_lock.release()
 
+    def _cleanup_temp_dirs(self) -> None:
+        for temp_dir in self._temp_dirs:
+            temp_dir.cleanup()
+
+    def _delete_after_processing(self, file: BaseFile) -> None:
+        """Delete a processed server file through its configured storage backend.
+
+        Sync wrapper around ``_adelete_after_processing``.
+        """
+        run_until_complete(self._adelete_after_processing(file))
+
+    async def _adelete_after_processing(self, file: BaseFile) -> None:
+        """Delete a processed server file through its configured storage backend."""
+        if not file.delete_after_processing:
+            return
+
+        if file.cleanup_local_file:
+            await asyncio.to_thread(self._delete_local_path, file.path)
+            return
+
+        settings = get_settings_service().settings
+        user_scope = component_authenticated_user_scope(self)
+        user_namespaces = {user_scope, storage_scope_id(user_scope)} if user_scope is not None else set()
+        if settings.storage_type == "s3":
+            parsed_path = parse_storage_path(str(file.path))
+            if not parsed_path:
+                # Absolute local paths can still be read in unrestricted S3 deployments
+                # for compatibility, but they must never be treated as object keys or
+                # deleted from the host filesystem.
+                return
+
+            namespace_id, file_name = parsed_path
+            if namespace_id not in user_namespaces:
+                self.log("Skipping S3 file cleanup outside the authenticated user's storage namespace.")
+                return
+
+            storage_service = get_storage_service()
+            if storage_service is None:
+                msg = "Storage service is unavailable; could not delete processed S3 file."
+                raise StorageServiceUnavailableError(msg)
+            await storage_service.delete_file(namespace_id, file_name)
+            return
+
+        if user_scope is not None:
+            config_dir = getattr(settings, "config_dir", None)
+            if config_dir is None:
+                self.log("Skipping local file cleanup because the storage directory is unavailable.")
+                return
+            try:
+                user_roots = [(Path(config_dir) / namespace).resolve() for namespace in user_namespaces]
+                owned_path = any(file.path.resolve().is_relative_to(root) for root in user_roots)
+            except (OSError, RuntimeError):
+                owned_path = False
+            if not owned_path:
+                self.log("Skipping local file cleanup outside the authenticated user's storage namespace.")
+                return
+
+        await asyncio.to_thread(self._delete_local_path, file.path)
+
+    @staticmethod
+    def _delete_local_path(path: Path) -> None:
+        """Delete an explicitly local cleanup target."""
+        if path.exists():
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink()
+
+    @delegates_to("aload_files_core")
     def load_files_core(self) -> list[Data]:
-        """Load files and return as Data objects.
+        """Load files and return as Data objects. Sync wrapper around ``aload_files_core``."""
+        return self._run_sync_loader(self.aload_files_core)
+
+    async def aload_files_core(self) -> list[Data]:
+        """Load files and return as Data objects, with per-instance caching.
+
+        Results are cached keyed by the ``markdown`` attribute so that multiple
+        output methods that share the same processing parameters (e.g.
+        ``load_files_message`` and ``load_files_dataframe`` when both run with
+        ``markdown=False``) do not trigger redundant file processing.
 
         Returns:
             list[Data]: List of Data objects from all files
         """
-        data_list = self.load_files_base()
-        if not data_list:
-            return [Data()]
-        return data_list
+        # Use the markdown flag (default False) as the cache key so that
+        # structured and markdown outputs are cached independently.
+        markdown_flag = getattr(self, "markdown", False)
+        cache_attr = f"_load_files_core_cache_{markdown_flag}"
+        cache_paths_attr = f"_load_files_core_paths_{markdown_flag}"
+
+        current_paths = self._load_files_paths_cache_key()
+        if hasattr(self, cache_attr) and getattr(self, cache_paths_attr, None) == current_paths:
+            return getattr(self, cache_attr)
+
+        data_list = await self._adispatch("load_files_base")
+        result = data_list if data_list else [Data()]
+        setattr(self, cache_attr, result)
+        setattr(self, cache_paths_attr, current_paths)
+        return result
 
     def _extract_file_metadata(self, data_item) -> dict:
         """Extract metadata from a data item with file_path."""
-        metadata: dict[str, Any] = {}
         if not hasattr(data_item, "file_path"):
-            return metadata
+            return {}
 
         file_path = data_item.file_path
-        file_path_obj = Path(file_path)
-        filename = file_path_obj.name
-
         settings = get_settings_service().settings
         if settings.storage_type == "s3":
             try:
@@ -267,13 +547,40 @@ class BaseFileComponent(Component, ABC):
                 # If we can't get file size, set to 0 or omit
                 file_size = 0
         else:
+            file_size = self._local_file_size(Path(file_path))
+        return self._build_file_metadata(data_item, file_path, file_size)
+
+    async def _aextract_file_metadata(self, data_item) -> dict:
+        """Async ``_extract_file_metadata``: awaits S3 size lookups, stats local files in a thread."""
+        if not hasattr(data_item, "file_path"):
+            return {}
+
+        file_path = data_item.file_path
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
             try:
-                file_size_stat = file_path_obj.stat()
-                file_size = file_size_stat.st_size
-            except OSError:
+                file_size = await get_file_size_async(file_path)
+            except (FileNotFoundError, ValueError):
+                # If we can't get file size, set to 0 or omit
                 file_size = 0
+        else:
+            file_size = await asyncio.to_thread(self._local_file_size, Path(file_path))
+        return self._build_file_metadata(data_item, file_path, file_size)
+
+    @staticmethod
+    def _local_file_size(path: Path) -> int:
+        try:
+            return path.stat().st_size
+        except OSError:
+            return 0
+
+    @staticmethod
+    def _build_file_metadata(data_item, file_path, file_size: int) -> dict:
+        metadata: dict[str, Any] = {}
+        filename = Path(file_path).name
 
         # Basic file metadata
+        metadata["file_path"] = file_path
         metadata["filename"] = filename
         metadata["file_size"] = file_size
 
@@ -284,7 +591,7 @@ class BaseFileComponent(Component, ABC):
 
         # Copy additional metadata from data if available
         if hasattr(data_item, "data") and isinstance(data_item.data, dict):
-            metadata_fields = ["mimetype", "file_size", "created_time", "modified_time"]
+            metadata_fields = ["mimetype", "file_size", "created_time", "modified_time", "encoding"]
             for field in metadata_fields:
                 if field in data_item.data:
                     metadata[field] = data_item.data[field]
@@ -298,40 +605,71 @@ class BaseFileComponent(Component, ABC):
             return text if text is not None else str(data_item)
         return str(data_item)
 
+    @delegates_to("aload_files_message")
     def load_files_message(self) -> Message:
-        """Load files and return as Message.
+        """Load files and return as Message. Sync wrapper around ``aload_files_message``.
 
         Returns:
           Message: Message containing all file data
         """
-        data_list = self.load_files_core()
+        return self._run_sync_loader(self.aload_files_message)
+
+    async def aload_files_message(self) -> Message:
+        """Load files as one Message, retaining each source file's parsed text when there are multiple.
+
+        Returns:
+          Message: Message containing all file data
+        """
+        data_list = await self._adispatch("load_files_core")
         if not data_list:
             return Message()
 
         # Extract metadata from the first data item
-        metadata = self._extract_file_metadata(data_list[0])
+        metadata = await self._aextract_file_metadata(data_list[0])
+        # Stitching every row's text together is O(rows), so it stays off the event loop.
+        text, source_files = await asyncio.to_thread(self._join_message_text, data_list)
+        if source_files:
+            metadata["source_files"] = source_files
+        return Message(text=text, **metadata)
 
+    def _join_message_text(self, data_list: list[Data]) -> tuple[str, list[dict[str, str | None]]]:
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
         parts: list[str] = []
+        source_files: list[dict[str, str | None]] = []
+        source_file_indexes: dict[str, int] = {}
         for d in data_list:
             try:
                 data_text = self._extract_text(d)
                 if data_text and isinstance(data_text, str):
-                    parts.append(data_text)
+                    part = data_text
                 elif data_text:
                     # get_text() returned non-string, convert it
-                    parts.append(str(data_text))
+                    part = str(data_text)
                 elif isinstance(d.data, dict):
                     # convert the data dict to a readable string
-                    parts.append(orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode())
+                    part = orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode()
                 else:
-                    parts.append(str(d))
+                    part = str(d)
             except Exception:  # noqa: BLE001
                 # Final fallback - just try to convert to string
                 # TODO: Consider downstream error case more. Should this raise an error?
-                parts.append(str(d))
+                part = str(d)
+            parts.append(part)
+            if len(data_list) > 1:
+                file_path = d.data.get(self.SERVER_FILE_PATH_FIELDNAME) if isinstance(d.data, dict) else None
+                file_path = str(file_path) if file_path else None
+                if file_path and file_path in source_file_indexes:
+                    source_file = source_files[source_file_indexes[file_path]]
+                    source_file["text"] = f"{source_file['text']}{sep}{part}"
+                else:
+                    if file_path:
+                        source_file_indexes[file_path] = len(source_files)
+                    source_file = {"file_path": file_path, "text": part}
+                    if encoding := d.data.get("encoding"):
+                        source_file["encoding"] = encoding
+                    source_files.append(source_file)
 
-        return Message(text=sep.join(parts), **metadata)
+        return sep.join(parts), source_files
 
     def load_files_path(self) -> Message:
         """Returns a Message containing file paths from loaded files.
@@ -353,56 +691,48 @@ class BaseFileComponent(Component, ABC):
 
         return Message(text="\n".join(paths) if paths else "")
 
+    @delegates_to("aload_files_structured_helper")
     def load_files_structured_helper(self, file_path: str) -> list[dict] | None:
+        return self._run_sync_loader(self.aload_files_structured_helper, file_path)
+
+    async def aload_files_structured_helper(self, file_path: str) -> list[dict] | None:
         if not file_path:
             return None
 
         # Get file extension in lowercase
         ext = Path(file_path).suffix.lower()
+        if ext not in _STRUCTURED_READERS:
+            return None
 
         settings = get_settings_service().settings
+        encoding = (getattr(self, "text_encoding", "") or "").strip() or None
 
-        # For S3 storage, download file bytes first
+        # For S3 storage, download file bytes first; pandas parsing stays off the event loop.
         if settings.storage_type == "s3":
-            # Download file content from S3
-            content = run_until_complete(read_file_bytes(file_path))
-
-            # Map file extensions to pandas read functions that support BytesIO
-            if ext == ".csv":
-                result = pd.read_csv(BytesIO(content))
-            elif ext == ".xlsx":
-                result = pd.read_excel(BytesIO(content))
-            elif ext == ".parquet":
-                result = pd.read_parquet(BytesIO(content))
-            else:
-                return None
-
-            return result.to_dict("records")
+            content = await read_file_bytes(file_path)
+            return await asyncio.to_thread(_read_structured_rows, BytesIO(content), ext, encoding=encoding)
 
         # Local storage - read directly from filesystem
-        file_readers: dict[str, Callable[[str], pd.DataFrame]] = {
-            ".csv": pd.read_csv,
-            ".xlsx": pd.read_excel,
-            ".parquet": pd.read_parquet,
-            # TODO: sqlite and json support?
-        }
+        return await asyncio.to_thread(_read_structured_rows, file_path, ext, encoding=encoding)
 
-        # Get the appropriate reader function or None
-        reader = file_readers.get(ext)
-
-        if reader:
-            result = reader(file_path)  # MyPy now knows reader is callable
-            return result.to_dict("records")
-
-        return None
-
+    @delegates_to("aload_files_structured")
     def load_files_structured(self) -> DataFrame:
+        """Load files and return as DataFrame with structured content.
+
+        Sync wrapper around ``aload_files_structured``.
+
+        Returns:
+            DataFrame: DataFrame containing structured content from all files
+        """
+        return self._run_sync_loader(self.aload_files_structured)
+
+    async def aload_files_structured(self) -> DataFrame:
         """Load files and return as DataFrame with structured content.
 
         Returns:
             DataFrame: DataFrame containing structured content from all files
         """
-        data_list = self.load_files_core()
+        data_list = await self._adispatch("load_files_core")
         if not data_list:
             return DataFrame()
 
@@ -411,15 +741,18 @@ class BaseFileComponent(Component, ABC):
 
         # If file_path is provided and is a CSV, read it directly
         if file_path and str(file_path).lower().endswith((".csv", ".xlsx", ".parquet")):
-            rows = self.load_files_structured_helper(file_path)
+            rows = await self._adispatch("load_files_structured_helper", file_path)
         else:
             # Convert Data objects to a list of dictionaries
             # TODO: Parse according to docling standards
             rows = [data_list[0].data]
 
-        self.status = DataFrame(rows)
+        result = await asyncio.to_thread(DataFrame, rows)
+        if file_path:
+            result.attrs["source_file_path"] = str(file_path)
+        self.status = result
 
-        return DataFrame(rows)
+        return result
 
     def parse_string_to_dict(self, s: str) -> dict:
         # Try JSON first (handles true/false/null)
@@ -441,34 +774,57 @@ class BaseFileComponent(Component, ABC):
         # If all parsing fails, return the fallback
         return {"value": s}
 
+    @delegates_to("aload_files_json")
     def load_files_json(self) -> Data:
+        """Load files and return as a single Data object containing JSON content.
+
+        Sync wrapper around ``aload_files_json``.
+
+        Returns:
+            Data: Data object containing JSON content from all files
+        """
+        return self._run_sync_loader(self.aload_files_json)
+
+    async def aload_files_json(self) -> Data:
         """Load files and return as a single Data object containing JSON content.
 
         Returns:
             Data: Data object containing JSON content from all files
         """
-        data_list = self.load_files_core()
+        data_list = await self._adispatch("load_files_core")
         if not data_list:
             return Data()
 
         # Grab the JSON data
         json_data = data_list[0].data[data_list[0].text_key]
-        json_data = self.parse_string_to_dict(json_data)
+        json_data = await asyncio.to_thread(self.parse_string_to_dict, json_data)
 
         self.status = Data(data=json_data)
 
         return Data(data=json_data)
 
+    @delegates_to("aload_files")
     def load_files(self) -> DataFrame:
+        """Load files and return as DataFrame. Sync wrapper around ``aload_files``.
+
+        Returns:
+            DataFrame: DataFrame containing all file data
+        """
+        return self._run_sync_loader(self.aload_files)
+
+    async def aload_files(self) -> DataFrame:
         """Load files and return as DataFrame.
 
         Returns:
             DataFrame: DataFrame containing all file data
         """
-        data_list = self.load_files_core()
+        data_list = await self._adispatch("load_files_core")
         if not data_list:
             return DataFrame()
+        # Building the rows and frames is O(rows), so it stays off the event loop.
+        return await asyncio.to_thread(self._data_list_to_dataframe, data_list)
 
+    def _data_list_to_dataframe(self, data_list: list[Data]) -> DataFrame:
         # Convert Data objects to a list of dictionaries
         all_rows = []
         for data in data_list:
@@ -555,6 +911,7 @@ class BaseFileComponent(Component, ABC):
                     data=merged_data_list,
                     path=base_file.path,
                     delete_after_processing=base_file.delete_after_processing,
+                    cleanup_local_file=base_file.cleanup_local_file,
                 )
             )
 
@@ -612,8 +969,23 @@ class BaseFileComponent(Component, ABC):
             # that don't exist on the local filesystem. We defer validation until file processing.
             # For local storage, validate the file exists immediately to fail fast.
             if settings.storage_type == "s3":
+                resolved_path = Path(path_str)
+                if resolved_path.is_absolute():
+                    # S3 deployments intentionally support genuine absolute local files
+                    # for trusted internal callers. Preserve that read behavior while
+                    # applying restricted-mode confinement and never deleting the local
+                    # path through the Server File cleanup flag.
+                    resolved_path = enforce_local_file_access(
+                        resolved_path, scope_ids=component_file_access_scopes(self)
+                    )
+                    delete_after_processing = False
+                elif parse_storage_path(path_str):
+                    # Relative values are object keys ("<namespace>/<file_name>") handed to
+                    # ``storage_service.get_file`` at read time. The namespace selects another
+                    # principal's prefix, so it must belong to this graph.
+                    validate_storage_key(self, path_str)
                 resolved_files.append(
-                    BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
+                    BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
                 )
             else:
                 # Check if path looks like a storage path (flow_id/filename format)
@@ -622,6 +994,10 @@ class BaseFileComponent(Component, ABC):
                     try:
                         resolved_path = Path(self.get_full_path(path_str))
                         self.log(f"Resolved storage path '{path_str}' to '{resolved_path}'")
+                    except StorageNamespaceError:
+                        # An out-of-scope namespace is an access denial, not a resolution
+                        # failure: never fall back to reading the raw string as a local path.
+                        raise
                     except (ValueError, AttributeError) as e:
                         # Fallback to resolve_path if get_full_path fails
                         self.log(f"get_full_path failed for '{path_str}': {e}, falling back to resolve_path")
@@ -629,7 +1005,21 @@ class BaseFileComponent(Component, ABC):
                 else:
                     resolved_path = Path(self.resolve_path(path_str))
 
+                # Security: in restricted (multi-tenant) mode, confine reads to the storage dir
+                # so a tenant cannot read arbitrary server files via an absolute/traversal path.
+                resolved_path = enforce_local_file_access(resolved_path, scope_ids=component_file_access_scopes(self))
+
                 if not resolved_path.exists():
+                    if delete_after_processing:
+                        # File may have already been processed and deleted by a concurrent output call.
+                        # Flag the skip so ``load_files_base`` can recover from any cached
+                        # parsed result for these paths instead of returning empty data.
+                        self._validate_skipped_due_to_delete_race = True
+                        self.log(
+                            f"Server file '{path}' not found - skipping as it may have been "
+                            "already processed and deleted by a concurrent call."
+                        )
+                        return
                     msg = f"File not found: '{path}' (resolved to: '{resolved_path}'). Please upload the file again."
                     self.log(msg)
                     if not self.silent_errors:
@@ -686,16 +1076,20 @@ class BaseFileComponent(Component, ABC):
             data = file.data
 
             if path.is_dir():
-                # Recurse into directories
+                # Recurse into directories. Skip symlinks defensively so that a
+                # link planted in a previously-extracted bundle (or a directory
+                # the user pointed at) cannot be dereferenced into an arbitrary
+                # host file (GHSA-ccv6-r384-xp75).
                 collected_files.extend(
                     [
                         BaseFileComponent.BaseFile(
                             data,
                             sub_path,
                             delete_after_processing=delete_after_processing,
+                            cleanup_local_file=file.cleanup_local_file,
                         )
                         for sub_path in path.rglob("*")
-                        if sub_path.is_file()
+                        if sub_path.is_file() and not sub_path.is_symlink()
                     ]
                 )
             elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
@@ -704,7 +1098,11 @@ class BaseFileComponent(Component, ABC):
                 self._temp_dirs.append(temp_dir)
                 temp_dir_path = Path(temp_dir.name)
                 self._unpack_bundle(path, temp_dir_path)
-                subpaths = list(temp_dir_path.iterdir())
+                # Drop any symlink that may have slipped through extraction.
+                # `_unpack_bundle` rejects link members for TAR archives, but
+                # this guard keeps the contract in place for any future bundle
+                # type added to SUPPORTED_BUNDLE_EXTENSIONS.
+                subpaths = [p for p in temp_dir_path.iterdir() if not p.is_symlink()]
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
                 collected_files.extend(
                     [
@@ -712,6 +1110,7 @@ class BaseFileComponent(Component, ABC):
                             data,
                             sub_path,
                             delete_after_processing=delete_after_processing,
+                            cleanup_local_file=file.cleanup_local_file,
                         )
                         for sub_path in subpaths
                     ]
@@ -752,11 +1151,24 @@ class BaseFileComponent(Component, ABC):
                 bundle.extract(member, path=output_dir)
 
         def _safe_extract_tar(bundle: tarfile.TarFile, output_dir: Path):
-            """Safely extract TAR files."""
+            """Safely extract TAR files.
+
+            Only regular files and directories are extracted. Symlinks, hardlinks,
+            and device/FIFO members are rejected because they could be made to
+            point at arbitrary locations on the host filesystem and lead to
+            arbitrary file read once the extracted entries are subsequently
+            ingested by `process_files()` (GHSA-ccv6-r384-xp75).
+            """
             for member in bundle.getmembers():
                 # Filter out resource fork information for automatic production of mac
                 if Path(member.name).name.startswith("._"):
                     continue
+                if member.issym() or member.islnk():
+                    msg = f"Refusing to extract link member from TAR File: {member.name!r} -> {member.linkname!r}"
+                    raise ValueError(msg)
+                if not (member.isfile() or member.isdir()):
+                    msg = f"Refusing to extract non-regular TAR member: {member.name!r}"
+                    raise ValueError(msg)
                 member_path = output_dir / member.name
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):
@@ -811,6 +1223,7 @@ class BaseFileComponent(Component, ABC):
                 self.log(msg)
                 if not self.silent_errors:
                     raise ValueError(msg)
+                continue
 
             final_files.append(file)
 

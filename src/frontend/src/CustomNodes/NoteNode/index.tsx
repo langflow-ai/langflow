@@ -1,13 +1,16 @@
 import { NodeResizer } from "@xyflow/react";
 import { debounce } from "lodash";
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
+import { useGetNoteTranslationsQuery } from "@/controllers/API/queries/flows/use-get-note-translations";
 import { useAlternate } from "@/shared/hooks/use-alternate";
-import useFlowStore from "@/stores/flowStore";
+import useFlowStore, { syncNoteTranslations } from "@/stores/flowStore";
 import type { NoteDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import NodeDescription from "../GenericNode/components/NodeDescription";
@@ -68,11 +71,23 @@ function NoteNode({
   data: NoteDataType;
   selected?: boolean;
 }) {
+  const { t } = useTranslation();
   const nodeRef = useRef<HTMLDivElement>(null);
   const [isEditingDescription, setIsEditingDescription] = useAlternate(false);
 
   const currentFlow = useFlowStore((state) => state.currentFlow);
+  const isReadOnly = useIsFlowReadOnly(currentFlow?.id);
   const setNode = useFlowStore((state) => state.setNode);
+
+  const { data: noteTranslations } = useGetNoteTranslationsQuery(
+    currentFlow?.id,
+  );
+
+  useEffect(() => {
+    if (noteTranslations && Object.keys(noteTranslations).length > 0) {
+      syncNoteTranslations(noteTranslations);
+    }
+  }, [noteTranslations]);
 
   // Resolve background color: either a custom hex or a preset key from COLOR_OPTIONS
   const templateBgColor = data.node?.template.backgroundColor;
@@ -116,13 +131,18 @@ function NoteNode({
   // Only render toolbar when note is selected
   const toolbar = useMemo(
     () =>
-      selected ? (
+      selected && !isReadOnly ? (
         <div className="absolute -top-12 left-1/2 z-50 -translate-x-1/2">
           <NoteToolbarComponent data={data} bgColor={bgColorKey} />
         </div>
       ) : null,
-    [data, bgColorKey, selected],
+    [data, bgColorKey, isReadOnly, selected],
   );
+
+  useEffect(() => {
+    if (isReadOnly) debouncedResize.cancel();
+    return () => debouncedResize.cancel();
+  }, [debouncedResize, isReadOnly]);
 
   // Generate text color classes based on background (light text on dark bg, dark on light)
   const getTextColorClass = (opacity?: number) => {
@@ -146,11 +166,13 @@ function NoteNode({
       <NodeResizer
         minWidth={NOTE_NODE_MIN_WIDTH}
         minHeight={NOTE_NODE_MIN_HEIGHT}
-        onResize={(_, { width, height }) => debouncedResize(width, height)}
+        onResize={(_, { width, height }) => {
+          if (!isReadOnly) debouncedResize(width, height);
+        }}
         onResizeEnd={() => {
           debouncedResize.flush();
         }}
-        isVisible={selected}
+        isVisible={selected && !isReadOnly}
         lineClassName="!border !border-muted-foreground"
       />
 
@@ -191,14 +213,14 @@ function NoteNode({
                 ? getTextColorClass()
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? ""
-                  : "dark:!ring-background dark:text-background",
+                  : "text-foreground dark:!ring-background dark:text-background",
             )}
             mdClassName={cn(
               hasCustomColor
                 ? getTextColorClass()
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? "dark:prose-invert"
-                  : "dark:!text-background",
+                  : "text-foreground dark:!text-background",
               "min-w-full max-h-full overflow-auto pr-4 sticky-note-scroll",
             )}
             style={{ backgroundColor: resolvedBgColor }}
@@ -206,7 +228,7 @@ function NoteNode({
             nodeId={data.id}
             selected={selected}
             description={data.node?.description}
-            emptyPlaceholder="Double-click to start typing or enter Markdown..."
+            emptyPlaceholder={t("noteNode.emptyPlaceholder")}
             placeholderClassName={cn(
               hasCustomColor
                 ? textColorMode === "light"
@@ -214,12 +236,13 @@ function NoteNode({
                   : "!text-black/70"
                 : COLOR_OPTIONS[bgColorKey] === null
                   ? ""
-                  : "dark:!text-background",
+                  : "text-foreground/70 dark:!text-background",
               "px-2",
             )}
             editNameDescription={isEditingDescription}
             setEditNameDescription={setIsEditingDescription}
             stickyNote
+            readOnly={isReadOnly}
           />
         </div>
       </div>

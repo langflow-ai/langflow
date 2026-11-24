@@ -7,6 +7,8 @@ services:
     build:
       context: ./
       dockerfile: ./dev.Dockerfile
+    environment:
+      - LANGFLOW_AUTO_LOGIN=${LANGFLOW_AUTO_LOGIN:-false}
     env_file:
       - .env
     ports:

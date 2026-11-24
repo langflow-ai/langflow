@@ -27,7 +27,6 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
-import { INCOMPLETE_LOOP_ERROR_ALERT } from "@/constants/alerts_constants";
 import { customDownloadNodeJson } from "@/customization/utils/custom-download-json";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
@@ -37,10 +36,10 @@ import {
   IS_MAC,
   LANGFLOW_SUPPORTED_TYPES,
   OUTPUT_TYPES,
-  SUCCESS_BUILD,
   specialCharsRegex,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
+import i18n from "../i18n";
 import type {
   APIClassType,
   APIKindType,
@@ -67,18 +66,10 @@ import {
   cleanMcpConfig,
   type MCPServerValue,
 } from "./helpers/clean-mcp-config";
-import { getLayoutedNodes } from "./layoutUtils";
+import { getFallbackGridPositions, getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
-
-export function checkChatInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "ChatInput");
-}
-
-export function checkWebhookInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "Webhook");
-}
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   const brokenEdges: {
@@ -134,6 +125,9 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
     // check if the source and target handle still exists
     const sourceHandle = edge.sourceHandle; //right
     const targetHandle = edge.targetHandle; //left
+    // Hold by reference: the target block rewrites edge.id on migration, so a second find-by-id in
+    // the source block would miss it and skip the source-handle migration (DataFrame stays). LE-1929.
+    const edgeInNewEdges = newEdges.find((e) => e.id === edge.id);
     if (targetHandle) {
       const targetHandleObject: targetHandleType = scapeJSONParse(targetHandle);
       const field = targetHandleObject.fieldName;
@@ -198,14 +192,39 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
 
       // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
       const expectedTargetHandle = scapedJSONStringfy(id);
+      const targetHandlesMatchResult = handlesMatch(
+        expectedTargetHandle,
+        targetHandle,
+      );
       if (
-        (!handlesMatch(expectedTargetHandle, targetHandle) ||
+        (!targetHandlesMatchResult ||
           (targetNode.data.node?.tool_mode && isToolMode) ||
           isAdvanced) &&
         !isLoopInput
       ) {
-        newEdges = newEdges.filter((e) => e.id !== edge.id);
+        newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
         brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      } else if (
+        targetHandlesMatchResult &&
+        expectedTargetHandle !== targetHandle
+      ) {
+        // Handles match via migration but IDs differ — update edge to use current types
+        // so React Flow can find the DOM handle
+        if (edgeInNewEdges) {
+          edgeInNewEdges.targetHandle = expectedTargetHandle;
+          if (edgeInNewEdges.data) {
+            edgeInNewEdges.data.targetHandle =
+              scapeJSONParse(expectedTargetHandle);
+          }
+          // Update edge ID to reflect new handles
+          edgeInNewEdges.id =
+            "reactflow__edge-" +
+            edgeInNewEdges.source +
+            (edgeInNewEdges.sourceHandle ?? "") +
+            "-" +
+            edgeInNewEdges.target +
+            expectedTargetHandle;
+        }
       }
     }
     if (sourceHandle) {
@@ -213,18 +232,32 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
       const name = parsedSourceHandle.name;
 
       if (sourceNode.type == "genericNode") {
-        const output =
-          sourceNode.data.node!.outputs?.find(
-            (output) => output.name === sourceNode.data.selected_output,
-          ) ??
-          sourceNode.data.node!.outputs?.find(
-            (output) =>
-              (output.selected ||
-                (sourceNode.data.node!.outputs?.filter(
-                  (output) => !output.group_outputs,
-                )?.length ?? 0) <= 1) &&
-              output.name === name,
-          );
+        // For components with group_outputs, each output has its own handle,
+        // so we must NOT use selected_output (which would match the wrong output).
+        // Only use selected_output for single-output dropdown components.
+        const hasGroupOutputs = sourceNode.data.node!.outputs?.some(
+          (o) => o.group_outputs,
+        );
+        const outputBySelectedOutput = hasGroupOutputs
+          ? undefined
+          : sourceNode.data.node!.outputs?.find(
+              (output) => output.name === sourceNode.data.selected_output,
+            );
+        const outputByFallback = sourceNode.data.node!.outputs?.find(
+          (output) =>
+            (output.selected ||
+              (sourceNode.data.node!.outputs?.filter(
+                (output) => !output.group_outputs,
+              )?.length ?? 0) <= 1) &&
+            output.name === name,
+        );
+        // Prefer the stored edge name (outputByFallback) over selected_output:
+        // mode-based components (e.g. Knowledge) keep both outputs in the class
+        // list, so trusting selected_output here silently rewrites edges to the
+        // wrong handle. selected_output is still the canonical pick for
+        // single-output dropdown components — fall back to it only when the
+        // stored handle name no longer matches any visible output.
+        const output = outputByFallback ?? outputBySelectedOutput;
 
         if (output) {
           const outputTypes =
@@ -241,21 +274,65 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
           const hasAllowsLoop = output?.allows_loop === true;
           // Backward compatibility: old flows may have Data/DataFrame types that need to match JSON/Table
           const expectedSourceHandle = scapedJSONStringfy(id);
-          if (
-            !handlesMatch(expectedSourceHandle, sourceHandle) &&
-            !hasAllowsLoop
-          ) {
-            newEdges = newEdges.filter((e) => e.id !== edge.id);
+          const sourceMatchResult = handlesMatch(
+            expectedSourceHandle,
+            sourceHandle,
+          );
+          // "Update Component" rewrites data.type to the component's
+          // current `name`, so a component renamed upstream (Prompt ->
+          // Prompt Template) leaves every outgoing edge holding the old
+          // dataType. The node id and output already matched here, so the
+          // rename is metadata drift, not a broken connection — migrate it.
+          const renamedSourceComponent =
+            !sourceMatchResult &&
+            parsedSourceHandle.dataType !== id.dataType &&
+            handlesMatch(
+              scapedJSONStringfy({
+                ...id,
+                dataType: parsedSourceHandle.dataType,
+              }),
+              sourceHandle,
+            );
+          if (!sourceMatchResult && !renamedSourceComponent && !hasAllowsLoop) {
+            newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
             brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+          } else if (
+            (sourceMatchResult || renamedSourceComponent) &&
+            expectedSourceHandle !== sourceHandle
+          ) {
+            // Handles match via migration but IDs differ — update edge to use current types
+            if (edgeInNewEdges) {
+              edgeInNewEdges.sourceHandle = expectedSourceHandle;
+              if (edgeInNewEdges.data) {
+                edgeInNewEdges.data.sourceHandle =
+                  scapeJSONParse(expectedSourceHandle);
+              }
+              // Update edge ID to reflect new handles
+              edgeInNewEdges.id =
+                "reactflow__edge-" +
+                edgeInNewEdges.source +
+                expectedSourceHandle +
+                "-" +
+                edgeInNewEdges.target +
+                (edgeInNewEdges.targetHandle ?? "");
+            }
           }
         } else {
-          newEdges = newEdges.filter((e) => e.id !== edge.id);
+          newEdges = newEdges.filter((e) => e !== edgeInNewEdges);
           brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
         }
       }
     }
 
-    newEdges = filterHiddenFieldsEdges(edge, newEdges, targetNode);
+    // Pass the retained reference: its id/handles reflect any migration above.
+    newEdges = filterHiddenFieldsEdges(
+      edgeInNewEdges ?? edge,
+      newEdges,
+      targetNode,
+      () => {
+        brokenEdges.push(generateAlertObject(sourceNode, targetNode, edge));
+      },
+    );
   });
 
   return { edges: newEdges, brokenEdges };
@@ -304,6 +381,7 @@ export function filterHiddenFieldsEdges(
   edge: EdgeType,
   newEdges: EdgeType[],
   targetNode: AllNodeType,
+  onRemoved?: (edge: EdgeType) => void,
 ) {
   if (targetNode) {
     const targetHandle = edge.data?.targetHandle;
@@ -314,7 +392,11 @@ export function filterHiddenFieldsEdges(
 
     // Only check the specific field the edge is connected to
     if (nodeTemplates[fieldName]?.show === false) {
+      const removed = newEdges.some((e) => e.id === edge.id);
       newEdges = newEdges.filter((e) => e.id !== edge.id);
+      // Dropping a connection because its target field went hidden used
+      // to leave no trace at all, so an upgrade could quietly unwire a flow.
+      if (removed) onRemoved?.(edge);
     }
   }
   return newEdges;
@@ -550,7 +632,14 @@ export const processFlows = (DbData: FlowType[], skipUpdate = true) => {
 };
 
 export const needsLayout = (nodes: AllNodeType[]) => {
-  return nodes.some((node) => !node.position);
+  // Number.isFinite does not coerce, so this also rejects non-numeric
+  // coordinates as well as NaN and ±Infinity.
+  return nodes.some(
+    (node) =>
+      !node.position ||
+      !Number.isFinite(node.position.x) ||
+      !Number.isFinite(node.position.y),
+  );
 };
 
 export async function processDataFromFlow(
@@ -568,6 +657,11 @@ export async function processDataFromFlow(
     if (refreshIds) updateIds(data); // Assuming updateIds is defined elsewhere
     // add layout to nodes if not present
     if (needsLayout(data.nodes)) {
+      // Seed deterministic positions synchronously first. processFlows invokes
+      // this function without awaiting it, so anything that depends on the
+      // `await` below would still hand position-less nodes to React Flow (whose
+      // getNodePositionWithOrigin dereferences node.position.x unguarded).
+      data.nodes = getFallbackGridPositions(data.nodes);
       const layoutedNodes = await getLayoutedNodes(data.nodes, data.edges);
       data.nodes = layoutedNodes;
     }
@@ -732,7 +826,7 @@ export function validateEdge(
 
   const loop = hasLoop(e, nodes, edges);
   if (targetHandleObject.output_types && !loop) {
-    return [INCOMPLETE_LOOP_ERROR_ALERT];
+    return [i18n.t("errors.incompleteLoop")];
   }
   return [];
 }
@@ -804,7 +898,9 @@ export function updateEdges(edges: EdgeType[]) {
     });
 }
 
-export function addVersionToDuplicates(flow: FlowType, flows: FlowType[]) {
+export type NamedFlow = Pick<FlowType, "id" | "name">;
+
+export function addVersionToDuplicates(flow: FlowType, flows: NamedFlow[]) {
   const flowsWithoutUpdatedFlow = flows.filter((f) => f.id !== flow.id);
 
   const existingNames = flowsWithoutUpdatedFlow.map((item) => item.name);
@@ -1643,6 +1739,11 @@ export function mergeNodeTemplates({
     const nodeTemplate = cloneDeep(node.data.node!.template);
     Object.keys(nodeTemplate)
       .filter((field_name) => field_name.charAt(0) !== "_")
+      .filter(
+        (field_name) =>
+          typeof nodeTemplate[field_name] === "object" &&
+          nodeTemplate[field_name] !== null,
+      )
       .forEach((key) => {
         if (
           node.type === "genericNode" &&
@@ -1844,6 +1945,24 @@ export function processFlowNodes(flow: FlowType) {
     flow.data.nodes = nodes;
     flow.data.edges = edges;
   }
+  reconcileStaleGenericNodeDimensions(flow.data.nodes);
+}
+
+/**
+ * Drop persisted width/height on genericNodes so React Flow re-measures the real DOM size.
+ *
+ * The component card is a fixed Tailwind width (`w-80`/`w-48`). Flows saved when that width was
+ * larger (`w-96` = 384px) kept `width: 384`, which React Flow then uses to place the right-side
+ * output handle — landing it ~64px past the visual dot so edges render detached (LE-1929). Only
+ * genericNodes are content-sized; noteNodes are user-resizable and keep their dimensions.
+ */
+export function reconcileStaleGenericNodeDimensions(nodes: AllNodeType[]) {
+  for (const node of nodes) {
+    if (node.type !== "genericNode") continue;
+    delete node.width;
+    delete node.height;
+    delete node.measured;
+  }
 }
 
 export function expandGroupNode(
@@ -1976,7 +2095,7 @@ export function getGroupStatus(
   flow: FlowType,
   ssData: { [key: string]: { valid: boolean; params: string } },
 ) {
-  let status = { valid: true, params: SUCCESS_BUILD };
+  let status = { valid: true, params: i18n.t("flow.buildSuccess") };
   const { nodes } = flow.data!;
   const ids = nodes.map((n: AllNodeType) => n.data.id);
   ids.forEach((id) => {
@@ -2072,14 +2191,66 @@ export function typesGenerator(data: APIObjectType) {
     }, {});
 }
 
+const getTemplateAliases = (
+  componentKey: string,
+  component: Record<string, any>,
+): string[] => {
+  const aliases = [componentKey, component?.name, component?.display_name];
+  const legacyAliases: Record<string, string[]> = {
+    ParserComponent: ["parser"],
+    "Prompt Template": ["Prompt"],
+  };
+  const componentType = component?.template?._type;
+
+  aliases.push(...(legacyAliases[componentKey] ?? []));
+
+  if (
+    typeof componentType === "string" &&
+    componentType.endsWith("Component")
+  ) {
+    aliases.push(componentType.replace(/Component$/, ""));
+  }
+
+  // Extension components are keyed ``ext:<bundle>:<ClassName>@<slot>``.
+  // Flows saved before the provider moved out of the built-in palette
+  // reference the legacy keys (``OpenAIModelComponent`` / ``OpenAIModel``);
+  // without these aliases such nodes stop resolving a current template and
+  // are wrongly reported as blocked instead of merely outdated.
+  const extMatch = componentKey.match(/^ext:[^:]+:([^@]+)@.+$/);
+  if (extMatch) {
+    const bareClassName = extMatch[1];
+    aliases.push(bareClassName);
+    if (bareClassName.endsWith("Component")) {
+      aliases.push(bareClassName.replace(/Component$/, ""));
+    }
+  }
+
+  return Array.from(new Set(aliases.filter(Boolean)));
+};
+
 export function templatesGenerator(data: APIObjectType) {
-  return Object.keys(data).reduce((acc, curr) => {
-    Object.keys(data[curr]).forEach((c: keyof APIKindType) => {
-      //prevent wrong overwriting of the component template by a group of the same type
-      if (!data[curr][c].flow) acc[c] = data[curr][c];
-    });
-    return acc;
-  }, {});
+  const templates = Object.entries(data).reduce<Record<string, APIClassType>>(
+    (acc, [, kind]) => {
+      Object.entries(kind).forEach(([componentKey, component]) => {
+        //prevent wrong overwriting of the component template by a group of the same type
+        if (!(component as APIClassType).flow) {
+          acc[componentKey] = cloneDeep(component as APIClassType);
+        }
+      });
+      return acc;
+    },
+    {},
+  );
+
+  for (const [componentKey, component] of Object.entries(templates)) {
+    for (const alias of getTemplateAliases(componentKey, component)) {
+      if (!(alias in templates)) {
+        templates[alias] = component;
+      }
+    }
+  }
+
+  return templates;
 }
 
 /**
@@ -2274,7 +2445,7 @@ export function getRandomElement<T>(array: T[]): T {
 }
 
 export function getRandomDescription(): string {
-  return getRandomElement(DESCRIPTIONS);
+  return i18n.t(getRandomElement(DESCRIPTIONS));
 }
 
 export const createNewFlow = (
@@ -2284,7 +2455,7 @@ export const createNewFlow = (
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
-    name: flow?.name ? flow.name : "New Flow",
+    name: flow?.name ? flow.name : i18n.t("flow.defaultName"),
     data: flowData,
     id: "",
     icon: flow?.icon ?? undefined,

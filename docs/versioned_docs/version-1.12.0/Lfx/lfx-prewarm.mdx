@@ -1,0 +1,59 @@
+---
+title: Pre-warm LFX with lfx prewarm
+slug: /lfx-prewarm
+---
+
+`lfx prewarm` pre-warms core component imports and, optionally, specific flows so the first build or run after a fork or snapshot skips the cold lazy-import cost.
+
+:::tip
+`lfx prewarm` has no benefit for single-shot `lfx run` invocations. Use it in a long-lived process when you intend to fork workers or capture a warm snapshot.
+:::
+
+Prewarming works in two layers:
+
+Core import warm-up imports the built-in component classes and runs a small flow with no network or threads to prime the graph execution machinery.
+
+Flow warm-up builds or fully executes a specific flow JSON to maximize warmth for that flow.
+
+## Performance
+
+The table below shows measured timings for a simple flow in a completely fresh environment with no cached imports.
+
+| Phase | Cold (median) | Prewarmed (median) | Speedup |
+|---|---|---|---|
+| Import | 4448 ms | 5.6 ms | 790× |
+| Build | 260 ms | 58 ms | 4× |
+| Run | 2.6 ms | 1.9 ms | ~1× |
+| Total per request | 4709 ms | 66 ms | 71× |
+
+These numbers represent the upper bound of what prewarming can deliver.
+Flows that use components with non-core imports will still incur those import costs on first execution, reducing the effective speedup.
+
+## lfx prewarm commands
+
+```bash
+# Warm core imports only
+lfx prewarm
+
+# Warm core imports and a specific flow
+lfx prewarm --flow my-flow.json
+
+# Warm and freeze the heap for copy-on-write sharing across forks
+lfx prewarm --freeze
+```
+
+## Options
+
+| Option | Description |
+|---|---|
+| `--flow` | Path to a flow JSON file to warm. Can be repeated for multiple flows. |
+| `--freeze` | Call `gc.freeze()` after warming to enable copy-on-write heap sharing across forks. |
+| `--skip-run` | Skip the hermetic warm-up run (imports only). |
+| `--unsafe-run-may-leak-connections` | Fully execute each `--flow` (maximum warmth). Leaves live connections and is **not fork-safe**. |
+| `--verbose` | Print per-component import results and timing. |
+
+## See also
+
+- [About LFX](./lfx-overview)
+- [Run flows with LFX](./lfx-run)
+- [Serve flows with LFX](./lfx-serve)

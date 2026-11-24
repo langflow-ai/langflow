@@ -1,32 +1,26 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
+import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 
 test(
   "user should be able to use chat memory as expected",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await adjustScreenView(page);
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("message history");
 
     await addLegacyComponents(page);
 
@@ -60,16 +54,23 @@ test(
     // Release the mouse button to finish the drag
     await page.mouse.up();
 
-    await page
-      .getByTestId("models_and_agentsMessage History")
-      .first()
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 200, y: 600 },
-      });
-
-    await initialGPTsetup(page, {
+    await configureLoopbackOpenAI(page, {
       skipAdjustScreenView: true,
     });
+
+    // ConfigureLoopbackOpenAI reloads the persisted graph. Add Message History
+    // afterwards so an in-flight autosave cannot be overwritten by that
+    // deterministic provider patch.
+    await addComponentFromSidebar(page, {
+      search: "message history",
+      testId: "models_and_agentsMessage History",
+      hoverAdd: true,
+      addButtonSlug: "message-history",
+    });
+    const memoryNode = page.getByRole("application", {
+      name: "Message History node",
+    });
+    await expect(memoryNode).toBeAttached();
 
     const prompt = `
 {context}
@@ -83,49 +84,36 @@ AI:
     await page.getByTestId("button_open_prompt_modal").nth(0).click();
 
     await page.getByTestId("modal-promptarea_prompt_template").fill(prompt);
-    await page.getByText("Edit Prompt", { exact: true }).click();
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.editPrompt, { exact: true }).click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     await adjustScreenView(page);
 
     //connection 1
-    await page
-      .getByTestId("handle-memory-shownode-message-right")
-      .first()
+    await memoryNode
+      .getByTestId("handle-memory-shownode-messages-right")
       .click();
 
     await page.getByTestId("handle-prompt-shownode-context-left").click();
 
     await page.locator('//*[@id="react-flow-id"]').hover();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
     });
 
-    await page
-      .getByPlaceholder("Send a message...")
-      .fill("hi, my car is blue and I like to eat pizza");
-
-    await page.getByTestId("button-send").click();
-
-    await page.waitForSelector("text=AI", { timeout: 30000 });
-
-    await page
-      .getByPlaceholder("Send a message...")
-      .fill("what color is my car and what do I like to eat?");
-
-    await page.getByTestId("button-send").click();
-
-    await page.getByTestId("stop_building_button").waitFor({
-      state: "visible",
-      timeout: 30000,
-    });
-    await page.getByTestId("stop_building_button").waitFor({
-      state: "hidden",
-      timeout: 180000,
-    });
+    await sendPlaygroundMessage(
+      page,
+      "hi, my car is blue and I like to eat pizza",
+    );
+    await sendPlaygroundMessage(
+      page,
+      "what color is my car and what do I like to eat?",
+    );
 
     // Wait for the first chat message element to be available
     const firstChatMessage = page.getByTestId("div-chat-message").nth(0);

@@ -1,0 +1,34 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "app_id": "A0OTHERAP1",
+    "bot_id": "B0OTHER001",
+    "bot_profile": {
+      "app_id": "A0OTHERAP1",
+      "id": "B0OTHER001",
+      "name": "CI Bot",
+      "team_id": "T0TEAM0001"
+    },
+    "channel": "C0SUPPORT1",
+    "channel_type": "channel",
+    "event_ts": "1700000500.001200",
+    "team": "T0TEAM0001",
+    "text": "Build 1234 failed",
+    "ts": "1700000500.001200",
+    "type": "message"
+  },
+  "event_id": "Ev0BOT00002",
+  "event_time": 1700000500,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}

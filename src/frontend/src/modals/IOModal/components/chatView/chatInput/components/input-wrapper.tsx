@@ -1,11 +1,11 @@
 import type React from "react";
+import { useTranslation } from "react-i18next";
 import { useGetConfig } from "@/controllers/API/queries/config/use-get-config";
 import {
-  ENABLE_IMAGE_ON_PLAYGROUND,
+  ENABLE_FILES_ON_PLAYGROUND,
   ENABLE_VOICE_ASSISTANT,
 } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
-import { CHAT_INPUT_PLACEHOLDER } from "../../../../../../constants/constants";
 import FilePreview from "../../fileComponent/components/file-preview";
 import ButtonSendWrapper from "./button-send-wrapper";
 import TextAreaWrapper from "./text-area-wrapper";
@@ -22,7 +22,7 @@ interface InputWrapperProps {
   files: FilePreviewType[];
   isDragging: boolean;
   handleDeleteFile: (file: FilePreviewType) => void;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
   handleFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   handleButtonClick: () => void;
   setShowAudioInput: (value: boolean) => void;
@@ -44,9 +44,9 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
   handleFileChange,
   handleButtonClick,
   setShowAudioInput,
-  currentFlowId,
   playgroundPage,
 }) => {
+  const { t } = useTranslation();
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
   // Check if voice mode is available
@@ -55,7 +55,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (target.closest("textarea,button,input,[role='button']")) {
       return;
     }
     inputRef.current?.focus();
@@ -67,7 +67,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
 
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     const target = e.target as HTMLElement;
-    if (target.closest("textarea")) {
+    if (target.closest("textarea,button,input,[role='button']")) {
       return;
     }
     e.stopPropagation();
@@ -78,9 +78,11 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
     <div className="flex w-full flex-col-reverse">
       <div
         data-testid="input-wrapper"
-        className="flex w-full flex-col rounded-md border cursor-text border-input p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
+        className="flex w-full flex-col rounded-md border cursor-text border-control bg-muted p-4 hover:border-muted-foreground focus:border-[1.75px] has-[:focus]:border-primary"
         onClick={onClick}
         onMouseDown={onMouseDown}
+        role="group"
+        aria-label={t("playgroundComponent.focusChatInput")}
       >
         <TextAreaWrapper
           isBuilding={isBuilding}
@@ -88,7 +90,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
           send={send}
           noInput={noInput}
           chatValue={chatValue}
-          CHAT_INPUT_PLACEHOLDER={CHAT_INPUT_PLACEHOLDER}
+          CHAT_INPUT_PLACEHOLDER={t("chat.inputPlaceholder")}
           inputRef={inputRef}
           files={files}
           isDragging={isDragging}
@@ -110,7 +112,7 @@ const InputWrapper: React.FC<InputWrapperProps> = ({
         <div className="flex w-full items-end justify-between">
           <div className={isBuilding ? "cursor-not-allowed" : ""}>
             {(!playgroundPage ||
-              (playgroundPage && ENABLE_IMAGE_ON_PLAYGROUND)) && (
+              (playgroundPage && ENABLE_FILES_ON_PLAYGROUND)) && (
               <UploadFileButton
                 isBuilding={isBuilding}
                 fileInputRef={fileInputRef}

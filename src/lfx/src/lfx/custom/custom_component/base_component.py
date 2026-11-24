@@ -113,7 +113,7 @@ class BaseComponent:
             return {}
 
         try:
-            cc_class = eval_custom_component_code(self._code)
+            cc_class = eval_custom_component_code(self._code, class_name=type(self).__name__)
 
         except AttributeError as e:
             pattern = r"module '.*?' has no attribute '.*?'"

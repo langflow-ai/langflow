@@ -1,0 +1,81 @@
+{
+  "_synthetic": true,
+  "_label": "SYNTHETIC FIXTURE - NOT A CAPTURE",
+  "_warning": "This file was written by hand for the INT-9 GA-swap exercise. It is NOT a capture from https://mcp.slack.com/mcp, the tool identifiers and schemas below are INVENTED, and it is not evidence of anything Slack publishes. Slack documents tool identifiers only for slack_get_file_upload_url and slack_complete_file_upload (decisions/substrate-slack.md fact 8). Moving a real Slack action to the MCP substrate still requires the dated authenticated tools/list capture named in that record's re-open trigger, stored under design/dedicated-integrations/evidence/.",
+  "_provider": "example (Slack-shaped)",
+  "_recorded_on": "2026-09-04",
+  "_initialize_result": {
+    "_note": "serverInfo comes from the MCP initialize handshake, not from tools/list; it is recorded here so the pin can name a server version.",
+    "protocolVersion": "2025-06-18",
+    "serverInfo": {
+      "name": "example-workspace-mcp",
+      "version": "2026.09.1"
+    }
+  },
+  "jsonrpc": "2.0",
+  "id": 1,
+  "result": {
+    "tools": [
+      {
+        "name": "example_search_messages",
+        "description": "Search messages the calling user can see.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "query": {
+              "type": "string",
+              "description": "Search terms."
+            },
+            "limit": {
+              "type": "integer",
+              "description": "Maximum number of matches to return.",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "required": ["query"],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "matches": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "permalink": { "type": "string" },
+                  "text": { "type": "string" },
+                  "ts": { "type": "string" }
+                }
+              }
+            }
+          },
+          "required": ["matches"],
+          "additionalProperties": false
+        }
+      },
+      {
+        "name": "example_read_channel_history",
+        "description": "Read recent messages from one channel.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "channel": { "type": "string" },
+            "limit": { "type": "integer" }
+          },
+          "required": ["channel"],
+          "additionalProperties": false
+        },
+        "outputSchema": {
+          "type": "object",
+          "properties": {
+            "messages": { "type": "array" }
+          },
+          "required": ["messages"],
+          "additionalProperties": false
+        }
+      }
+    ]
+  }
+}

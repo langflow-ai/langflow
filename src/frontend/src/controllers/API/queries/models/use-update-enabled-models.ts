@@ -1,12 +1,18 @@
 import { UseMutationResult } from "@tanstack/react-query";
 import { useMutationFunctionType } from "@/types/api";
+import type { ModelType } from "@/types/models";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
+import {
+  appendProviderScope,
+  type ProviderScopeParams,
+} from "../../helpers/provider-scope";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 export interface ModelStatusUpdate {
   provider: string;
   model_id: string;
+  model_type: ModelType;
   enabled: boolean;
 }
 
@@ -16,18 +22,26 @@ export interface UpdateEnabledModelsResponse {
 
 export const useUpdateEnabledModels: useMutationFunctionType<
   undefined,
-  { updates: ModelStatusUpdate[] },
+  { updates: ModelStatusUpdate[] } & ProviderScopeParams,
   UpdateEnabledModelsResponse,
   Error
 > = (options?) => {
   const { mutate } = UseRequestProcessor();
 
-  const updateEnabledModelsFn = async (data: {
+  const updateEnabledModelsFn = async ({
+    updates,
+    flowId,
+    projectId,
+  }: {
     updates: ModelStatusUpdate[];
-  }): Promise<UpdateEnabledModelsResponse> => {
+  } & ProviderScopeParams): Promise<UpdateEnabledModelsResponse> => {
+    const queryParams = new URLSearchParams();
+    appendProviderScope(queryParams, { flowId, projectId });
     const response = await api.post<UpdateEnabledModelsResponse>(
-      `${getURL("MODELS")}/enabled_models`,
-      data.updates,
+      `${getURL("MODELS")}/enabled_models${
+        queryParams.toString() ? `?${queryParams.toString()}` : ""
+      }`,
+      updates,
     );
     return response.data;
   };
@@ -35,7 +49,7 @@ export const useUpdateEnabledModels: useMutationFunctionType<
   const mutation: UseMutationResult<
     UpdateEnabledModelsResponse,
     Error,
-    { updates: ModelStatusUpdate[] }
+    { updates: ModelStatusUpdate[] } & ProviderScopeParams
   > = mutate(["useUpdateEnabledModels"], updateEnabledModelsFn, options);
 
   return mutation;

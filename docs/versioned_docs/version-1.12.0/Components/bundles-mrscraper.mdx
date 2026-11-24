@@ -1,0 +1,146 @@
+---
+title: MrScraper
+slug: /bundles-mrscraper
+---
+
+import Icon from "@site/src/components/icon";
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **MrScraper** bundle.
+
+For more information, see the [MrScraper documentation](https://docs.mrscraper.com).
+
+## MrScraper AI Agent Scraper
+
+This component creates and runs an AI-powered scraper that uses natural-language instructions to extract data from a web page.
+
+It outputs the API response as [`Data`](/data-types#json).
+
+### MrScraper AI Agent Scraper parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| MrScraper API Token (`api_token`) | SecretString | Input parameter. Your MrScraper API token. |
+| URL (`url`) | String | Input parameter. The target URL to scrape. |
+| Extraction Prompt (`message`) | String | Input parameter. A natural-language description of the data to extract. |
+| Agent Type (`agent`) | Dropdown | Input parameter. Select the agent based on your scraping use case: general for scraping a single/general page, listing for scraping listing pages across pagination, or map for map-based scraping. Default: general. |
+| Proxy Country (`proxy_country`) | String | Input parameter. Optional ISO country code for proxy geolocation, such as `us`, `gb`, or `sg`. |
+
+## MrScraper Batch Scrape URLs
+
+This component reruns an existing AI or manual scraper on multiple URLs in a single batch.
+
+It outputs the API response as [`Data`](/data-types#json).
+
+### MrScraper Batch Scrape URLs parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| MrScraper API Token (`api_token`) | SecretString | Input parameter. Your MrScraper API token. |
+| Scraper ID (`scraper_id`) | String | Input parameter. The ID of the scraper to reuse for the same domain. |
+| URLs (`urls`) | String | Input parameter. Target URLs separated by commas or new lines. |
+| Scraper Mode (`mode`) | Dropdown | Input parameter. Whether to rerun an `AI` or `Manual` scraper. Default: `AI`. |
+
+## MrScraper Crawl Website
+
+This component uses the map agent to discover and scrape pages from a starting URL.
+
+It outputs the API response as [`Data`](/data-types#json).
+
+### MrScraper Crawl Website parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| MrScraper API Token (`api_token`) | SecretString | Input parameter. Your MrScraper API token. |
+| URL (`url`) | String | Input parameter. The starting URL to crawl. |
+| Max Depth (`max_depth`) | Integer | Input parameter. The crawl depth from the starting URL. A value of `0` processes only the starting URL. Default: `2`. |
+| Max Pages (`max_pages`) | Integer | Input parameter. The maximum number of pages to process. Default: `50`. |
+| Limit (`limit`) | Integer | Input parameter. The maximum number of records to extract. Default: `1000`. |
+| Include Patterns (`include_patterns`) | String | Input parameter. Optional URL regular expression patterns to include, separated by `\|\|`. |
+| Exclude Patterns (`exclude_patterns`) | String | Input parameter. Optional URL regular expression patterns to exclude, separated by `\|\|`. |
+
+## MrScraper Fetch Rendered HTML
+
+This component fetches fully rendered HTML with the MrScraper stealth browser, including content rendered by JavaScript.
+
+It outputs the API response as [`Data`](/data-types#json).
+
+### MrScraper Fetch Rendered HTML parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| MrScraper API Token (`api_token`) | SecretString | Input parameter. Your MrScraper API token. |
+| URL (`url`) | String | Input parameter. The target URL from which to fetch rendered HTML. |
+| Timeout (seconds) (`timeout`) | Integer | Input parameter. The maximum number of seconds to wait for the page to load. Default: `120`. |
+| Geo Code (`geo_code`) | String | Input parameter. The ISO country code for proxy geolocation. Default: `US`. |
+| Block Resources (`block_resources`) | Boolean | Input parameter. If `true`, blocks images, CSS, and fonts to speed up the request. Default: `false`. |
+
+## MrScraper Get Result Detail
+
+This component retrieves the full details of a specific scraping result by its ID.
+
+It outputs the result as [`Data`](/data-types#json).
+
+### MrScraper Get Result Detail parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| MrScraper API Token (`api_token`) | SecretString | Input parameter. Your MrScraper API token. |
+| Result ID (`result_id`) | String | Input parameter. The unique identifier of the scraping result to retrieve. |
+
+## MrScraper Get Results
+
+This component retrieves a paginated, sortable, and filterable list of scraping results.
+
+It outputs the API response as [`Data`](/data-types#json).
+
+### MrScraper Get Results parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| MrScraper API Token (`api_token`) | SecretString | Input parameter. Your MrScraper API token. |
+| Sort Field (`sort_field`) | Dropdown | Input parameter. The result field to sort by. Default: `updatedAt`. |
+| Sort Order (`sort_order`) | Dropdown | Input parameter. The sort direction: `ASC` or `DESC`. Default: `DESC`. |
+| Page Size (`page_size`) | Integer | Input parameter. The number of results per page. Default: `10`. |
+| Page (`page`) | Integer | Input parameter. The one-indexed page number. Default: `1`. |
+| Search (`search`) | String | Input parameter. An optional free-text search across result fields. |
+| Date Range Column (`date_range_column`) | String | Input parameter. The optional column to filter by date range, such as `updatedAt` or `createdAt`. |
+| Start Date (`start_at`) | String | Input parameter. The optional ISO 8601 start date for the date range filter. |
+| End Date (`end_at`) | String | Input parameter. The optional ISO 8601 end date for the date range filter. |
+
+## MrScraper Run AI Scraper
+
+This component reruns an existing AI scraper on the original URL or a different compatible page.
+
+It outputs the API response as [`Data`](/data-types#json).
+
+### MrScraper Run AI Scraper parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| MrScraper API Token (`api_token`) | SecretString | Input parameter. Your MrScraper API token. |
+| Scraper ID (`scraper_id`) | String | Input parameter. The ID of the scraper to reuse for the same domain. |
+| URL (`url`) | String | Input parameter. The target URL for the scraper. |
+| Max Depth (`max_depth`) | Integer | Input parameter. For map agents, the crawl depth from the starting URL. A value of `0` processes only the starting URL. Default: `2`. |
+| Max Pages (`max_pages`) | Integer | Input parameter. For map agents, the maximum number of pages to process. Default: `50`. |
+| Limit (`limit`) | Integer | Input parameter. For map agents, the maximum number of records to extract. Default: `1000`. |
+| Include Patterns (`include_patterns`) | String | Input parameter. For map agents, optional URL regular expression patterns to include, separated by `\|\|`. |
+| Exclude Patterns (`exclude_patterns`) | String | Input parameter. For map agents, optional URL regular expression patterns to exclude, separated by `\|\|`. |
+
+## MrScraper Run Manual Scraper
+
+This component reruns a scraper configured with CSS selectors or XPath rules in the MrScraper dashboard.
+
+It outputs the API response as [`Data`](/data-types#json).
+
+### MrScraper Run Manual Scraper parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| MrScraper API Token (`api_token`) | SecretString | Input parameter. Your MrScraper API token. |
+| Scraper ID (`scraper_id`) | String | Input parameter. The ID of the scraper to reuse for the same domain. |
+| URL (`url`) | String | Input parameter. The target URL, whose page structure should match the original scraper target. |

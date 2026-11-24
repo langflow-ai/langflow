@@ -26,6 +26,8 @@ describe("computeDisplayHandle", () => {
         "slider",
         "tab",
         "sortableList",
+        "actionPicker",
+        "duration",
         "connect",
         "auth",
         "query",
@@ -49,6 +51,35 @@ describe("computeDisplayHandle", () => {
     it("should return true for empty or undefined type", () => {
       expect(computeDisplayHandle({ type: "" }, false)).toBe(true);
       expect(computeDisplayHandle({}, false)).toBe(true);
+    });
+  });
+
+  describe("connection_ref handling", () => {
+    it("should return false for connection_ref fields", () => {
+      expect(computeDisplayHandle({ type: "connection_ref" }, false)).toBe(
+        false,
+      );
+    });
+
+    it("should return false for connection_ref even when input_types is set", () => {
+      expect(
+        computeDisplayHandle(
+          { type: "connection_ref", input_types: ["Message"] },
+          false,
+        ),
+      ).toBe(false);
+    });
+
+    it("should return false for connection_ref in tool mode", () => {
+      expect(
+        computeDisplayHandle({ type: "connection_ref", tool_mode: true }, true),
+      ).toBe(false);
+    });
+
+    it("should only match the exact connection_ref type", () => {
+      expect(computeDisplayHandle({ type: "Connection_Ref" }, false)).toBe(
+        true,
+      );
     });
   });
 

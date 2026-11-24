@@ -99,12 +99,23 @@ const RenderInputParameters = ({
     );
   }, [shownTemplateFields, data.node?.template, isToolMode, data.id, edges]);
 
+  // LE-1810 (T8): a minimized node still shows ALL its input handles —
+  // each one gets a distinct vertical offset on the collapsed card.
+  const handleFields = useMemo(
+    () =>
+      shownTemplateFields.filter(
+        (templateField) => displayHandleMap.get(templateField) ?? false,
+      ),
+    [shownTemplateFields, displayHandleMap],
+  );
+
   const renderInputParameter = shownTemplateFields.map(
     (templateField: string, idx: number) => {
       const template = data.node?.template[templateField];
 
       const memoizedColor = memoizedColors.get(templateField);
       const memoizedKey = memoizedKeys.get(templateField);
+      const handleIdx = handleFields.indexOf(templateField);
 
       return (
         <NodeInputField
@@ -134,12 +145,34 @@ const RenderInputParameters = ({
           isToolMode={isToolMode && template.tool_mode}
           isPrimaryInput={templateField === primaryInputFieldName}
           displayHandle={displayHandleMap.get(templateField) ?? false}
+          minimizedHandleTop={
+            handleIdx === -1
+              ? undefined
+              : `${(((handleIdx + 1) / (handleFields.length + 1)) * 100).toFixed(2)}%`
+          }
         />
       );
     },
   );
 
-  return <>{renderInputParameter}</>;
+  // LE-1810 (B05 polish): with several handles on a collapsed card the
+  // percentage offsets land too close together — an invisible spacer grows
+  // the card so each handle gets breathing room (~18px per handle).
+  const minimizedSpacer =
+    !showNode && handleFields.length > 1 ? (
+      <div
+        aria-hidden="true"
+        data-testid="minimized-handle-spacer"
+        style={{ height: `${(handleFields.length + 1) * 18}px` }}
+      />
+    ) : null;
+
+  return (
+    <>
+      {minimizedSpacer}
+      {renderInputParameter}
+    </>
+  );
 };
 
 export default RenderInputParameters;

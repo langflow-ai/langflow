@@ -1,0 +1,273 @@
+"""Async HTTP client for Langflow REST API.
+
+Adapted from the CLI's sync Backend class, using httpx.AsyncClient
+for non-blocking operations inside the MCP server.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import re
+from typing import TYPE_CHECKING, Any
+
+import httpx
+from starlette.status import HTTP_204_NO_CONTENT
+
+from lfx.log.logger import logger
+from lfx.utils.ssrf_transport import SSRFProtectedTransport
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+
+
+# Env vars named like the header they become. ``lfx-mcp`` is a stdio server, so a
+# client config can only reach it through ``env`` -- there is no ``headers`` field for
+# a subprocess -- and this is the only channel for per-request global variables.
+GLOBAL_VAR_ENV_PREFIX = "X-LANGFLOW-GLOBAL-VAR-"
+_HEADER_NAME = re.compile(r"[!#$%&'*+\-.^_`|~0-9A-Za-z]+")
+_HEADER_VALUE = re.compile(r"[\x21-\x7e](?:[\x20-\x7e\t]*[\x21-\x7e])?")
+
+
+def _global_var_headers() -> dict[str, str]:
+    """Read ``X-LANGFLOW-GLOBAL-VAR-*`` entries out of the process environment."""
+    headers = {}
+    for name, value in os.environ.items():
+        if not name.upper().startswith(GLOBAL_VAR_ENV_PREFIX) or not value:
+            continue
+        # Validate before HTTPX/h11 serialize these values: protocol errors can
+        # otherwise include the entire header value, which may be a credential.
+        if len(name) == len(GLOBAL_VAR_ENV_PREFIX) or not _HEADER_NAME.fullmatch(name):
+            msg = "Global variable override names must include a variable name and form valid HTTP headers"
+            raise ValueError(msg)
+        if not _HEADER_VALUE.fullmatch(value):
+            msg = "Global variable override values must be valid ASCII HTTP header values"
+            raise ValueError(msg)
+        headers[name] = value
+    return headers
+
+
+class LangflowClient:
+    """Async HTTP client for Langflow's REST API.
+
+    Auth sends both headers on every request:
+    - Authorization: Bearer <access_token or api_key>
+    - x-api-key: <api_key> (when available)
+
+    Any ``X-LANGFLOW-GLOBAL-VAR-*`` environment variable is forwarded as the header of
+    the same name, so a flow run through ``lfx-mcp`` resolves per-request global
+    variables exactly as a direct ``POST /api/v1/run`` carrying those headers would.
+
+    Uses a persistent httpx.AsyncClient for connection pooling.
+    """
+
+    def __init__(
+        self,
+        server_url: str | None = None,
+        api_key: str | None = None,
+        access_token: str | None = None,
+        *,
+        use_env_api_key: bool = True,
+        use_env_global_vars: bool = True,
+        use_env_proxies: bool = True,
+        pinned_ips: dict[str, list[str]] | None = None,
+        auth_headers: dict[str, str] | None = None,
+    ):
+        self.server_url = (server_url or os.environ.get("LANGFLOW_SERVER_URL", "http://localhost:7860")).rstrip("/")
+        # HTTP mounts must not substitute process credentials for their caller.
+        self.api_key = api_key or (os.environ.get("LANGFLOW_API_KEY") if use_env_api_key else None)
+        self.access_token = access_token
+        self._auth_headers = dict(auth_headers or {})
+        # Keep environment-based configuration consistent for this client's lifetime.
+        self.global_var_headers = _global_var_headers() if use_env_global_vars else {}
+        self._use_env_proxies = use_env_proxies
+        self._pinned_ips = {host: list(addresses) for host, addresses in (pinned_ips or {}).items()}
+        self._http: httpx.AsyncClient | None = None
+        self._lock = asyncio.Lock()
+
+    async def _client(self) -> httpx.AsyncClient:
+        async with self._lock:
+            if self._http is None or self._http.is_closed:
+                transport = (
+                    SSRFProtectedTransport(pinned_ips=self._pinned_ips)
+                    if self._pinned_ips
+                    else None
+                    if self._use_env_proxies
+                    else httpx.AsyncHTTPTransport()
+                )
+                self._http = httpx.AsyncClient(
+                    follow_redirects=True,
+                    event_hooks={"request": [self._check_request_origin]},
+                    **({"transport": transport} if transport is not None else {}),
+                )
+            return self._http
+
+    async def _check_request_origin(self, request: httpx.Request) -> None:
+        """Keep environment overrides on the configured server's origin."""
+        if not self.global_var_headers and not self._pinned_ips and not self._auth_headers:
+            return
+        server = httpx.URL(self.server_url)
+        defaults = {"http": 80, "https": 443}
+        server_origin = (server.scheme, server.host, server.port or defaults.get(server.scheme))
+        request_origin = (request.url.scheme, request.url.host, request.url.port or defaults.get(request.url.scheme))
+        if request_origin != server_origin:
+            # HTTPX strips Authorization across origins, but retains custom
+            # headers, including global variables containing provider keys.
+            msg = "Refusing to forward credentials outside the Langflow server origin"
+            raise RuntimeError(msg)
+
+    async def aclose(self) -> None:
+        """Close the underlying HTTP client."""
+        if self._http is not None and not self._http.is_closed:
+            await self._http.aclose()
+            self._http = None
+
+    async def close(self) -> None:
+        await self.aclose()
+
+    def _headers(self) -> dict[str, str]:
+        headers = {"Content-Type": "application/json"}
+        if self.access_token:
+            headers["Authorization"] = f"Bearer {self.access_token}"
+        if self.api_key:
+            headers["x-api-key"] = self.api_key
+        # The prefix is the whole allowlist, so this cannot collide with the auth
+        # headers above or leak anything else out of the environment.
+        headers.update(self.global_var_headers)
+        headers.update(self._auth_headers)
+        return headers
+
+    def _url(self, path: str) -> str:
+        return f"{self.server_url}/api/v1{path}"
+
+    async def get(self, path: str, **kwargs: Any) -> Any:
+        url = self._url(path)
+        try:
+            client = await self._client()
+            resp = await client.get(url, headers=self._headers(), timeout=30.0, **kwargs)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            msg = f"GET {path} failed ({exc.response.status_code})"
+            raise RuntimeError(msg) from exc
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            msg = f"GET {path} failed: {exc}"
+            raise RuntimeError(msg) from exc
+
+    async def post(self, path: str, json_data: Any = None, timeout: float = 30.0, **kwargs: Any) -> Any:
+        url = self._url(path)
+        try:
+            client = await self._client()
+            resp = await client.post(url, headers=self._headers(), json=json_data, timeout=timeout, **kwargs)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            msg = f"POST {path} failed ({exc.response.status_code})"
+            raise RuntimeError(msg) from exc
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            msg = f"POST {path} failed: {exc}"
+            raise RuntimeError(msg) from exc
+
+    async def stream_post(
+        self, path: str, json_data: Any = None, timeout: float = 300.0
+    ) -> AsyncIterator[dict[str, Any]]:
+        """POST with streaming SSE response. Yields parsed event dicts."""
+        url = self._url(path)
+        client = await self._client()
+        async with client.stream("POST", url, headers=self._headers(), json=json_data, timeout=timeout) as resp:
+            resp.raise_for_status()
+            async for raw_line in resp.aiter_lines():
+                line = raw_line.strip()
+                if not line:
+                    continue
+                # Some endpoints frame lines as SSE (``data: {...}``) rather than
+                # bare NDJSON; strip the prefix so both wire shapes parse.
+                line = line.removeprefix("data:").strip()
+                if not line:
+                    continue
+                try:
+                    yield json.loads(line)
+                except json.JSONDecodeError:
+                    logger.debug("stream_post: skipping non-JSON SSE line: %s", line[:200])
+                    continue
+
+    async def patch(self, path: str, json_data: Any = None, **kwargs: Any) -> Any:
+        url = self._url(path)
+        try:
+            client = await self._client()
+            resp = await client.patch(url, headers=self._headers(), json=json_data, timeout=30.0, **kwargs)
+            resp.raise_for_status()
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            msg = f"PATCH {path} failed ({exc.response.status_code})"
+            raise RuntimeError(msg) from exc
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            msg = f"PATCH {path} failed: {exc}"
+            raise RuntimeError(msg) from exc
+
+    async def delete(self, path: str, **kwargs: Any) -> Any:
+        url = self._url(path)
+        try:
+            client = await self._client()
+            resp = await client.delete(url, headers=self._headers(), timeout=30.0, **kwargs)
+            resp.raise_for_status()
+            if resp.status_code == HTTP_204_NO_CONTENT or not resp.content:
+                return {}
+            return resp.json()
+        except httpx.HTTPStatusError as exc:
+            msg = f"DELETE {path} failed ({exc.response.status_code})"
+            raise RuntimeError(msg) from exc
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            msg = f"DELETE {path} failed: {exc}"
+            raise RuntimeError(msg) from exc
+
+    async def login(self, username: str, password: str) -> str:
+        """Authenticate and create an API key.
+
+        Each call creates a new API key on the server.
+        Returns the API key string.
+        """
+        try:
+            client = await self._client()
+            # Login to get JWT
+            resp = await client.post(
+                self._url("/login"),
+                data={"username": username, "password": password},
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                timeout=30.0,
+            )
+            resp.raise_for_status()
+            token_data = resp.json()
+            if "access_token" not in token_data:
+                msg = f"Login response missing 'access_token': {list(token_data.keys())}"
+                raise RuntimeError(msg)
+            self.access_token = token_data["access_token"]
+
+            # Create API key
+            resp = await client.post(
+                self._url("/api_key/"),
+                headers=self._headers(),
+                json={"name": "mcp-client"},
+                timeout=30.0,
+            )
+            resp.raise_for_status()
+            key_data = resp.json()
+            if "api_key" not in key_data:
+                msg = f"API key response missing 'api_key': {list(key_data.keys())}"
+                raise RuntimeError(msg)
+            self.api_key = key_data["api_key"]
+        except httpx.HTTPStatusError as exc:
+            msg = f"Login failed ({exc.response.status_code})"
+            raise RuntimeError(msg) from exc
+        except (httpx.ConnectError, httpx.TimeoutException) as exc:
+            msg = f"Login failed: {exc}"
+            raise RuntimeError(msg) from exc
+        return self.api_key
+
+    async def post_event(self, flow_id: str, event_type: str, summary: str = "") -> None:
+        """Post an event to the flow events queue. Best-effort -- does not raise on failure."""
+        try:
+            await self.post(f"/flows/{flow_id}/events", json_data={"type": event_type, "summary": summary})
+        except Exception:  # noqa: BLE001
+            logger.warning("Failed to post flow event (flow_id=%s, type=%s)", flow_id, event_type, exc_info=True)

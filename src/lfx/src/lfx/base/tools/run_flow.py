@@ -3,7 +3,11 @@ from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
 
-from langflow.helpers.flow import get_flow_by_id_or_name
+from langflow.helpers.flow import (
+    get_flow_by_id_or_name,
+    get_user_is_superuser,
+    scoped_model_provider_policy_for_target_flow,
+)
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component import Component, get_component_toolkit
@@ -20,6 +24,11 @@ from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_shared_component_cache_service
 from lfx.template.field.base import Output
+from lfx.utils.flow_validation import (
+    admin_only_build_required,
+    custom_component_admin_only_enabled,
+    prepare_flow_build_for_user,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -31,6 +40,7 @@ class RunFlowBaseComponent(Component):
     def __init__(self, *args, **kwargs):
         self._flow_output_methods: set[str] = set()
         super().__init__(*args, **kwargs)
+        self.flow_tweak_data = self._attributes.get("flow_tweak_data")
         self.add_tool_output = True
         ################################################################
         # cache the selected flow's graph in the shared component cache
@@ -95,8 +105,15 @@ class RunFlowBaseComponent(Component):
     _base_outputs: list[Output] = []
     default_keys = ["code", "_type", "flow_name_selected", "flow_id_selected", "session_id", "cache_flow"]
     FLOW_INPUTS: list[dotdict] = []
-    flow_tweak_data: dict = {}
     IOPUT_SEP = "~"  # separator for joining a vertex id and input/output name to form a unique input/output name
+
+    @property
+    def flow_tweak_data(self) -> dict[str, Any]:
+        return self._attributes.setdefault("flow_tweak_data", {})
+
+    @flow_tweak_data.setter
+    def flow_tweak_data(self, value: dict[str, Any] | None) -> None:
+        self._attributes["flow_tweak_data"] = value if value is not None else {}
 
     ################################################################
     # set and register the selected flow's output methods
@@ -138,28 +155,57 @@ class RunFlowBaseComponent(Component):
         if not (flow_name_selected or flow_id_selected):
             msg = "Flow name or id is required"
             raise ValueError(msg)
-        if flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
-            if self._is_cached_flow_up_to_date(flow, updated_at):
-                return flow
-            self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
-
-        # TODO: use flow id only
-        flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
-        if not flow:
-            msg = "Flow not found"
-            raise ValueError(msg)
-
-        graph = Graph.from_payload(
-            payload=flow.data.get("data", {}),
+        async with scoped_model_provider_policy_for_target_flow(
+            user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
-        )
-        graph.description = flow.data.get("description", None)
-        graph.updated_at = flow.data.get("updated_at", None)
+        ):
+            # The stored child payload is caller-controlled: a regular user can persist
+            # component source through the flow-write API and this trusted component then
+            # hands it to Graph.from_payload. Apply the same caller-aware policy the
+            # top-level run path applies so LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY holds
+            # across the nested-flow boundary. Resolve the caller's superuser flag only
+            # when the policy is configured on (or unreadable, failing closed): with the
+            # policy off the flag cannot change the outcome, and the per-call user lookup
+            # would hit the database even on cache hits.
+            if custom_component_admin_only_enabled() is False:
+                is_superuser = False
+                admin_only = False
+            else:
+                is_superuser = await get_user_is_superuser(self.user_id)
+                admin_only = admin_only_build_required(is_superuser=is_superuser)
+            if not admin_only and flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
+                if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
+                    self._flow_cache_call("delete", flow_id=flow_id_selected)
+                elif self._is_cached_flow_up_to_date(flow, updated_at):
+                    return flow
+                else:
+                    self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
 
-        self._flow_cache_call("set", flow=graph)
+            # TODO: use flow id only
+            flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
+            if not flow:
+                msg = "Flow not found"
+                raise ValueError(msg)
 
-        return graph
+            payload = flow.data.get("data", {})
+            sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
+            graph = Graph.from_payload(
+                payload=sanitized_payload if sanitized_payload is not None else payload,
+                flow_id=flow_id_selected or flow.data.get("id"),
+                flow_name=flow_name_selected,
+                user_id=self.user_id,
+            )
+            graph.description = flow.data.get("description", None)
+            graph.updated_at = flow.data.get("updated_at", None)
+
+            # A cached graph carries no policy generation: under admin-only mode it may
+            # have been compiled from unchecked caller source, so it is neither served
+            # nor stored while the policy applies to this caller.
+            if not admin_only:
+                self._flow_cache_call("set", flow=graph)
+
+            return graph
 
     ################################################################
     # Flow inputs/config
@@ -203,6 +249,7 @@ class RunFlowBaseComponent(Component):
                         ),
                         # TODO: make this more robust?
                         "tool_mode": not (field_template[input_name].get("advanced", False)),
+                        "input_types": self._resolve_exposed_input_types(field_template[input_name]),
                     }
                 )
                 for input_name in field_order
@@ -210,6 +257,23 @@ class RunFlowBaseComponent(Component):
             ]
             new_fields.extend(new_vertex_inputs)
         return new_fields
+
+    @staticmethod
+    def _resolve_exposed_input_types(field_template_entry: dict) -> list[str]:
+        """Resolve input_types for a flow input re-exposed via Run Flow.
+
+        Some components (e.g. ChatInput) explicitly set ``input_types=[]`` on
+        text-typed inputs to suppress connection handles within their own
+        flow. When Run Flow re-exposes those fields the user expects to wire
+        upstream components into them, so we restore a Message handle for
+        text-typed fields with no input_types.
+        """
+        existing = field_template_entry.get("input_types") or []
+        if existing:
+            return list(existing)
+        if field_template_entry.get("type") in {"str", "Text"}:
+            return ["Message"]
+        return list(existing)
 
     def add_new_fields(self, build_config: dotdict, new_fields: list[dotdict]) -> dotdict:
         """Add new fields to the build_config."""
@@ -340,6 +404,26 @@ class RunFlowBaseComponent(Component):
             return result.results or result.artifacts or result.outputs
 
         return None
+
+    def __deepcopy__(self, memo: dict):
+        """Let the copy resolve every output it carries, and reuse the graph cache.
+
+        ``_register_flow_output_method`` writes one resolver per selected-flow
+        output onto the *instance*, and ``Component.__deepcopy__`` rebuilds the
+        component through ``type(self)(**kwargs)`` rather than copying
+        ``__dict__``. A tool-mode node's saved outputs are only the
+        ``component_as_tool`` handle, so the rebuilt component registers nothing
+        from its vertex, while ``_outputs_map`` is copied over naming resolvers
+        it does not have. What makes the tool call run on the copy at all is
+        ``component_tool._resolve_local_method``; this keeps the copy able to
+        resolve any output it advertises.
+        """
+        new_component = super().__deepcopy__(memo)
+        # _pre_run_setup only runs on the vertex-built component, so hand the
+        # timestamp over; without it the copy reads every cached graph as stale.
+        new_component._cached_flow_updated_at = self._cached_flow_updated_at  # noqa: SLF001
+        new_component._ensure_flow_output_methods()  # noqa: SLF001
+        return new_component
 
     def _clear_dynamic_flow_output_methods(self) -> None:
         for method_name in self._flow_output_methods:
@@ -504,9 +588,27 @@ class RunFlowBaseComponent(Component):
                 flow_id_selected=self.flow_id_selected,
                 updated_at=self._cached_flow_updated_at,
             )  # may or may not want to create a deepcopy of the graph here
+            if graph is None:
+                msg = "Flow not found"
+                raise ValueError(msg)
+
+            # A cached child graph is rebuilt without the current serving run's
+            # identity. Bind that context only when executing it, so its messages
+            # have the same owner and persistence policy as the parent run.
+            parent_graph = getattr(getattr(self, "_vertex", None), "graph", None)
+            if parent_graph is not None:
+                graph.end_user_id = getattr(parent_graph, "end_user_id", None)
+                graph.persist_messages = getattr(parent_graph, "persist_messages", True)
 
             if tweaks := self._build_flow_tweak_data():
-                graph = self._process_tweaks_on_graph(graph, tweaks)
+                from lfx.processing.process import process_tweaks_on_graph
+
+                # These tweaks are this component's own declared inputs, not a
+                # caller overriding the sub-flow, so the deployment policy does
+                # not judge them. Without this, ``off`` would stop the Run Flow
+                # component and every flow used as an agent tool from working.
+                # The protected-field floor still applies.
+                graph = process_tweaks_on_graph(graph, tweaks, caller_supplied=False)
 
             result = await run_flow(
                 inputs=self._build_inputs(tweaks),
@@ -516,9 +618,29 @@ class RunFlowBaseComponent(Component):
                 session_id=self.session_id,
                 output_type=output_type,
                 graph=graph,
+                # The target is a sub-flow of THIS execution, so it resolves
+                # connections under the calling graph's principal. A freshly
+                # loaded child graph carries the fail-closed ``unknown()``, which
+                # would deny every connection inside a Run Flow node.
+                execution_principal=getattr(self.graph, "execution_principal", None),
             )
 
-        except Exception:  # noqa: BLE001
+        except Exception as exc:
+            from lfx.exceptions.tweaks import TweakRefusedError
+            from lfx.run.hitl import NestedHITLUnsupportedError
+            from lfx.utils.flow_validation import CustomComponentValidationError
+
+            if isinstance(exc, NestedHITLUnsupportedError):
+                raise
+            # A refused tweak is a caller error, not a flow failure. Collapsing it
+            # into a generic RuntimeError would discard the refused field names and
+            # the reason, and the caller would never learn which key was rejected.
+            if isinstance(exc, TweakRefusedError):
+                raise
+            # A component-policy refusal is also a caller-facing rejection: collapsing
+            # it into RuntimeError would hide the reason and the HTTP 400 mapping.
+            if isinstance(exc, CustomComponentValidationError):
+                raise
             msg = f"Error running flow: {self.flow_name_selected}"
             raise RuntimeError(msg) from None
 
@@ -726,17 +848,3 @@ class RunFlowBaseComponent(Component):
             self._attributes["flow_name_selected_updated_at"] = self._cached_flow_updated_at
         # remove stale data from previous toolmode run
         self._attributes.pop("flow_tweak_data", None)
-
-    def _process_tweaks_on_graph(self, graph: Graph, tweaks: dict[str, dict[str, Any]]):
-        # there is a bug with the lfx process_tweaks_on_graph function
-        # that causes it to not persist the tweaks to the graph at runtime.
-        # so we implement a custom version here that fixes the bug.
-        # TODO: make a fast follow-up PR to fix this bug in the existing helper.
-        for vertex in graph.vertices:
-            if not (isinstance(vertex, Vertex) and isinstance(vertex.id, str)):
-                continue
-            if not (node_tweaks := tweaks.get(vertex.id)):
-                continue
-            node_tweaks.pop("code", None)
-            vertex.update_raw_params(node_tweaks, overwrite=True)
-        return graph

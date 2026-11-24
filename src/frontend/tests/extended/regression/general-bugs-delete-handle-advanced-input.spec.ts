@@ -1,11 +1,12 @@
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import {
-  closeAdvancedOptions,
-  disableInspectPanel,
-  enableInspectPanel,
-  openAdvancedOptions,
+  closeParametersPanel,
+  openParametersPanel,
+  toggleParameterOnNode,
 } from "../../utils/open-advanced-options";
 
 test(
@@ -15,6 +16,8 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -32,15 +35,13 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 3 });
 
-    await disableInspectPanel(page);
+    await openParametersPanel(page);
 
-    await openAdvancedOptions(page);
-
-    await page.getByTestId("showtrue_case_message").click();
-    await closeAdvancedOptions(page);
+    await toggleParameterOnNode(page, "true_case_message");
+    await closeParametersPanel(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 2000,
     });
@@ -62,15 +63,21 @@ test(
 
     await page.getByTestId("title-If-Else").click();
 
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
+    // LE-1810: values render on the node only — the connected field shows
+    // "Receiving input" there and its Remove action is locked in the panel.
     const numberOfDisabledInputs = await page
       .getByPlaceholder("Receiving input")
       .count();
 
-    expect(numberOfDisabledInputs).toBe(2);
+    expect(numberOfDisabledInputs).toBe(1);
 
-    await closeAdvancedOptions(page);
+    await expect(
+      page.getByTestId("inspector-remove-true_case_message"),
+    ).toBeDisabled();
+
+    await closeParametersPanel(page);
 
     await page.getByTestId("title-If-Else").click();
 
@@ -78,7 +85,7 @@ test(
 
     await page.getByTestId("checkAndSaveBtn").last().click();
 
-    await openAdvancedOptions(page);
+    await openParametersPanel(page);
 
     const numberOfDisabledInputsAfter = await page
       .getByPlaceholder("Receiving input")
@@ -90,8 +97,6 @@ test(
 
     expect(numberOfLockIconsAfter).toBe(0);
 
-    await closeAdvancedOptions(page);
-
-    await enableInspectPanel(page);
+    await closeParametersPanel(page);
   },
 );

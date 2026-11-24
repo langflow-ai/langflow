@@ -12,14 +12,22 @@ on:
     inputs:
       base-artifact-name:
         description: "Name of the base package artifact"
-        required: true
+        required: false
         type: string
       main-artifact-name:
         description: "Name of the main package artifact"
-        required: true
+        required: false
         type: string
       lfx-artifact-name:
         description: "Name of the LFX package artifact"
+        required: false
+        type: string
+      sdk-artifact-name:
+        description: "Name of the langflow-sdk package artifact"
+        required: false
+        type: string
+      bundles-artifact-name:
+        description: "Name of the bundles package artifact (contains every src/bundles/*/ wheel)"
         required: false
         type: string
       pre_release:
@@ -36,12 +44,16 @@ jobs:
     outputs:
       base-artifact-name: ${{ steps.set-names.outputs.base-artifact-name }}
       main-artifact-name: ${{ steps.set-names.outputs.main-artifact-name }}
+      lfx-artifact-name: ${{ steps.set-names.outputs.lfx-artifact-name }}
+      sdk-artifact-name: ${{ steps.set-names.outputs.sdk-artifact-name }}
+      bundles-artifact-name: ${{ steps.set-names.outputs.bundles-artifact-name }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
       - name: Setup Environment
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: true
           cache-dependency-glob: "uv.lock"
           python-version: "3.13"
@@ -58,28 +70,85 @@ jobs:
           # Base package builds to dist/ but should be in src/backend/base/dist/
           mkdir -p src/backend/base/dist
           mv dist/langflow_base*.whl src/backend/base/dist/
+      - name: Build LFX package
+        run: |
+          uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
+          cd src/lfx
+          uv build --wheel --out-dir dist
+          uv run --no-sync python ../../scripts/ci/release_auth_defaults.py verify dist/*.whl
+      - name: Build SDK package
+        run: |
+          cd src/sdk
+          uv build --wheel --out-dir dist
       - name: Build main package
         run: make build_langflow args="--wheel"
+      - name: Build bundle wheels
+        id: build-bundles
+        run: |
+          shopt -s nullglob
+          bundles=(src/bundles/*/pyproject.toml)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No bundles found under src/bundles/*/"
+            echo "bundles-found=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          mkdir -p bundles-dist
+          BUNDLES_DIST="$PWD/bundles-dist"
+          for bundle_pyproject in "${bundles[@]}"; do
+            bundle_dir=$(dirname "$bundle_pyproject")
+            echo "Building wheel for $bundle_dir"
+            (cd "$bundle_dir" && uv build --wheel --out-dir "$BUNDLES_DIST")
+          done
+          echo "bundles-found=1" >> $GITHUB_OUTPUT
+          ls -la bundles-dist/
+      - name: Upload lfx artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: adhoc-dist-lfx
+          path: src/lfx/dist
+      - name: Upload SDK artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: adhoc-dist-sdk
+          path: src/sdk/dist
       - name: Upload base artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adhoc-dist-base
           path: src/backend/base/dist
       - name: Upload main artifact
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: adhoc-dist-main
           path: dist
+      - name: Upload bundles artifact
+        if: steps.build-bundles.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v7
+        with:
+          name: adhoc-dist-bundles
+          path: bundles-dist
       - name: Set artifact names
         id: set-names
         run: |
           echo "base-artifact-name=adhoc-dist-base" >> $GITHUB_OUTPUT
           echo "main-artifact-name=adhoc-dist-main" >> $GITHUB_OUTPUT
+          echo "lfx-artifact-name=adhoc-dist-lfx" >> $GITHUB_OUTPUT
+          echo "sdk-artifact-name=adhoc-dist-sdk" >> $GITHUB_OUTPUT
+          if [ "${{ steps.build-bundles.outputs.bundles-found }}" = "1" ]; then
+            echo "bundles-artifact-name=adhoc-dist-bundles" >> $GITHUB_OUTPUT
+          else
+            echo "bundles-artifact-name=" >> $GITHUB_OUTPUT
+          fi
 
   test-installation-stable:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }}
+    env:
+      LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
     needs: [build-if-needed]
-    if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
+    if: |
+      always() &&
+      (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped') &&
+      (inputs.langflow-version != '' || inputs.main-artifact-name != '' || needs.build-if-needed.outputs.main-artifact-name != '')
     runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
@@ -89,16 +158,12 @@ jobs:
           - os: linux
             arch: amd64
             runner: ubuntu-latest
-            python-version: "3.10"
+            python-version: "3.11"
           - os: linux
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.12"
-          # macOS AMD64
-          - os: macos
-            arch: amd64
-            runner: macos-latest-large
-            python-version: "3.10"
+          # macOS AMD64 (Intel) - Python 3.12 only for cost optimization
           - os: macos
             arch: amd64
             runner: macos-latest-large
@@ -107,7 +172,7 @@ jobs:
           - os: macos
             arch: arm64
             runner: macos-latest
-            python-version: "3.10"
+            python-version: "3.11"
           - os: macos
             arch: arm64
             runner: macos-latest
@@ -116,18 +181,57 @@ jobs:
           - os: windows
             arch: amd64
             runner: windows-latest
-            python-version: "3.10"
+            python-version: "3.11"
           - os: windows
             arch: amd64
             runner: windows-latest
             python-version: "3.12"
+          # Python 3.13 is stable and required to pass.
+          # macOS Intel stays on Python 3.12 to limit runner cost.
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.13"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.13"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.13"
+          # Python 3.14 is stable and required to pass.
+          # macOS Intel stays on Python 3.12. The required onnxruntime>=1.26
+          # has no macOS Intel wheels for Python 3.14.
+          - os: linux
+            arch: amd64
+            runner: ubuntu-latest
+            python-version: "3.14"
+          - os: windows
+            arch: amd64
+            runner: windows-latest
+            python-version: "3.14"
+          - os: macos
+            arch: arm64
+            runner: macos-latest
+            python-version: "3.14"
 
     steps:
+      - name: Checkout authentication smoke check
+        uses: actions/checkout@v7
+        with:
+          path: auth-smoke
+          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
       - name: Determine install method
         id: install-method
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ inputs.langflow-version }}" ]; then
+            if [ -n "$LANGFLOW_VERSION" ]; then
               echo "method=pypi" >> $GITHUB_OUTPUT
             else
               echo "method=wheel" >> $GITHUB_OUTPUT
@@ -139,14 +243,15 @@ jobs:
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
 
       - name: Setup UV
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           ignore-empty-workdir: true
 
@@ -161,123 +266,121 @@ jobs:
         shell: bash
 
       # Download artifacts for wheel installation
-      - name: Download LFX package artifact
-        if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v7
+      - name: Download langflow-sdk package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
-          name: ${{ inputs.lfx-artifact-name }}
+          name: ${{ inputs.sdk-artifact-name || needs.build-if-needed.outputs.sdk-artifact-name || 'adhoc-dist-sdk' }}
+          path: ./sdk-dist
+
+      - name: Download LFX package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
       - name: Download base package artifact
-        if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v7
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.base-artifact-name != '' || needs.build-if-needed.outputs.base-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
-        if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v7
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.main-artifact-name != '' || needs.build-if-needed.outputs.main-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
+
+      - name: Download bundles package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.bundles-artifact-name || needs.build-if-needed.outputs.bundles-artifact-name }}
+          path: ./bundles-dist
 
       - name: Create fresh virtual environment
         run: |
           uv venv test-env --seed
         shell: bash
 
-      # Wheel installation steps
-      - name: Install LFX package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.lfx-artifact-name != ''
+      - name: Install packages from wheel
+        if: steps.install-method.outputs.method == 'wheel'
         run: |
-          ls -la ./lfx-dist/
-          find ./lfx-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./lfx-dist/"
-            exit 1
-          fi
-        shell: bash
+          set -eo pipefail
+          shopt -s nullglob
 
-      - name: Install base package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
-        run: |
-          ls -la ./base-dist/
-          find ./base-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            PYTHON=./test-env/Scripts/python.exe
           else
-            echo "No wheel file found in ./base-dist/"
-            exit 1
+            PYTHON=./test-env/bin/python
           fi
-        shell: bash
 
-      - name: Install main package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
-        run: |
-          ls -la ./main-dist/
-          find ./main-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./main-dist/"
-            exit 1
-          fi
-        shell: bash
+          refresh_find_links() {
+            FIND_LINKS=()
+            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+              if [ -d "$wheel_dir" ]; then
+                FIND_LINKS+=(--find-links "$wheel_dir")
+              fi
+            done
+          }
 
-      - name: Install LFX package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.lfx-artifact-name != ''
-        run: |
-          ls -la ./lfx-dist/
-          find ./lfx-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./lfx-dist/"
-            exit 1
-          fi
-        shell: bash
+          install_wheels() {
+            label="$1"
+            shift
+            if [ "$#" -eq 0 ]; then
+              echo "No $label wheel found"
+              exit 1
+            fi
+            printf 'Installing %s wheel(s):\n' "$label"
+            printf '%s\n' "$@"
+            refresh_find_links
+            # Use `if-necessary-or-explicit` (not `allow`): nightly langflow* wheels
+            # are .dev pre-releases so we need to allow them explicitly, but `allow`
+            # leaks to transitive deps and resolves pre-release pydantic alphas
+            # (e.g. 2.14.0a1) which break langchain-core's module-level
+            # `RunnablePassthrough()` call at import time.
+            uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "$@"
+          }
 
-      - name: Install base package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
-        run: |
-          ls -la ./base-dist/
-          find ./base-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./base-dist/"
-            exit 1
+          SDK_WHEELS=(./sdk-dist/*.whl)
+          LFX_WHEELS=(./lfx-dist/*.whl)
+          if [ ${#SDK_WHEELS[@]} -gt 0 ] || [ ${#LFX_WHEELS[@]} -gt 0 ]; then
+            install_wheels "SDK/LFX" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
           fi
-        shell: bash
 
-      - name: Install main package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
-        run: |
-          ls -la ./main-dist/
-          find ./main-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./main-dist/"
+          BASE_WHEELS=(./base-dist/*.whl)
+          if [ ${#BASE_WHEELS[@]} -gt 0 ]; then
+            install_wheels "base" "${BASE_WHEELS[@]}"
+          fi
+
+          if [ -d ./bundles-dist ]; then
+            BUNDLE_WHEELS=(./bundles-dist/*.whl)
+            install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
+          fi
+
+          MAIN_WHEELS=()
+          while IFS= read -r wheel; do
+            MAIN_WHEELS+=("$wheel")
+          done < <(find ./main-dist -name "langflow*.whl" ! -name "langflow_base*.whl" -type f | sort)
+          if [ ${#MAIN_WHEELS[@]} -ne 1 ]; then
+            echo "Expected exactly one langflow wheel in ./main-dist, found ${#MAIN_WHEELS[@]}"
+            find ./main-dist -name "*.whl" -type f | sort
             exit 1
           fi
+          install_wheels "main" "${MAIN_WHEELS[@]}"
         shell: bash
 
       # PyPI installation steps
       - name: Install langflow from PyPI (Windows)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os == 'windows'
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
-          if [ -n "${{ inputs.langflow-version }}" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe langflow==${{ inputs.langflow-version }}
+          if [ -n "$LANGFLOW_VERSION" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe "langflow==$LANGFLOW_VERSION"
           else
             uv pip install --python ./test-env/Scripts/python.exe langflow
           fi
@@ -285,9 +388,11 @@ jobs:
 
       - name: Install langflow from PyPI (Unix)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os != 'windows'
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
-          if [ -n "${{ inputs.langflow-version }}" ]; then
-            uv pip install --python ./test-env/bin/python langflow==${{ inputs.langflow-version }}
+          if [ -n "$LANGFLOW_VERSION" ]; then
+            uv pip install --python ./test-env/bin/python "langflow==$LANGFLOW_VERSION"
           else
             uv pip install --python ./test-env/bin/python langflow
           fi
@@ -319,52 +424,18 @@ jobs:
           uv run --python ./test-env/bin/python python -m langflow --help
         shell: bash
 
-      - name: Test server startup (Windows)
+      - name: Test installed release authentication (Windows)
         if: matrix.os == 'windows'
         timeout-minutes: 5
-        run: |
-          # Start server in background
-          $serverProcess = Start-Process -FilePath ".\test-env\Scripts\python.exe" -ArgumentList "-m", "langflow", "run", "--host", "localhost", "--port", "7860", "--backend-only" -PassThru -WindowStyle Hidden
-
-          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
-          do {
-            try {
-              $response = Invoke-WebRequest -Uri "http://localhost:7860/health_check" -UseBasicParsing -TimeoutSec 5
-              if ($response.StatusCode -eq 200) {
-                Write-Host "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-                break
-              }
-            } catch {
-              Start-Sleep -Seconds 5
-            }
-          } while ($true)
-
-          # Stop the server process
-          Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
+        run: .\test-env\Scripts\python.exe auth-smoke/scripts/ci/check_authentication.py --start-server
         shell: powershell
 
-      - name: Test server startup (Unix)
+      - name: Test installed release authentication (Unix)
         if: matrix.os != 'windows'
         timeout-minutes: 5
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-        run: |
-          # Start server in background
-          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
-          SERVER_PID=$!
-
-          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
-          while true; do
-            if curl -f http://localhost:7860/health_check >/dev/null 2>&1; then
-              echo "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-              break
-            fi
-            sleep 5
-          done
-
-          # Clean shutdown
-          kill $SERVER_PID 2>/dev/null || true
-          sleep 5
+        run: ./test-env/bin/python auth-smoke/scripts/ci/check_authentication.py --start-server
         shell: bash
 
       - name: Test import in Python (Windows)
@@ -395,38 +466,52 @@ jobs:
 
   test-installation-experimental:
     name: Install & Run - ${{ matrix.os }} ${{ matrix.arch }} ${{ matrix.python-version }} (Experimental)
+    env:
+      LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
     needs: [build-if-needed]
-    if: always() && (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped')
+    if: |
+      always() &&
+      (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped') &&
+      (inputs.langflow-version != '' || inputs.main-artifact-name != '' || needs.build-if-needed.outputs.main-artifact-name != '')
     runs-on: ${{ matrix.runner }}
     continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Python 3.13 - Experimental
+          # Python 3.15 is experimental and does not block releases.
+          # macOS Intel is omitted for the same onnxruntime reason as 3.14.
           - os: linux
             arch: amd64
             runner: ubuntu-latest
-            python-version: "3.13"
+            python-version: "3.15"
           - os: windows
             arch: amd64
             runner: windows-latest
-            python-version: "3.13"
-          - os: macos
-            arch: amd64
-            runner: macos-latest-large
-            python-version: "3.13"
+            python-version: "3.15"
           - os: macos
             arch: arm64
             runner: macos-latest
-            python-version: "3.13"
+            python-version: "3.15"
 
     steps:
+      - name: Checkout authentication smoke check
+        uses: actions/checkout@v7
+        with:
+          path: auth-smoke
+          sparse-checkout: |
+            scripts/ci/check_authentication.py
+            .github/actions/setup-python-preview
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
       - name: Determine install method
         id: install-method
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            if [ -n "${{ inputs.langflow-version }}" ]; then
+            if [ -n "$LANGFLOW_VERSION" ]; then
               echo "method=pypi" >> $GITHUB_OUTPUT
             else
               echo "method=wheel" >> $GITHUB_OUTPUT
@@ -438,16 +523,20 @@ jobs:
         shell: bash
 
       - name: Setup Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
           architecture: ${{ matrix.arch == 'amd64' && 'x64' || matrix.arch }}
 
       - name: Setup UV
-        uses: astral-sh/setup-uv@v6
+        uses: astral-sh/setup-uv@v10.0.0
         with:
+          version: latest-known
           enable-cache: false
           ignore-empty-workdir: true
+
+      - name: Set up Python preview builds
+        uses: ./auth-smoke/.github/actions/setup-python-preview
 
       - name: Install Protocol Buffers (macOS AMD64)
         if: matrix.os == 'macos' && matrix.arch == 'amd64'
@@ -460,179 +549,253 @@ jobs:
         shell: bash
 
       # Download artifacts for wheel installation
-      - name: Download LFX package artifact
-        if: steps.install-method.outputs.method == 'wheel' && inputs.lfx-artifact-name != ''
-        uses: actions/download-artifact@v7
+      - name: Download langflow-sdk package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
-          name: ${{ inputs.lfx-artifact-name }}
+          name: ${{ inputs.sdk-artifact-name || needs.build-if-needed.outputs.sdk-artifact-name || 'adhoc-dist-sdk' }}
+          path: ./sdk-dist
+
+      - name: Download LFX package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != '')
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
           path: ./lfx-dist
 
       - name: Download base package artifact
-        if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v7
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.base-artifact-name != '' || needs.build-if-needed.outputs.base-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
           path: ./base-dist
 
       - name: Download main package artifact
-        if: steps.install-method.outputs.method == 'wheel'
-        uses: actions/download-artifact@v7
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.main-artifact-name != '' || needs.build-if-needed.outputs.main-artifact-name != '')
+        uses: actions/download-artifact@v8
         with:
           name: ${{ inputs.main-artifact-name || needs.build-if-needed.outputs.main-artifact-name || 'adhoc-dist-main' }}
           path: ./main-dist
+
+      - name: Download bundles package artifact
+        if: steps.install-method.outputs.method == 'wheel' && (inputs.bundles-artifact-name != '' || needs.build-if-needed.outputs.bundles-artifact-name != '')
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.bundles-artifact-name || needs.build-if-needed.outputs.bundles-artifact-name }}
+          path: ./bundles-dist
 
       - name: Create fresh virtual environment
         run: |
           uv venv test-env --seed
         shell: bash
 
-      # Wheel installation steps
-      - name: Install LFX package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows' && inputs.lfx-artifact-name != ''
+      - name: Install packages from wheel
+        if: steps.install-method.outputs.method == 'wheel'
         run: |
-          ls -la ./lfx-dist/
-          find ./lfx-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./lfx-dist/"
-            exit 1
-          fi
-        shell: bash
+          set -eo pipefail
+          shopt -s nullglob
 
-      - name: Install base package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
-        run: |
-          ls -la ./base-dist/
-          find ./base-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
+          if [ "${{ matrix.os }}" = "windows" ]; then
+            PYTHON=./test-env/Scripts/python.exe
           else
-            echo "No wheel file found in ./base-dist/"
-            exit 1
+            PYTHON=./test-env/bin/python
           fi
-        shell: bash
 
-      - name: Install main package from wheel (Windows)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
-        run: |
-          ls -la ./main-dist/
-          find ./main-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/Scripts/python.exe "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./main-dist/"
-            exit 1
-          fi
-        shell: bash
+          refresh_find_links() {
+            FIND_LINKS=()
+            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+              if [ -d "$wheel_dir" ]; then
+                FIND_LINKS+=(--find-links "$wheel_dir")
+              fi
+            done
+          }
 
-      - name: Install LFX package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows' && inputs.lfx-artifact-name != ''
-        run: |
-          ls -la ./lfx-dist/
-          find ./lfx-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./lfx-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./lfx-dist/"
-            exit 1
-          fi
-        shell: bash
+          install_wheels() {
+            label="$1"
+            shift
+            if [ "$#" -eq 0 ]; then
+              echo "No $label wheel found"
+              exit 1
+            fi
+            printf 'Installing %s wheel(s):\n' "$label"
+            printf '%s\n' "$@"
+            refresh_find_links
+            # See stable job above for rationale on --prerelease=if-necessary-or-explicit.
+            uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "$@"
+          }
 
-      - name: Install base package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
-        run: |
-          ls -la ./base-dist/
-          find ./base-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./base-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./base-dist/"
-            exit 1
+          SDK_WHEELS=(./sdk-dist/*.whl)
+          LFX_WHEELS=(./lfx-dist/*.whl)
+          if [ ${#SDK_WHEELS[@]} -gt 0 ] || [ ${#LFX_WHEELS[@]} -gt 0 ]; then
+            install_wheels "SDK/LFX" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
           fi
-        shell: bash
 
-      - name: Install main package from wheel (Unix)
-        if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
-        run: |
-          ls -la ./main-dist/
-          find ./main-dist -name "*.whl" -type f
-          WHEEL_FILE=$(find ./main-dist -name "*.whl" -type f | head -1)
-          if [ -n "$WHEEL_FILE" ]; then
-            uv pip install --prerelease=allow --python ./test-env/bin/python "$WHEEL_FILE"
-          else
-            echo "No wheel file found in ./main-dist/"
+          BASE_WHEELS=(./base-dist/*.whl)
+          if [ ${#BASE_WHEELS[@]} -gt 0 ]; then
+            install_wheels "base" "${BASE_WHEELS[@]}"
+          fi
+
+          if [ -d ./bundles-dist ]; then
+            BUNDLE_WHEELS=(./bundles-dist/*.whl)
+            install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
+          fi
+
+          MAIN_WHEELS=()
+          while IFS= read -r wheel; do
+            MAIN_WHEELS+=("$wheel")
+          done < <(find ./main-dist -name "langflow*.whl" ! -name "langflow_base*.whl" -type f | sort)
+          if [ ${#MAIN_WHEELS[@]} -ne 1 ]; then
+            echo "Expected exactly one langflow wheel in ./main-dist, found ${#MAIN_WHEELS[@]}"
+            find ./main-dist -name "*.whl" -type f | sort
             exit 1
           fi
+          install_wheels "main" "${MAIN_WHEELS[@]}"
         shell: bash
 
       - name: Force reinstall local wheels to prevent downgrades (Windows)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os == 'windows'
         run: |
+          # Expose the local wheel dirs so dependency re-resolution (the
+          # pre-release path below drops --no-deps) can find the local
+          # pre-release SDK/LFX/base wheels. Without these, uv re-resolves
+          # langflow-base's `lfx>=X.Y.Zrc0` constraint against PyPI only, where
+          # the matching rc/dev wheel is not published yet, and fails with
+          # "No solution found when resolving dependencies".
+          FIND_LINKS=()
+          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+            if [ -d "$wheel_dir" ]; then
+              FIND_LINKS+=(--find-links "$wheel_dir")
+            fi
+          done
+
           # Reinstall LFX if it was provided
-          if [ -n "${{ inputs.lfx-artifact-name }}" ]; then
+          if [ -n "${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name }}" ]; then
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
             if [ -n "$LFX_WHEEL" ]; then
               echo "Force reinstalling LFX: $LFX_WHEEL"
+              INSTALL_WHEELS=("$LFX_WHEEL")
+              SDK_WHEEL=""
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+              fi
+              if [ -n "$SDK_WHEEL" ]; then
+                echo "Force reinstalling langflow-sdk with LFX: $SDK_WHEEL"
+                INSTALL_WHEELS=("$SDK_WHEEL" "$LFX_WHEEL")
+              fi
               NO_DEPS="--no-deps"
               if [ "${{ inputs.pre_release }}" = "true" ]; then
                 NO_DEPS=""
               fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/Scripts/python.exe "$LFX_WHEEL"
+              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
             fi
           fi
 
           # Reinstall base
-          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
+          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f 2>/dev/null | head -1 || true)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
+            INSTALL_WHEELS=("$BASE_WHEEL")
             NO_DEPS="--no-deps"
             if [ "${{ inputs.pre_release }}" = "true" ]; then
+              # Keep local pre-release roots explicit while re-resolving deps. uv's
+              # if-necessary-or-explicit mode does not allow pre-release transitive
+              # deps found only through --find-links, such as langflow-sdk dev wheels.
               NO_DEPS=""
+              LOCAL_WHEELS=()
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+                if [ -n "$SDK_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$SDK_WHEEL")
+                fi
+              fi
+              if [ -d ./lfx-dist ]; then
+                LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+                if [ -n "$LFX_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$LFX_WHEEL")
+                fi
+              fi
+              INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")
             fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
+            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
           fi
         shell: bash
 
       - name: Force reinstall local wheels to prevent downgrades (Unix)
         if: steps.install-method.outputs.method == 'wheel' && matrix.os != 'windows'
         run: |
+          # Expose the local wheel dirs so dependency re-resolution (the
+          # pre-release path below drops --no-deps) can find the local
+          # pre-release SDK/LFX/base wheels. Without these, uv re-resolves
+          # langflow-base's `lfx>=X.Y.Zrc0` constraint against PyPI only, where
+          # the matching rc/dev wheel is not published yet, and fails with
+          # "No solution found when resolving dependencies".
+          FIND_LINKS=()
+          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+            if [ -d "$wheel_dir" ]; then
+              FIND_LINKS+=(--find-links "$wheel_dir")
+            fi
+          done
+
           # Reinstall LFX if it was provided
-          if [ -n "${{ inputs.lfx-artifact-name }}" ]; then
+          if [ -n "${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name }}" ]; then
             LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
             if [ -n "$LFX_WHEEL" ]; then
               echo "Force reinstalling LFX: $LFX_WHEEL"
+              INSTALL_WHEELS=("$LFX_WHEEL")
+              SDK_WHEEL=""
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+              fi
+              if [ -n "$SDK_WHEEL" ]; then
+                echo "Force reinstalling langflow-sdk with LFX: $SDK_WHEEL"
+                INSTALL_WHEELS=("$SDK_WHEEL" "$LFX_WHEEL")
+              fi
               NO_DEPS="--no-deps"
               if [ "${{ inputs.pre_release }}" = "true" ]; then
                 NO_DEPS=""
               fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/bin/python "$LFX_WHEEL"
+              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
             fi
           fi
 
           # Reinstall base
-          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f | head -1)
+          BASE_WHEEL=$(find ./base-dist -name "*.whl" -type f 2>/dev/null | head -1 || true)
           if [ -n "$BASE_WHEEL" ]; then
             echo "Force reinstalling langflow-base: $BASE_WHEEL"
+            INSTALL_WHEELS=("$BASE_WHEEL")
             NO_DEPS="--no-deps"
             if [ "${{ inputs.pre_release }}" = "true" ]; then
+              # Keep local pre-release roots explicit while re-resolving deps. uv's
+              # if-necessary-or-explicit mode does not allow pre-release transitive
+              # deps found only through --find-links, such as langflow-sdk dev wheels.
               NO_DEPS=""
+              LOCAL_WHEELS=()
+              if [ -d ./sdk-dist ]; then
+                SDK_WHEEL=$(find ./sdk-dist -name "*.whl" -type f | head -1)
+                if [ -n "$SDK_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$SDK_WHEEL")
+                fi
+              fi
+              if [ -d ./lfx-dist ]; then
+                LFX_WHEEL=$(find ./lfx-dist -name "*.whl" -type f | head -1)
+                if [ -n "$LFX_WHEEL" ]; then
+                  LOCAL_WHEELS+=("$LFX_WHEEL")
+                fi
+              fi
+              INSTALL_WHEELS=("${LOCAL_WHEELS[@]}" "$BASE_WHEEL")
             fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/bin/python "$BASE_WHEEL"
+            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit "${FIND_LINKS[@]}" --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
           fi
         shell: bash
 
       # PyPI installation steps
       - name: Install langflow from PyPI (Windows)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os == 'windows'
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
-          if [ -n "${{ inputs.langflow-version }}" ]; then
-            uv pip install --python ./test-env/Scripts/python.exe langflow==${{ inputs.langflow-version }}
+          if [ -n "$LANGFLOW_VERSION" ]; then
+            uv pip install --python ./test-env/Scripts/python.exe "langflow==$LANGFLOW_VERSION"
           else
             uv pip install --python ./test-env/Scripts/python.exe langflow
           fi
@@ -640,9 +803,11 @@ jobs:
 
       - name: Install langflow from PyPI (Unix)
         if: steps.install-method.outputs.method == 'pypi' && matrix.os != 'windows'
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
         run: |
-          if [ -n "${{ inputs.langflow-version }}" ]; then
-            uv pip install --python ./test-env/bin/python langflow==${{ inputs.langflow-version }}
+          if [ -n "$LANGFLOW_VERSION" ]; then
+            uv pip install --python ./test-env/bin/python "langflow==$LANGFLOW_VERSION"
           else
             uv pip install --python ./test-env/bin/python langflow
           fi
@@ -674,52 +839,18 @@ jobs:
           uv run --python ./test-env/bin/python python -m langflow --help
         shell: bash
 
-      - name: Test server startup (Windows)
+      - name: Test installed release authentication (Windows)
         if: matrix.os == 'windows'
         timeout-minutes: 5
-        run: |
-          # Start server in background
-          $serverProcess = Start-Process -FilePath ".\test-env\Scripts\python.exe" -ArgumentList "-m", "langflow", "run", "--host", "localhost", "--port", "7860", "--backend-only" -PassThru -WindowStyle Hidden
-
-          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
-          do {
-            try {
-              $response = Invoke-WebRequest -Uri "http://localhost:7860/health_check" -UseBasicParsing -TimeoutSec 5
-              if ($response.StatusCode -eq 200) {
-                Write-Host "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-                break
-              }
-            } catch {
-              Start-Sleep -Seconds 5
-            }
-          } while ($true)
-
-          # Stop the server process
-          Stop-Process -Id $serverProcess.Id -Force -ErrorAction SilentlyContinue
+        run: .\test-env\Scripts\python.exe auth-smoke/scripts/ci/check_authentication.py --start-server
         shell: powershell
 
-      - name: Test server startup (Unix)
+      - name: Test installed release authentication (Unix)
         if: matrix.os != 'windows'
         timeout-minutes: 5
         env:
           OBJC_DISABLE_INITIALIZE_FORK_SAFETY: YES
-        run: |
-          # Start server in background
-          ./test-env/bin/python -m langflow run --host localhost --port 7860 --backend-only &
-          SERVER_PID=$!
-
-          # Wait for server to be ready (GitHub Actions will timeout after 5 minutes)
-          while true; do
-            if curl -f http://localhost:7860/health_check >/dev/null 2>&1; then
-              echo "✅ Server is ready on ${{ matrix.os }}-${{ matrix.arch }}"
-              break
-            fi
-            sleep 5
-          done
-
-          # Clean shutdown
-          kill $SERVER_PID 2>/dev/null || true
-          sleep 5
+        run: ./test-env/bin/python auth-smoke/scripts/ci/check_authentication.py --start-server
         shell: bash
 
       - name: Test import in Python (Windows)
@@ -748,46 +879,181 @@ jobs:
           "
         shell: bash
 
+  test-base-runtime:
+    name: Base Distribution Wheel - Linux Python 3.14
+    needs: [build-if-needed]
+    if: |
+      always() &&
+      inputs.langflow-version == '' &&
+      (needs.build-if-needed.result == 'success' || needs.build-if-needed.result == 'skipped') &&
+      (inputs.base-artifact-name != '' || needs.build-if-needed.outputs.base-artifact-name != '')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout authentication smoke check
+        uses: actions/checkout@v7
+        with:
+          path: auth-smoke
+          sparse-checkout: scripts/ci/check_authentication.py
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Setup UV
+        uses: astral-sh/setup-uv@v10.0.0
+        with:
+          version: latest-known
+          enable-cache: false
+          python-version: "3.14"
+
+      - name: Download langflow-sdk package artifact
+        if: inputs.sdk-artifact-name != '' || needs.build-if-needed.outputs.sdk-artifact-name != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.sdk-artifact-name || needs.build-if-needed.outputs.sdk-artifact-name || 'adhoc-dist-sdk' }}
+          path: ./sdk-dist
+
+      - name: Download LFX package artifact
+        if: inputs.lfx-artifact-name != '' || needs.build-if-needed.outputs.lfx-artifact-name != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.lfx-artifact-name || needs.build-if-needed.outputs.lfx-artifact-name || 'adhoc-dist-lfx' }}
+          path: ./lfx-dist
+
+      - name: Download base package artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: ${{ inputs.base-artifact-name || needs.build-if-needed.outputs.base-artifact-name || 'adhoc-dist-base' }}
+          path: ./base-dist
+
+      - name: Install only the base dependency chain
+        shell: bash
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+
+          SDK_WHEELS=(./sdk-dist/*.whl)
+          LFX_WHEELS=(./lfx-dist/*.whl)
+          BASE_WHEELS=(./base-dist/*.whl)
+          [ ${#SDK_WHEELS[@]} -le 1 ] || { echo "Expected at most one SDK wheel"; exit 1; }
+          [ ${#LFX_WHEELS[@]} -le 1 ] || { echo "Expected at most one LFX wheel"; exit 1; }
+          [ ${#BASE_WHEELS[@]} -eq 1 ] || { echo "Expected one base wheel"; exit 1; }
+
+          FIND_LINKS=()
+          for directory in sdk-dist lfx-dist base-dist; do
+            if [ -d "$directory" ]; then
+              FIND_LINKS+=(--find-links "./$directory")
+            fi
+          done
+          uv venv base-test-env --seed --python 3.14
+          uv pip install --python base-test-env/bin/python \
+            --prerelease=if-necessary-or-explicit \
+            "${FIND_LINKS[@]}" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}" "${BASE_WHEELS[0]}"
+          uv pip check --python base-test-env/bin/python
+
+      - name: Verify base boundary and indexed imports
+        shell: bash
+        run: |
+          base-test-env/bin/python - <<'PY'
+          import importlib
+          import re
+          import sys
+          from importlib.metadata import distributions, entry_points, metadata, requires
+          from pathlib import Path
+
+          from lfx.interface.components import _read_component_index
+
+          normalize = lambda value: re.sub(r"[-_.]+", "-", value).lower()
+          installed = {normalize(dist.metadata["Name"]) for dist in distributions() if dist.metadata["Name"]}
+          assert {"langflow-base", "langflow-sdk", "lfx"} <= installed, installed
+          forbidden = installed & {"langflow", "langflow-core", "torch", "torchvision"}
+          forbidden |= {name for name in installed if name.startswith("lfx-")}
+          assert not forbidden, f"Forbidden base distributions: {sorted(forbidden)}"
+          for group in ("lfx.bundles", "langflow.extensions", "langflow.plugins"):
+              assert not entry_points(group=group), f"Extension entry points registered in {group}"
+
+          scripts = Path(sys.executable).parent
+          # Must track [project.scripts] in src/backend/base/pyproject.toml. On the
+          # 1.12 line #14339 renamed this entry point back to `langflow`; asserting
+          # `langflow-base` here is only correct on branches that predate it.
+          assert (scripts / "langflow").is_file(), f"langflow console script missing from {scripts}"
+          assert not (scripts / "langflow-base").exists(), "langflow-base console script is not part of the 1.12 base distribution"
+          provided_extras = set(metadata("langflow-base").get_all("Provides-Extra", []))
+          assert {"complete", "all"} <= provided_extras
+          compatibility_requirements = [
+              requirement for requirement in (requires("langflow-base") or [])
+              if 'extra == "complete"' in requirement or 'extra == "all"' in requirement
+          ]
+          assert not compatibility_requirements, compatibility_requirements
+
+          index = _read_component_index()
+          assert index is not None, "Installed LFX rejected its bundled component index"
+          for category, components in index["entries"]:
+              for component_name, component in components.items():
+                  module_path = component.get("metadata", {}).get("module")
+                  assert module_path, f"{category}.{component_name} has no module"
+                  module_name, class_name = module_path.rsplit(".", 1)
+                  getattr(importlib.import_module(module_name), class_name)
+          PY
+
+      - name: Test installed base authentication
+        shell: bash
+        timeout-minutes: 5
+        env:
+          LANGFLOW_SUPERUSER_PASSWORD: ci-startup-only-password  # pragma: allowlist secret
+        run: base-test-env/bin/python auth-smoke/scripts/ci/check_authentication.py --start-server
+
   test-summary:
     name: Cross-Platform Test Summary
-    needs: [test-installation-stable, test-installation-experimental]
+    needs: [build-if-needed, test-installation-stable, test-installation-experimental, test-base-runtime]
     runs-on: ubuntu-latest
     if: always()
     steps:
       - name: Check test results
+        env:
+          LANGFLOW_VERSION: ${{ inputs.langflow-version }}
+          EXPECT_BASE_RUNTIME: ${{ inputs.base-artifact-name != '' || needs.build-if-needed.outputs.base-artifact-name != '' }}
         run: |
           stable_result="${{ needs.test-installation-stable.result }}"
           experimental_result="${{ needs.test-installation-experimental.result }}"
+          base_result="${{ needs.test-base-runtime.result }}"
 
           echo "Stable platforms result: $stable_result"
-          echo "Experimental platforms result: $experimental_result"
+          echo "Experimental platforms result (continue-on-error, so failed legs still read success): $experimental_result"
+          echo "Base runtime result: $base_result"
 
-          # Stable platforms must succeed, experimental can fail
+          if [ "$stable_result" = "skipped" ] && [ "$base_result" = "skipped" ]; then
+            echo "✅ No Langflow application distribution was selected; package build tests passed"
+            exit 0
+          fi
+
+          if [ "$EXPECT_BASE_RUNTIME" = "true" ] && [ -z "$LANGFLOW_VERSION" ] && [ "$base_result" != "success" ]; then
+            echo "❌ Base runtime wheel test failed: $base_result"
+            exit 1
+          fi
+
+          if [ "$stable_result" = "skipped" ] && [ "$base_result" = "success" ]; then
+            echo "✅ Base-only wheel installation tests passed"
+            exit 0
+          fi
+
+          # Stable platforms must succeed. The experimental (Python 3.15) job runs with
+          # continue-on-error, so its result reads "success" even when a leg fails; report it
+          # as non-blocking rather than claiming those versions passed.
           if [ "$stable_result" = "success" ]; then
-            if [ "$experimental_result" = "success" ]; then
-              if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-                if [ -n "${{ inputs.langflow-version }}" ]; then
-                  echo "✅ All PyPI installation tests passed (including Python 3.13)"
-                else
-                  echo "✅ All source build and installation tests passed (including Python 3.13)"
-                fi
+            if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+              if [ -n "$LANGFLOW_VERSION" ]; then
+                echo "✅ PyPI installation tests passed on the stable platforms"
               else
-                echo "✅ All cross-platform tests passed - PyPI upload can proceed"
+                echo "✅ Source build and installation tests passed on the stable platforms"
               fi
             else
-              if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-                if [ -n "${{ inputs.langflow-version }}" ]; then
-                  echo "✅ PyPI installation tests passed (Python 3.13 experimental failures are acceptable)"
-                else
-                  echo "✅ Source build and installation tests passed (Python 3.13 experimental failures are acceptable)"
-                fi
-              else
-                echo "✅ Cross-platform tests passed - Python 3.13 experimental failures are acceptable - PyPI upload can proceed"
-              fi
+              echo "✅ Cross-platform tests passed on the stable platforms - PyPI upload can proceed"
             fi
+            echo "ℹ️ Python 3.15 experimental results are non-blocking; check the (Experimental) jobs for their outcome"
           elif [ "$stable_result" = "failure" ]; then
             echo "❌ Critical platform tests failed - blocking release"
-            echo "Stable platforms (Python 3.10, 3.12) must pass for release"
+            echo "Stable platforms (Python 3.11, 3.12, 3.13, 3.14) must pass for release"
             exit 1
           elif [ "$stable_result" = "cancelled" ]; then
             echo "❌ Critical platform tests were cancelled"

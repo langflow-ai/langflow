@@ -9,6 +9,7 @@ import pytest
 from langflow.agentic.helpers.sse import (
     format_complete_event,
     format_error_event,
+    format_flow_update_event,
     format_progress_event,
     format_token_event,
 )
@@ -243,6 +244,59 @@ class TestFormatTokenEvent:
         assert parsed["chunk"] == "Hello 世界 🌍"
 
 
+class TestFormatFlowUpdateEventProposePlan:
+    """Contract tests for the propose_plan action flowing through
+    format_flow_update_event.
+
+    The ProposePlan MCP tool pushes ``{"action": "propose_plan", "markdown": "..."}``
+    onto the flow-event queue. The assistant service drains it and feeds it to
+    ``format_flow_update_event``, which spreads the dict into the SSE payload.
+    The frontend then routes by ``action`` to render the plan card.
+
+    These tests lock in the wire format so future refactors of the SSE layer
+    cannot silently break the assistant's planning step.
+    """  # noqa: D205
+
+    def test_should_emit_flow_update_event_with_propose_plan_action(self):
+        update = {"action": "propose_plan", "markdown": "Plan text."}
+
+        result = format_flow_update_event(update)
+
+        assert result.startswith("data: ")
+        assert result.endswith("\n\n")
+        parsed = json.loads(result[6:-2])
+        assert parsed["event"] == "flow_update"
+        assert parsed["action"] == "propose_plan"
+        assert parsed["markdown"] == "Plan text."
+
+    def test_should_preserve_markdown_with_newlines_as_escaped_json(self):
+        # Multi-line markdown must round-trip cleanly. SSE protocol uses
+        # blank lines as delimiters, so a raw newline inside the payload
+        # would split the event. json.dumps must escape them.
+        plan = "## Plan\n\n- Step 1\n- Step 2"
+        update = {"action": "propose_plan", "markdown": plan}
+
+        result = format_flow_update_event(update)
+
+        json_str = result[6:-2]
+        # SSE payload must be on a single line (no raw newlines mid-event).
+        assert "\n" not in json_str
+        parsed = json.loads(json_str)
+        # But the markdown content must round-trip with newlines intact.
+        assert parsed["markdown"] == plan
+
+    def test_should_keep_event_type_when_action_is_propose_plan(self):
+        # Regression guard: someone might be tempted to overwrite ``event``
+        # if ``action`` is set. The SSE consumer relies on the outer event
+        # type to dispatch handlers — it must stay "flow_update".
+        update = {"action": "propose_plan", "markdown": "x"}
+
+        result = format_flow_update_event(update)
+        parsed = json.loads(result[6:-2])
+
+        assert parsed["event"] == "flow_update"
+
+
 class TestSSEFormatConsistency:
     """Tests for SSE format consistency across all event types."""
 
@@ -258,7 +312,6 @@ class TestSSEFormatConsistency:
         for event in events:
             assert event.startswith("data: ")
             assert event.endswith("\n\n")
-            # Should be valid JSON between "data: " and "\n\n"
             json_str = event[6:-2]
             parsed = json.loads(json_str)
             assert "event" in parsed
@@ -274,5 +327,57 @@ class TestSSEFormatConsistency:
 
         for event in test_cases:
             json_str = event[6:-2]
-            # Should not raise
             json.loads(json_str)
+
+
+class TestBugsAndEdgeCases:
+    """Tests that challenge the code — exposing real bugs and untested edge cases."""
+
+    def test_newlines_in_values_are_json_escaped(self):
+        """Newlines in SSE field values must be JSON-escaped to not break SSE protocol.
+
+        SSE uses newline-newline as delimiter. json.dumps escapes newlines, so the
+        raw payload between 'data: ' prefix and final newlines is valid single-line JSON.
+        """
+        malicious_error = 'error\n\ndata: {"event":"fake_complete"}\n\n'
+        result = format_error_event(malicious_error)
+
+        # The JSON payload (between "data: " and final "\n\n") must be on one line
+        json_str = result[6:-2]
+        assert "\n" not in json_str  # No raw newlines inside the JSON
+        parsed = json.loads(json_str)
+        assert parsed["message"] == malicious_error
+
+    def test_non_serializable_data_crashes_without_handling(self):
+        """format_complete_event crashes on non-JSON-serializable data.
+
+        No try-except around json.dumps — TypeError propagates to caller.
+        """
+        from datetime import datetime, timezone
+
+        with pytest.raises(TypeError):
+            format_complete_event({"timestamp": datetime.now(tz=timezone.utc)})
+
+    def test_negative_attempt_accepted_without_validation(self):
+        """Negative attempt/max_attempts are accepted silently — no input validation."""
+        result = format_progress_event("generating", -1, -5)
+        data = json.loads(result[6:-2])
+        assert data["attempt"] == -1
+        assert data["max_attempts"] == -5
+
+    def test_attempt_greater_than_max_accepted(self):
+        """Attempt > max_attempts is accepted silently — no consistency check."""
+        result = format_progress_event("generating", 10, 3)
+        data = json.loads(result[6:-2])
+        assert data["attempt"] == 10
+        assert data["max_attempts"] == 3
+
+    def test_format_cancelled_event_structure(self):
+        """format_cancelled_event should return well-formed SSE event."""
+        from langflow.agentic.helpers.sse import format_cancelled_event
+
+        result = format_cancelled_event()
+        assert result.startswith("data: ")
+        assert result.endswith("\n\n")
+        parsed = json.loads(result[6:-2])
+        assert parsed["event"] == "cancelled"

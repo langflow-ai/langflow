@@ -21,7 +21,7 @@ class PlaygroundEvent(BaseModel):
     files: list[str] | None = Field(default=None)
     text: str | None = Field(default=None)
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
     id_: UUID | str | None = Field(default=None, alias="id")
 
@@ -80,7 +80,7 @@ class TokenEvent(BaseModel):
     chunk: str = Field(...)
     id: UUID | str | None = Field(alias="id")
     timestamp: Annotated[str, timestamp_to_str_validator] = Field(
-        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S %Z")
+        default_factory=lambda: datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f %Z")
     )
 
 

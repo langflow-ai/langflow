@@ -2,9 +2,11 @@
 // Note: type annotations allow type checking and IDEs autocompletion
 
 const path = require("path");
-const lightCodeTheme = require("prism-react-renderer/themes/github");
-const darkCodeTheme = require("prism-react-renderer/themes/dracula");
-const { remarkCodeHike } = require("@code-hike/mdx");
+
+
+const { lightNeonPrismTheme, grafiteNeonTheme } = require("./src/prismThemes");
+
+const rehypeWbrUnderscore = require("./src/plugins/rehypeWbrUnderscore");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -36,7 +38,7 @@ const config = {
       tagName: "link",
       attributes: {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Sora:wght@550;600&display=swap",
       },
     },
     ...(isProduction
@@ -110,16 +112,35 @@ const config = {
           routeBasePath: "/", // Serve the docs at the site's root
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
-          beforeDefaultRemarkPlugins: [
-            [
-              remarkCodeHike,
-              {
-                theme: "github-dark",
-                showCopyButton: true,
-                lineNumbers: true,
-              },
-            ],
-          ],
+          // Versioning configuration
+          lastVersion: "1.13.0",
+          versions: {
+            current: {
+              label: "1.14.x (Next)",
+              path: "next",
+            },
+            "1.13.0": {
+              label: "1.13.x",
+              path: "",
+            },
+            "1.12.0": {
+              label: "1.12.x",
+              path: "1.12.0",
+            },
+            "1.11.0": {
+              label: "1.11.x",
+              path: "1.11.0",
+            },
+            "1.10.0": {
+              label: "1.10.x",
+              path: "1.10.0",
+            },
+            "1.9.0": {
+              label: "1.9.x",
+              path: "1.9.0",
+            },
+          },
+          rehypePlugins: [rehypeWbrUnderscore],
         },
         sitemap: {
           // https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-sitemap
@@ -134,10 +155,7 @@ const config = {
         },
         blog: false,
         theme: {
-          customCss: [
-            require.resolve("@code-hike/mdx/styles.css"),
-            require.resolve("./css/custom.css"),
-          ],
+          customCss: [require.resolve("./css/custom.css")],
         },
       }),
     ],
@@ -154,14 +172,53 @@ const config = {
             spec: "openapi/openapi.json",
             route: "/api",
           },
-          {
-            id: "workflow",
-            spec: "openapi/langflow-workflows-openapi.json",
-            route: "/api/workflow",
-          },
         ],
         theme: {
-          primaryColor: "#7528FC",
+          primaryColor: "#F471B5",
+          options: {
+            disableSearch: true,
+          },
+          theme: {
+            sidebar: {
+              backgroundColor: "transparent",
+            },
+            colors: {
+              // Badge backgrounds carry white text — all pass WCAG AA (4.5:1)
+              http: {
+                get: "#1e6ff5",
+                post: "#0c875e",
+                put: "#a56a07",
+                delete: "#eb1616",
+                patch: "#8655f6",
+                head: "#6265f1",
+                options: "#6b7280",
+              },
+              // Response chips (2xx green / 4xx-5xx red) — darkened from Redoc
+              // defaults (#1d8127 / #d41f1c) to pass 4.5:1 on their tinted bg
+              success: {
+                main: "#186a20",
+              },
+              error: {
+                main: "#ce1e1b",
+              },
+            },
+            schema: {
+              linesColor: "#F471B5",
+              requireLabelColor: "#F471B5",
+            },
+            rightPanel: {
+              backgroundColor: "#00000000", // transparent — "transparent" not accepted by Redoc theme parser
+              textColor: "#c6c6d1",
+            },
+            typography: {
+              code: {
+                color: "#F471B5",
+              },
+            },
+            codeBlock: {
+              backgroundColor: "#161618",
+            },
+          },
         },
       },
     ],
@@ -249,10 +306,14 @@ const config = {
           },
           {
             to: "/data-types",
-            from: ["/guides-data-message", "/configuration-objects"],
+            from: [
+              "/guides-data-message",
+              "/configuration-objects",
+              "/concepts-objects",
+            ],
           },
           {
-            to: "/concepts-flows",
+            to: "/agents",
             from: [
               "/travel-planning-agent",
               "/starter-projects-travel-planning-agent",
@@ -266,18 +327,43 @@ const config = {
               "/sequential-agent",
               "/starter-projects-sequential-agent",
               "/tutorials-sequential-agent",
+            ],
+          },
+          {
+            to: "/memory",
+            from: [
               "/memory-chatbot",
               "/starter-projects-memory-chatbot",
               "/tutorials-memory-chatbot",
+            ],
+          },
+          {
+            to: "/chat-with-files",
+            from: [
               "/financial-report-parser",
               "/document-qa",
               "/starter-projects-document-qa",
               "/tutorials-document-qa",
+            ],
+          },
+          {
+            to: "/components-prompts",
+            from: [
               "/blog-writer",
               "/starter-projects-blog-writer",
               "/tutorials-blog-writer",
+            ],
+          },
+          {
+            to: "/get-started-quickstart",
+            from: [
               "/basic-prompting",
               "/starter-projects-basic-prompting",
+            ],
+          },
+          {
+            to: "/chat-with-rag",
+            from: [
               "/vector-store-rag",
               "/starter-projects-vector-store-rag",
             ],
@@ -297,6 +383,7 @@ const config = {
               "/configuration-authentication",
               "/configuration-security-best-practices",
               "/Configuration/configuration-security-best-practices",
+              "/jwt-authentication",
             ],
           },
           {
@@ -313,6 +400,7 @@ const config = {
             from: [
               "/concepts-api",
               "/workspace-api",
+              "/embedded-chat-widget",
             ],
           },
           {
@@ -336,10 +424,6 @@ const config = {
             from: "/agents-tool-calling-agent-component",
           },
           {
-            to: "/concepts-publish",
-            from: "/embedded-chat-widget",
-          },
-          {
             to: "/bundles-google",
             from: [
               "/integrations-setup-google-oauth-langflow",
@@ -353,10 +437,6 @@ const config = {
           {
             to: "/develop-application",
             from: "/develop-overview",
-          },
-          {
-            to: "/data-types",
-            from: "/concepts-objects",
           },
           {
             to: "/bundles-apify",
@@ -394,7 +474,38 @@ const config = {
               "/integrations-nvidia-g-assist",
               "/integrations-nvidia-system-assist",
             ]
-          }
+          },
+          {
+            to: "/legacy-core-components",
+            from: [
+              "/directory",
+              "/text-input-and-output",
+            ]
+          },
+          {
+            to: "/operations",
+            from: [
+              "/data-operations",
+              "/dataframe-operations",
+              "/text-operations",
+            ]
+          },
+          {
+            to: "/api#tag/Workflow",
+            from: "/api/workflow",
+          },
+          {
+            to: "/components-bundle-components#altk",
+            from: "/bundles-altk",
+          },
+          {
+            to: "/components-bundle-components#legacy-bundles",
+            from: "/bundles-chroma",
+          },
+          {
+            to: "/macos-support",
+            from: "/deployment-macos-support",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
@@ -416,17 +527,26 @@ const config = {
       };
     },
   ],
+  clientModules: [
+    require.resolve("./src/clientModules/tocProgress.js"),
+    require.resolve("./src/clientModules/redocA11y.js"),
+    require.resolve("./src/clientModules/codeBlockA11y.js"),
+  ],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        hideOnScroll: true,
+        hideOnScroll: false,
         logo: {
           alt: "Langflow",
           src: "img/lf-docs-light.svg",
           srcDark: "img/lf-docs-dark.svg",
         },
         items: [
+          {
+            type: 'docsVersionDropdown',
+            position: 'left',
+          },
           // right
           {
             position: "right",
@@ -434,6 +554,7 @@ const config = {
             className: "header-github-link",
             target: "_blank",
             rel: null,
+            "aria-label": "GitHub",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -447,6 +568,7 @@ const config = {
             className: "header-twitter-link",
             target: "_blank",
             rel: null,
+            "aria-label": "Twitter",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -460,6 +582,7 @@ const config = {
             className: "header-discord-link",
             target: "_blank",
             rel: null,
+            "aria-label": "Discord",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -477,8 +600,9 @@ const config = {
         respectPrefersColorScheme: true,
       },
       prism: {
-        theme: lightCodeTheme,
-        darkTheme: darkCodeTheme,
+        theme: lightNeonPrismTheme,
+        darkTheme: grafiteNeonTheme,
+        additionalLanguages: ["bash", "docker", "nginx", "powershell", "batch"],
       },
       zoom: {
         selector: ".markdown :not(a) > img:not(.no-zoom)",
@@ -490,7 +614,7 @@ const config = {
       docs: {
         sidebar: {
           hideable: false,
-          autoCollapseCategories: true,
+          autoCollapseCategories: false,
         },
       },
       footer: {

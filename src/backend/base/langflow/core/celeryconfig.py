@@ -1,11 +1,18 @@
 # celeryconfig.py
 import os
 
+langflow_valkey_host = os.environ.get("LANGFLOW_VALKEY_HOST")
+langflow_valkey_port = os.environ.get("LANGFLOW_VALKEY_PORT")
 langflow_redis_host = os.environ.get("LANGFLOW_REDIS_HOST")
 langflow_redis_port = os.environ.get("LANGFLOW_REDIS_PORT")
 # broker default user
 
-if langflow_redis_host and langflow_redis_port:
+if langflow_valkey_host and langflow_valkey_port:
+    # Valkey is wire-compatible with Redis. Celery/kombu registers redis://,
+    # not valkey://, as the transport scheme.
+    broker_url = f"redis://{langflow_valkey_host}:{langflow_valkey_port}/0"
+    result_backend = f"redis://{langflow_valkey_host}:{langflow_valkey_port}/0"
+elif langflow_redis_host and langflow_redis_port:
     broker_url = f"redis://{langflow_redis_host}:{langflow_redis_port}/0"
     result_backend = f"redis://{langflow_redis_host}:{langflow_redis_port}/0"
 else:
@@ -14,5 +21,9 @@ else:
     mq_password = os.environ.get("RABBITMQ_DEFAULT_PASS", "langflow")
     broker_url = os.environ.get("BROKER_URL", f"amqp://{mq_user}:{mq_password}@localhost:5672//")
     result_backend = os.environ.get("RESULT_BACKEND", "redis://localhost:6379/0")
-# tasks should be json or pickle
-accept_content = ["json", "pickle"]
+# Broker and result data must never be deserialized as Python objects. A broker
+# writer can otherwise execute code in the worker before task routing runs.
+task_serializer = "json"
+result_serializer = "json"
+accept_content = ["json"]
+result_accept_content = ["json"]

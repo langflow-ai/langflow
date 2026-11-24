@@ -21,6 +21,19 @@ class TestNewsSearchComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs):
+        # Serve the Google News feed offline; the component's parsing of it runs for real.
+        feed = """<?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0"><channel><item>
+            <title>Test Article</title><link>https://news.example.com/1</link>
+            <pubDate>2024-03-20</pubDate><description>Test summary</description>
+        </item></channel></rss>"""
+        response = Mock()
+        response.content = feed.encode("utf-8")
+        response.raise_for_status = Mock()
+        with patch("requests.get", return_value=response):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
+
     def test_successful_news_search(self):
         # Mock Google News RSS feed content
         mock_rss_content = """

@@ -1,9 +1,15 @@
 import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "auto-login");
+});
 
 test.describe(
   "Auto_login tests",
-  { tag: ["@release", "@api", "@database", "@mainpage"] },
+  { tag: ["@release", "@api", "@database"] },
 
   () => {
     test(
@@ -13,7 +19,7 @@ test.describe(
         await awaitBootstrapTest(page, {
           skipModal: true,
         });
-        await page.getByTestId("new-project-btn").click();
+        await openTemplatesModal(page);
       },
     );
 
@@ -24,27 +30,12 @@ test.describe(
         await awaitBootstrapTest(page, {
           skipModal: true,
         });
-        await page.getByTestId("new-project-btn").click();
-        await page.waitForSelector('[data-testid="modal-title"]', {
-          timeout: 5000,
-        });
+        await openTemplatesModal(page);
 
         await page.goto("/login");
-        await page.getByTestId("new-project-btn").click();
-        await page.waitForSelector('[data-testid="modal-title"]', {
-          timeout: 5000,
-        });
-        await page.goto("/admin");
-        await page.getByTestId("new-project-btn").click();
-        await page.waitForSelector('[data-testid="modal-title"]', {
-          timeout: 5000,
-        });
-
-        await page.goto("/admin/login");
-        await page.getByTestId("new-project-btn").click();
-        await page.waitForSelector('[data-testid="modal-title"]', {
-          timeout: 5000,
-        });
+        await openTemplatesModal(page);
+        await page.goto("/login/admin");
+        await openTemplatesModal(page);
       },
     );
   },

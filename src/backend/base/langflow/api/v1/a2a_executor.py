@@ -1,0 +1,293 @@
+"""Protocol-pure A2A AgentExecutor for Langflow flows.
+
+Deliberately free of langflow imports (only the a2a SDK, ``lfx.schema.workflow``,
+and stdlib) so it can move to lfx when the A2A protocol layer is extracted. The
+langflow-bound seam (flow lookup, v2 execution, gating) lives in ``a2a.py`` and
+is injected as the ``run_flow`` callable. The one exception is the place a run
+holds while an instance migration waits for changes to end (``migration_pause``).
+
+The a2a-sdk 1.x server stack is protobuf-based (``a2a.types.a2a_pb2``); the
+spec-name methods ``message/send`` / ``tasks/get`` reach it through the v0.3
+compat adapter wired up in ``a2a.py``.
+"""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import json
+import logging
+from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
+from uuid import UUID
+
+from a2a.helpers.proto_helpers import get_data_parts, new_data_part, new_text_part
+from a2a.server.agent_execution import AgentExecutor, RequestContext
+from a2a.server.events import EventQueue
+from a2a.server.tasks import TaskUpdater
+from a2a.types import a2a_pb2 as pb
+from lfx.schema.workflow import JobStatus, OutputReason, WorkflowExecutionResponse
+
+from langflow.api.utils.migration_pause import writing_until_told
+
+logger = logging.getLogger(__name__)
+
+
+class ResumeConflictError(RuntimeError):
+    """A duplicate HITL resume lost the atomic checkpoint claim.
+
+    The worker that won the claim owns the task's terminal state, so the loser must bail without
+    emitting a terminal event: a FAILED here would race the winner's COMPLETED and could
+    permanently mask it. Raised by the injected ``resume_flow`` seam, caught in ``execute``.
+    """
+
+
+# (flow_id, task_id, input_text, context_id, request_host, admitted_user_id) -> the v2 sync run result.
+# context_id scopes the run's chat memory (the A2A conversation = the flow session).
+RunFlow = Callable[[UUID, str, str, str | None, str | None, str | None], Awaitable[WorkflowExecutionResponse]]
+# (flow_id, task_id, decision_text, request_host, admitted_user_id) -> the run result after
+# applying a human decision to a paused task. The final fields preserve the original HTTP gate.
+ResumeFlow = Callable[[UUID, str, str, str | None, str | None], Awaitable[WorkflowExecutionResponse]]
+
+
+def _json_safe(content: object) -> object:
+    """Coerce a data-output payload to a JSON-native value for ``new_data_part``.
+
+    ``new_data_part`` serializes via ``ParseDict`` into a protobuf ``Value``, which rejects
+    non-JSON-native values (datetime, UUID, a pydantic model such as lfx ``OutputValue``). Round-trip
+    through json, dumping pydantic models and str-ifying anything else, so a data-typed flow output
+    can't raise a ParseError mid-artifact and leave the task with no terminal event.
+    """
+
+    def _default(obj: object) -> object:
+        dump = getattr(obj, "model_dump", None)
+        return dump(mode="json") if callable(dump) else str(obj)
+
+    return json.loads(json.dumps(content, default=_default))
+
+
+def _answer_parts(response: WorkflowExecutionResponse) -> list[pb.Part]:
+    """The run's answer as A2A artifact parts: text for string channels, data for the rest.
+
+    SINGLE is the canonical agent shape (one ChatOutput); preserve its text, including an
+    intentional "". Otherwise read each ``outputs`` channel: a string message/text becomes a
+    text part, and anything else that carries content (a ``data``-typed output, or a non-string
+    payload) becomes an ``application/json`` data part, so a structured / data-only flow emits
+    its JSON instead of being silently dropped to an empty text answer. The card already
+    advertises ``application/json`` output, so this makes that contract real.
+    """
+    if response.output.reason == OutputReason.SINGLE:
+        return [new_text_part(response.output.text or "")]
+    parts: list[pb.Part] = []
+    for output in response.outputs.values():
+        if output.content is None:
+            continue
+        if output.type in {"message", "text"} and isinstance(output.content, str):
+            parts.append(new_text_part(output.content))
+        else:
+            parts.append(new_data_part(_json_safe(output.content), media_type="application/json"))
+    return parts
+
+
+# How long a run that has returned keeps its place while the SDK saves nothing of its task.
+_SAVE_GRACE = 60.0
+
+
+@dataclass
+class _Place:
+    """A run's place among the changes a migration pause waits for."""
+
+    let_go: Callable[[], None]
+    # The state the task was in when the run began. An answer to a task that waits for a person is saved
+    # first in that same state, with the answer in it, and that save ends nothing.
+    began_in: str | None = None
+    # A save of the task in a state that ends no run has come since the run began.
+    moved: bool = False
+    returned: bool = False
+    saved: bool = False
+    # Set once the run has returned: gives the place up when no save of the task has come for _SAVE_GRACE.
+    giving_up: asyncio.TimerHandle | None = None
+
+
+# The place of each run that holds one, by task id.
+_places: dict[str, _Place] = {}
+
+
+def task_saved(task_id: str, state: str | None, *, run_over: bool) -> None:
+    """The task store has written this task in this state. run_over says that the state ends a run."""
+    place = _places.get(task_id)
+    if place is None:
+        return
+    if not run_over:
+        place.moved = True
+    elif place.moved or state != place.began_in:
+        # The run brought the task here. The place does not ask the store what the row held before: an
+        # older version stored a public task under another owner, and another worker can save in between.
+        place.saved = True
+    if not _settle(task_id, place) and place.giving_up:
+        # The SDK is still saving what the run did, so the wait for the last save starts again.
+        _give_up_later(task_id, place)
+
+
+def _settle(task_id: str, place: _Place, *, given_up: bool = False) -> bool:
+    """Let a place go once its run has returned and what it ended with is saved, or the wait for that is given up."""
+    if not (given_up or (place.returned and place.saved)):
+        return False
+    if place.giving_up:
+        place.giving_up.cancel()
+    if _places.get(task_id) is place:
+        del _places[task_id]
+    place.let_go()
+    return True
+
+
+def _give_up_later(task_id: str, place: _Place) -> None:
+    if place.giving_up:
+        place.giving_up.cancel()
+    place.giving_up = asyncio.get_running_loop().call_later(_SAVE_GRACE, lambda: _settle(task_id, place, given_up=True))
+
+
+class FlowAgentExecutor(AgentExecutor):
+    """Runs a Langflow flow for one A2A ``message/send`` and reports a terminal Task."""
+
+    def __init__(self, run_flow: RunFlow, resume_flow: ResumeFlow) -> None:
+        self._run_flow = run_flow
+        self._resume_flow = resume_flow
+
+    async def execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        # The SDK goes on with a run after the request that sent its message has answered, and it saves
+        # the state the run ended with only after this method has returned. So the run holds a place of
+        # its own among the changes a migration pause waits for, until the task store has saved that state.
+        let_go = writing_until_told("a2a_run")
+        if let_go is None:
+            await self._execute(context, event_queue)
+            return
+        existing = context.current_task
+        place = _Place(let_go, began_in=pb.TaskState.Name(existing.status.state) if existing is not None else None)
+        if earlier := _places.pop(context.task_id, None):
+            # A follow-up message on the same task: this run takes the place over.
+            _settle(context.task_id, earlier, given_up=True)
+        _places[context.task_id] = place
+        try:
+            await self._execute(context, event_queue)
+        finally:
+            place.returned = True
+            if not _settle(context.task_id, place):
+                # ponytail: a save that never comes, because the SDK's reader died, would hold every pause off.
+                # The place is given up once no save of the task has come for _SAVE_GRACE. Have the store take
+                # a place of its own if one save is ever slower than that. An answer that lost the claim to
+                # another worker saves nothing that ends a run, so its place waits that long as well. A run
+                # that is cancelled is saved as cancelled once more after its place is gone: the row's
+                # time changes and nothing else.
+                _give_up_later(context.task_id, place)
+
+    async def _execute(self, context: RequestContext, event_queue: EventQueue) -> None:
+        flow_id = context.call_context.state["flow_id"]
+
+        # A follow-up message on an input-required task resumes the paused run with the
+        # message as the human decision; a first message starts a fresh run. The SDK only
+        # routes a follow-up here when the existing (owner-scoped) task is non-terminal.
+        existing = context.current_task
+        resuming = existing is not None and existing.status.state == pb.TaskState.TASK_STATE_INPUT_REQUIRED
+
+        if not resuming:
+            # DefaultRequestHandlerV2 rejects a status/artifact event before a Task
+            # event ("Agent should enqueue Task before TaskStatusUpdateEvent"), and
+            # this SDK version has no new_task helper, so enqueue the proto Task first.
+            # On resume the Task already exists, so don't re-submit it.
+            await event_queue.enqueue_event(
+                pb.Task(
+                    id=context.task_id,
+                    context_id=context.context_id,
+                    status=pb.TaskStatus(state=pb.TaskState.TASK_STATE_SUBMITTED),
+                )
+            )
+        updater = TaskUpdater(event_queue, context.task_id, context.context_id)
+        await updater.start_work()
+
+        text = context.get_user_input()
+        if not text and context.message is not None:
+            # A caller can send structured input as DataPart(s) with no text. The flow input is
+            # a text channel, so serialize the data to JSON so it reaches the flow rather than
+            # being dropped. Plain-text input is untouched (the common case).
+            data = get_data_parts(context.message.parts)
+            if data:
+                text = json.dumps(data[0] if len(data) == 1 else data)
+        try:
+            if resuming:
+                response = await self._resume_flow(
+                    UUID(flow_id),
+                    context.task_id,
+                    text,
+                    context.call_context.state.get("request_host"),
+                    context.call_context.state.get("admitted_user_id"),
+                )
+            else:
+                response = await self._run_flow(
+                    UUID(flow_id),
+                    context.task_id,
+                    text,
+                    context.context_id,
+                    context.call_context.state.get("request_host"),
+                    context.call_context.state.get("admitted_user_id"),
+                )
+        except asyncio.CancelledError:
+            # tasks/cancel preempted this live run (the SDK cancels the producer task). Emit a
+            # terminal CANCELED on this producer's OWN queue before it closes, so the original
+            # message/send / message/stream consumer gets a terminal event instead of hanging on the
+            # last 'working' state, then propagate the cancellation (never swallow it, or the task
+            # won't wind down). The durable store is set to CANCELED by the request handler.
+            with contextlib.suppress(Exception):
+                await updater.cancel()
+            raise
+        except ResumeConflictError:
+            # A duplicate resume lost the claim: the winning worker drives this task to its terminal
+            # state. Emit nothing here so a stray FAILED can't race and mask the winner's completion.
+            logger.info("A2A resume for task %s ceded to the worker that won the claim", context.task_id)
+            return
+        except Exception:
+            # Unexpected build/timeout/system failures become a failed Task, not a 500.
+            # The endpoint is unauthenticated, so don't hand the caller raw exception
+            # text (graph-build internals, DB errors); log it server-side instead.
+            logger.exception("A2A flow execution failed for task %s", context.task_id)
+            await updater.failed(updater.new_agent_message([new_text_part("Flow execution failed")]))
+            return
+
+        # The run paused for human input: park the task as input-required carrying the prompt,
+        # so a follow-up message resumes it. Not terminal, so the task stays open.
+        if response.status == JobStatus.SUSPENDED:
+            prompt = (response.human_request or {}).get("prompt") or "Input required"
+            await updater.requires_input(updater.new_agent_message([new_text_part(prompt)]))
+            return
+
+        # Component/runtime errors come back in-band as a FAILED status, not raised.
+        # ponytail: this in-band branch needs a flow that builds then errors at a
+        # component to exercise; left to the suite's raised-failure coverage this slice.
+        if response.status == JobStatus.FAILED or response.has_errors:
+            # The endpoint is unauthenticated, so redact like the raised-exception branch above:
+            # log the component error text server-side, hand the caller a generic message.
+            detail = "; ".join(error.error for error in response.errors) or "Flow execution failed"
+            logger.error("A2A flow failed in-band for task %s: %s", context.task_id, detail)
+            await updater.failed(updater.new_agent_message([new_text_part("Flow execution failed")]))
+            return
+
+        # Emit the answer artifact and complete. This runs OUTSIDE the try above, and _answer_parts
+        # serializes arbitrary flow output, so guard it: an unexpected serialization failure here
+        # would escape execute() and leave the task with no terminal event (stuck 'working'). Downgrade
+        # any such failure to a terminal 'failed' instead.
+        try:
+            parts = _answer_parts(response)
+            await updater.add_artifact(parts or [new_text_part("")], name="result")
+            await updater.complete()
+        except Exception:
+            logger.exception("A2A artifact emission failed for task %s", context.task_id)
+            await updater.failed(updater.new_agent_message([new_text_part("Flow execution failed")]))
+
+    async def cancel(self, context: RequestContext, event_queue: EventQueue) -> None:
+        # The durable terminal CANCELED is written by the request handler (see a2a.py); here we only
+        # emit the terminal cancel event so a live message/stream subscriber sees it. Must not raise:
+        # the SDK marks the task FAILED if agent cancel raises, so suppress a failed emit (e.g. an
+        # already-closed queue). Only invoked for a live producer; a parked (finished) task's cancel
+        # is handled entirely in the handler.
+        with contextlib.suppress(Exception):
+            await TaskUpdater(event_queue, context.task_id, context.context_id).cancel()

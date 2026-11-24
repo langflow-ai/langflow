@@ -3,22 +3,22 @@ import uuid
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
-from langchain.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
-from langchain.agents.agent import RunnableAgent
-from langchain.callbacks.base import BaseCallbackHandler
+from langchain_classic.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
+from langchain_classic.agents.agent import RunnableAgent
+from langchain_core.callbacks.base import BaseCallbackHandler
 from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
-from lfx.base.agents.utils import get_chat_output_sender_name
+from lfx.base.agents.token_callback import TokenUsageCallbackHandler
+from lfx.base.agents.utils import get_chat_output_sender_name, resolve_agent_verbose
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
-from lfx.inputs.inputs import InputTypes, MultilineInput
+from lfx.inputs.inputs import InputTypes
 from lfx.io import BoolInput, HandleInput, IntInput, MessageInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
-from lfx.schema.content_block import ContentBlock
 from lfx.schema.data import Data
 from lfx.schema.log import OnTokenFunctionType
 from lfx.schema.message import Message
@@ -29,6 +29,8 @@ if TYPE_CHECKING:
     from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 
+# Kept for backward compatibility: flows serialized with the pre-deprecation
+# component code still call get_tool_description(), which falls back to this.
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
 DEFAULT_AGENT_NAME = "Agent ({tools_names})"
 
@@ -49,24 +51,31 @@ class LCAgentComponent(Component):
             advanced=True,
             info="Should the Agent fix errors when reading user input for better processing?",
         ),
-        BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True),
+        # The stdout chain markers this used to enable now follow the LANGCHAIN_VERBOSE
+        # env var (off by default) via resolve_agent_verbose(); see run_agent /
+        # get_agent_kwargs. The input value alone no longer attaches LangChain's
+        # StdOutCallbackHandler. The info string surfaces this in the UI so the toggle
+        # and its (now env-gated) behavior agree.
+        BoolInput(
+            name="verbose",
+            display_name="Verbose",
+            value=True,
+            advanced=True,
+            info=(
+                "Legacy toggle. The '> Entering new ... chain' / '> Finished chain.' "
+                "markers it used to print to stdout are now gated on the "
+                "LANGCHAIN_VERBOSE environment variable (off by default); set "
+                "LANGCHAIN_VERBOSE=true to emit them. Toggling this input on its own no "
+                "longer attaches LangChain's stdout handler. Agent steps remain visible "
+                "in the UI regardless of this setting."
+            ),
+        ),
         IntInput(
             name="max_iterations",
             display_name="Max Iterations",
             value=15,
             advanced=True,
             info="The maximum number of attempts the agent can make to complete its task before it stops.",
-        ),
-        MultilineInput(
-            name="agent_description",
-            display_name="Agent Description [Deprecated]",
-            info=(
-                "The description of the agent. This is only used when in Tool Mode. "
-                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically. "
-                "This feature is deprecated and will be removed in future versions."
-            ),
-            advanced=True,
-            value=DEFAULT_TOOLS_DESCRIPTION,
         ),
     ]
 
@@ -107,7 +116,10 @@ class LCAgentComponent(Component):
     def get_agent_kwargs(self, *, flatten: bool = False) -> dict:
         base = {
             "handle_parsing_errors": self.handle_parsing_errors,
-            "verbose": self.verbose,
+            # Gate LangChain's stdout chain markers on LANGCHAIN_VERBOSE (off by
+            # default) instead of the always-True component input, so they don't
+            # leak to container/k8s stdout logs. See resolve_agent_verbose().
+            "verbose": resolve_agent_verbose(),
             "allow_dangerous_code": True,
         }
         agent_kwargs = {
@@ -152,7 +164,9 @@ class LCAgentComponent(Component):
         else:
             # note the tools are not required to run the agent, hence the validation removed.
             handle_parsing_errors = hasattr(self, "handle_parsing_errors") and self.handle_parsing_errors
-            verbose = hasattr(self, "verbose") and self.verbose
+            # Gate LangChain's stdout chain markers on LANGCHAIN_VERBOSE (off by default)
+            # rather than the always-True component input. See resolve_agent_verbose().
+            verbose = resolve_agent_verbose()
             max_iterations = hasattr(self, "max_iterations") and self.max_iterations
             runnable = AgentExecutor.from_agent_and_tools(
                 agent=agent,
@@ -251,7 +265,12 @@ class LCAgentComponent(Component):
             sender=MESSAGE_SENDER_AI,
             sender_name=sender_name,
             properties={"icon": "Bot", "state": "partial"},
-            content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+            # `text=""` sentinel so MessageTable's no_content check accepts
+            # an in-flight agent message whose content_blocks haven't been
+            # populated yet. Mirrors ChatInput's convention.
+            text="",
+            # Flat chronological event log; see lfx.base.agents.events.
+            content_blocks=[],
             session_id=session_id or uuid.uuid4(),
         )
 
@@ -261,12 +280,20 @@ class LCAgentComponent(Component):
         if self._event_manager:
             on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
 
+        token_usage_handler = TokenUsageCallbackHandler()
+
         try:
             result = await process_agent_events(
                 runnable.astream_events(
                     input_dict,
                     # here we use the shared callbacks because the AgentExecutor uses the tools
-                    config={"callbacks": [AgentAsyncHandler(self.log), *self._get_shared_callbacks()]},
+                    config={
+                        "callbacks": [
+                            AgentAsyncHandler(self.log),
+                            token_usage_handler,
+                            *self._get_shared_callbacks(),
+                        ]
+                    },
                     version="v2",
                 ),
                 agent_message,
@@ -280,12 +307,25 @@ class LCAgentComponent(Component):
                 if msg_id:
                     await delete_message(id_=msg_id)
             await self._send_message_event(e.agent_message, category="remove_message")
-            logger.error(f"ExceptionWithMessageError: {e}")
+            # exception(), not error(f"...{e}"): this class's str() interpolates the model's
+            # partial completion, and passing the exception rather than formatting it is what
+            # gives the exported record an error.type to triage on.
+            logger.exception("Agent run failed after a partial message was emitted")
             raise
-        except Exception as e:
-            # Log or handle any other exceptions
-            logger.error(f"Error: {e}")
+        except Exception:
+            logger.exception("Agent run failed")
             raise
+
+        # Extract accumulated token usage from callback handler
+        usage_data = token_usage_handler.get_usage()
+        if usage_data:
+            self._token_usage = usage_data
+            result.properties.usage = usage_data
+            # Only update DB and send event if the message was stored (has an ID)
+            if result.get_id():
+                stored_result = await self._update_stored_message(result)
+                await self._send_message_event(stored_result)
+                result = stored_result
 
         self.status = result
         return result
@@ -293,6 +333,19 @@ class LCAgentComponent(Component):
     @abstractmethod
     def create_agent_runnable(self) -> Runnable:
         """Create the agent."""
+
+    def resolve_duplicate_tool_names(self) -> None:
+        """Make the connected tools individually addressable by the LLM.
+
+        Two nodes of the same component type each derive the same tool name, so
+        without this the model cannot tell them apart and every call lands on
+        one of them. This agent is the first place the whole tool set is
+        visible, and names that do not collide are left untouched.
+        """
+        from lfx.base.tools.component_tool import disambiguate_tool_names
+
+        if getattr(self, "tools", None):
+            self.tools = disambiguate_tool_names(self.tools)
 
     def validate_tool_names(self) -> None:
         """Validate tool names to ensure they match the required pattern."""
@@ -321,6 +374,7 @@ class LCToolsAgentComponent(LCAgentComponent):
     ]
 
     def build_agent(self) -> AgentExecutor:
+        self.resolve_duplicate_tool_names()
         self.validate_tool_names()
         agent = self.create_agent_runnable()
         return AgentExecutor.from_agent_and_tools(
@@ -337,7 +391,16 @@ class LCToolsAgentComponent(LCAgentComponent):
         return self.display_name or "Agent"
 
     def get_tool_description(self) -> str:
-        return self.agent_description or DEFAULT_TOOLS_DESCRIPTION
+        """Backward-compat shim for the deprecated ``agent_description`` input.
+
+        The current agent-as-tool path derives the tool description from the
+        component's ``display_description`` (see ``_get_tools``) and no longer
+        calls this method. It is kept only so older flows serialized with the
+        pre-deprecation component code -- which still call
+        ``self.get_tool_description()`` and define their own ``agent_description``
+        input -- stay loadable.
+        """
+        return getattr(self, "agent_description", None) or DEFAULT_TOOLS_DESCRIPTION
 
     def _build_tools_names(self):
         tools_names = ""
@@ -367,14 +430,9 @@ class LCToolsAgentComponent(LCAgentComponent):
 
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        tools_names = self._build_tools_names()
-        agent_description = self.get_tool_description()
-        # TODO: Agent Description Depreciated Feature to be removed
-        description = f"{agent_description}{tools_names}"
 
         tools = component_toolkit(component=self).get_tools(
             tool_name=self.get_tool_name(),
-            tool_description=description,
             # here we do not use the shared callbacks as we are exposing the agent as a tool
             callbacks=self.get_langchain_callbacks(),
         )

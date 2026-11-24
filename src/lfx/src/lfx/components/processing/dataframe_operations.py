@@ -1,3 +1,5 @@
+from typing import Any
+
 import pandas as pd
 
 from lfx.custom.custom_component.component import Component
@@ -13,6 +15,8 @@ class DataFrameOperationsComponent(Component):
     documentation: str = "https://docs.langflow.org/dataframe-operations"
     icon = "table"
     name = "DataFrameOperations"
+    legacy = True
+    replacement = ["processing.Operations"]
     metadata = {
         "keywords": [
             "dataframe",
@@ -161,6 +165,22 @@ class DataFrameOperationsComponent(Component):
             dynamic=True,
             show=False,
         ),
+        DataFrameInput(
+            name="left_dataframe",
+            display_name="Left Table",
+            info="The left (primary) DataFrame for merge operations. "
+            "In a left merge, all rows from this table are preserved.",
+            dynamic=True,
+            show=False,
+        ),
+        DataFrameInput(
+            name="right_dataframe",
+            display_name="Right Table",
+            info="The right (secondary) DataFrame for merge operations. "
+            "In a right merge, all rows from this table are preserved.",
+            dynamic=True,
+            show=False,
+        ),
         StrInput(
             name="merge_on_column",
             display_name="Merge On Column",
@@ -200,6 +220,8 @@ class DataFrameOperationsComponent(Component):
             "num_rows",
             "replace_value",
             "replacement_value",
+            "left_dataframe",
+            "right_dataframe",
             "merge_on_column",
             "merge_how",
         ]
@@ -243,6 +265,8 @@ class DataFrameOperationsComponent(Component):
             elif operation_name == "Drop Duplicates":
                 build_config["column_name"]["show"] = True
             elif operation_name == "Merge":
+                build_config["left_dataframe"]["show"] = True
+                build_config["right_dataframe"]["show"] = True
                 build_config["merge_on_column"]["show"] = True
                 build_config["merge_how"]["show"] = True
 
@@ -255,14 +279,20 @@ class DataFrameOperationsComponent(Component):
         return self.df.copy()
 
     def perform_operation(self) -> DataFrame:
-        df_copy = self._get_primary_dataframe()
-
         # Handle SortableListInput format for operation (also supports legacy string format)
         operation_input = getattr(self, "operation", [])
         if isinstance(operation_input, list):
             op = operation_input[0].get("name", "") if operation_input else ""
         else:
             op = operation_input or ""
+
+        # Merge and Concatenate use their own inputs, not the primary df
+        if op == "Merge":
+            return self.merge_dataframes()
+        if op == "Concatenate":
+            return self.concatenate_dataframes()
+
+        df_copy = self._get_primary_dataframe()
 
         # If no operation selected, return original DataFrame
         if not op:
@@ -288,13 +318,25 @@ class DataFrameOperationsComponent(Component):
             return self.replace_values(df_copy)
         if op == "Drop Duplicates":
             return self.drop_duplicates(df_copy)
-        if op == "Concatenate":
-            return self.concatenate_dataframes()
-        if op == "Merge":
-            return self.merge_dataframes()
         msg = f"Unsupported operation: {op}"
         logger.error(msg)
         raise ValueError(msg)
+
+    @staticmethod
+    def _comparable_filter_value(column: pd.Series, filter_value: Any) -> Any:
+        """Return a text input as a number when the column is numeric.
+
+        Filter and Replace Value inputs arrive as text, and ``30 == "30"`` never matches in pandas.
+        A blank input stays text: ``pd.to_numeric("")`` is NaN, which would match missing cells.
+        """
+        if filter_value in (None, ""):
+            return filter_value
+        if pd.api.types.is_numeric_dtype(column) and not pd.api.types.is_bool_dtype(column):
+            try:
+                return pd.to_numeric(filter_value)
+            except (ValueError, TypeError):
+                return filter_value
+        return filter_value
 
     def filter_rows_by_value(self, df: DataFrame) -> DataFrame:
         column = df[self.column_name]
@@ -304,9 +346,9 @@ class DataFrameOperationsComponent(Component):
         operator = getattr(self, "filter_operator", "equals")  # Default to equals for backward compatibility
 
         if operator == "equals":
-            mask = column == filter_value
+            mask = column == self._comparable_filter_value(column, filter_value)
         elif operator == "not equals":
-            mask = column != filter_value
+            mask = column != self._comparable_filter_value(column, filter_value)
         elif operator == "contains":
             mask = column.astype(str).str.contains(str(filter_value), na=False)
         elif operator == "not contains":
@@ -332,7 +374,7 @@ class DataFrameOperationsComponent(Component):
                 # If conversion fails, compare as strings
                 mask = column.astype(str) < str(filter_value)
         else:
-            mask = column == filter_value  # Fallback to equals
+            mask = column == self._comparable_filter_value(column, filter_value)  # Fallback to equals
 
         return DataFrame(df[mask])
 
@@ -360,7 +402,24 @@ class DataFrameOperationsComponent(Component):
         return DataFrame(df.tail(self.num_rows))
 
     def replace_values(self, df: DataFrame) -> DataFrame:
-        df[self.column_name] = df[self.column_name].replace(self.replace_value, self.replacement_value)
+        column = df[self.column_name]
+        replace_val = self._comparable_filter_value(column, self.replace_value)
+        replacement_val = self._comparable_filter_value(column, self.replacement_value)
+        try:
+            result = column.replace(replace_val, replacement_val)
+        except TypeError:
+            if not (
+                isinstance(column.dtype, pd.api.extensions.ExtensionDtype)
+                and pd.api.types.is_integer_dtype(column.dtype)
+            ):
+                raise
+            # Nullable integers reject fractional/text replacements instead of widening like NumPy columns.
+            widened = column.astype("Float64" if pd.api.types.is_float(replacement_val) else object)
+            # A float cannot represent every Int64 value. Preserve unrelated large integers exactly.
+            if not widened.astype(object).equals(column.astype(object)):
+                widened = column.astype(object)
+            result = widened.mask(column.eq(replace_val).fillna(value=False), replacement_val)
+        df[self.column_name] = result
         return DataFrame(df)
 
     def drop_duplicates(self, df: DataFrame) -> DataFrame:
@@ -380,48 +439,57 @@ class DataFrameOperationsComponent(Component):
         return DataFrame(concatenated)
 
     def merge_dataframes(self) -> DataFrame:
-        """Merge two DataFrames based on a common column (join operation)."""
-        if not isinstance(self.df, list) or len(self.df) == 0:
-            return self.df.copy() if self.df is not None else DataFrame()
+        """Merge two DataFrames based on a common column (join operation).
 
-        # If only one DataFrame, return it
-        if len(self.df) == 1:
-            return self.df[0].copy()
+        Uses explicit left_dataframe and right_dataframe inputs to give the user
+        deterministic control over which DataFrame is primary (left) and which
+        is secondary (right) in the merge.
+        """
+        left_df = getattr(self, "left_dataframe", None)
+        right_df = getattr(self, "right_dataframe", None)
 
-        # Merge requires exactly two DataFrames
-        max_merge_inputs = 2
-        if len(self.df) > max_merge_inputs:
-            msg = f"Merge requires exactly {max_merge_inputs} DataFrames, got {len(self.df)}"
-            raise ValueError(msg)
+        if left_df is None:
+            return DataFrame()
 
-        df1 = self.df[0].copy()
-        df2 = self.df[1].copy()
+        if right_df is None:
+            return left_df.copy()
+
+        df_left = left_df.copy()
+        df_right = right_df.copy()
 
         merge_on = getattr(self, "merge_on_column", None)
         merge_how = getattr(self, "merge_how", "inner")
 
-        # If merge column specified, validate it exists in both DataFrames
+        # Track only columns created by this merge, without colliding with input names.
+        right_columns = {}
+        used_columns = set(df_left.columns) | set(df_right.columns)
+        for col in df_left.columns.intersection(df_right.columns):
+            if merge_on and col == merge_on:
+                continue
+            right_col = f"{col}_right"
+            while right_col in used_columns:
+                right_col += "_right"
+            right_columns[col] = right_col
+            used_columns.add(right_col)
+        df_right = df_right.rename(columns=right_columns)
+
         if merge_on:
-            if merge_on not in df1.columns:
-                msg = f"Column '{merge_on}' not found in first DataFrame. Available: {list(df1.columns)}"
+            if merge_on not in df_left.columns:
+                msg = f"Column '{merge_on}' not found in left DataFrame. Available: {list(df_left.columns)}"
                 raise ValueError(msg)
-            if merge_on not in df2.columns:
-                msg = f"Column '{merge_on}' not found in second DataFrame. Available: {list(df2.columns)}"
+            if merge_on not in df_right.columns:
+                msg = f"Column '{merge_on}' not found in right DataFrame. Available: {list(df_right.columns)}"
                 raise ValueError(msg)
 
-            merged = df1.merge(df2, on=merge_on, how=merge_how, suffixes=("", "_df2"))
+            merged = df_left.merge(df_right, on=merge_on, how=merge_how)
         else:
-            merged = df1.merge(df2, left_index=True, right_index=True, how=merge_how, suffixes=("", "_df2"))
+            merged = df_left.merge(df_right, left_index=True, right_index=True, how=merge_how)
 
-        # Combine duplicate columns: use df1 value if exists, otherwise df2 value
+        # Combine duplicate columns: use left value if exists, otherwise right value
         cols_to_drop = []
-        for col in merged.columns:
-            if col.endswith("_df2"):
-                original_col = col[:-4]  # Remove "_df2" suffix
-                if original_col in merged.columns:
-                    # Coalesce: use original if not null, otherwise use _df2
-                    merged[original_col] = merged[original_col].combine_first(merged[col])
-                    cols_to_drop.append(col)
+        for col, right_col in right_columns.items():
+            merged[col] = merged[col].combine_first(merged[right_col])
+            cols_to_drop.append(right_col)
 
         if cols_to_drop:
             merged = merged.drop(columns=cols_to_drop)

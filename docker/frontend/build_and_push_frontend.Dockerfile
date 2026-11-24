@@ -9,12 +9,22 @@
 FROM --platform=$BUILDPLATFORM node:lts-bookworm-slim AS builder-base
 COPY src/frontend /frontend
 
-RUN cd /frontend && npm install && npm run build
+# PUPPETEER_SKIP_DOWNLOAD: puppeteer (via accessibility-checker, test-only)
+# must not download Chrome here - the build env can't fetch it and the
+# production image never runs it.
+RUN cd /frontend && PUPPETEER_SKIP_DOWNLOAD=true npm install && npm run build
 
 ################################
 # RUNTIME
 ################################
-FROM nginxinc/nginx-unprivileged:stable-bookworm-perl AS runtime
+# The stale Bookworm tag lacks the OpenSSL fix for CVE-2025-15467.
+FROM nginxinc/nginx-unprivileged:1.30.5-trixie@sha256:8f18dedfceea3d7feb98792810c8c9925c985890ade257f2ec1b2f492b4eaebb AS runtime
+
+USER root
+RUN apt-get update \
+    && apt-get upgrade -y \
+    && rm -rf /var/lib/apt/lists/*
+USER nginx
 
 LABEL org.opencontainers.image.title=langflow-frontend
 LABEL org.opencontainers.image.authors=['Langflow']

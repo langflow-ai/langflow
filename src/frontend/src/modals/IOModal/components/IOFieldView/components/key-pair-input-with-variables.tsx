@@ -1,10 +1,15 @@
 import { nanoid } from "nanoid";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import InputComponent from "../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Input } from "../../../../../components/ui/input";
 import { useGetGlobalVariables } from "../../../../../controllers/API/queries/variables";
+import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
+import type { GlobalVariable } from "../../../../../types/global_variables";
 import { classNames } from "../../../../../utils/utils";
+
+const EMPTY_GLOBAL_VARIABLES: GlobalVariable[] = [];
 
 export type KeyPairRow = {
   id: string;
@@ -32,26 +37,33 @@ const IOKeyPairInputWithVariables = ({
   testId,
   enableGlobalVariables = false,
 }: IOKeyPairInputWithVariablesProps) => {
-  const { data: globalVariables = [] } = useGetGlobalVariables();
+  const { t } = useTranslation();
+  const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const { data: globalVariables = EMPTY_GLOBAL_VARIABLES } =
+    useGetGlobalVariables({
+      flowId: currentFlowId || undefined,
+      enabled: Boolean(currentFlowId),
+    });
   const [selectedGlobalVariables, setSelectedGlobalVariables] = useState<
     Record<string, string>
   >({});
 
-  const globalVariableOptions = globalVariables.map((gv) => gv.name);
+  const globalVariableOptions = useMemo(
+    () => globalVariables.map((gv) => gv.name),
+    [globalVariables],
+  );
 
   // Initialize selectedGlobalVariables when value changes or global variables load
   useEffect(() => {
-    if (globalVariables.length > 0 && value.length > 0) {
-      const initialSelected: Record<string, string> = {};
-      value.forEach((item) => {
-        // Check if the value matches a global variable name
-        if (globalVariableOptions.includes(item.value)) {
-          initialSelected[item.id] = item.value;
-        }
-      });
-      setSelectedGlobalVariables(initialSelected);
-    }
-  }, [globalVariables.length, value.length]);
+    const initialSelected: Record<string, string> = {};
+    value.forEach((item) => {
+      // Check if the value matches a global variable name
+      if (globalVariableOptions.includes(item.value)) {
+        initialSelected[item.id] = item.value;
+      }
+    });
+    setSelectedGlobalVariables(initialSelected);
+  }, [currentFlowId, globalVariableOptions, value]);
 
   const handleKeyChange = (id: string, newKey: string) => {
     const item = value.find((item) => item.id === id);
@@ -122,7 +134,7 @@ const IOKeyPairInputWithVariables = ({
               value={item.key.trim()}
               className={classNames(item.error ? "input-invalid" : "")}
               placeholder={
-                item.error ? "Duplicate or empty key" : "Type key..."
+                item.error ? t("input.duplicateOrEmptyKey") : t("input.typeKey")
               }
               onChange={(event) => handleKeyChange(item.id, event.target.value)}
               disabled={!isInputField}
@@ -134,13 +146,13 @@ const IOKeyPairInputWithVariables = ({
                 value={item.value}
                 onChange={(newValue) => handleValueChange(item.id, newValue)}
                 disabled={!isInputField}
-                placeholder="Type a value..."
+                placeholder={t("input.typeValue")}
                 selectedOption={selectedGlobalVariables[item.id] || ""}
                 setSelectedOption={(option) =>
                   handleGlobalVariableSelect(item.id, option)
                 }
                 options={globalVariableOptions}
-                optionsPlaceholder="Search global variables..."
+                optionsPlaceholder={t("input.searchGlobalVariables")}
                 optionsIcon="Globe"
                 nodeStyle
                 password={false}
@@ -151,7 +163,7 @@ const IOKeyPairInputWithVariables = ({
               <Input
                 type="text"
                 value={item.value}
-                placeholder="Type a value..."
+                placeholder={t("input.typeValue")}
                 onChange={(event) =>
                   handleValueChange(item.id, event.target.value)
                 }
@@ -164,6 +176,7 @@ const IOKeyPairInputWithVariables = ({
               <button
                 type="button"
                 onClick={handleAddRow}
+                aria-label={t("input.addRow")}
                 data-testid={testId ? `${testId}-plus-btn-0` : undefined}
               >
                 <IconComponent
@@ -175,6 +188,7 @@ const IOKeyPairInputWithVariables = ({
               <button
                 type="button"
                 onClick={() => handleDeleteRow(item)}
+                aria-label={t("input.removeRow", { index: idx + 1 })}
                 data-testid={testId ? `${testId}-minus-btn-${idx}` : undefined}
               >
                 <IconComponent

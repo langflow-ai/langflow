@@ -1,0 +1,46 @@
+[project]
+name = "lfx-toolguard"
+version = "0.2.4"
+description = "Langflow Policies component powered by ToolGuard."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "policies", "toolguard"]
+dependencies = [
+    # Keep this 1.13 backport from replacing the bundle published for 1.14.
+    "lfx>=1.13.0.dev0,<1.14.0.dev0",
+    "toolguard>=0.2.20,<1.0.0",
+    "fastmcp>=3.4.10,<4.0.0",
+    # ToolGuard installs LiteLLM; workspace constraints do not protect standalone installs.
+    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+[project.entry-points."langflow.extensions"]
+lfx-toolguard = "lfx_toolguard"
+
+[build-system]
+requires = ["hatchling==1.31.0"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/lfx_toolguard"]
+include = [
+    "src/lfx_toolguard/extension.json",
+    "src/lfx_toolguard/components/**/*.py",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_toolguard",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

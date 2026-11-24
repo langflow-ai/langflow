@@ -3,13 +3,30 @@ title: Notify and Listen
 slug: /notify-and-listen
 ---
 
-import Icon from "@site/src/components/icon";
-import PartialParams from '@site/docs/_partial-hidden-params.mdx';
-
 The **Notify** and **Listen** components are used together.
+They pass data through the context of the current graph run.
+They don't send external notifications or persist data between runs.
 
-The **Notify** component builds a notification from the current flow's context, including specific data content and a status identifier.
+Both components are in beta.
 
-The resulting notification is sent to the **Listen** component.
-The notification data can then be passed to other components in the flow, such as the [**If-Else** component](/if-else).
+## Notify component
+
+The **Notify** component stores input data under a context key and activates **Listen** components that use the same key.
+Strings, objects, messages, tables, and data frames are normalized to `Data`.
+
+| Input | Type | Default | Description |
+|-------|------|---------|-------------|
+| **Context Key** | String | Required | Key used to store and retrieve the data during the graph run. |
+| **Input Data** | Data, JSON, Message, DataFrame, or Table | Empty | Data to store. |
+| **Append** | Boolean | `false` | Add the value to a list under the key instead of replacing the existing value. |
+
+The **JSON** output returns the normalized input data.
+
+## Listen component
+
+The **Listen** component retrieves data stored under its **Context Key**.
+The key must exactly match the **Notify** component's key.
+If the key has no value, the **JSON** output returns empty data.
+
+You can pass the output to another component, such as [**If-Else**](/if-else).
 

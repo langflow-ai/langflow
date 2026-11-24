@@ -7,6 +7,12 @@ slug: /integrations-langwatch
 
 ## Integrate LangWatch observability
 
+:::note LangWatch is unavailable in the default Docker images
+The official Langflow Docker images (`langflowai/langflow` and `langflowai/langflow-nightly`) run on Python 3.14, and the `langwatch` package doesn't yet support Python 3.14 (it requires Python `<3.14`). As a result, LangWatch tracing is **not available in the default Docker images** even when `LANGWATCH_API_KEY` is set. Langflow logs a warning on the first flow run and continues without LangWatch tracing.
+
+To use LangWatch, run Langflow on Python 3.10–3.13, such as the PyPI distribution (`pip install langflow`) or the Langflow desktop app. If you need a container, build a custom image on a Python 3.10–3.13 base.
+:::
+
 To integrate with Langflow, add your LangWatch API key as a Langflow environment variable:
 
 1. Get a LangWatch API key from your LangWatch account.

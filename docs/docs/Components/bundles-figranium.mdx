@@ -1,0 +1,76 @@
+---
+title: Figranium
+slug: /bundles-figranium
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Figranium** bundle.
+
+[Figranium](https://github.com/figranium/figranium) is an open-source, self-hostable visual browser automation platform.
+The components in this bundle call the Figranium HTTP API directly, so they work with Figranium Cloud and with self-hosted instances.
+
+Every component needs the URL of your Figranium instance and an API key, which is sent as the `x-api-key` header.
+Create the key in your Figranium instance under **Settings**.
+
+For more information, see the [Figranium documentation](https://docs.figranium.dev).
+
+:::tip
+Self-hosted Figranium instances often run on a private network.
+Langflow's [SSRF protection](./api-keys-and-authentication#ssrf-protection) allows literal loopback addresses such as `http://localhost:11345` by default; to reach other internal hosts, add them to `LANGFLOW_SSRF_ALLOWED_HOSTS`.
+
+On a shared server where users you don't fully trust can build flows, keep `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` enabled, set `LANGFLOW_CONNECTOR_SSRF_ALLOW_LOOPBACK=false`, and allowlist only your Figranium host.
+Use an `https://` URL for any Figranium instance outside that private network, because the API key travels in the request headers.
+:::
+
+## Execute Figranium Task
+
+This component runs a saved Figranium task and returns the execution result.
+
+Figranium executes the task synchronously and returns the result in the same response, so long browser automations need a higher **Timeout** than the default.
+
+It outputs the execution result as [`Data`](/data-types#json).
+
+### Execute Figranium Task parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Figranium URL (`base_url`) | String | Input parameter. The base URL of your Figranium instance, such as `https://figranium.example.com` or `http://localhost:11345`. |
+| API Key (`api_key`) | SecretString | Input parameter. Your Figranium API key. |
+| Task ID (`task_id`) | String | Input parameter. The ID of the saved task to run. Use the **List Figranium Tasks** component to find task IDs. |
+| Variables (`task_variables`) | String | Input parameter. Optional task variables as a JSON object, such as `{"query": "Langflow"}`. Default: `{}`. |
+| Timeout (seconds) (`timeout`) | Integer | Input parameter. How long to wait for the task to finish. Default: `120`. |
+
+## List Figranium Tasks
+
+This component lists the saved tasks on a Figranium instance.
+
+It outputs one [`Data`](/data-types#json) object per task with the task's `id`, `name`, and, when set, `description`.
+
+### List Figranium Tasks parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Figranium URL (`base_url`) | String | Input parameter. The base URL of your Figranium instance. |
+| API Key (`api_key`) | SecretString | Input parameter. Your Figranium API key. |
+
+## List Figranium Executions
+
+This component lists the execution history of a Figranium instance.
+
+It outputs one [`Data`](/data-types#json) object per execution, including the execution's `id`, `status`, `taskId`, `taskName`, `durationMs`, and `timestamp`.
+
+### List Figranium Executions parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Figranium URL (`base_url`) | String | Input parameter. The base URL of your Figranium instance. |
+| API Key (`api_key`) | SecretString | Input parameter. Your Figranium API key. |

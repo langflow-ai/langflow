@@ -81,6 +81,7 @@ async def test_webhook_endpoint_requires_api_key_when_auto_login_false(client, a
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_endpoint_with_valid_api_key(client, added_webhook_test, created_api_key):
     """Test that webhook works when valid API key is provided."""
     endpoint_name = added_webhook_test["endpoint_name"]
@@ -130,6 +131,7 @@ async def test_webhook_endpoint_unauthorized_user_flow(client, added_webhook_tes
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_api_key):
     endpoint_name = added_webhook_test["endpoint_name"]
     endpoint = f"api/v1/run/{endpoint_name}?stream=false"
@@ -142,8 +144,9 @@ async def test_webhook_flow_on_run_endpoint(client, added_webhook_test, created_
     assert response.status_code == 200, response.json()
 
 
-async def test_webhook_with_auto_login_enabled(client, added_webhook_test):
-    """Test webhook behavior when WEBHOOK_AUTH_ENABLE=false - should work without API key."""
+@pytest.mark.parametrize("identifier", ["id", "endpoint_name"])
+async def test_webhook_auth_disabled_still_requires_api_key(client, added_webhook_test, identifier):
+    """The legacy flag cannot authorize an anonymous caller as the flow owner."""
     # Modify the auth_settings.WEBHOOK_AUTH_ENABLE on the real settings service
     from langflow.services.deps import get_settings_service
 
@@ -153,19 +156,58 @@ async def test_webhook_with_auto_login_enabled(client, added_webhook_test):
     try:
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = False
 
-        endpoint_name = added_webhook_test["endpoint_name"]
+        endpoint_name = added_webhook_test[identifier]
         endpoint = f"api/v1/webhook/{endpoint_name}"
 
         payload = {"path": "/tmp/test_auto_login.txt"}  # noqa: S108
 
-        # Should work without API key when webhook auth is disabled
         response = await client.post(endpoint, json=payload)
-        assert response.status_code == 202
+        assert response.status_code == 403
+        assert "API key required" in response.json()["detail"]
     finally:
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
 
 
-async def test_webhook_with_random_payload_requires_auth(client, added_webhook_test, created_api_key):
+def test_webhook_auth_enable_defaults_to_true():
+    """Regression guard: WEBHOOK_AUTH_ENABLE must default to True (secure by default).
+
+    Defaulting to False previously allowed anyone who knew a flow UUID to execute
+    that flow unauthenticated as the flow owner. We read the class-level default
+    directly so a stray LANGFLOW_WEBHOOK_AUTH_ENABLE env var can't mask a regression.
+    """
+    from lfx.services.settings.auth import AuthSettings
+
+    assert AuthSettings.model_fields["WEBHOOK_AUTH_ENABLE"].default is True
+
+
+async def test_config_reports_effective_webhook_authentication(client, logged_in_headers, monkeypatch):
+    """Generated webhook commands must still include the key when the legacy flag is false."""
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", False)
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+
+    assert response.status_code == 200
+    assert response.json()["webhook_auth_enable"] is True
+
+
+async def test_webhook_rejects_unauthenticated_request_by_default(client, added_webhook_test):
+    """Under the default config, an unauthenticated POST to /webhook must return 403."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    # Confirm the runtime default matches the secure-by-default value before exercising it.
+    assert settings_service.auth_settings.WEBHOOK_AUTH_ENABLE is True
+
+    endpoint = f"api/v1/webhook/{added_webhook_test['endpoint_name']}"
+    response = await client.post(endpoint, json={"test": "unauthenticated_trigger"})
+
+    assert response.status_code == 403
+    assert "API key required" in response.json()["detail"]
+
+
+@pytest.mark.parametrize("auth_enabled", [True, False])
+async def test_webhook_with_random_payload_requires_auth(client, added_webhook_test, created_api_key, auth_enabled):
     """Test that webhook with random payload still requires authentication."""
     # Modify the auth_settings.WEBHOOK_AUTH_ENABLE on the real settings service
     from langflow.services.deps import get_settings_service
@@ -176,7 +218,7 @@ async def test_webhook_with_random_payload_requires_auth(client, added_webhook_t
     original_webhook_auth_enable = settings_service.auth_settings.WEBHOOK_AUTH_ENABLE
 
     try:
-        settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = True
+        settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = auth_enabled
 
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
@@ -194,6 +236,24 @@ async def test_webhook_with_random_payload_requires_auth(client, added_webhook_t
         assert response.status_code == 202, f"Expected 202, got {response.status_code}: {response.json()}"
     finally:
         settings_service.auth_settings.WEBHOOK_AUTH_ENABLE = original_webhook_auth_enable
+
+
+@pytest.mark.parametrize("auth_enabled", [True, False])
+@pytest.mark.parametrize("identifier", ["id", "endpoint_name"])
+async def test_webhook_rejects_another_users_valid_key(
+    client, added_webhook_test, created_user_two_api_key, monkeypatch, auth_enabled, identifier
+):
+    """A real API key cannot trigger a different owner's flow in either configuration."""
+    from langflow.services.deps import get_settings_service
+
+    monkeypatch.setattr(get_settings_service().auth_settings, "WEBHOOK_AUTH_ENABLE", auth_enabled)
+    response = await client.post(
+        f"api/v1/webhook/{added_webhook_test[identifier]}",
+        headers={"x-api-key": created_user_two_api_key.api_key},
+        json={"data": "test"},
+    )
+
+    assert response.status_code == 404
 
 
 # =============================================================================
@@ -221,24 +281,12 @@ async def test_webhook_not_found_invalid_endpoint(client, created_api_key):
 
 async def test_webhook_invalid_api_key(client, added_webhook_test):
     """Test that webhook returns 403 for invalid API key when auth is enabled."""
-    from unittest.mock import AsyncMock, MagicMock
-
     from fastapi import HTTPException
-    from langflow.services.auth.service import AuthService
 
-    # Create a mock settings service with WEBHOOK_AUTH_ENABLE=True
-    mock_auth_settings = MagicMock()
-    mock_auth_settings.WEBHOOK_AUTH_ENABLE = True
-
-    mock_settings_service = MagicMock()
-    mock_settings_service.auth_settings = mock_auth_settings
-
-    # Create a mock auth service
-    mock_auth_service = MagicMock(spec=AuthService)
-    mock_auth_service.settings_service = mock_settings_service
-    mock_auth_service.get_webhook_user = AsyncMock(side_effect=HTTPException(status_code=403, detail="Invalid API key"))
-
-    with patch("langflow.api.v1.endpoints.get_auth_service", return_value=mock_auth_service):
+    with patch(
+        "langflow.api.v1.endpoints.get_webhook_user",
+        side_effect=HTTPException(status_code=403, detail="Invalid API key"),
+    ):
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
         payload = {"test": "data"}
@@ -250,26 +298,12 @@ async def test_webhook_invalid_api_key(client, added_webhook_test):
 
 async def test_webhook_missing_api_key_when_required(client, added_webhook_test):
     """Test that webhook returns 403 when API key is missing and auth is enabled."""
-    from unittest.mock import AsyncMock, MagicMock
-
     from fastapi import HTTPException
-    from langflow.services.auth.service import AuthService
 
-    # Create a mock settings service with WEBHOOK_AUTH_ENABLE=True
-    mock_auth_settings = MagicMock()
-    mock_auth_settings.WEBHOOK_AUTH_ENABLE = True
-
-    mock_settings_service = MagicMock()
-    mock_settings_service.auth_settings = mock_auth_settings
-
-    # Create a mock auth service
-    mock_auth_service = MagicMock(spec=AuthService)
-    mock_auth_service.settings_service = mock_settings_service
-    mock_auth_service.get_webhook_user = AsyncMock(
-        side_effect=HTTPException(status_code=403, detail="API key required when webhook authentication is enabled")
-    )
-
-    with patch("langflow.api.v1.endpoints.get_auth_service", return_value=mock_auth_service):
+    with patch(
+        "langflow.api.v1.endpoints.get_webhook_user",
+        side_effect=HTTPException(status_code=403, detail="API key required when webhook authentication is enabled"),
+    ):
         endpoint_name = added_webhook_test["endpoint_name"]
         endpoint = f"api/v1/webhook/{endpoint_name}"
         payload = {"test": "data"}
@@ -343,6 +377,7 @@ async def test_webhook_with_special_characters_in_payload(client, added_webhook_
 # =============================================================================
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_creates_vertex_builds(client, added_webhook_test, created_api_key):
     """Test that webhook execution creates vertex builds in the database."""
     flow_id = added_webhook_test["id"]
@@ -400,6 +435,7 @@ async def test_webhook_vertex_builds_contain_expected_data(client, added_webhook
             assert str(build["flow_id"]) == flow_id
 
 
+@pytest.mark.usefixtures("administrator_user")
 async def test_webhook_multiple_executions_create_multiple_builds(client, added_webhook_test, created_api_key):
     """Test that multiple webhook executions create multiple vertex builds."""
     flow_id = added_webhook_test["id"]
@@ -810,93 +846,217 @@ class TestSimpleRunFlowTask:
 
 
 class TestWebhookEventsStreamAuth:
-    """Unit tests for webhook_events_stream authentication."""
+    """Tests for webhook_events_stream authentication."""
 
-    async def test_calls_get_current_user_for_sse_for_authentication(self):
-        """Should call get_current_user_for_sse to validate authentication."""
-        from unittest.mock import AsyncMock, Mock, patch
+    async def test_raises_404_when_user_does_not_own_flow(self):
+        """Should raise 404 when authenticated user doesn't own the flow."""
+        from unittest.mock import Mock, patch
 
-        from langflow.api.v1.endpoints import webhook_events_stream
-
-        user_id = "user-123"
-        flow = Mock()
-        flow.id = "test-flow-id"
-        flow.name = "Test Flow"
-        flow.user_id = user_id
-
-        request = Mock()
-        request.is_disconnected = AsyncMock(return_value=True)  # Disconnect immediately
+        from fastapi import HTTPException
+        from langflow.api.v1.endpoints import get_flow_for_sse_user
 
         mock_user = Mock()
-        mock_user.id = user_id
+        mock_user.id = "different-user-id"
+
+        # Mock get_flow_by_id_or_endpoint_name to raise 404 as it would if user doesn't own it
+        with patch("langflow.api.v1.endpoints.get_flow_by_id_or_endpoint_name") as mock_get_flow:
+            mock_get_flow.side_effect = HTTPException(status_code=404, detail="Flow identifier test-flow-id not found")
+
+            with pytest.raises(HTTPException) as exc_info:
+                await get_flow_for_sse_user(
+                    flow_id_or_name="test-flow-id",
+                    user=mock_user,
+                )
+
+        assert exc_info.value.status_code == 404
+        assert "Flow identifier test-flow-id not found" in exc_info.value.detail
+
+    async def test_webhook_events_stream_cross_user_access_returns_404(
+        self, client, added_webhook_test, user_two_api_key
+    ):
+        """Regression test: cross-user access to /webhook-events/{id} returns 404, not 403.
+
+        This ensures no existence oracle is exposed.
+        """
+        flow_id = added_webhook_test["id"]
+        endpoint = f"api/v1/webhook-events/{flow_id}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.get(endpoint, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {flow_id} not found" in response.json()["detail"]
+
+    async def test_webhook_events_stream_cross_user_endpoint_name_returns_404(
+        self, client, added_webhook_test, user_two_api_key
+    ):
+        """Regression test: cross-user access to SSE via endpoint_name returns 404."""
+        endpoint_name = added_webhook_test["endpoint_name"]
+        endpoint = f"api/v1/webhook-events/{endpoint_name}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.get(endpoint, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {endpoint_name} not found" in response.json()["detail"]
+
+    async def test_sse_route_calls_ensure_flow_permission_for_shared_flow(self):
+        """Regression: webhook_events_stream must enforce flow:read before subscribing.
+
+        The SSE dependency widens to share-aware lookup when an authz plugin is
+        active, so a non-owner *could* resolve another user's flow.  The route
+        guards against this by calling ``ensure_flow_permission`` before any
+        event-bus subscription happens — without that, a non-owner with
+        cross-user fetch enabled could exfiltrate webhook event payloads for
+        another user's flow.
+        """
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+        from uuid import uuid4
+
+        from fastapi import HTTPException
+        from langflow.api.v1 import endpoints as endpoints_module
+
+        owner = SimpleNamespace(id=uuid4(), is_superuser=False)
+        attacker = SimpleNamespace(id=uuid4(), is_superuser=False)
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="shared-flow",
+            user_id=owner.id,
+            workspace_id=None,
+            folder_id=None,
+        )
+        auth = endpoints_module.SseAuth(user=attacker, flow=flow)
+
+        async def _deny(*_args, **_kwargs):
+            raise HTTPException(status_code=403, detail="Permission denied")
+
+        # Subscribe must NOT be reached when permission is denied — if the
+        # route accidentally falls through to event_generator() and calls
+        # subscribe(), this AsyncMock will fail the test.
+        subscribe_mock = AsyncMock(side_effect=AssertionError("subscribe() must not be called when authz denies"))
 
         with (
-            patch("langflow.api.v1.endpoints.get_current_user_for_sse", new_callable=AsyncMock) as mock_auth,
-            patch("langflow.api.v1.endpoints.webhook_event_manager") as mock_manager,
+            patch.object(endpoints_module, "ensure_flow_permission", side_effect=_deny),
+            patch.object(endpoints_module.webhook_event_manager, "subscribe", subscribe_mock),
         ):
-            mock_auth.return_value = mock_user
-            mock_manager.subscribe = AsyncMock(return_value=asyncio.Queue())
-            mock_manager.unsubscribe = AsyncMock()
-
-            await webhook_events_stream(
-                flow_id_or_name="test-flow-id",
-                flow=flow,
-                request=request,
-            )
-
-            # Should call get_current_user_for_sse with request
-            mock_auth.assert_called_once_with(request)
-
-    async def test_raises_403_when_auth_fails(self):
-        """Should propagate 403 error when authentication fails."""
-        from unittest.mock import AsyncMock, Mock, patch
-
-        from fastapi import HTTPException
-        from langflow.api.v1.endpoints import webhook_events_stream
-
-        flow = Mock()
-        flow.id = "test-flow-id"
-
-        request = Mock()
-
-        with patch("langflow.api.v1.endpoints.get_current_user_for_sse", new_callable=AsyncMock) as mock_auth:
-            mock_auth.side_effect = HTTPException(status_code=403, detail="Missing or invalid credentials")
-
+            request_stub = SimpleNamespace()
             with pytest.raises(HTTPException) as exc_info:
-                await webhook_events_stream(
-                    flow_id_or_name="test-flow-id",
-                    flow=flow,
-                    request=request,
-                )
+                # The deny raises before the session is touched; a mock satisfies
+                # the transaction-release parameter added for #14445.
+                await endpoints_module.webhook_events_stream(auth=auth, request=request_stub, session=AsyncMock())
 
-            assert exc_info.value.status_code == 403
-            assert "Missing or invalid credentials" in exc_info.value.detail
+        assert exc_info.value.status_code == 403
+        subscribe_mock.assert_not_awaited()
 
-    async def test_raises_403_when_user_does_not_own_flow(self):
-        """Should raise 403 when authenticated user doesn't own the flow."""
-        from unittest.mock import AsyncMock, Mock, patch
+    async def test_webhook_run_cross_user_uuid_returns_404(self, client, added_webhook_test, user_two_api_key):
+        """Regression test: cross-user access to run webhook via UUID returns 404."""
+        flow_id = added_webhook_test["id"]
+        endpoint = f"api/v1/webhook/{flow_id}"
 
-        from fastapi import HTTPException
-        from langflow.api.v1.endpoints import webhook_events_stream
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
 
-        flow = Mock()
-        flow.id = "test-flow-id"
-        flow.user_id = "owner-user-id"
+        # Access with User 2's API key
+        response = await client.post(endpoint, json={"test": "data"}, params={"x-api-key": user_two_api_key})
 
-        mock_user = Mock()
-        mock_user.id = "different-user-id"  # Different from flow owner
+        # Should return 404 because the flow doesn't belong to User 2
+        # If it returns 403, it's an existence oracle
+        assert response.status_code == 404
+        assert f"Flow identifier {flow_id} not found" in response.json()["detail"]
 
-        request = Mock()
+    async def test_webhook_run_cross_user_endpoint_name_returns_404(self, client, added_webhook_test, user_two_api_key):
+        """Regression test: cross-user access to run webhook via endpoint_name returns 404."""
+        endpoint_name = added_webhook_test["endpoint_name"]
+        endpoint = f"api/v1/webhook/{endpoint_name}"
 
-        with patch("langflow.api.v1.endpoints.get_current_user_for_sse", new_callable=AsyncMock) as mock_auth:
-            mock_auth.return_value = mock_user
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
 
-            with pytest.raises(HTTPException) as exc_info:
-                await webhook_events_stream(
-                    flow_id_or_name="test-flow-id",
-                    flow=flow,
-                    request=request,
-                )
+        # Access with User 2's API key
+        response = await client.post(endpoint, json={"test": "data"}, params={"x-api-key": user_two_api_key})
 
-            assert exc_info.value.status_code == 403
-            assert "Access denied" in exc_info.value.detail
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {endpoint_name} not found" in response.json()["detail"]
+
+
+def _enable_serving_required(monkeypatch):
+    """Turn on the serving end-user feature with identity REQUIRED, on the live settings."""
+    from lfx.services.deps import get_settings_service
+
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "serving_end_user_header", "X-End-User-Id")
+    monkeypatch.setattr(settings, "serving_trust_proxy_headers", True)
+    monkeypatch.setattr(settings, "serving_end_user_required", True)
+
+
+async def test_webhook_required_identity_absent_is_rejected_401(
+    client, added_webhook_test, created_api_key, monkeypatch
+):
+    """I3: a webhook with no identity is a SYNCHRONOUS 401 when identity is required.
+
+    The run executes in a fire-and-forget task that can't surface an error, so the gate must fire in
+    the endpoint before scheduling — otherwise a required-but-absent identity would 202 and be
+    silently dropped.
+    """
+    _enable_serving_required(monkeypatch)
+    endpoint = f"api/v1/webhook/{added_webhook_test['endpoint_name']}"
+    resp = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json={"k": "v"})
+    assert resp.status_code == 401, resp.text
+    assert resp.json()["detail"]["code"] == "END_USER_IDENTITY_REQUIRED"
+
+
+async def test_webhook_required_identity_present_is_accepted(client, added_webhook_test, created_api_key, monkeypatch):
+    # With the header present the gate passes and the run is scheduled as usual (202).
+    _enable_serving_required(monkeypatch)
+    endpoint = f"api/v1/webhook/{added_webhook_test['endpoint_name']}"
+    resp = await client.post(
+        endpoint,
+        headers={"x-api-key": created_api_key.api_key, "X-End-User-Id": "alice"},
+        json={"k": "v"},
+    )
+    assert resp.status_code == 202, resp.text
+
+
+async def test_webhook_route_names_the_webhook_execution_family(
+    client, added_webhook_test, created_api_key, monkeypatch
+):
+    """INT-6: the route, not the task's default, chooses the privileged family.
+
+    ``simple_run_flow_task`` defaults to the actor family (``v1_run``) so an
+    unconverted caller cannot silently inherit the flow owner's credentials;
+    ``webhook`` -- the one genuinely unattended caller -- is named at the route.
+    """
+    import inspect
+
+    from langflow.api.utils.execution_principal import FAMILY_V1_RUN, FAMILY_WEBHOOK
+    from langflow.api.v1 import endpoints
+
+    default_family = inspect.signature(endpoints.simple_run_flow_task).parameters["execution_family"].default
+    assert default_family == FAMILY_V1_RUN
+
+    captured: dict = {}
+    started = asyncio.Event()
+
+    async def _record_task(**kwargs):
+        captured.update(kwargs)
+        started.set()
+
+    monkeypatch.setattr(endpoints, "simple_run_flow_task", _record_task)
+
+    endpoint = f"api/v1/webhook/{added_webhook_test['endpoint_name']}"
+    response = await client.post(endpoint, headers={"x-api-key": created_api_key.api_key}, json={"k": "v"})
+
+    assert response.status_code == 202, response.text
+    # asyncio.timeout() is 3.11+; this suite still runs on 3.10, so use wait_for.
+    await asyncio.wait_for(started.wait(), timeout=10)
+    assert captured["execution_family"] == FAMILY_WEBHOOK

@@ -171,3 +171,20 @@ class TestCreateInputSchema:
         input_instance = StrInput(name="test@field#name")
         schema = create_input_schema([input_instance])
         assert "test@field#name" in schema.model_fields
+
+    # numpy scalar defaults (from DB round-trip) are coerced to native Python types.
+    # Regression test for Agent build failing with TypeError when KnowledgeBase /
+    # MemoryBase top_k arrives as numpy.int64 — Pydantic Field fails to introspect
+    # the non-native scalar and raises:
+    #   TypeError("'numpy.int64' object is not iterable")
+    #   TypeError("vars() argument must have __dict__ attribute")
+    def test_numpy_scalar_default_value_coerced(self):
+        numpy = pytest.importorskip("numpy")
+        # Bypass IntInput's value validator to simulate the post-deserialization
+        # state where the field already holds a numpy scalar.
+        input_instance = IntInput(name="top_k", required=False)
+        object.__setattr__(input_instance, "value", numpy.int64(5))
+        schema = create_input_schema([input_instance])
+        field_info = schema.model_fields["top_k"]
+        assert field_info.default == 5
+        assert type(field_info.default) is int

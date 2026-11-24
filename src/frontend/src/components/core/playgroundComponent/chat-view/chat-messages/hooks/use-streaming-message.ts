@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { applyBasePath } from "@/customization/utils/urls";
 import useAlertStore from "@/stores/alertStore";
 import { ChatMessageType } from "@/types/chat";
 
@@ -13,6 +15,7 @@ export function useStreamingMessage({
   isBuilding,
   updateChat,
 }: UseStreamingMessageProps) {
+  const { t } = useTranslation();
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
   // We need to check if message is not undefined because
   // we need to run .toString() on it
@@ -41,7 +44,7 @@ export function useStreamingMessage({
   const streamChunks = (url: string) => {
     setIsStreaming(true); // Streaming starts
     return new Promise<boolean>((resolve, reject) => {
-      eventSource.current = new EventSource(url);
+      eventSource.current = new EventSource(applyBasePath(url));
       eventSource.current.onmessage = (event) => {
         const parsedData = JSON.parse(event.data);
         if (parsedData.chunk) {
@@ -59,7 +62,7 @@ export function useStreamingMessage({
         const errorEvent = event as MessageEvent;
         if (errorEvent.data && JSON.parse(errorEvent.data)?.error) {
           setErrorData({
-            title: "Error on Streaming",
+            title: t("errors.errorOnStreaming"),
             list: [JSON.parse(errorEvent.data)?.error],
           });
         }

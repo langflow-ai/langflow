@@ -5,11 +5,7 @@ from packaging import version as pkg_version
 
 
 def _compute_non_prerelease_version(prerelease_version: str) -> str:
-    prerelease_keywords = ["a", "b", "rc", "dev", "post"]
-    for keyword in prerelease_keywords:
-        if keyword in prerelease_version:
-            return prerelease_version.split(keyword)[0][:-1]
-    return prerelease_version
+    return pkg_version.Version(prerelease_version).base_version
 
 
 def _get_version_info():
@@ -25,9 +21,9 @@ def _get_version_info():
     """
     package_options = [
         ("langflow", "Langflow"),
-        ("langflow-base", "Langflow Base"),
+        ("langflow-base", "Langflow"),
         ("langflow-nightly", "Langflow Nightly"),
-        ("langflow-base-nightly", "Langflow Base Nightly"),
+        ("langflow-base-nightly", "Langflow Nightly"),
     ]
     __version__ = None
     for pkg_name, display_name in package_options:
@@ -38,10 +34,17 @@ def _get_version_info():
         except (ImportError, metadata.PackageNotFoundError):
             pass
         else:
+            # The canonical `langflow` / `langflow-base` distribution matches first, and the
+            # nightly now publishes under that canonical name as a `.devN` pre-release. Derive the
+            # "Nightly" label from the `.dev` version marker (not the package name) so the startup
+            # banner and telemetry `package` field still identify nightlies correctly.
+            display = display_name
+            if "dev" in prerelease_version and "Nightly" not in display:
+                display = f"{display_name} Nightly"
             return {
                 "version": prerelease_version,
                 "main_version": version,
-                "package": display_name,
+                "package": display,
             }
 
     if __version__ is None:

@@ -1,30 +1,48 @@
 import { render, screen } from "@testing-library/react";
-import React from "react";
+import type { ReactNode } from "react";
 import { CategoryGroup } from "../categoryGroup";
+
+type MockChildrenProps = {
+  children?: ReactNode;
+  className?: string;
+};
+
+type MockCategoryDisclosureProps = {
+  item: { name: string; display_name: string };
+  openCategories: string[];
+};
+
+type MockSearchConfigTriggerProps = {
+  showConfig: boolean;
+  setShowConfig: (value: boolean) => void;
+};
 
 // Mock the UI components
 jest.mock("@/components/ui/sidebar", () => ({
-  SidebarGroup: ({ children, className }: any) => (
+  SidebarGroup: ({ children, className }: MockChildrenProps) => (
     <div data-testid="sidebar-group" className={className}>
       {children}
     </div>
   ),
-  SidebarGroupContent: ({ children }: any) => (
+  SidebarGroupContent: ({ children }: MockChildrenProps) => (
     <div data-testid="sidebar-group-content">{children}</div>
   ),
-  SidebarGroupLabel: ({ children, className }: any) => (
+  SidebarGroupLabel: ({ children, className }: MockChildrenProps) => (
     <div data-testid="sidebar-group-label" className={className}>
       {children}
     </div>
   ),
-  SidebarMenu: ({ children }: any) => (
+  SidebarMenu: ({ children }: MockChildrenProps) => (
     <div data-testid="sidebar-menu">{children}</div>
   ),
 }));
 
 // Mock the CategoryDisclosure component
 jest.mock("../categoryDisclouse", () => ({
-  CategoryDisclosure: ({ item, openCategories }: any) => (
+  CategoryDisclosure: ({
+    item,
+    openCategories,
+  }: MockCategoryDisclosureProps) => (
     <div data-testid={`category-disclosure-${item.name}`}>
       CategoryDisclosure for {item.display_name} - Open:{" "}
       {openCategories.includes(item.name).toString()}
@@ -42,7 +60,10 @@ jest.mock("@/utils/styleUtils", () => ({
 
 // Mock the SearchConfigTrigger component
 jest.mock("../searchConfigTrigger", () => ({
-  SearchConfigTrigger: ({ showConfig, setShowConfig }: any) => (
+  SearchConfigTrigger: ({
+    showConfig,
+    setShowConfig,
+  }: MockSearchConfigTriggerProps) => (
     <button
       data-testid="search-config-trigger"
       onClick={() => setShowConfig(!showConfig)}
@@ -261,7 +282,7 @@ describe("CategoryGroup", () => {
         ...defaultProps,
         dataFilter: {
           ...defaultProps.dataFilter,
-          unknownCategory: {
+          unknown_category: {
             unknownComp: { ...mockAPIClass, display_name: "Unknown Component" },
           },
         },
@@ -270,11 +291,13 @@ describe("CategoryGroup", () => {
       render(<CategoryGroup {...propsWithUnknownCategory} />);
 
       expect(
-        screen.getByTestId("category-disclosure-unknownCategory"),
+        screen.getByTestId("category-disclosure-unknown_category"),
       ).toBeInTheDocument();
+      // Snake-case fallbacks are humanised to Title Case so runtime-discovered
+      // bundles render as ``Demo Bundle`` instead of ``demo_bundle``.
       expect(
         screen.getByText(
-          "CategoryDisclosure for unknownCategory - Open: false",
+          "CategoryDisclosure for Unknown Category - Open: false",
         ),
       ).toBeInTheDocument();
     });

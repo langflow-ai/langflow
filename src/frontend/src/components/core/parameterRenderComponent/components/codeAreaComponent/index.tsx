@@ -1,5 +1,6 @@
 import { GRADIENT_CLASS } from "@/constants/constants";
 import CodeAreaModal from "@/modals/codeAreaModal";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
@@ -53,7 +54,13 @@ export default function CodeAreaComponent({
   id = "",
   placeholder,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string>): JSX.Element | null {
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
+  );
+  const isBlocked = !allowCustomComponents;
+
   const renderCodeText = () => (
     <span
       id={id}
@@ -110,6 +117,19 @@ export default function CodeAreaComponent({
     return null;
   }
 
+  if (isBlocked) {
+    return (
+      <div className={cn("w-full", "pointer-events-none cursor-not-allowed")}>
+        <div className="w-full">
+          <div className="relative w-full">
+            {renderCodeText()}
+            {renderExternalLinkIcon()}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn("w-full", disabled && "pointer-events-none")}>
       <CodeAreaModal
@@ -119,7 +139,7 @@ export default function CodeAreaComponent({
         setNodeClass={handleNodeClass!}
         setValue={(newValue) => handleOnNewValue({ value: newValue })}
       >
-        <Button unstyled className="w-full">
+        <Button unstyled className="w-full" aria-labelledby={ariaLabelledBy}>
           <div className="relative w-full">
             {renderCodeText()}
             {renderExternalLinkIcon()}

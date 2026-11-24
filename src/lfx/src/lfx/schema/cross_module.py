@@ -45,16 +45,17 @@ class CrossModuleMeta(type(BaseModel)):  # type: ignore[misc]
         # 1. Has model_fields attribute (is a Pydantic model)
         # 2. Has the same __class__.__name__
         # 3. Has compatible model fields
-        if not hasattr(instance, "model_fields"):
+        instance_cls = type(instance)
+        if not hasattr(instance_cls, "model_fields"):
             return False
 
         # Check if class names match
-        if instance.__class__.__name__ != cls.__name__:
+        if instance_cls.__name__ != cls.__name__:
             return False
 
         # Check if the instance has all required fields from cls
         cls_fields = set(cls.model_fields.keys()) if hasattr(cls, "model_fields") else set()
-        instance_fields = set(type(instance).model_fields.keys())
+        instance_fields = set(instance_cls.model_fields.keys())
 
         # The instance must have at least the same fields as the class
         # (it can have more, but not fewer required fields)

@@ -1,16 +1,21 @@
+from __future__ import annotations
+
 import importlib
 import signal
-import sys
 import traceback
 from contextlib import suppress
 from functools import lru_cache
+from typing import TYPE_CHECKING, Any
 
-from docling_core.types.doc import DoclingDocument
 from pydantic import BaseModel, SecretStr, TypeAdapter
 
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+
+if TYPE_CHECKING:
+    from docling.document_converter import DocumentConverter
+    from docling_core.types.doc import DoclingDocument
 
 
 class DoclingDependencyError(Exception):
@@ -20,6 +25,46 @@ class DoclingDependencyError(Exception):
         self.dependency_name = dependency_name
         self.install_command = install_command
         super().__init__(f"{dependency_name} is not correctly installed. {install_command}")
+
+
+def _get_docling_document_class() -> type[Any]:
+    try:
+        docling_doc_module = importlib.import_module("docling_core.types.doc")
+    except ImportError as e:
+        dependency_name = "docling-core"
+        install_command = (
+            "Install Docling with `uv pip install 'langflow[docling]'` or `uv pip install 'lfx-docling[local]'`."
+        )
+        raise DoclingDependencyError(dependency_name, install_command) from e
+    return docling_doc_module.DoclingDocument
+
+
+def get_docling_image_ref_mode(image_mode: str) -> Any:
+    try:
+        docling_doc_module = importlib.import_module("docling_core.types.doc")
+    except ImportError:
+        return image_mode
+    return docling_doc_module.ImageRefMode(image_mode)
+
+
+def _is_docling_document(value: Any) -> bool:
+    try:
+        docling_document = _get_docling_document_class()
+    except DoclingDependencyError:
+        return all(hasattr(value, method) for method in ("export_to_markdown", "export_to_html", "export_to_text"))
+    return isinstance(value, docling_document)
+
+
+def coerce_docling_document(doc: Any) -> Any:
+    if all(hasattr(doc, method) for method in ("export_to_markdown", "export_to_html", "export_to_text")):
+        return doc
+    if isinstance(doc, dict):
+        return _get_docling_document_class().model_validate(doc)
+    if _is_docling_document(doc):
+        return doc
+
+    msg = f"Expected a DoclingDocument, got {type(doc).__name__}."
+    raise TypeError(msg)
 
 
 def extract_docling_documents(
@@ -59,7 +104,7 @@ def extract_docling_documents(
                 try:
                     # Check if this column contains DoclingDocument objects
                     sample = data_inputs[col].dropna().iloc[0] if len(data_inputs[col].dropna()) > 0 else None
-                    if sample is not None and isinstance(sample, DoclingDocument):
+                    if sample is not None and _is_docling_document(sample):
                         found_column = col
                         break
                 except (IndexError, AttributeError):
@@ -107,9 +152,11 @@ def extract_docling_documents(
                 documents = [
                     input_.data[doc_key]
                     for input_ in data_inputs
-                    if isinstance(input_, Data)
-                    and doc_key in input_.data
-                    and isinstance(input_.data[doc_key], DoclingDocument)
+                    if (
+                        isinstance(input_, Data)
+                        and doc_key in input_.data
+                        and _is_docling_document(input_.data[doc_key])
+                    )
                 ]
                 if not documents:
                     msg = f"No valid Data inputs found in {type(data_inputs)}"
@@ -224,6 +271,10 @@ def _get_cached_converter(
     return DocumentConverter(format_options=format_options)
 
 
+class _ShutdownRequestedError(Exception):
+    """Raised by check_shutdown() to unwind the docling_worker call stack."""
+
+
 def docling_worker(
     *,
     file_paths: list[str],
@@ -252,22 +303,24 @@ def docling_worker(
         logger.debug(f"Docling worker received {signal_name}, initiating graceful shutdown...")
         shutdown_requested = True
 
-        # Send shutdown notification to parent process
+        # Send shutdown notification to parent thread
         with suppress(Exception):
             queue.put({"error": f"Worker interrupted by {signal_name}", "shutdown": True})
 
-        # Exit gracefully
-        sys.exit(0)
+        # NOTE: Do NOT call sys.exit() here. This function runs in a thread
+        # (not a subprocess), so sys.exit() would raise SystemExit which can
+        # crash the host process in single-worker setups. Instead, just set
+        # the flag and let check_shutdown() terminate the worker loop.
 
     def check_shutdown() -> None:
-        """Check if shutdown was requested and exit if so."""
+        """Check if shutdown was requested and raise to unwind if so."""
         if shutdown_requested:
             logger.info("Shutdown requested, exiting worker...")
 
             with suppress(Exception):
                 queue.put({"error": "Worker shutdown requested", "shutdown": True})
 
-            sys.exit(0)
+            raise _ShutdownRequestedError
 
     # Register signal handlers early
     try:
@@ -282,12 +335,12 @@ def docling_worker(
     check_shutdown()
 
     try:
-        from docling.datamodel.base_models import ConversionStatus, InputFormat  # noqa: F401
-        from docling.datamodel.pipeline_options import OcrOptions, PdfPipelineOptions, VlmPipelineOptions  # noqa: F401
-        from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption  # noqa: F401
-        from docling.models.factories import get_ocr_factory  # noqa: F401
-        from docling.pipeline.vlm_pipeline import VlmPipeline  # noqa: F401
-        from langchain_docling.picture_description import PictureDescriptionLangChainOptions  # noqa: F401
+        from docling.datamodel.base_models import ConversionStatus
+
+        importlib.import_module("docling.datamodel.pipeline_options")
+        importlib.import_module("docling.document_converter")
+        importlib.import_module("docling.models.factories")
+        importlib.import_module("docling.pipeline.vlm_pipeline")
 
         # Check for shutdown after imports
         check_shutdown()
@@ -327,7 +380,16 @@ def docling_worker(
             from docling.datamodel.pipeline_options import PdfPipelineOptions
             from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
             from docling.models.factories import get_ocr_factory
-            from langchain_docling.picture_description import PictureDescriptionLangChainOptions
+
+            try:
+                from langchain_docling.picture_description import PictureDescriptionLangChainOptions
+            except ImportError as e:
+                msg = (
+                    "langchain-docling is not installed. Install it with "
+                    "`uv pip install 'langflow[docling-image-description]'` or "
+                    "`uv pip install 'lfx-docling[image-description]'`."
+                )
+                raise ImportError(msg) from e
 
             pipeline_options = PdfPipelineOptions()
             pipeline_options.do_ocr = ocr_engine not in {"", "None"}
@@ -442,6 +504,9 @@ def docling_worker(
         logger.info(f"Successfully processed {len([d for d in processed_data if d])} files")
         queue.put(processed_data)
 
+    except _ShutdownRequestedError:
+        logger.info("Docling worker stopped by shutdown request")
+        return
     except KeyboardInterrupt:
         logger.warning("KeyboardInterrupt during processing, exiting gracefully...")
         queue.put({"error": "Worker interrupted during processing", "shutdown": True})

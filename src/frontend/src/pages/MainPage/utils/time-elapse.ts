@@ -1,4 +1,9 @@
-export const timeElapsed = (dateTimeString: string | undefined): string => {
+type TFunction = (key: string, opts?: object) => string;
+
+export const timeElapsed = (
+  dateTimeString: string | undefined,
+  t?: TFunction,
+): string => {
   if (!dateTimeString) {
     return "";
   }
@@ -15,16 +20,36 @@ export const timeElapsed = (dateTimeString: string | undefined): string => {
   const years = Math.floor(months / 12);
 
   if (years > 0) {
-    return years === 1 ? `${years} year` : `${years} years`;
+    return t
+      ? t("mainPage.timeElapsed.year", { count: years })
+      : years === 1
+        ? `${years} year`
+        : `${years} years`;
   } else if (months > 0) {
-    return months === 1 ? `${months} month` : `${months} months`;
+    return t
+      ? t("mainPage.timeElapsed.month", { count: months })
+      : months === 1
+        ? `${months} month`
+        : `${months} months`;
   } else if (days > 0) {
-    return days === 1 ? `${days} day` : `${days} days`;
+    return t
+      ? t("mainPage.timeElapsed.day", { count: days })
+      : days === 1
+        ? `${days} day`
+        : `${days} days`;
   } else if (hours > 0) {
-    return hours === 1 ? `${hours} hour` : `${hours} hours`;
+    return t
+      ? t("mainPage.timeElapsed.hour", { count: hours })
+      : hours === 1
+        ? `${hours} hour`
+        : `${hours} hours`;
   } else if (minutes > 0) {
-    return minutes === 1 ? `${minutes} minute` : `${minutes} minutes`;
+    return t
+      ? t("mainPage.timeElapsed.minute", { count: minutes })
+      : minutes === 1
+        ? `${minutes} minute`
+        : `${minutes} minutes`;
   } else {
-    return "less than a minute";
+    return t ? t("mainPage.timeElapsed.lessThanMinute") : "less than a minute";
   }
 };

@@ -3,6 +3,8 @@ import clsx, { type ClassValue } from "clsx";
 import moment from "moment";
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
 import TableDropdownCellEditor from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableDropdownCellEditor";
+import { BASENAME } from "@/customization/config-constants";
+import i18n from "@/i18n";
 import useAlertStore from "@/stores/alertStore";
 import { type ColumnField, FormatterType } from "@/types/utils/functions";
 import "moment-timezone";
@@ -379,7 +381,7 @@ export function getSetFromObject(obj: object, key?: string): Set<string> {
   return set;
 }
 
-export function freezeObject(obj: any) {
+export function freezeObject<T>(obj: T): T {
   if (!obj) return obj;
   return JSON.parse(JSON.stringify(obj));
 }
@@ -394,8 +396,8 @@ export function extractColumnsFromRows(
   rows: object[],
   mode: "intersection" | "union",
   excludeColumns?: Array<string>,
-): ColDef<any>[] {
-  const columnsKeys: { [key: string]: ColDef<any> | ColGroupDef<any> } = {};
+): ColDef[] {
+  const columnsKeys: { [key: string]: ColDef | ColGroupDef } = {};
   if (rows.length === 0) {
     return [];
   }
@@ -450,9 +452,9 @@ export function isThereModal(): boolean {
   return modal.length > 0;
 }
 
-export function messagesSorter(a: any, b: any) {
-  const indexA = MESSAGES_TABLE_ORDER.indexOf(a.field);
-  const indexB = MESSAGES_TABLE_ORDER.indexOf(b.field);
+export function messagesSorter(a: { field?: string }, b: { field?: string }) {
+  const indexA = a.field ? MESSAGES_TABLE_ORDER.indexOf(a.field) : -1;
+  const indexB = b.field ? MESSAGES_TABLE_ORDER.indexOf(b.field) : -1;
 
   // If the field is not in the MESSAGES_TABLE_ORDER, we can place it at the end.
   const orderA = indexA === -1 ? MESSAGES_TABLE_ORDER.length : indexA;
@@ -541,7 +543,38 @@ export function brokenEdgeMessage({
     source.outputDisplayName ? " | " + source.outputDisplayName : ""
   } -> ${target.displayName}${target.field ? " | " + target.field : ""}`;
 }
-export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
+// Mirrors lfx's `coalesce_bool`, which is how the backend reads a boolean
+// table cell, so a toggle never shows a value the backend reads differently.
+const TRUTHY_CELL_STRINGS = new Set(["true", "1", "t", "y", "yes"]);
+
+export function isTruthyCellValue(value: unknown): boolean {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "string") {
+    return TRUTHY_CELL_STRINGS.has(value.trim().toLowerCase());
+  }
+  if (typeof value === "number") return Number.isInteger(value) && value !== 0;
+  return false;
+}
+
+const BOOLEAN_COLUMN_TYPES = new Set(["boolean", "bool"]);
+
+// Backend table schemas declare a column's `type` but not its `formatter`, and
+// the text fallback below used to be written back into the schema, so saved
+// flows carry `formatter: "text"` too. Either way a boolean column would render
+// as a free-text cell whose typed value is a string, so derive the toggle from
+// `type` unless the column opted into a dropdown of options.
+function resolveColumnFormatter(col: ColumnField): FormatterType {
+  if (
+    BOOLEAN_COLUMN_TYPES.has(col.type ?? "") &&
+    !col.options?.length &&
+    (!col.formatter || col.formatter === FormatterType.text)
+  ) {
+    return FormatterType.boolean;
+  }
+  return col.formatter ?? FormatterType.text;
+}
+
+export function FormatColumns(columns: ColumnField[]): ColDef[] {
   if (!columns) return [];
   const basic_types = new Set(["date", "number"]);
   const colDefs = columns.map((col) => {
@@ -567,10 +600,10 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
               newValue,
               context.field_parsers[colDef.field ?? ""],
             );
-          } catch (error: any) {
+          } catch (error) {
             useAlertStore.getState().setErrorData({
-              title: "Error parsing string",
-              list: [String(error.message ?? error)],
+              title: i18n.t("errors.errorParsingString"),
+              list: [String(error instanceof Error ? error.message : error)],
             });
             return oldValue;
           }
@@ -578,9 +611,7 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
         return newValue;
       },
     };
-    if (!col.formatter) {
-      col.formatter = FormatterType.text;
-    }
+    col.formatter = resolveColumnFormatter(col);
     if (basic_types.has(col.formatter)) {
       newCol.cellDataType = col.formatter;
     } else {
@@ -614,6 +645,9 @@ export function FormatColumns(columns: ColumnField[]): ColDef<any>[] {
           };
         } else if (col.formatter === FormatterType.boolean) {
           newCol.cellRenderer = TableAutoCellRender;
+          // Grid edits (typing into the cell, fill) must not store a string.
+          newCol.valueParser = ({ newValue }: ValueParserParams) =>
+            isTruthyCellValue(newValue);
           newCol.editable = false;
           newCol.autoHeight = false;
           newCol.cellClass = "no-border !py-2";
@@ -658,7 +692,7 @@ export function generateBackendColumnsFromValue(
 
     // Determine the formatter based on the sample value
     if (rows[0] && rows[0][column.field ?? ""]) {
-      const value = rows[0][column.field ?? ""] as any;
+      const value = rows[0][column.field ?? ""] as unknown;
       if (typeof value === "string") {
         if (isTimeStampString(value)) {
           newColumn.formatter = FormatterType.date;
@@ -804,7 +838,7 @@ export const isStringArray = (value: unknown): value is string[] => {
 export const stringToBool = (str) => (str === "false" ? false : true);
 
 // Filter out null/undefined options
-export const filterNullOptions = (opts: any[]): any[] => {
+export const filterNullOptions = <T>(opts: T[]): T[] => {
   return opts.filter((opt) => opt !== null && opt !== undefined);
 };
 
@@ -1028,7 +1062,7 @@ export const setAuthCookie = (
     typeof window !== "undefined" && window.location.protocol === "https:";
 
   cookies.set(tokenName, value, {
-    path: "/",
+    path: `${BASENAME}/`,
     secure: isSecure,
     sameSite: isSecure ? "strict" : "lax",
   });

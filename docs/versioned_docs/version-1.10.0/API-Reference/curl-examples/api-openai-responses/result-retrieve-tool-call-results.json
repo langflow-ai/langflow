@@ -1,0 +1,58 @@
+{
+  "id": "a6e5511e-71f8-457a-88d2-7d8c6ea34e36",
+  "object": "response",
+  "created_at": 1756835379,
+  "status": "completed",
+  "error": null,
+  "incomplete_details": null,
+  "instructions": null,
+  "max_output_tokens": null,
+  "model": "ced2ec91-f325-4bf0-8754-f3198c2b1563",
+  "output": [
+    {
+      "id": "evaluate_expression_1",
+      "queries": [
+        "15*23"
+      ],
+      "status": "completed",
+      "tool_name": "evaluate_expression",
+      "type": "tool_call",
+      "results": {
+        "result": "345"
+      }
+    },
+    {
+      "type": "message",
+      "id": "msg_a6e5511e-71f8-457a-88d2-7d8c6ea34e36",
+      "status": "completed",
+      "role": "assistant",
+      "content": [
+        {
+          "type": "output_text",
+          "text": "The result of 23 * 15 is 345.",
+          "annotations": []
+        }
+      ]
+    }
+  ],
+  "parallel_tool_calls": true,
+  "previous_response_id": null,
+  "reasoning": {
+    "effort": null,
+    "summary": null
+  },
+  "store": true,
+  "temperature": 1.0,
+  "text": {
+    "format": {
+      "type": "text"
+    }
+  },
+  "tool_choice": "auto",
+  "tools": [],
+  "top_p": 1.0,
+  "truncation": "disabled",
+  "usage": null,
+  "user": null,
+  "metadata": {}
+}

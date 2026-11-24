@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
@@ -6,12 +7,12 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-} from "@/components/ui/select-custom";
+} from "@/components/ui/select";
 import { cn } from "@/utils/utils";
 
 export interface SessionMoreMenuProps {
   onRename: () => void;
-  onMessageLogs?: () => void;
+  onMessageLogs?: (triggerElement: HTMLElement | null) => void;
   onDelete: () => void;
   onClearChat?: () => void;
   showMessageLogs?: boolean;
@@ -58,8 +59,10 @@ export function SessionMoreMenu({
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: SessionMoreMenuProps) {
+  const { t } = useTranslation();
   const [selectValue, setSelectValue] = useState("");
   const [internalOpen, setInternalOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   // Use controlled state if provided, otherwise use internal state
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
@@ -72,7 +75,7 @@ export function SessionMoreMenu({
         onRename();
         break;
       case "messageLogs":
-        onMessageLogs?.();
+        onMessageLogs?.(triggerRef.current);
         break;
       case "clearChat":
         onClearChat?.();
@@ -99,6 +102,8 @@ export function SessionMoreMenu({
           content={tooltipContent}
         >
           <SelectTrigger
+            variant="plain"
+            ref={triggerRef}
             className={cn(
               "h-8 w-8 border-none bg-transparent p-2 rounded transition-colors text-muted-foreground hover:bg-accent hover:text-foreground focus:ring-0",
               !isVisible && "invisible group-hover:visible",
@@ -118,71 +123,84 @@ export function SessionMoreMenu({
             />
           </SelectTrigger>
         </ShadTooltip>
-        <SelectContent
-          side={side}
-          align={align}
-          sideOffset={sideOffset}
-          className={cn("p-0", contentClassName)}
-          onCloseAutoFocus={(e) => e.preventDefault()}
-        >
-          {showRename && (
-            <SelectItem
-              value="rename"
-              className="session-more-menu-item"
-              data-testid="rename-session-option"
-            >
-              <div className="flex items-center">
-                <ForwardedIconComponent
-                  name="SquarePen"
-                  className="mr-2 h-4 w-4"
-                />
-                Rename
-              </div>
-            </SelectItem>
-          )}
-          {showMessageLogs && (
-            <SelectItem
-              value="messageLogs"
-              className="session-more-menu-item"
-              data-testid="message-logs-option"
-            >
-              <div className="flex items-center">
-                <ForwardedIconComponent
-                  name="Scroll"
-                  className="mr-2 h-4 w-4"
-                />
-                Message logs
-              </div>
-            </SelectItem>
-          )}
-          {showClearChat && (
-            <SelectItem
-              value="clearChat"
-              className="session-more-menu-item"
-              data-testid="clear-chat-option"
-            >
-              <div className="flex items-center text-status-red hover:text-status-red">
-                <ForwardedIconComponent name="X" className="mr-2 h-4 w-4" />
-                Clear chat
-              </div>
-            </SelectItem>
-          )}
-          {showDelete && (
-            <SelectItem
-              value="delete"
-              className="session-more-menu-item"
-              data-testid="delete-session-option"
-            >
-              <div className="flex items-center text-status-red hover:text-status-red">
-                <ForwardedIconComponent
-                  name="Trash2"
-                  className="mr-2 h-4 w-4"
-                />
-                {isDefaultSession ? "Clear session" : "Delete session"}
-              </div>
-            </SelectItem>
-          )}
-        </SelectContent>
+        {/* A closed Radix Select still renders its items off-DOM, which adds
+            up across one menu per session row; mount them only while open. */}
+        {open && (
+          <SelectContent
+            side={side}
+            align={align}
+            sideOffset={sideOffset}
+            className={cn("min-w-[11.5rem] p-0", contentClassName)}
+            onCloseAutoFocus={(e) => {
+              e.preventDefault();
+              triggerRef.current?.focus();
+            }}
+          >
+            {showRename && (
+              <SelectItem
+                variant="plain"
+                value="rename"
+                className="session-more-menu-item"
+                data-testid="rename-session-option"
+              >
+                <div className="flex items-center">
+                  <ForwardedIconComponent
+                    name="SquarePen"
+                    className="mr-2 h-4 w-4"
+                  />
+                  {t("playgroundComponent.rename")}
+                </div>
+              </SelectItem>
+            )}
+            {showMessageLogs && (
+              <SelectItem
+                variant="plain"
+                value="messageLogs"
+                className="session-more-menu-item"
+                data-testid="message-logs-option"
+              >
+                <div className="flex items-center">
+                  <ForwardedIconComponent
+                    name="Scroll"
+                    className="mr-2 h-4 w-4"
+                  />
+                  {t("playgroundComponent.messageLogs")}
+                </div>
+              </SelectItem>
+            )}
+            {showClearChat && (
+              <SelectItem
+                variant="plain"
+                value="clearChat"
+                className="session-more-menu-item"
+                data-testid="clear-chat-option"
+              >
+                <div className="flex items-center text-status-red hover:text-status-red">
+                  <ForwardedIconComponent name="X" className="mr-2 h-4 w-4" />
+                  {t("playgroundComponent.clearChat")}
+                </div>
+              </SelectItem>
+            )}
+            {showDelete && (
+              <SelectItem
+                variant="plain"
+                value="delete"
+                className="session-more-menu-item"
+                data-testid="delete-session-option"
+              >
+                <div className="flex items-center text-status-red hover:text-status-red">
+                  <ForwardedIconComponent
+                    name="Trash2"
+                    className="mr-2 h-4 w-4"
+                  />
+                  {isDefaultSession
+                    ? t("playgroundComponent.clearSession")
+                    : t("playgroundComponent.deleteSession")}
+                </div>
+              </SelectItem>
+            )}
+          </SelectContent>
+        )}
       </Select>
     </div>
   );

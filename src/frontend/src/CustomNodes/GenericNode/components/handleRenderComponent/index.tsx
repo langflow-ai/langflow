@@ -1,8 +1,17 @@
 import { type Connection, Handle, Position } from "@xyflow/react";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
+import { useIsFlowReadOnly } from "@/contexts/permissionsContext";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
+import type { APIDataType } from "@/types/api";
+import type { groupedObjType } from "@/types/components";
+import type {
+  NodeDataType,
+  sourceHandleType,
+  targetHandleType,
+} from "@/types/flow";
 import { nodeColorsName } from "@/utils/styleUtils";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -24,6 +33,7 @@ const BASE_HANDLE_STYLES = {
 
 const HandleContent = memo(function HandleContent({
   isNullHandle,
+  isMuted,
   handleColor,
   accentForegroundColorName,
   isHovered,
@@ -35,6 +45,7 @@ const HandleContent = memo(function HandleContent({
   nodeId,
 }: {
   isNullHandle: boolean;
+  isMuted: boolean;
   handleColor: string;
   accentForegroundColorName: string;
   isHovered: boolean;
@@ -97,7 +108,7 @@ const HandleContent = memo(function HandleContent({
 
   const getNeonShadow = useCallback(
     (color: string, isActive: boolean) => {
-      if (isNullHandle) return "none";
+      if (isNullHandle || isMuted) return "none";
       if (!isActive) return `0 0 0 3px ${color}`;
       return [
         "0 0 0 1px hsl(var(--border))",
@@ -110,27 +121,29 @@ const HandleContent = memo(function HandleContent({
         `0 0 20px ${color}`,
       ].join(", ");
     },
-    [isNullHandle],
+    [isNullHandle, isMuted],
   );
 
   const contentStyle = useMemo(
     () => ({
       background: isNullHandle ? "hsl(var(--border))" : handleColor,
-      width: "10px",
-      height: "10px",
+      width: isMuted && !isNullHandle ? "6px" : "10px",
+      height: isMuted && !isNullHandle ? "6px" : "10px",
       transition: "all 0.2s",
+      opacity: isMuted && !isNullHandle ? 0 : 1,
       boxShadow: getNeonShadow(
         accentForegroundColorName,
         isHovered || openHandle,
       ),
       animation:
-        (isHovered || openHandle) && !isNullHandle
+        (isHovered || openHandle) && !isNullHandle && !isMuted
           ? `pulseNeon-${nodeId} 1.1s ease-in-out infinite`
           : "none",
       border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
     }),
     [
       isNullHandle,
+      isMuted,
       handleColor,
       getNeonShadow,
       accentForegroundColorName,
@@ -163,28 +176,49 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement,
   nodeId,
   colorName,
+  minimizedHandleTop,
 }: {
   left: boolean;
   tooltipTitle?: string;
-  proxy?: any;
-  id: any;
+  proxy?: { field: string; id: string };
+  id?: targetHandleType | sourceHandleType;
   title: string;
-  myData: any;
+  myData: APIDataType;
   colors: string[];
-  setFilterEdge: (edges: any) => void;
+  setFilterEdge: (newState: groupedObjType[]) => void;
   showNode: boolean;
   testIdComplement?: string;
   nodeId: string;
   colorName?: string[];
+  minimizedHandleTop?: string;
 }) {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
 
-  const isLocked = useFlowStore(
+  const idType = id && "type" in id ? id.type : undefined;
+
+  const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
   );
+  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const isPermissionReadOnly = useIsFlowReadOnly(currentFlowId);
+  const isLocked = isFlowLocked || isPermissionReadOnly;
 
   const edges = useFlowStore((state) => state.edges);
+  const getNode = useFlowStore((state) => state.getNode);
+
+  // Check if this node is in "connect other models" mode
+  const isInConnectionMode = useFlowStore(
+    useCallback(
+      (state) => {
+        if (idType !== "model" || !left) return false;
+        const node = state.nodes.find((n) => n.id === nodeId);
+        return (node?.data as NodeDataType)?._connectionMode === true;
+      },
+      [nodeId, idType, left],
+    ),
+  );
 
   const {
     setHandleDragging,
@@ -210,7 +244,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   const dark = useDarkStore((state) => state.dark);
 
   const myId = useMemo(
-    () => scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+    () => scapedJSONStringfy(proxy ? { ...id, proxy } : (id ?? {})),
     [id, proxy],
   );
 
@@ -234,6 +268,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     filterPresent,
     currentFilter,
     isNullHandle,
+    isMuted,
     handleColor,
     accentForegroundColorName,
   } = useMemo(() => {
@@ -276,8 +311,18 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     const outputType = connectedEdge?.data?.sourceHandle?.output_types?.[0];
     const connectedColor = (outputType && nodeColorsName[outputType]) || "gray";
 
+    // Model handles that initiated connection mode on this node should not be nulled
+    const isOwnModelConnectionMode =
+      idType === "model" && left && filterType?.target === nodeId;
+
     const isNullHandle =
-      filterPresent && !(openHandle || ownDraggingHandle || ownFilterHandle);
+      filterPresent &&
+      !(
+        openHandle ||
+        ownDraggingHandle ||
+        ownFilterHandle ||
+        isOwnModelConnectionMode
+      );
 
     // Create a Set from colorName to remove duplicates
     const colorNameSet = new Set(colorName || []);
@@ -325,6 +370,10 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           color: handleColorName,
         };
 
+    const isModelType = idType === "model";
+    const isMuted =
+      isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
+
     return {
       sameNode: sameDraggingNode || sameFilterNode,
       ownHandle: ownDraggingHandle || ownFilterHandle,
@@ -334,6 +383,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       filterPresent,
       currentFilter,
       isNullHandle,
+      isMuted,
       handleColor,
     };
   }, [
@@ -347,10 +397,13 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     colorName,
     tooltipTitle,
     edges,
+    id,
+    isInConnectionMode,
   ]);
 
   const handleMouseDown = useCallback(
     (event: React.MouseEvent) => {
+      if (isLocked) return;
       if (event.button === 0) {
         setHandleDragging(currentFilter);
         const handleMouseUp = () => {
@@ -360,10 +413,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         document.addEventListener("mouseup", handleMouseUp);
       }
     },
-    [currentFilter, setHandleDragging],
+    [currentFilter, isLocked, setHandleDragging],
   );
 
   const handleClick = useCallback(() => {
+    if (isLocked) return;
     const nodes = useFlowStore.getState().nodes;
     setFilterEdge(groupByFamily(myData, tooltipTitle!, left, nodes!));
     setFilterType(currentFilter);
@@ -385,6 +439,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     filterOpenHandle,
     filterType,
     onConnect,
+    isLocked,
   ]);
 
   const handleMouseEnter = useCallback(() => setIsHovered(true), []);
@@ -394,6 +449,28 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     (e: React.MouseEvent) => e.preventDefault(),
     [],
   );
+
+  // The handle carries role="button" (see below) but ReactFlow's own
+  // keyboard a11y is disabled canvas-wide (disableKeyboardA11y, PageComponent),
+  // so without this it would be an announced-but-inert button: focusable by
+  // no means, activatable only by mouse. Route Enter/Space to the same
+  // handler mouse clicks use so the announced role is actually operable.
+  const handleKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      handleClick();
+    },
+    [handleClick],
+  );
+
+  // DefaultEdge already prefers display_name over the raw id for its
+  // accessible name; do the same here instead of reading the node's id
+  // character-by-character to assistive tech.
+  const nodeDisplayName = getNode(nodeId)?.data?.node?.display_name ?? nodeId;
+  const handleAriaLabel = left
+    ? t("handle.ariaLabelInput", { field: title, node: nodeDisplayName })
+    : t("handle.ariaLabelOutput", { field: title, node: nodeDisplayName });
 
   return (
     <div>
@@ -427,6 +504,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           )}
           style={{
             ...BASE_HANDLE_STYLES,
+            // LE-1810 (T8): distribute the handles of a minimized node
+            // vertically so they don't overlap at the card center.
+            ...(!showNode && minimizedHandleTop
+              ? { top: minimizedHandleTop }
+              : {}),
             pointerEvents: isLocked ? "none" : "auto",
           }}
           onClick={handleClick}
@@ -435,12 +517,17 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           onMouseDown={handleMouseDown}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
+          onKeyDown={isLocked ? undefined : handleKeyDown}
+          role="button"
+          tabIndex={isLocked ? undefined : 0}
+          aria-label={handleAriaLabel}
           data-testid={`handle-${testIdComplement}-${title.toLowerCase()}-${
             !showNode ? (left ? "target" : "source") : left ? "left" : "right"
           }`}
         >
           <HandleContent
             isNullHandle={isNullHandle ?? false}
+            isMuted={isMuted ?? false}
             handleColor={handleColor}
             accentForegroundColorName={accentForegroundColorName}
             isHovered={isHovered}

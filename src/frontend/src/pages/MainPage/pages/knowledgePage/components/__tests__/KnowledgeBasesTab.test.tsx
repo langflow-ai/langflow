@@ -6,13 +6,17 @@ import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-base
 
 // ── Heavy / external dependency mocks ────────────────────────────────────────
 
+interface MockTableRow {
+  dir_name: string;
+  name: string;
+}
 jest.mock(
   "@/components/core/parameterRenderComponent/components/tableComponent",
   () => ({
     __esModule: true,
-    default: ({ rowData }: { rowData: any[] }) => (
+    default: ({ rowData }: { rowData: MockTableRow[] }) => (
       <div data-testid="mock-table">
-        {rowData?.map((row: any) => (
+        {rowData?.map((row) => (
           <div key={row.dir_name} data-testid={`row-${row.dir_name}`}>
             {row.name}
           </div>
@@ -44,11 +48,19 @@ jest.mock(
 
 const mockSetErrorData = jest.fn();
 const mockSetSuccessData = jest.fn();
+const mockSetNoticeData = jest.fn();
+type StoreSelector<TState> = ((state: TState) => unknown) | undefined;
 jest.mock("@/stores/alertStore", () => {
-  const store = jest.fn((selector: any) => {
-    const state = {
+  type AlertState = {
+    setErrorData: jest.Mock;
+    setSuccessData: jest.Mock;
+    setNoticeData: jest.Mock;
+  };
+  const store = jest.fn((selector: StoreSelector<AlertState>) => {
+    const state: AlertState = {
       setErrorData: mockSetErrorData,
       setSuccessData: mockSetSuccessData,
+      setNoticeData: mockSetNoticeData,
     };
     return typeof selector === "function" ? selector(state) : state;
   });
@@ -57,17 +69,19 @@ jest.mock("@/stores/alertStore", () => {
 
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
-  default: jest.fn((selector: any) => {
-    const state = { examples: [] };
+  default: jest.fn((selector: StoreSelector<{ examples: never[] }>) => {
+    const state = { examples: [] as never[] };
     return typeof selector === "function" ? selector(state) : state;
   }),
 }));
 
 jest.mock("@/stores/foldersStore", () => ({
-  useFolderStore: jest.fn((selector: any) => {
-    const state = { myCollectionId: "my-collection" };
-    return typeof selector === "function" ? selector(state) : state;
-  }),
+  useFolderStore: jest.fn(
+    (selector: StoreSelector<{ myCollectionId: string }>) => {
+      const state = { myCollectionId: "my-collection" };
+      return typeof selector === "function" ? selector(state) : state;
+    },
+  ),
 }));
 
 jest.mock("react-router-dom", () => ({
@@ -83,9 +97,14 @@ jest.mock("@/hooks/flows/use-add-flow", () => ({
 jest.mock("@/customization/utils/analytics", () => ({ track: jest.fn() }));
 jest.mock("@/utils/reactflowUtils", () => ({ updateIds: jest.fn() }));
 
+interface MockDeleteModalProps {
+  open: boolean;
+  onConfirm: () => void;
+  children?: React.ReactNode;
+}
 jest.mock("@/modals/deleteConfirmationModal", () => ({
   __esModule: true,
-  default: ({ open, onConfirm, children }: any) =>
+  default: ({ open, onConfirm, children }: MockDeleteModalProps) =>
     open ? (
       <div data-testid="delete-modal">
         <button data-testid="confirm-delete" onClick={onConfirm}>
@@ -104,7 +123,11 @@ jest.mock("@/modals/knowledgeBaseUploadModal/KnowledgeBaseUploadModal", () => ({
 
 jest.mock("../KnowledgeBaseEmptyState", () => ({
   __esModule: true,
-  default: ({ handleCreateKnowledge }: any) => (
+  default: ({
+    handleCreateKnowledge,
+  }: {
+    handleCreateKnowledge: () => void;
+  }) => (
     <div data-testid="empty-state">
       <button data-testid="create-flow-btn" onClick={handleCreateKnowledge}>
         Create Flow

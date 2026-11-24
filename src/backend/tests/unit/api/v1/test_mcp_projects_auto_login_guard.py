@@ -1,0 +1,417 @@
+"""AUTO_LOGIN guard coverage for the per-project MCP credential resolver.
+
+``verify_project_auth`` historically fell back to the configured superuser whenever a
+project carried no explicit MCP auth settings and ``AUTO_LOGIN`` was on — regardless of
+``skip_auth_auto_login``. Every other authenticated entrypoint (``api_key_security``,
+``ws_api_key_security``, ``authenticate_with_credentials``) rejects credential-less
+callers in that configuration, so the MCP transport endpoints must do the same.
+"""
+
+from contextlib import asynccontextmanager
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
+
+import pytest
+from fastapi import HTTPException, status
+from langflow.api.v1.mcp_projects import verify_project_auth
+from langflow.api.v1.mcp_utils import authenticated_caller_ctx, composer_authenticated_project_ctx
+from langflow.services.auth.constants import AUTO_LOGIN_ERROR
+
+MODULE = "langflow.api.v1.mcp_projects"
+
+
+def _settings(*, auto_login: bool, skip_auth: bool, superuser: str = "admin") -> SimpleNamespace:
+    return SimpleNamespace(
+        auth_settings=SimpleNamespace(
+            AUTO_LOGIN=auto_login,
+            skip_auth_auto_login=skip_auth,
+            SUPERUSER=superuser,
+        )
+    )
+
+
+def _session_scope_yielding(project, *, user=None) -> object:
+    """Build a ``session_scope`` replacement whose session resolves to ``project``."""
+
+    @asynccontextmanager
+    async def _scope():
+        session = MagicMock()
+        session.exec = AsyncMock(return_value=SimpleNamespace(first=lambda: project))
+        session.get = AsyncMock(return_value=user)
+        yield session
+
+    return _scope
+
+
+@pytest.mark.parametrize(
+    ("auth_settings", "expected_status"),
+    [({}, 401), ({"oauth_port": "8000"}, 401), ({"auth_type": "unknown"}, 403)],
+)
+async def test_verify_project_auth_rejects_incomplete_policy(auth_settings, expected_status):
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=auth_settings)
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=True)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await verify_project_auth(project.id, query_param=None, header_param=None)
+    assert exc.value.status_code == expected_status
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_auto_login_alone_rejects_credential_less_caller():
+    """Default config (AUTO_LOGIN on, skip_auth_auto_login off) must not resolve to the superuser."""
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=None)
+    superuser = SimpleNamespace(id=uuid4(), username="admin")
+
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        patch(f"{MODULE}.get_user_by_username", new=AsyncMock(return_value=superuser)) as mock_lookup,
+        pytest.raises(HTTPException) as exc,
+    ):
+        await verify_project_auth(project.id, query_param=None, header_param=None)
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
+    assert exc.value.detail == AUTO_LOGIN_ERROR
+    mock_lookup.assert_not_awaited()
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_auto_login_skip_keeps_superuser_fallback():
+    """AUTO_LOGIN + skip_auth_auto_login preserves the documented single-user MCP fallback."""
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=None)
+    superuser = SimpleNamespace(id=uuid4(), username="admin")
+
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=True)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        patch(f"{MODULE}.get_user_by_username", new=AsyncMock(return_value=superuser)),
+    ):
+        result = await verify_project_auth(project.id, query_param=None, header_param=None)
+
+    assert result is superuser
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_honours_presented_api_key_under_auto_login():
+    """A presented API key must authenticate even when policy would not have demanded one.
+
+    Under MCP Composer with a default project (no ``auth_settings``) and ``AUTO_LOGIN`` on,
+    ``requires_api_key`` is False. Before the presented-key branch existed, a key minted by
+    ``POST /{id}/install`` was ignored and the caller fell through to the now-rejecting
+    superuser fallback, so the generated client config could never authenticate.
+    """
+    owner_id = uuid4()
+    project = SimpleNamespace(id=uuid4(), user_id=owner_id, auth_settings=None)
+    owner = SimpleNamespace(id=owner_id, username="owner")
+    api_key_result = SimpleNamespace(user=owner)
+    set_telemetry_user = MagicMock()
+
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        patch(f"{MODULE}.authenticate_api_key", new=AsyncMock(return_value=api_key_result)),
+        patch(f"{MODULE}.AuthCredentialContext.from_api_key_result", return_value=MagicMock()),
+        patch(f"{MODULE}.set_authenticated_telemetry_user", set_telemetry_user),
+        patch(f"{MODULE}.get_user_by_username", new=AsyncMock()) as mock_lookup,
+    ):
+        result = await verify_project_auth(project.id, query_param=None, header_param="generated-key")
+
+    assert result is owner
+    set_telemetry_user.assert_called_once_with(owner)
+    mock_lookup.assert_not_awaited()
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("auth_settings", [None, {"auth_type": "none"}])
+async def test_verify_project_auth_rejects_presented_key_from_another_owner(auth_settings):
+    """A valid key belonging to a different user must not unlock this project."""
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=auth_settings)
+    other_user = SimpleNamespace(id=uuid4(), username="someone-else")
+
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+        patch(f"{MODULE}.authenticate_api_key", new=AsyncMock(return_value=SimpleNamespace(user=other_user))),
+        patch(f"{MODULE}.AuthCredentialContext.from_api_key_result", return_value=MagicMock()),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await verify_project_auth(project.id, query_param=None, header_param="someone-elses-key")
+
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_public_project_keeps_caller_anonymous():
+    """A public project executes as its owner without authenticating the anonymous caller as that owner."""
+    owner = SimpleNamespace(id=uuid4(), username="owner", is_active=True)
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": "none"})
+    token = authenticated_caller_ctx.set(uuid4())
+    composer_token = composer_authenticated_project_ctx.set(project.id)
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project, user=owner)),
+        ):
+            result = await verify_project_auth(project.id, query_param=None, header_param=None)
+
+        assert authenticated_caller_ctx.get() is None
+        assert composer_authenticated_project_ctx.get() is None
+    finally:
+        composer_authenticated_project_ctx.reset(composer_token)
+        authenticated_caller_ctx.reset(token)
+
+    assert result is owner
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_binds_oauth_composer_credential_to_project():
+    owner = SimpleNamespace(id=uuid4(), username="owner", is_active=True)
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": "oauth"})
+    credential = str(uuid4())
+    composer_service = MagicMock()
+    composer_service.validate_backend_auth_token.return_value = True
+    caller_token = authenticated_caller_ctx.set(None)
+    composer_token = composer_authenticated_project_ctx.set(None)
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project, user=owner)),
+            patch(f"{MODULE}.get_service", return_value=composer_service),
+        ):
+            result = await verify_project_auth(
+                project.id, query_param=None, header_param=None, composer_backend_token=credential
+            )
+
+        assert result is owner
+        assert authenticated_caller_ctx.get() is None
+        assert composer_authenticated_project_ctx.get() == project.id
+        composer_service.validate_backend_auth_token.assert_called_once_with(str(project.id), credential)
+    finally:
+        composer_authenticated_project_ctx.reset(composer_token)
+        authenticated_caller_ctx.reset(caller_token)
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("auth_type", ["none", "apikey", "oauth"])
+async def test_verify_project_auth_records_presented_api_key_caller(auth_type):
+    """A valid owner key identifies the caller for every project authentication type."""
+    owner = SimpleNamespace(id=uuid4(), username="owner")
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": auth_type})
+    api_key_result = SimpleNamespace(user=owner)
+    token = authenticated_caller_ctx.set(None)
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+            patch(f"{MODULE}.authenticate_api_key", new=AsyncMock(return_value=api_key_result)),
+            patch(f"{MODULE}.AuthCredentialContext.from_api_key_result", return_value=MagicMock()),
+        ):
+            result = await verify_project_auth(project.id, query_param=None, header_param="generated-key")
+
+        assert authenticated_caller_ctx.get() == owner.id
+    finally:
+        authenticated_caller_ctx.reset(token)
+
+    assert result is owner
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_records_auto_login_caller_and_resets_stale_context():
+    """AUTO_LOGIN records the fallback principal after clearing stale request context."""
+    project = SimpleNamespace(id=uuid4(), user_id=uuid4(), auth_settings=None)
+    superuser = SimpleNamespace(id=uuid4(), username="admin")
+    token = authenticated_caller_ctx.set(uuid4())
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=True)),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+            patch(f"{MODULE}.get_user_by_username", new=AsyncMock(return_value=superuser)),
+        ):
+            result = await verify_project_auth(project.id, query_param=None, header_param=None)
+
+        assert authenticated_caller_ctx.get() == superuser.id
+    finally:
+        authenticated_caller_ctx.reset(token)
+
+    assert result is superuser
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("auth_settings", [{}, {"oauth_port": "8000"}, {"auth_type": "apikey"}])
+async def test_verify_project_auth_without_composer_requires_credentials(auth_settings, tmp_path):
+    from fastapi import Request
+    from langflow.api.v1.mcp_projects import verify_project_auth_conditional
+    from langflow.services.auth.context import clear_current_auth_context
+    from langflow.services.auth.service import AuthService
+    from lfx.services.settings.auth import AuthSettings
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path), AUTO_LOGIN=True, skip_auth_auto_login=True)
+    settings_service = SimpleNamespace(auth_settings=settings, settings=SimpleNamespace(mcp_composer_enabled=False))
+    service = AuthService(settings_service)
+    owner = SimpleNamespace(id=uuid4())
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings=auth_settings)
+    request = Request({"type": "http", "headers": [], "query_string": b""})
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=settings_service),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+            patch("langflow.services.auth.utils._auth_service", return_value=service),
+            patch("langflow.services.auth.utils.get_settings_service", return_value=settings_service),
+            patch("langflow.services.auth.service.get_user_by_username", new=AsyncMock(return_value=owner)),
+            pytest.raises(HTTPException) as exc,
+        ):
+            await verify_project_auth_conditional(project.id, request)
+    finally:
+        clear_current_auth_context()
+    assert exc.value.status_code == 401
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_conditional_accepts_external_only_credential(tmp_path):
+    from fastapi import Request
+    from langflow.api.v1.mcp_projects import verify_project_auth_conditional
+    from langflow.services.auth.context import clear_current_auth_context
+    from langflow.services.auth.external import identity_from_claims, set_current_external_access_context
+    from langflow.services.auth.service import AuthService
+    from langflow.services.database.models.user.model import User
+    from lfx.services.settings.auth import AuthSettings
+    from pydantic import SecretStr
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")  # pragma: allowlist secret
+    settings.AUTO_LOGIN = False
+    settings.EXTERNAL_AUTH_ENABLED = True
+    settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    settings.EXTERNAL_AUTH_PROVIDER = "external"
+    settings.EXTERNAL_AUTH_TOKEN_HEADER = "X-External-Auth"  # noqa: S105
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path), mcp_composer_enabled=False),
+    )
+    service = AuthService(settings_service)
+    owner = User(id=uuid4(), username="owner", password="hashed", is_active=True, is_superuser=False)  # noqa: S106
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={})
+    credential = "external-project-credential"  # pragma: allowlist secret
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [(b"x-external-auth", credential.encode())],
+            "query_string": b"",
+        }
+    )
+    identity = identity_from_claims({"sub": "external-project-subject"}, settings)
+    resolver = AsyncMock(return_value=identity)
+    caller_token = authenticated_caller_ctx.set(None)
+
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=settings_service),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+            patch("langflow.services.auth.utils._auth_service", return_value=service),
+            patch("langflow.services.auth.utils.get_settings_service", return_value=settings_service),
+            patch("langflow.services.auth.service.resolve_external_identity", new=resolver),
+            patch.object(service, "_materialize_external_user", new=AsyncMock(return_value=owner)),
+            patch.object(service, "_reconcile_verified_external_groups", new=AsyncMock()),
+        ):
+            result = await verify_project_auth_conditional(project.id, request)
+    finally:
+        authenticated_caller_ctx.reset(caller_token)
+        clear_current_auth_context()
+        set_current_external_access_context(None)
+
+    assert result is owner
+    resolver.assert_awaited_once_with(credential, settings)
+
+
+@pytest.mark.anyio
+async def test_verify_project_auth_conditional_falls_back_to_api_key_after_external_rejection(tmp_path):
+    from fastapi import Request
+    from langflow.api.v1.mcp_projects import verify_project_auth_conditional
+    from langflow.services.auth.context import clear_current_auth_context
+    from langflow.services.auth.exceptions import InvalidTokenError
+    from langflow.services.auth.external import set_current_external_access_context
+    from langflow.services.auth.service import AuthService
+    from langflow.services.database.models.api_key.crud import ApiKeyAuthResult
+    from langflow.services.database.models.user.model import User
+    from lfx.services.settings.auth import AuthSettings
+    from pydantic import SecretStr
+
+    settings = AuthSettings(CONFIG_DIR=str(tmp_path))
+    settings.SECRET_KEY = SecretStr("MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=")  # pragma: allowlist secret
+    settings.AUTO_LOGIN = False
+    settings.EXTERNAL_AUTH_ENABLED = True
+    settings.EXTERNAL_AUTH_TRUSTED_JWT_DECODE = True
+    settings.EXTERNAL_AUTH_PROVIDER = "external"
+    settings.EXTERNAL_AUTH_TOKEN_HEADER = "X-External-Auth"  # noqa: S105
+    settings_service = SimpleNamespace(
+        auth_settings=settings,
+        settings=SimpleNamespace(config_dir=str(tmp_path), mcp_composer_enabled=False),
+    )
+    service = AuthService(settings_service)
+    owner = User(id=uuid4(), username="owner", password="hashed", is_active=True, is_superuser=False)  # noqa: S106
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={})
+    credential = "rejected-external-credential"  # pragma: allowlist secret
+    request = Request(
+        {
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [
+                (b"x-external-auth", credential.encode()),
+                (b"x-api-key", b"valid-project-key"),
+            ],
+            "query_string": b"",
+        }
+    )
+    resolver = AsyncMock(side_effect=InvalidTokenError("External credential rejected"))
+    api_key_result = ApiKeyAuthResult(user=owner, api_key_source="db", api_key_id=uuid4())
+    authenticate_key = AsyncMock(return_value=api_key_result)
+    caller_token = authenticated_caller_ctx.set(None)
+
+    try:
+        with (
+            patch(f"{MODULE}.get_settings_service", return_value=settings_service),
+            patch(f"{MODULE}.session_scope", _session_scope_yielding(project)),
+            patch("langflow.services.auth.utils._auth_service", return_value=service),
+            patch("langflow.services.auth.utils.get_settings_service", return_value=settings_service),
+            patch("langflow.services.auth.service.resolve_external_identity", new=resolver),
+            patch("langflow.services.auth.service.authenticate_api_key", new=authenticate_key),
+        ):
+            result = await verify_project_auth_conditional(project.id, request)
+    finally:
+        authenticated_caller_ctx.reset(caller_token)
+        clear_current_auth_context()
+        set_current_external_access_context(None)
+
+    assert result.id == owner.id
+    resolver.assert_awaited_once_with(credential, settings)
+    authenticate_key.assert_awaited_once_with("valid-project-key")
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("auth_type", ["none", "oauth"])
+async def test_verify_project_auth_rejects_inactive_owner(auth_type):
+    owner = SimpleNamespace(id=uuid4(), is_active=False)
+    project = SimpleNamespace(id=uuid4(), user_id=owner.id, auth_settings={"auth_type": auth_type})
+    composer_service = SimpleNamespace(validate_backend_auth_token=MagicMock(return_value=True))
+
+    with (
+        patch(f"{MODULE}.get_settings_service", return_value=_settings(auto_login=True, skip_auth=False)),
+        patch(f"{MODULE}.session_scope", _session_scope_yielding(project, user=owner)),
+        patch(f"{MODULE}.get_service", return_value=composer_service),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await verify_project_auth(
+            project.id,
+            query_param=None,
+            header_param=None,
+            composer_backend_token="composer-test-token" if auth_type == "oauth" else None,
+        )
+
+    assert exc.value.status_code == status.HTTP_404_NOT_FOUND
+    assert exc.value.detail == "Project owner not found"

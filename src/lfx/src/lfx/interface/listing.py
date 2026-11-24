@@ -17,10 +17,14 @@ class AllTypesDict(LazyLoadDictBase):
 
     @override
     def get_type_dict(self):
-        from lfx.custom.utils import get_all_types_dict
+        # Must stay synchronous: this is reached from the sync `all_types_dict` property during
+        # graph build (vertex base_type fallback). Use the sync builder, not the async
+        # `get_all_types_dict` (returning its un-awaited coroutine raised
+        # "'coroutine' object is not a mapping").
+        from lfx.custom.utils import build_custom_components
 
         settings_service = get_settings_service()
-        return get_all_types_dict(settings_service.settings.components_path)
+        return build_custom_components(settings_service.settings.components_path)
 
 
 lazy_load_dict = AllTypesDict()

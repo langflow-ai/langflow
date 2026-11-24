@@ -1,0 +1,33 @@
+name: Set up Python preview builds
+description: Install native build dependencies for experimental Python source builds.
+runs:
+  using: composite
+  steps:
+    - name: Use the stable Python ABI for older PyO3 extensions
+      shell: bash
+      run: echo "PYO3_USE_ABI3_FORWARD_COMPATIBILITY=1" >> "$GITHUB_ENV"
+    - name: Enable the HTTP/3 API required by impit source builds
+      shell: bash
+      run: echo "RUSTFLAGS=${RUSTFLAGS:+$RUSTFLAGS }--cfg reqwest_unstable" >> "$GITHUB_ENV"
+    - name: Install Linux native build dependencies
+      if: runner.os == 'Linux'
+      shell: bash
+      run: |
+        set -euo pipefail
+        curl -fsSL https://packages.confluent.io/clients/deb/archive.key \
+          | gpg --dearmor \
+          | sudo tee /usr/share/keyrings/confluent-clients.gpg >/dev/null
+        source /etc/os-release
+        echo "deb [signed-by=/usr/share/keyrings/confluent-clients.gpg] https://packages.confluent.io/clients/deb ${VERSION_CODENAME} main" \
+          | sudo tee /etc/apt/sources.list.d/confluent-clients.list >/dev/null
+        sudo apt-get update
+        sudo apt-get install --no-install-recommends -y \
+          libev-dev libxml2-dev libxslt1-dev librdkafka-dev protobuf-compiler
+    - name: Install macOS native build dependencies
+      if: runner.os == 'macOS'
+      shell: bash
+      run: |
+        set -euo pipefail
+        brew install libev librdkafka protobuf
+        echo "CPPFLAGS=-I$(brew --prefix)/include ${CPPFLAGS:-}" >> "$GITHUB_ENV"
+        echo "LDFLAGS=-L$(brew --prefix)/lib ${LDFLAGS:-}" >> "$GITHUB_ENV"

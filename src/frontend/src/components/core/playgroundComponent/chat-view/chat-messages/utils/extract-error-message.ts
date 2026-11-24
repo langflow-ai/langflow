@@ -34,5 +34,12 @@ export function extractErrorMessage(reason: string | undefined): string | null {
     // If parsing fails, return null to fall back to showing the full reason
   }
 
-  return null;
+  // No JSON found — extract plain text from markdown-formatted reason
+  // Strips markdown bold (**text**) and list markers (- )
+  const plainText = reason
+    .replace(/\*\*/g, "")
+    .replace(/^[\s-]+/gm, "")
+    .replace(/\n+/g, " ")
+    .trim();
+  return plainText || null;
 }

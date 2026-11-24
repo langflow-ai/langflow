@@ -1,9 +1,11 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
-from langflow.services.auth.utils import get_current_active_user
+from langflow.api.utils import CurrentActiveUser
+from langflow.services.deps import get_catalog_policy_service
+from langflow.services.integration_policy_discovery import ablocked_template_positions
 
 router = APIRouter(prefix="/starter-projects", tags=["Flows"])
 
@@ -37,14 +39,27 @@ class GraphDumpResponse(BaseModel):
     data: GraphData
     is_component: bool | None = None
     name: str | None = None
+    name_key: str
     description: str | None = None
     endpoint_name: str | None = None
 
 
-@router.get("/", dependencies=[Depends(get_current_active_user)], status_code=200)
-async def get_starter_projects() -> list[GraphDumpResponse]:
+@router.get("/", status_code=200)
+async def get_starter_projects(
+    request: Request,
+    current_user: CurrentActiveUser,
+    *,
+    include_blocked: bool = False,
+) -> list[GraphDumpResponse]:
     """Get a list of starter projects."""
     from langflow.initial_setup.load import get_starter_projects_dump
+    from langflow.utils.i18n import translate_flow_notes
+
+    if include_blocked and not current_user.is_superuser:
+        raise HTTPException(status_code=403, detail="Only superusers can include blocked catalog templates.")
+
+    catalog_policy_snapshot = get_catalog_policy_service().snapshot
+    locale = getattr(request.state, "locale", "en")
 
     try:
         # Get the raw data from lfx GraphDump
@@ -52,10 +67,20 @@ async def get_starter_projects() -> list[GraphDumpResponse]:
 
         # Convert TypedDict GraphDump to Pydantic GraphDumpResponse
         results = []
+        result_nodes: list[list] = []
         for item in raw_data:
+            name_key = item.get("name_key")
+            if not isinstance(name_key, str):
+                continue
+            if not include_blocked and catalog_policy_snapshot.is_template_blocked(name_key):
+                continue
+
+            nodes = item.get("data", {}).get("nodes", [])
+            translated_nodes = translate_flow_notes(nodes, locale)
+
             # Create GraphData
             graph_data = GraphData(
-                nodes=item.get("data", {}).get("nodes", []),
+                nodes=translated_nodes,
                 edges=item.get("data", {}).get("edges", []),
                 viewport=item.get("data", {}).get("viewport"),
             )
@@ -65,11 +90,21 @@ async def get_starter_projects() -> list[GraphDumpResponse]:
                 data=graph_data,
                 is_component=item.get("is_component"),
                 name=item.get("name"),
+                name_key=name_key,
                 description=item.get("description"),
                 endpoint_name=item.get("endpoint_name"),
             )
             results.append(graph_dump)
+            result_nodes.append(nodes if isinstance(nodes, list) else [])
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
+
+    if not include_blocked:
+        # Integration governance (INT-7): a template whose integration node
+        # could never run is hidden for the same reason a catalog-blocked
+        # template is. The superuser authoring view keeps showing everything.
+        blocked_positions = await ablocked_template_positions(result_nodes, user_id=current_user.id)
+        if blocked_positions:
+            results = [result for position, result in enumerate(results) if position not in blocked_positions]
     return results

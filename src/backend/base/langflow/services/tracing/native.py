@@ -20,16 +20,19 @@ from typing_extensions import override
 from langflow.serialization.serialization import serialize
 from langflow.services.database.models.traces.model import SpanStatus, SpanType
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.span_sorting import (
+    LANGFLOW_SPAN_NAMESPACE,
+    resolve_span_uuids,
+    topological_sort_spans,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
-    from langchain.callbacks.base import BaseCallbackHandler
+    from langchain_classic.callbacks.base import BaseCallbackHandler
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
-
-LANGFLOW_SPAN_NAMESPACE = UUID("a3e1c2d4-5b6f-7890-abcd-ef1234567890")
 
 TYPE_MAP = {
     "chain": SpanType.CHAIN,
@@ -265,17 +268,45 @@ class NativeTracer(BaseTracer):
             except Exception as e:  # noqa: BLE001
                 logger.debug("Error waiting for flush: %s", e)
 
+    def _finalize_pending_spans(self) -> None:
+        """Force-complete spans that started but never received an end_trace.
+
+        The terminal component's end event can be enqueued as ``end_tracers`` tears the trace
+        worker down, so its end_trace may never run. Without this, that component (e.g. Chat
+        Output) is silently missing from the persisted trace. Flush whatever started.
+        """
+        if not self.spans:
+            return
+        end_time = datetime.now(tz=timezone.utc)
+        for trace_id, span_info in list(self.spans.items()):
+            self.spans.pop(trace_id, None)
+            start_time = span_info["start_time"]
+            self.completed_spans.append(
+                self._build_completed_span(
+                    span_id=trace_id,
+                    name=span_info["name"],
+                    span_type=self._map_trace_type(span_info["trace_type"]),
+                    inputs=span_info["inputs"],
+                    outputs=None,
+                    start_time=start_time,
+                    end_time=end_time,
+                    latency_ms=int((end_time - start_time).total_seconds() * 1000),
+                    error=None,
+                    attributes={},
+                    span_source="component",
+                )
+            )
+
     async def _flush_to_database(self, error: Exception | None = None) -> None:
         """Persist the completed trace and all its spans in a single DB session to minimise round-trips."""
+        self._finalize_pending_spans()
         try:
-            from uuid import UUID as UUID_
-
             from lfx.services.deps import session_scope
 
             from langflow.services.database.models.traces.model import SpanTable, TraceTable
 
             try:
-                flow_uuid = UUID_(self.flow_id)
+                flow_uuid = UUID(self.flow_id)
             except (ValueError, TypeError):
                 # Deterministic fallback so malformed flow_ids don't silently discard trace data.
                 flow_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"invalid-flow-id:{self.flow_id}")
@@ -294,9 +325,8 @@ class NativeTracer(BaseTracer):
             has_span_errors = any(span.get("status") == SpanStatus.ERROR for span in self.completed_spans)
             trace_status = SpanStatus.ERROR if (error or has_span_errors) else SpanStatus.OK
 
-            # Only sum LangChain spans because component spans already aggregate their children's
-            # tokens — summing both levels would double-count every LLM call.
-            # OTel spec requires deriving total from input+output (no standard total_tokens key)
+            # Only sum LangChain spans (component spans already aggregate their children's
+            # tokens); OTel derives total from input+output as there is no standard total_tokens key.
             from langflow.services.tracing.formatting import safe_int_tokens
 
             total_tokens = sum(
@@ -320,25 +350,12 @@ class NativeTracer(BaseTracer):
                 )
                 await session.merge(trace)
 
-                for span_data in self.completed_spans:
-                    try:
-                        span_uuid = UUID_(span_data["id"])
-                    except (ValueError, TypeError):
-                        # Span IDs from LangChain callbacks are strings, not UUIDs — derive
-                        # a stable UUID so the same span always maps to the same DB row.
-                        span_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{span_data['id']}")
+                # Pre-compute UUIDs and topologically sort so parents are inserted before children
+                # (required by PostgreSQL's immediate FK enforcement on span.parent_span_id → span.id).
+                resolved = resolve_span_uuids(self.completed_spans, self.trace_id)
+                resolved = topological_sort_spans(resolved)
 
-                    parent_uuid = None
-                    if span_data.get("parent_span_id"):
-                        parent_id = span_data["parent_span_id"]
-                        if isinstance(parent_id, UUID_):
-                            parent_uuid = parent_id
-                        else:
-                            try:
-                                parent_uuid = UUID_(str(parent_id))
-                            except (ValueError, TypeError):
-                                parent_uuid = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{parent_id}")
-
+                for span_data, span_uuid, parent_uuid in resolved:
                     span = SpanTable(
                         id=span_uuid,
                         trace_id=self.trace_id,
@@ -375,9 +392,8 @@ class NativeTracer(BaseTracer):
         from langflow.services.tracing.native_callback import NativeCallbackHandler
         from langflow.services.tracing.service import component_context_var
 
-        # Component context is set before add_trace() is called,
-        # so it's available when components call get_langchain_callbacks() during flow execution.
-        # We need to check component_context in case _current_component_id was still None when callbacks were created.
+        # Component context is set before add_trace(), so it's available when components call
+        # get_langchain_callbacks() — checked here in case _current_component_id was None at creation.
         parent_span_id = None
         component_context = component_context_var.get(None)
         if component_context:

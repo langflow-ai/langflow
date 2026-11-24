@@ -2,6 +2,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import CanvasControlsDropdown, {
   KEYBOARD_SHORTCUTS,
 } from "../CanvasControlsDropdown";
+import {
+  FIT_VIEW_OPTIONS,
+  FIT_VIEW_PADDING_WITH_INSPECTION_PANEL,
+} from "../fit-view-options";
 
 jest.mock("@/components/ui/button", () => ({
   Button: ({ children, ...rest }) => <button {...rest}>{children}</button>,
@@ -73,20 +77,28 @@ jest.mock("@xyflow/react", () => ({
     }),
 }));
 
+const useFlowStoreState = { inspectionPanelVisible: false };
+
+jest.mock("@/stores/flowStore", () => ({
+  __esModule: true,
+  default: (selector) => selector(useFlowStoreState),
+}));
+
 describe("CanvasControlsDropdown", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useFlowStoreState.inspectionPanelVisible = false;
   });
 
   it("renders current zoom percentage and toggles menu", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
     expect(screen.getByText("100%"));
     fireEvent.click(screen.getByTestId("canvas_controls_dropdown"));
     expect(screen.getByTestId("dropdown-content")).toBeInTheDocument();
   });
 
   it("handles zoom in/out, fit and reset via click", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
     fireEvent.click(screen.getByTestId("canvas_controls_dropdown"));
 
     fireEvent.click(screen.getByTestId("zoom_in"));
@@ -102,8 +114,32 @@ describe("CanvasControlsDropdown", () => {
     expect(zoomTo).toHaveBeenCalledWith(1);
   });
 
+  // Opening a flow fits the canvas with the same options, so a padding that
+  // only lived here would make the initial view drift from Zoom to Fit.
+  it("fits with the shared canvas fit options", () => {
+    render(<CanvasControlsDropdown selectedNode={null} />);
+    fireEvent.click(screen.getByTestId("canvas_controls_dropdown"));
+
+    fireEvent.click(screen.getByTestId("fit_view"));
+
+    expect(fitView).toHaveBeenCalledWith(FIT_VIEW_OPTIONS);
+  });
+
+  it("clears the inspection panel when it covers the canvas", () => {
+    useFlowStoreState.inspectionPanelVisible = true;
+    render(<CanvasControlsDropdown selectedNode={{ id: "node-1" } as never} />);
+    fireEvent.click(screen.getByTestId("canvas_controls_dropdown"));
+
+    fireEvent.click(screen.getByTestId("fit_view"));
+
+    expect(fitView).toHaveBeenCalledWith({
+      ...FIT_VIEW_OPTIONS,
+      padding: FIT_VIEW_PADDING_WITH_INSPECTION_PANEL,
+    });
+  });
+
   it("handles keyboard shortcuts with modifier", () => {
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     const keydown = (code: string) =>
       document.dispatchEvent(
@@ -137,7 +173,7 @@ describe("CanvasControlsDropdown", () => {
       }),
     );
 
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     const keydown = (code: string) =>
       document.dispatchEvent(
@@ -165,7 +201,7 @@ describe("CanvasControlsDropdown", () => {
       }),
     );
 
-    render(<CanvasControlsDropdown />);
+    render(<CanvasControlsDropdown selectedNode={null} />);
 
     const keydown = (code: string) =>
       document.dispatchEvent(

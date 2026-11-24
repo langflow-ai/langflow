@@ -3,22 +3,94 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
+import hashlib
+import os
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-from datetime import datetime, timezone
-from uuid import UUID
+from datetime import datetime, timedelta, timezone
+from uuid import UUID, uuid4
+
+from lfx.graph.exceptions import GraphPausedException
+from lfx.observability import inject_trace_carrier
+from sqlalchemy import false, update
+from sqlalchemy.exc import DataError, DBAPIError, IntegrityError, OperationalError, StatementError
+from sqlmodel import col, func, select
 
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.crud import (
-    get_job_by_job_id,
-    get_jobs_by_flow_id,
     get_latest_jobs_by_asset_ids,
     update_job_status,
 )
-from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
+from langflow.services.database.models.jobs.metrics import archive_retention_metrics, prepare_retention_metrics
+from langflow.services.database.models.jobs.model import (
+    ExecutionSignal,
+    Job,
+    JobCheckpoint,
+    JobEvent,
+    JobStatus,
+    JobType,
+    SignalType,
+)
 from langflow.services.deps import session_scope
+from langflow.services.jobs.exceptions import HUMAN_INPUT_REQUIRED_EVENT, DuplicateJobError, PauseRequested
+
+# Bounded retries for append_event's optimistic seq assignment — contention is at most a
+# couple of concurrent appenders per job (worker + orphan sweep, or scaled-out processes).
+_APPEND_EVENT_MAX_RETRIES = 50
+
+# Micro-batching window for append_event: calls made within this many seconds of each
+# other (across any jobs) share DB round trips instead of each opening its own
+# session_scope() (pool checkout). Durable agent runs stream one event per step/token,
+# so a fresh checkout per event is the dominant source of connection churn for chatty
+# runs. The caller's contract is unchanged -- append_event still awaits and returns the
+# real, gap-free seq -- only the number of connection checkouts changes. Only paid when
+# another append is already queued when this one takes over as window owner -- a lone
+# append has nothing to batch with, so it flushes immediately instead of waiting it out.
+_APPEND_EVENT_BATCH_WINDOW_S = 0.01
+
+
+class _PendingAppend:
+    """One queued append_event call, waiting on its assigned seq."""
+
+    __slots__ = ("event_type", "future", "job_id", "payload")
+
+    def __init__(self, job_id: UUID, event_type: str, payload: dict, future: asyncio.Future[int]) -> None:
+        self.job_id = job_id
+        self.event_type = event_type
+        self.payload = payload
+        self.future = future
+
+
+# Statuses that mean the run is over and the row is retention-eligible. Every
+# other status (QUEUED, IN_PROGRESS, SUSPENDED) is live work: a SUSPENDED run
+# is waiting on a human who may answer weeks later, so age never makes it
+# eligible.
+_RETAINABLE_STATUSES = (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT)
+
+# Floor for a keep-alive's heartbeat interval, matching the background runner's,
+# so a tiny configured interval cannot turn heartbeats into a write loop.
+_MIN_HEARTBEAT_INTERVAL_S = 0.1
+
+
+def _unwrap_pause_payload(payload: dict | None) -> dict | None:
+    """Return the raw pause request, unwrapping the wire adapter's envelope.
+
+    The pause event is persisted as the wire frame the runner saw: the langflow
+    adapter nests the raw request under ``data``, AG-UI under a ``CustomEvent``'s
+    ``value``. Consumers (resume single-use, timeout reroute, allowed-decision
+    gate) read ``request_id``/``timeout_seconds``/``allowed_decisions`` at the top
+    level, so peel one envelope layer when the payload is wrapped.
+    """
+    if not isinstance(payload, dict) or "request_id" in payload:
+        return payload
+    for key in ("value", "data"):
+        inner = payload.get(key)
+        if isinstance(inner, dict) and "request_id" in inner:
+            return inner
+    return payload
 
 
 class JobService(Service):
@@ -28,13 +100,40 @@ class JobService(Service):
 
     def __init__(self):
         """Initialize the job service."""
+        # Process-unique owner stamped on the heartbeat of jobs this process keeps alive.
+        self._owner = f"jobs:{os.getpid()}:{uuid4().hex[:8]}"
+        self._keep_alives: dict[UUID, tuple[asyncio.Task, asyncio.Event]] = {}
         self.set_ready()
+        self._append_queue: list[_PendingAppend] = []
+        self._append_lock: asyncio.Lock | None = None
+        self._append_lock_loop: asyncio.AbstractEventLoop | None = None
 
-    async def get_jobs_by_flow_id(self, flow_id: UUID | str, page: int = 1, page_size: int = 10) -> list[Job]:
-        """Get jobs for a specific flow with pagination.
+    def _bind_append_lock(self) -> asyncio.Lock:
+        """Return the append lock, rebinding it to the currently running loop if needed.
+
+        This service is a service-manager singleton and can outlive the event loop it
+        was first used on (e.g. a new loop per test in the real-service suite; in
+        production there is only ever one loop for the process's life, so this binds
+        once and never again). asyncio.Lock caches the loop it first acquired on and
+        raises "bound to a different event loop" if reused from another one, so a stale
+        lock must be replaced rather than reused. Anything still in the queue was queued
+        against a loop that's gone and can never be flushed, so it's dropped with it.
+        """
+        loop = asyncio.get_running_loop()
+        if self._append_lock is None or self._append_lock_loop is not loop:
+            self._append_queue = []
+            self._append_lock = asyncio.Lock()
+            self._append_lock_loop = loop
+        return self._append_lock
+
+    async def get_jobs_by_flow_id(
+        self, flow_id: UUID | str, user_id: UUID, page: int = 1, page_size: int = 10
+    ) -> list[Job]:
+        """Get jobs for a specific flow with pagination, filtered by user.
 
         Args:
             flow_id: The flow ID to filter jobs by
+            user_id: The user ID to enforce ownership
             page: Page number (1-indexed)
             page_size: Number of jobs per page
 
@@ -45,22 +144,37 @@ class JobService(Service):
             flow_id = UUID(flow_id)
 
         async with session_scope() as session:
-            return await get_jobs_by_flow_id(session, flow_id, page=page, size=page_size)
+            stmt = (
+                select(Job)
+                .where(Job.flow_id == flow_id)
+                .where((Job.user_id == user_id) | (Job.user_id.is_(None)))
+                .order_by(col(Job.created_timestamp).desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
 
-    async def get_job_by_job_id(self, job_id: UUID | str) -> Job | None:
+    async def get_job_by_job_id(self, job_id: UUID | str, user_id: UUID | None = None) -> Job | None:
         """Get job for a specific job ID.
 
         Args:
             job_id: The job ID to filter jobs by
+            user_id: When provided, restricts the result to jobs owned by this user
+                or legacy jobs with no owner (user_id IS NULL).
 
         Returns:
-            Job object for the specified job ID
+            Job object for the specified job ID, or None if not found or not accessible
         """
         if isinstance(job_id, str):
             job_id = UUID(job_id)
 
         async with session_scope() as session:
-            return await get_job_by_job_id(session, job_id)
+            stmt = select(Job).where(Job.job_id == job_id)
+            if user_id:
+                stmt = stmt.where((Job.user_id == user_id) | (Job.user_id.is_(None)))
+            result = await session.exec(stmt)
+            return result.first()
 
     async def create_job(
         self,
@@ -69,15 +183,42 @@ class JobService(Service):
         job_type: JobType = JobType.WORKFLOW,
         asset_id: UUID | None = None,
         asset_type: str | None = None,
+        user_id: UUID | None = None,
+        dedupe_key: str | None = None,
+        end_user_id: str | None = None,
+        initial_metadata: dict | None = None,
+        status: JobStatus = JobStatus.QUEUED,
+        *,
+        heartbeat: bool = False,
     ) -> Job:
-        """Create a new job record with QUEUED status.
+        """Create a new job record, QUEUED unless ``status`` says otherwise.
 
         Args:
             job_id: The job ID
             flow_id: The flow ID
+            user_id: The user ID
             job_type: The job type
             asset_id: The asset ID
             asset_type: The asset type
+            user_id: The user ID who owns this job
+            dedupe_key: Optional idempotency key to prevent duplicate jobs for the same batch
+            end_user_id: Serving-plane end-user id (the gateway header) this run belongs to,
+                or None for editor / anonymous / feature-off runs. Recorded in
+                ``job_metadata['end_user_id']`` (no schema change) — ``user_id`` stays the
+                executing service account so re-enqueue/resume can still fetch the SID-owned
+                flow, while status/stop/resume isolate on this end-user key. See F8.
+            initial_metadata: Metadata that must be committed atomically with the QUEUED
+                row. The background workflow facade uses this for its replay request and
+                encrypted override envelope so a worker can never claim a partially
+                initialized job.
+            status: Initial status. A caller that starts the run right away, in the same
+                request, passes IN_PROGRESS and calls ``execute_with_status`` with
+                ``mark_in_progress=False``, which saves the QUEUED -> IN_PROGRESS UPDATE.
+                Leave it QUEUED for anything a worker or the startup sweep may pick up:
+                the sweep re-enqueues QUEUED workflow rows.
+            heartbeat: Insert the row already heartbeated by this process, so it is live
+                before ``start_keep_alive`` takes over. For a run this process starts
+                right away and keeps alive itself.
 
         Returns:
             Created Job object
@@ -89,13 +230,77 @@ class JobService(Service):
             flow_id = UUID(flow_id)
 
         async with session_scope() as session:
+            if dedupe_key is not None:
+                dialect = session.get_bind().dialect.name
+                if dialect == "postgresql":
+                    # A waiting creator must see the previous creator's commit, even when
+                    # the engine defaults to REPEATABLE READ. This fresh, owned transaction
+                    # alone uses READ COMMITTED; the pooled connection's default is restored.
+                    await session.connection(execution_options={"isolation_level": "READ COMMITTED"})
+                    lock_key = int.from_bytes(
+                        hashlib.sha256(f"langflow.job.dedupe:{user_id}:{dedupe_key}".encode()).digest()[:8],
+                        "big",
+                        signed=True,
+                    )
+                    await session.exec(select(func.pg_advisory_xact_lock(lock_key)))
+                elif dialect == "sqlite":
+                    # Reserve SQLite's writer before reading. No rows change, but the
+                    # reservation prevents another creator from passing the same check.
+                    # Unlike BEGIN IMMEDIATE, this also works with an explicit BEGIN.
+                    await session.exec(update(Job).where(false()).values(job_id=Job.job_id))
+
+                # Why: scope uniqueness to the owner — a client-controlled idempotency_key flows into
+                # dedupe_key, so a global count would let user A collide with / DoS user B's key (and leak
+                # its existence). Ownerless rows (single-tenant AUTO_LOGIN, user_id None) share one space.
+                stmt = (
+                    select(func.count())
+                    .select_from(Job)
+                    .where(Job.dedupe_key == dedupe_key)
+                    # SUSPENDED included so retrying the same key while a run is paused at a HITL node
+                    # cannot bypass dedupe and launch a second concurrent execution that races the resume.
+                    .where(
+                        col(Job.status).in_(
+                            [JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.SUSPENDED, JobStatus.COMPLETED]
+                        )
+                    )
+                )
+                stmt = (
+                    stmt.where(Job.user_id == user_id)
+                    if user_id is not None
+                    else stmt.where(col(Job.user_id).is_(None))
+                )
+                result = await session.exec(stmt)
+                if result.one() > 0:
+                    msg = f"A non-retryable job with dedupe_key={dedupe_key!r} already exists"
+                    raise DuplicateJobError(msg)
+
+            metadata = dict(initial_metadata or {})
+            if end_user_id:
+                metadata["end_user_id"] = end_user_id
+            if heartbeat:
+                metadata.update(self._heartbeat_stamp())
             job = Job(
                 job_id=job_id,
                 flow_id=flow_id,
-                status=JobStatus.QUEUED,
+                status=status,
                 type=job_type,
                 asset_id=asset_id,
                 asset_type=asset_type,
+                user_id=user_id,
+                dedupe_key=dedupe_key,
+                # Job-owned context is stamped atomically with the insert. A later shallow
+                # update_job_metadata preserves what is already on the row.
+                #
+                # The end user, so serving rows carry who the run was for.
+                #
+                # The trace carrier, because the queued run happens after this request returns,
+                # in a worker that may be a different process, so contextvars cannot carry the
+                # trace there. Written once, here, and never rewritten: job_metadata is saved
+                # back whole, and a second writer on the pause path would race this one.
+                #
+                # Still None when neither applies, so non-serving untraced rows stay
+                # byte-identical to what they were.
+                job_metadata=inject_trace_carrier(metadata) or None,
             )
             session.add(job)
             await session.flush()
@@ -115,12 +320,984 @@ class JobService(Service):
             Updated Job object or None if not found
         """
         async with session_scope() as session:
-            job = await update_job_status(session, job_id, status)
-            if job and finished_timestamp:
-                job.finished_timestamp = datetime.now(timezone.utc)
+            finished_at = datetime.now(timezone.utc) if finished_timestamp else None
+            return await update_job_status(session, job_id, status, finished_timestamp=finished_at)
+
+    async def update_job_metadata(
+        self,
+        job_id: UUID,
+        patch: dict,
+        *,
+        replace: bool = False,
+    ) -> Job | None:
+        """Merge ``patch`` into ``job.job_metadata`` (or replace it).
+
+        Domain-owned per-job context lives here — KB ingestion writes
+        counters and per-item outcomes, workflow runs can record their
+        own keys, etc. The wrapped coroutine inside
+        ``execute_with_status`` calls this as it makes progress so the
+        UI can read partial state without waiting for the job to
+        finish.
+
+        Args:
+            job_id: The job ID to update.
+            patch: Top-level keys to merge into the existing dict. Keys
+                in ``patch`` overwrite same-named keys on the existing
+                row; nested dicts are NOT deep-merged — callers that
+                want deep-merge semantics should read, merge, and pass
+                the full result.
+            replace: When ``True``, replace ``job_metadata`` outright
+                instead of merging. Use when the caller is the sole
+                writer and wants a known-shape blob (e.g. KB ingestion
+                finalize).
+
+        Returns:
+            The updated Job, or ``None`` if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            if replace or job.job_metadata is None:
+                job.job_metadata = dict(patch)
+            else:
+                # Shallow merge — callers wanting deep-merge own the
+                # composition. This keeps the helper predictable.
+                job.job_metadata = {**job.job_metadata, **patch}
+            session.add(job)
+            await session.flush()
+            return job
+
+    async def suspend_job(self, job_id: UUID, metadata: dict) -> Job | None:
+        """Atomically merge pause metadata and transition a job to ``SUSPENDED``.
+
+        Resume-critical metadata must become visible in the same transaction as
+        the status transition. Otherwise a status reader can observe
+        ``SUSPENDED`` before ``pending_request_id`` or ``pre_pause_outputs`` is
+        committed and return an incomplete pause response.
+
+        Returns the updated Job, or ``None`` if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            job.job_metadata = {**(job.job_metadata or {}), **metadata}
+            job.status = JobStatus.SUSPENDED
+            session.add(job)
+            await session.flush()
+            return job
+
+    async def set_result(self, job_id: UUID, result: dict | None) -> Job | None:
+        """Persist the durable terminal result blob for a job.
+
+        ``None`` clears a previously-written result (used when a late stop
+        reconciles a racing completion to CANCELLED and the completed-run result
+        must not linger on the terminal row).
+
+        Returns the updated Job, or None if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            job.result = result
+            session.add(job)
+            await session.flush()
+            return job
+
+    async def set_error(self, job_id: UUID, error: dict) -> Job | None:
+        """Persist the durable terminal error blob for a job.
+
+        Returns the updated Job, or None if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            job.error = error
+            session.add(job)
+            await session.flush()
+            return job
+
+    async def save_checkpoint(self, job_id: UUID, kind: str, blob: str) -> None:
+        """Upsert the durable checkpoint blob for ``(job_id, kind)``.
+
+        ``blob`` is already-serialized text persisted verbatim — the helper never
+        parses it, so the graph producer (JSON) and the agent saver (base64 of
+        msgpack, LE-1447) share one API. UNIQUE(job_id, kind) keeps a single live
+        checkpoint per kind: a second save replaces the first.
+        """
+        # Why: a single-statement dialect upsert is atomic, so two concurrent savers (two vertices at
+        # one pause boundary) never collide on UNIQUE(job_id, kind) — no read-then-insert race to log.
+        now = datetime.now(timezone.utc)
+        async with session_scope() as session:
+            if session.get_bind().dialect.name == "postgresql":
+                from sqlalchemy.dialects.postgresql import insert as _dialect_insert
+            else:
+                from sqlalchemy.dialects.sqlite import insert as _dialect_insert
+            stmt = (
+                _dialect_insert(JobCheckpoint)
+                .values(id=uuid4(), job_id=job_id, kind=kind, blob=blob, created_at=now, updated_at=now)
+                .on_conflict_do_update(index_elements=["job_id", "kind"], set_={"blob": blob, "updated_at": now})
+            )
+            await session.exec(stmt)
+
+    async def load_checkpoint(self, job_id: UUID, kind: str) -> str | None:
+        """Return the stored checkpoint blob for ``(job_id, kind)``, or None if absent."""
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
+            row = (await session.exec(stmt)).first()
+            return row.blob if row is not None else None
+
+    async def delete_checkpoint(self, job_id: UUID, kind: str) -> None:
+        """Delete the checkpoint for ``(job_id, kind)``; no-op when none exists."""
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.job_id == job_id).where(JobCheckpoint.kind == kind)
+            row = (await session.exec(stmt)).first()
+            if row is not None:
+                await session.delete(row)
+                await session.flush()
+
+    async def get_pending_human_request(self, job_id: UUID) -> dict | None:
+        async with session_scope() as session:
+            stmt = (
+                select(JobEvent)
+                .where(JobEvent.job_id == job_id)
+                .where(JobEvent.event_type == HUMAN_INPUT_REQUIRED_EVENT)
+                .order_by(col(JobEvent.seq).desc())
+            )
+            row = (await session.exec(stmt)).first()
+            return _unwrap_pause_payload(row.payload) if row is not None else None
+
+    async def all_checkpoints(self, kind: str) -> list[tuple[UUID, str]]:
+        """Return ``(job_id, blob)`` for every stored checkpoint of ``kind``.
+
+        Lets a checkpoint store resolve the cross-row ABC lookups (by checkpoint
+        id, run id, session id) it can't express through the job-keyed helper. The
+        set is bounded: one row per actively-suspended job, dropped on completion.
+        """
+        async with session_scope() as session:
+            stmt = select(JobCheckpoint).where(JobCheckpoint.kind == kind)
+            rows = (await session.exec(stmt)).all()
+            return [(row.job_id, row.blob) for row in rows]
+
+    async def append_event(self, job_id: UUID, event_type: str, payload: dict) -> int:
+        """Append a durable event for a job and return its per-job seq.
+
+        Calls within the batching window share one transaction, including calls for
+        different jobs. A cancelled window owner releases the lock so another caller
+        can flush the queue. Once database work starts, its owner joins the shielded
+        flush even on cancellation: another job's append must not be cancelled with
+        it, and database work must never outlive all its callers.
+        """
+        lock = self._bind_append_lock()
+        future: asyncio.Future[int] = asyncio.get_running_loop().create_future()
+        item = _PendingAppend(job_id, event_type, payload, future)
+        self._append_queue.append(item)
+        try:
+            async with lock:
+                if not future.done():
+                    # A bare sleep(0) doesn't wait in wall-clock time -- it only lets
+                    # whatever's already scheduled on this tick run before we resume, so
+                    # genuinely-simultaneous callers (e.g. a burst of concurrent requests)
+                    # get a free chance to join. Only pay the real window -- a wait with
+                    # nothing queued yet is a pure latency tax -- once that check finds
+                    # someone actually waiting on us.
+                    await asyncio.sleep(0)
+                    if len(self._append_queue) > 1:
+                        await asyncio.sleep(_APPEND_EVENT_BATCH_WINDOW_S)
+                    batch, self._append_queue = self._append_queue, []
+                    flush = asyncio.create_task(self._flush_append_batch(batch))
+                    try:
+                        await asyncio.shield(flush)
+                    except asyncio.CancelledError:
+                        # Shield alone would detach the flush. Join it before releasing
+                        # the lock or propagating cancellation, including repeated cancels.
+                        while not flush.done():
+                            with contextlib.suppress(asyncio.CancelledError):
+                                await asyncio.shield(flush)
+                        flush.result()
+                        raise
+            return await future
+        except asyncio.CancelledError:
+            if future.done() and not future.cancelled():
+                # A failed commit may have resolved our future while we joined the flush.
+                # Retrieve its exception even though this caller propagates cancellation.
+                future.exception()
+            else:
+                future.cancel()
+            with contextlib.suppress(ValueError):
+                self._append_queue.remove(item)
+            raise
+
+    async def _flush_append_batch(self, items: list[_PendingAppend]) -> None:
+        """Commit a batch across jobs, retrying the transaction on seq collisions.
+
+        UNIQUE(job_id, seq) guards per-job ordering against other processes. No
+        caller receives a seq until session_scope has successfully committed it.
+        """
+        last_exc: Exception | None = None
+        try:
+            for attempt in range(_APPEND_EVENT_MAX_RETRIES):
+                try:
+                    async with session_scope() as session:
+                        job_ids = {item.job_id for item in items}
+                        stmt = (
+                            select(JobEvent.job_id, func.max(JobEvent.seq))
+                            .where(col(JobEvent.job_id).in_(job_ids))
+                            .group_by(JobEvent.job_id)
+                        )
+                        result = await session.exec(stmt)
+                        last_seqs = {job_id: max_seq or 0 for job_id, max_seq in result.all()}
+                        events = []
+                        seqs = []
+                        for item in items:
+                            next_seq = last_seqs.get(item.job_id, 0) + 1
+                            last_seqs[item.job_id] = next_seq
+                            seqs.append(next_seq)
+                            events.append(
+                                JobEvent(
+                                    job_id=item.job_id,
+                                    seq=next_seq,
+                                    event_type=item.event_type,
+                                    payload=item.payload,
+                                )
+                            )
+                        session.add_all(events)
+                        await session.flush()
+                except IntegrityError as exc:
+                    # Lost the (job_id, seq) race for this batch — re-read max and retry.
+                    last_exc = exc
+                except OperationalError as exc:
+                    # SQLite "database is locked"/busy under concurrent writers is transient.
+                    if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
+                        raise
+                    last_exc = exc
+                else:
+                    for item, seq in zip(items, seqs, strict=True):
+                        if not item.future.done():
+                            item.future.set_result(seq)
+                    return
+                # Yield + brief backoff so the contending writer can commit before we retry.
+                await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
+            # Exhausted retries under sustained contention — surface the last collision.
+            msg = f"append_event exhausted {_APPEND_EVENT_MAX_RETRIES} retries (seq contention)"
+            raise RuntimeError(msg) from last_exc
+        except asyncio.CancelledError:
+            # Shutdown can cancel the flush itself, rather than its shielded owner.
+            # Settle all callers before propagating that cancellation.
+            for item in items:
+                if not item.future.done():
+                    item.future.cancel()
+            raise
+        except Exception as exc:  # noqa: BLE001 — every pending future must resolve, success or failure
+            # Isolatable: the database (or the driver, before ever reaching it) cleanly
+            # rejected the payload with no ambiguity about what was committed -- safe to
+            # split and retry per job. DataError (e.g. a NUL byte in JSONB) is one such
+            # case: Postgres rejects it synchronously, pre-commit, same as a client-side
+            # StatementError. Anything else under DBAPIError (OperationalError and the
+            # like) may reflect a connection drop mid-commit -- genuinely ambiguous about
+            # what landed -- so those still poison the whole batch rather than replay it.
+            isolatable = (isinstance(exc, StatementError) and not isinstance(exc, DBAPIError)) or isinstance(
+                exc, DataError
+            )
+            if isolatable:
+                by_job: dict[UUID, list[_PendingAppend]] = {}
+                for item in items:
+                    by_job.setdefault(item.job_id, []).append(item)
+                if len(by_job) > 1:
+                    for job_items in by_job.values():
+                        await self._flush_append_batch(job_items)
+                    return
+            for item in items:
+                if not item.future.done():
+                    item.future.set_exception(exc)
+
+    async def read_events(self, job_id: UUID, after_seq: int = 0) -> list[JobEvent]:
+        """Return durable events for a job with seq > after_seq, ordered by seq.
+
+        ``after_seq`` is the SSE Last-Event-ID cursor; pass 0 to read from the
+        start.
+        """
+        async with session_scope() as session:
+            stmt = (
+                select(JobEvent)
+                .where(JobEvent.job_id == job_id)
+                .where(JobEvent.seq > after_seq)
+                .order_by(col(JobEvent.seq).asc())
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
+
+    async def write_signal(self, job_id: UUID, signal_type: SignalType, data: dict | None = None) -> ExecutionSignal:
+        """Write a control signal for a job (e.g. STOP).
+
+        The runner consumes it at the next vertex boundary and stamps
+        ``consumed_at``.
+        """
+        async with session_scope() as session:
+            signal = ExecutionSignal(job_id=job_id, signal_type=signal_type, data=data)
+            session.add(signal)
+            await session.flush()
+            await session.refresh(signal)
+            return signal
+
+    async def unconsumed_signals(self, job_id: UUID) -> list[ExecutionSignal]:
+        """Return signals for a job that have not yet been consumed, oldest first."""
+        async with session_scope() as session:
+            stmt = (
+                select(ExecutionSignal)
+                .where(ExecutionSignal.job_id == job_id)
+                .where(col(ExecutionSignal.consumed_at).is_(None))
+                .order_by(col(ExecutionSignal.created_at).asc())
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
+
+    async def consume_signals(self, job_id: UUID, signal_type: SignalType) -> int:
+        """Stamp ``consumed_at`` on a job's unconsumed signals of ``signal_type``.
+
+        The runner calls this once it has acted on a STOP so the signal does not
+        linger: ``unconsumed_signals`` filters on ``consumed_at IS NULL``, so an
+        unstamped STOP would (a) grow the table forever and (b) make a later
+        re-enqueued run of the same job self-cancel off the stale signal. Returns
+        the number of rows stamped.
+        """
+        now = datetime.now(timezone.utc)
+        async with session_scope() as session:
+            stmt = (
+                select(ExecutionSignal)
+                .where(ExecutionSignal.job_id == job_id)
+                .where(ExecutionSignal.signal_type == signal_type)
+                .where(col(ExecutionSignal.consumed_at).is_(None))
+            )
+            result = await session.exec(stmt)
+            rows = list(result.all())
+            for row in rows:
+                row.consumed_at = now
+                session.add(row)
+            await session.flush()
+            return len(rows)
+
+    async def heartbeat(self, job_id: UUID, owner: str) -> None:
+        """Stamp the running owner + a fresh heartbeat on the job row.
+
+        This is the liveness signal a reconciler reads to tell a live in-flight
+        run from a genuinely orphaned one: only the running owner refreshes it,
+        and a reconciler only fails/requeues a job whose heartbeat is STALE
+        (``is_lease_stale``). Stored in ``job_metadata`` (no new column, matching
+        the attempt-accounting decision in the design) via a shallow merge so the
+        persisted request / retry flags are preserved.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        await self.update_job_metadata(job_id, {"owner": owner, "heartbeat_at": now})
+
+    @staticmethod
+    def is_lease_stale(job: Job, *, lease_ttl_s: float) -> bool:
+        """True when a job's heartbeat is older than ``lease_ttl_s`` (or absent).
+
+        An absent heartbeat means the owner never recorded liveness (it died in
+        the QUEUED->IN_PROGRESS window, or this is a legacy row), so it is
+        treated as stale and reconcilable. A fresh heartbeat (within the TTL)
+        means a live owner is running the job and a reconciler must NOT touch it.
+        """
+        meta = job.job_metadata or {}
+        raw = meta.get("heartbeat_at")
+        if not raw:
+            return True
+        try:
+            hb = datetime.fromisoformat(raw)
+        except (TypeError, ValueError):
+            return True
+        if hb.tzinfo is None:
+            hb = hb.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - hb).total_seconds()
+        return age > lease_ttl_s
+
+    def _heartbeat_stamp(self) -> dict[str, str]:
+        return {"owner": self._owner, "heartbeat_at": datetime.now(timezone.utc).isoformat()}
+
+    async def start_keep_alive(self, job_id: UUID, *, interval_s: float | None = None, beat_now: bool = True) -> None:
+        """Heartbeat ``job_id`` from this process for as long as it stays IN_PROGRESS.
+
+        For runs that execute in this process outside the background runner, which
+        heartbeats its own jobs. A job with no heartbeat looks orphaned to the first
+        sweep that runs while it is in flight (a sibling worker's startup sweep, or
+        the Redis-fallback watchdog), which fails it as worker_lost. The heartbeat
+        ends at ``stop_keep_alive`` or once the job leaves IN_PROGRESS.
+
+        Each heartbeat rewrites ``job_metadata`` whole, so the caller must not write
+        that column itself until ``stop_keep_alive`` returns.
+
+        ``beat_now=False`` waits one interval before the first heartbeat. Only for a
+        job inserted heartbeated (``create_job(heartbeat=True)``) moments ago: its
+        heartbeat is still fresh, and a run shorter than the interval writes none.
+        """
+        if job_id in self._keep_alives:
+            return
+        if interval_s is None:
+            from langflow.services.deps import get_settings_service
+
+            interval_s = get_settings_service().settings.background_heartbeat_interval_s
+        stop = asyncio.Event()
+        loop = self._keep_alive_loop(job_id, stop, max(interval_s, _MIN_HEARTBEAT_INTERVAL_S), beat_now=beat_now)
+        task = asyncio.create_task(loop)
+        self._keep_alives[job_id] = (task, stop)
+        task.add_done_callback(lambda done: self._forget_keep_alive(job_id, done))
+
+    async def stop_keep_alive(self, job_id: UUID) -> None:
+        """Stop ``job_id``'s heartbeat, returning only once no heartbeat write is in flight."""
+        entry = self._keep_alives.pop(job_id, None)
+        if entry is None:
+            return
+        task, stop = entry
+        stop.set()
+        await asyncio.wait({task})
+
+    async def _keep_alive_loop(self, job_id: UUID, stop: asyncio.Event, interval_s: float, *, beat_now: bool) -> None:
+        if not beat_now:
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(stop.wait(), timeout=interval_s)
+        while not stop.is_set() and await self._beat(job_id):
+            with contextlib.suppress(asyncio.TimeoutError):
+                await asyncio.wait_for(stop.wait(), timeout=interval_s)
+
+    async def _beat(self, job_id: UUID) -> bool:
+        """Heartbeat ``job_id`` if it is still IN_PROGRESS. False once it is not."""
+        # session_scope logs a failed write; a transient DB error must not end the heartbeat.
+        with contextlib.suppress(Exception):
+            async with session_scope() as session:
+                # The row lock keeps a concurrent job_metadata write from being lost
+                # under this read-modify-write on Postgres. SQLite has no row locks.
+                job = await session.get(Job, job_id, with_for_update=True)
+                if job is None or job.status != JobStatus.IN_PROGRESS:
+                    return False
+                job.job_metadata = {**(job.job_metadata or {}), **self._heartbeat_stamp()}
                 session.add(job)
                 await session.flush()
-            return job
+        return True
+
+    def _forget_keep_alive(self, job_id: UUID, task: asyncio.Task) -> None:
+        if not task.cancelled():
+            task.exception()  # Retrieve it, so a crashed loop is not reported as never retrieved.
+        entry = self._keep_alives.get(job_id)
+        if entry is not None and entry[0] is task:
+            del self._keep_alives[job_id]
+
+    async def increment_attempt_if(self, job_id: UUID, *, expected: int, new: int) -> bool:
+        """Atomically bump ``job_metadata.attempt`` from ``expected`` to ``new``.
+
+        Returns True only for the single caller whose read-modify-write observed
+        ``attempt == expected`` and committed. Concurrent reconcilers reading the
+        same ``expected`` race on the row, but UNIQUE row identity + a re-read
+        under the write lock means only one transaction's conditional UPDATE
+        matches: every other sees ``rowcount == 0`` and returns False. This
+        closes the lost-update window where two reconcilers both bumped 1->2 and
+        each requeued, pushing a job past ``max_attempts``.
+
+        Portable across SQLite and Postgres: the conditional UPDATE matches the
+        JSON-extracted attempt cast to integer, the same single-row-conditional
+        primitive ``claim_queued_job`` relies on.
+        """
+        from sqlalchemy import Integer
+        from sqlalchemy import cast as sa_cast
+        from sqlmodel import update
+
+        attempt_expr = sa_cast(col(Job.job_metadata)["attempt"].as_string(), Integer)
+        async with session_scope() as session:
+            # Read the current metadata so we can write back a full merged blob
+            # (JSON columns are replaced wholesale, not patched in place).
+            job = await session.get(Job, job_id)
+            if job is None:
+                return False
+            merged = {**(job.job_metadata or {}), "attempt": new}
+            stmt = update(Job).where(Job.job_id == job_id, attempt_expr == expected).values(job_metadata=merged)
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def retry_requeue_claim(self, job_id: UUID, *, expected_attempt: int) -> bool:
+        """Atomically bump ``attempt`` AND flip IN_PROGRESS->QUEUED for a retry requeue.
+
+        A SINGLE conditional UPDATE guarded by BOTH ``attempt == expected_attempt``
+        AND ``status == IN_PROGRESS``. The winner sets ``attempt = expected+1`` and
+        ``status = QUEUED`` in one statement; every racing reconciler then sees
+        either a changed attempt or a non-IN_PROGRESS status and gets
+        ``rowcount == 0``. This closes the window that a separate increment +
+        ``update_job_status(QUEUED)`` left open, where a second reconciler could
+        read the already-bumped attempt on a still-IN_PROGRESS row and bump it
+        again past ``max_attempts``. Portable across SQLite and Postgres.
+        """
+        from sqlalchemy import Integer
+        from sqlalchemy import cast as sa_cast
+        from sqlmodel import update
+
+        attempt_expr = sa_cast(col(Job.job_metadata)["attempt"].as_string(), Integer)
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return False
+            merged = {**(job.job_metadata or {}), "attempt": expected_attempt + 1}
+            stmt = (
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    attempt_expr == expected_attempt,
+                    Job.status == JobStatus.IN_PROGRESS,
+                )
+                .values(job_metadata=merged, status=JobStatus.QUEUED)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def claim_queued_lease(
+        self,
+        job_id: UUID,
+        *,
+        owner: str,
+        lease_ttl_s: float,
+        heartbeat_at: str | None = None,
+    ) -> bool:
+        """Lease-claim a QUEUED row WITHOUT flipping its status. Returns True if won.
+
+        Single-flight ownership for the default re-enqueue path that, unlike
+        ``claim_queued_job``, does NOT move the row to IN_PROGRESS. Keeping the
+        row QUEUED means a re-enqueue that crashes before the runner emits its
+        first transition leaves the job re-runnable (the sweep never fails QUEUED
+        rows, and the next boot re-claims it once this lease goes stale) instead
+        of becoming a stranded IN_PROGRESS that gets failed worker_lost. The
+        runner's ``execute_with_status`` performs the real QUEUED->IN_PROGRESS
+        flip when it actually starts.
+
+        The claim succeeds only when the row is QUEUED and its current lease is
+        absent or stale, and the conditional UPDATE matches the EXACT prior
+        ``heartbeat_at`` we read, so two workers racing the same stale row see
+        only one ``rowcount == 1``. A caller-supplied ``heartbeat_at`` becomes
+        the claim token for a later guarded release or terminalization. Portable
+        across SQLite and Postgres.
+        """
+        from sqlmodel import update
+
+        hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+        claim_heartbeat = heartbeat_at or datetime.now(timezone.utc).isoformat()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None or job.status != JobStatus.QUEUED:
+                return False
+            meta = job.job_metadata or {}
+            prior_hb = meta.get("heartbeat_at")
+            # A fresh lease means another worker already owns this claim window.
+            if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
+                return False
+            merged = {**meta, "owner": owner, "heartbeat_at": claim_heartbeat}
+            # Guard on the exact prior heartbeat so a concurrent claimer that
+            # already stamped its own loses the conditional UPDATE.
+            guard = hb_expr.is_(None) if prior_hb is None else hb_expr == prior_hb
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.QUEUED, guard)
+                .values(job_metadata=merged)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def release_queued_lease(self, job_id: UUID, *, owner: str, heartbeat_at: str) -> bool:
+        """Release this owner's QUEUED lease without clearing a newer claim.
+
+        The status, owner, and exact heartbeat guards make the whole-metadata
+        replacement safe across SQLite and Postgres: a worker that has replaced
+        or refreshed this lease cannot have its claim erased by a stale recovery.
+        """
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None or job.status != JobStatus.QUEUED:
+                return False
+            metadata = dict(job.job_metadata or {})
+            if metadata.get("owner") != owner or metadata.get("heartbeat_at") != heartbeat_at:
+                return False
+            metadata.pop("owner", None)
+            metadata.pop("heartbeat_at", None)
+            stmt = (
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    Job.status == JobStatus.QUEUED,
+                    owner_expr == owner,
+                    hb_expr == heartbeat_at,
+                )
+                .values(job_metadata=metadata or None)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def fail_queued_job(
+        self,
+        job_id: UUID,
+        *,
+        owner: str,
+        heartbeat_at: str,
+        error: dict,
+        event_type: str,
+    ) -> bool:
+        """Atomically terminalize this owner's QUEUED claim with its durable event.
+
+        The entire status-CAS + event transaction is retried after a per-job
+        sequence collision or transient SQLite writer lock. Rolling back before
+        each retry leaves the job QUEUED under the exact original lease, so a
+        retry either commits both records or safely loses to a newer claim.
+        """
+        from sqlmodel import update
+
+        owner_expr = col(Job.job_metadata)["owner"].as_string()
+        hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+        last_exc: Exception | None = None
+        for attempt in range(_APPEND_EVENT_MAX_RETRIES):
+            try:
+                async with session_scope() as session:
+                    job = await session.get(Job, job_id)
+                    if job is None or job.status != JobStatus.QUEUED:
+                        return False
+                    metadata = job.job_metadata or {}
+                    if metadata.get("owner") != owner or metadata.get("heartbeat_at") != heartbeat_at:
+                        return False
+                    stmt = (
+                        update(Job)
+                        .where(
+                            Job.job_id == job_id,
+                            Job.status == JobStatus.QUEUED,
+                            owner_expr == owner,
+                            hb_expr == heartbeat_at,
+                        )
+                        .values(
+                            status=JobStatus.FAILED,
+                            error=dict(error),
+                            finished_timestamp=datetime.now(timezone.utc),
+                        )
+                    )
+                    result = await session.exec(stmt)  # type: ignore[call-overload]
+                    if result.rowcount != 1:
+                        return False
+                    current_max = (
+                        await session.exec(select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id))
+                    ).one()
+                    session.add(
+                        JobEvent(
+                            job_id=job_id,
+                            seq=(current_max or 0) + 1,
+                            event_type=event_type,
+                            payload=dict(error),
+                        )
+                    )
+                    await session.flush()
+                    return True
+            except IntegrityError as exc:
+                last_exc = exc
+            except OperationalError as exc:
+                if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
+                    raise
+                last_exc = exc
+            await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
+
+        msg = f"fail_queued_job exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (event seq contention)"
+        raise RuntimeError(msg) from last_exc
+
+    async def purge_terminal_jobs(self, *, older_than_days: float, limit: int = 5000) -> int:
+        """Delete terminal jobs older than the window plus their child rows. Returns rows deleted.
+
+        Retention for the durable job store: every flow run writes a job row
+        (v1 runs and builds, v2 workflow runs, ingestion, trigger firings) and
+        nothing else deletes it, while ``job_events`` grows a row per durable
+        milestone of a background run. Only terminal runs are eligible (see
+        ``_RETAINABLE_STATUSES``); live work is never purged at any age.
+
+        The child tables (``job_events``, ``execution_signals``,
+        ``job_checkpoints``) carry ``job_id`` as a plain indexed column with NO
+        foreign key, so nothing cascades: they are deleted explicitly here, or
+        they survive as orphans no query can reach again.
+
+        Age comes from the terminal timestamp, falling back to creation for a
+        row that reached a terminal status without one. Deletes are chunked by
+        ``limit`` so a pass never takes a long lock or bloats one transaction;
+        a caller with a backlog loops until a pass returns fewer than ``limit``.
+
+        Every API worker runs the sweep, so concurrent callers are expected. On
+        Postgres the batch is selected ``FOR UPDATE SKIP LOCKED``: a second
+        sweep skips rows the first has locked and takes a disjoint batch instead
+        of queueing behind it (or deadlocking on the child deletes), and a
+        selected row cannot change status before it is deleted. SQLite renders
+        no lock clause, so a metrics-archive insert reserves its writer before
+        selecting the batch. Background outcome totals are archived in this
+        same transaction, independently of whether Prometheus is enabled.
+
+        On SQLite, each DELETE uses at most 500 job IDs to stay below older
+        builds' 999-variable limit; the selected batch remains one transaction.
+
+        Ingestion jobs referenced by memory workflow runs are retained while
+        those references exist: their ON DELETE SET NULL foreign key would
+        otherwise make already-ingested runs count as pending again.
+
+        A job a trigger ledger row still marks DISPATCHED is skipped until the
+        dispatcher records its outcome: ``reconcile_dispatched`` reads that
+        outcome by joining the job, so purging the job first would leave the
+        ledger row DISPATCHED forever. A later sweep purges it once reconciled.
+
+        Both arguments must be positive. A zero window makes every terminal job
+        eligible and a negative one dates the cutoff in the future, and SQLite
+        reads a negative ``LIMIT`` as unbounded, so either would turn a
+        retention pass into a wholesale delete. The sweep never passes them
+        (retention is off at 0), but this method is public, so it guards itself.
+        """
+        if older_than_days <= 0:
+            msg = f"older_than_days must be positive, got {older_than_days!r}"
+            raise ValueError(msg)
+        if limit <= 0:
+            msg = f"limit must be positive, got {limit!r}"
+            raise ValueError(msg)
+
+        from sqlalchemy import exists
+        from sqlmodel import delete
+
+        from langflow.services.database.models.memory_base.model import MemoryBaseWorkflowRun
+        from langflow.services.database.models.trigger.model import TriggerEvent
+        from langflow.services.database.models.trigger.schemas import TriggerEventState
+
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+        aged_at = func.coalesce(col(Job.finished_timestamp), col(Job.created_timestamp))
+        awaiting_reconcile = exists().where(
+            col(TriggerEvent.job_id) == col(Job.job_id),
+            col(TriggerEvent.state) == TriggerEventState.DISPATCHED.value,
+        )
+        preserves_memory_state = exists().where(col(MemoryBaseWorkflowRun.ingestion_job_id) == col(Job.job_id))
+        async with session_scope() as session:
+            await prepare_retention_metrics(session)
+            result = await session.exec(
+                select(Job.job_id)
+                .where(
+                    col(Job.status).in_(_RETAINABLE_STATUSES),
+                    aged_at < cutoff,
+                    ~awaiting_reconcile,
+                    ~preserves_memory_state,
+                )
+                .limit(limit)
+                .with_for_update(skip_locked=True)
+            )
+            job_ids = list(result.all())
+            if not job_ids:
+                return 0
+            delete_batch_size = 500 if session.get_bind().dialect.name == "sqlite" else len(job_ids)
+            for start in range(0, len(job_ids), delete_batch_size):
+                batch_ids = job_ids[start : start + delete_batch_size]
+                await archive_retention_metrics(session, batch_ids)
+                for child in (JobEvent, ExecutionSignal, JobCheckpoint):
+                    await session.exec(delete(child).where(col(child.job_id).in_(batch_ids)))  # type: ignore[call-overload]
+                await session.exec(delete(Job).where(col(Job.job_id).in_(batch_ids)))  # type: ignore[call-overload]
+            await session.flush()
+            return len(job_ids)
+
+    async def claim_suspended_for_resume(self, job_id: UUID, *, owner: str | None = None) -> bool:
+        """Atomically flip SUSPENDED->IN_PROGRESS for resume; True iff this caller won.
+
+        The single conditional ``UPDATE ... WHERE status = SUSPENDED`` is the single-use
+        primitive: only one concurrent resume gets ``rowcount == 1``. Going straight to
+        IN_PROGRESS (with a fresh heartbeat) means a racing startup sweep sees a non-QUEUED,
+        live row and cannot double-enqueue it.
+        """
+        from sqlmodel import update
+
+        now = datetime.now(timezone.utc).isoformat()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return False
+            merged = {**(job.job_metadata or {})}
+            if owner is not None:
+                merged.update({"owner": owner, "heartbeat_at": now})
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.SUSPENDED)
+                .values(status=JobStatus.IN_PROGRESS, job_metadata=merged)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def claim_suspended_for_cancel(self, job_id: UUID) -> bool:
+        """Atomically flip SUSPENDED->CANCELLED; True iff this caller won.
+
+        Mirror of ``claim_suspended_for_resume`` for the supersede/stop side of the
+        race: a resume that already flipped the row to IN_PROGRESS keeps its run —
+        an unconditional CANCELLED write here would clobber it and destroy its
+        checkpoint mid-flight.
+        """
+        from sqlmodel import update
+
+        async with session_scope() as session:
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.SUSPENDED)
+                .values(status=JobStatus.CANCELLED, finished_timestamp=datetime.now(timezone.utc))
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def queued_workflow_job_ids(self) -> list[UUID]:
+        """Return the ids of every QUEUED workflow job (for strand recovery)."""
+        async with session_scope() as session:
+            stmt = select(Job.job_id).where(
+                Job.status == JobStatus.QUEUED,
+                Job.type == JobType.WORKFLOW,
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
+
+    async def claim_queued_job(self, job_id: UUID) -> bool:
+        """Atomically claim a QUEUED job for execution. Returns True if we won.
+
+        Single-flight guard for the startup sweep: a conditional
+        ``UPDATE job SET status=IN_PROGRESS WHERE job_id=? AND status='QUEUED'``
+        means only ONE racer's update affects a row (``rowcount == 1``); every
+        other concurrent sweeper sees ``rowcount == 0`` and must not enqueue.
+        Works identically on SQLite and Postgres (a single-row conditional UPDATE
+        is atomic on both), so two uvicorn workers booting against one DB cannot
+        both re-run the same non-idempotent QUEUED job.
+        """
+        from sqlmodel import update
+
+        async with session_scope() as session:
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.QUEUED)
+                .values(status=JobStatus.IN_PROGRESS)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
+    async def sweep_orphans(self, *, lease_ttl_s: float = 30.0, require_heartbeat: bool = False) -> list[UUID]:
+        """Reconcile GENUINELY orphaned IN_PROGRESS jobs (stale/absent heartbeat).
+
+        Liveness-aware: only an IN_PROGRESS row whose heartbeat is older than
+        ``lease_ttl_s`` (or never recorded) is treated as orphaned. A row with a
+        FRESH heartbeat means a live owner is mid-run, so the sweep must NOT
+        touch it — this is what stops a booting worker B from flipping worker A's
+        actively-running job FAILED(worker_lost) under ``gunicorn -w N``.
+
+        For a real orphan, mark it FAILED with a worker_lost error, stamp
+        finished_timestamp, and append a terminal ``run_failed`` event so a
+        reattacher always sees a clean end. QUEUED jobs are intentionally
+        untouched (at-least-once: they get re-picked by a fresh worker).
+
+        ``require_heartbeat`` skips rows that never recorded a heartbeat. A live run
+        can carry none when a sibling replica still runs a version from before its
+        path heartbeated, during a rolling upgrade, so a sweep after startup must not
+        read that as death.
+
+        Returns the ids of the jobs transitioned to FAILED.
+        """
+        from sqlmodel import update
+
+        error_payload = {"type": "worker_lost"}
+        reconciled: list[UUID] = []
+        async with session_scope() as session:
+            stmt = select(Job).where(Job.status == JobStatus.IN_PROGRESS)
+            result = await session.exec(stmt)
+            in_progress = list(result.all())
+            now = datetime.now(timezone.utc)
+            hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+            for job in in_progress:
+                if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
+                    # Live owner still heartbeating — leave the run alone.
+                    continue
+                prior_heartbeat = (job.job_metadata or {}).get("heartbeat_at")
+                if require_heartbeat and prior_heartbeat is None:
+                    continue
+                heartbeat_unchanged = hb_expr.is_(None) if prior_heartbeat is None else hb_expr == prior_heartbeat
+                claim = (
+                    update(Job)
+                    .where(
+                        Job.job_id == job.job_id,
+                        Job.status == JobStatus.IN_PROGRESS,
+                        heartbeat_unchanged,
+                    )
+                    .values(
+                        status=JobStatus.FAILED,
+                        error=dict(error_payload),
+                        finished_timestamp=now,
+                    )
+                )
+                claim_result = await session.exec(claim)  # type: ignore[call-overload]
+                if claim_result.rowcount == 1:
+                    reconciled.append(job.job_id)
+            await session.flush()
+        # Why: append the terminal milestone via append_event (own session) so its seq-collision retry
+        # applies — a collision with a concurrent appender can no longer roll back the whole sweep.
+        for job_id in reconciled:
+            await self.append_event(job_id, "run_failed", dict(error_payload))
+        return reconciled
+
+    async def sweep_input_deadlines(self) -> list[UUID]:
+        """FAIL SUSPENDED runs whose human-input deadline has passed (LE-1452).
+
+        A separate pass from ``sweep_orphans`` (which only touches IN_PROGRESS): selects
+        SUSPENDED rows carrying an ``input_deadline_at`` in ``job_metadata`` that is now
+        in the past and writes a terminal FAILED status with an ``input_timed_out`` error
+        plus a durable terminal event, so a reattaching client sees a clean end. Rows
+        without a stamped deadline (the setting was off at suspend) are left untouched.
+
+        Returns the ids transitioned to FAILED.
+        """
+        from sqlmodel import update
+
+        error_payload = {"type": "input_timed_out"}
+        reconciled: list[UUID] = []
+        async with session_scope() as session:
+            result = await session.exec(select(Job).where(Job.status == JobStatus.SUSPENDED))
+            now = datetime.now(timezone.utc)
+            deadline_expr = col(Job.job_metadata)["input_deadline_at"].as_string()
+            for job in result.all():
+                deadline = (job.job_metadata or {}).get("input_deadline_at")
+                if not deadline or self._parse_deadline(deadline) is None or self._parse_deadline(deadline) > now:
+                    continue
+                # A resume, a newer pause, or another sweeper can win after the
+                # SELECT. Only the worker claiming this exact expired pause may
+                # emit its terminal event and delete the checkpoint.
+                claim = (
+                    update(Job)
+                    .where(
+                        Job.job_id == job.job_id,
+                        Job.status == JobStatus.SUSPENDED,
+                        deadline_expr == deadline,
+                    )
+                    .values(status=JobStatus.FAILED, error=dict(error_payload), finished_timestamp=now)
+                )
+                claim_result = await session.exec(claim)  # type: ignore[call-overload]
+                if claim_result.rowcount == 1:
+                    reconciled.append(job.job_id)
+            await session.flush()
+        for job_id in reconciled:
+            await self.append_event(job_id, "input_timed_out", dict(error_payload))
+            # Why: a deadline timeout terminalizes the run, so its durable checkpoint is dead weight
+            # that _all() keeps full-scanning (expires_at is never set); drop it like the cancel path.
+            with contextlib.suppress(Exception):
+                await self.delete_checkpoint(job_id, "graph")
+        return reconciled
+
+    @staticmethod
+    def _parse_deadline(raw: str) -> datetime | None:
+        try:
+            parsed = datetime.fromisoformat(raw)
+        except (ValueError, TypeError):
+            return None
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
 
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
@@ -137,11 +1314,59 @@ class JobService(Service):
         async with session_scope() as session:
             return await get_latest_jobs_by_asset_ids(session, uuid_asset_ids)
 
-    async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
+    async def cancel_in_flight_jobs_by_asset(
+        self,
+        asset_id: UUID | str,
+        asset_type: str,
+        *,
+        user_id: UUID | None = None,
+    ) -> list[UUID]:
+        """Mark every queued / in-progress job for ``asset_id`` CANCELLED.
+
+        Used by the asset-delete flows (KB, Memory Base, …) so an
+        in-flight ingestion stops writing to (and thereby recreating)
+        the asset's storage. The ingestion's own ``is_job_cancelled``
+        poll picks up the new status and bails out via the cancelled
+        handler.
+
+        Returns the ids of the jobs transitioned. Empty list when
+        nothing is in flight.
+        """
+        normalized_id = UUID(asset_id) if isinstance(asset_id, str) else asset_id
+        async with session_scope() as session:
+            stmt = select(Job).where(
+                Job.asset_id == normalized_id,
+                Job.asset_type == asset_type,
+                col(Job.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS]),
+            )
+            if user_id is not None:
+                stmt = stmt.where((Job.user_id == user_id) | (col(Job.user_id).is_(None)))
+            result = await session.exec(stmt)
+            jobs = list(result.all())
+            if not jobs:
+                return []
+            now = datetime.now(timezone.utc)
+            for job in jobs:
+                job.status = JobStatus.CANCELLED
+                job.finished_timestamp = now
+                session.add(job)
+            await session.flush()
+            return [job.job_id for job in jobs]
+
+    async def execute_with_status(
+        self,
+        job_id: UUID,
+        run_coro_func,
+        *args,
+        mark_in_progress: bool = True,
+        keep_alive: bool = False,
+        **kwargs,
+    ):
         """Wrapper that manages job status lifecycle around a coroutine.
 
         This function:
-        1. Updates status to IN_PROGRESS before execution
+        1. Updates status to IN_PROGRESS before execution (unless ``mark_in_progress`` is
+           False: the caller created the row IN_PROGRESS already)
         2. Executes the wrapped function
         3. Updates status to COMPLETED on success or FAILED on error
         4. Sets finished_timestamp when done
@@ -150,6 +1375,14 @@ class JobService(Service):
             job_id: The job ID
             run_coro_func: The coroutine function to wrap
             *args: Positional arguments to pass to run_coro_func
+            mark_in_progress: Write IN_PROGRESS before running. Keyword-only, and not
+                passed on to run_coro_func.
+            keep_alive: Heartbeat the job while run_coro_func runs (``start_keep_alive``),
+                for a run outside the background runner, which heartbeats its own jobs.
+                Insert the row with ``create_job(heartbeat=True)``: the first heartbeat
+                waits one interval. The heartbeat stops before the terminal status write,
+                and on a pause, which leaves the row IN_PROGRESS. run_coro_func must not
+                write ``job_metadata``. Keyword-only, and not passed on to run_coro_func.
             **kwargs: Keyword arguments to pass to run_coro_func
 
         Returns:
@@ -163,13 +1396,25 @@ class JobService(Service):
         await logger.ainfo(f"Starting job execution: job_id={job_id}")
 
         try:
-            # Update to IN_PROGRESS
-            await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
-            await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
+            if mark_in_progress:
+                await logger.adebug(f"Updating job {job_id} status to IN_PROGRESS")
+                await self.update_job_status(job_id, JobStatus.IN_PROGRESS)
 
-            # Execute the wrapped function
-            await logger.ainfo(f"Executing job function for job_id={job_id}")
-            result = await run_coro_func(*args, **kwargs)
+            if keep_alive:
+                await self.start_keep_alive(job_id, beat_now=False)
+            try:
+                # Execute the wrapped function
+                await logger.ainfo(f"Executing job function for job_id={job_id}")
+                result = await run_coro_func(*args, **kwargs)
+            finally:
+                if keep_alive:
+                    await self.stop_keep_alive(job_id)
+
+        except (PauseRequested, GraphPausedException):
+            # A producer paused the run for human input. The runner suspends it
+            # (SUSPENDED); do NOT write a terminal status here.
+            await logger.adebug(f"Job {job_id} paused for human input")
+            raise
 
         except AssertionError as e:
             # Handle missing required arguments
@@ -191,7 +1436,7 @@ class JobService(Service):
                 await self.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
             else:
                 # System-initiated cancellation - update status to FAILED
-                await logger.aerror(f"Job {job_id} was cancelled by system")
+                await logger.awarning(f"Job {job_id} was cancelled by system")
                 await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
             raise
 
@@ -205,3 +1450,18 @@ class JobService(Service):
             await logger.ainfo(f"Job {job_id} completed successfully")
             await self.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
             return result
+
+    async def _validate_ownership(self, job_id: UUID, user_id: UUID) -> Job:
+        """Verify that a job exists and belongs to the specified user.
+
+        Raises:
+            ValueError: If the job is not found or is NOT owned by the user.
+        """
+        job = await self.get_job_by_job_id(job_id)
+        if job is None:
+            msg = f"Job {job_id} not found"
+            raise ValueError(msg)
+        if job.user_id is not None and job.user_id != user_id:
+            msg = f"Access denied for job {job_id}"
+            raise ValueError(msg)
+        return job

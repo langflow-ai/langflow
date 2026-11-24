@@ -1,44 +1,38 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { selectGptModel } from "../../utils/select-gpt-model";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Research Translation Loop.spec",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page
-      .getByRole("heading", { name: "Research Translation Loop" })
-      .click();
+    const templateHeading = page.getByRole("heading", {
+      name: "Research Translation Loop",
+    });
+    const templateAvailable = await templateHeading
+      .waitFor({ state: "visible", timeout: 5000 })
+      .then(() => true)
+      .catch(() => false);
+    test.skip(
+      !templateAvailable,
+      "Research Translation Loop requires the optional lfx-arxiv bundle",
+    );
+    await templateHeading.click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
-    await initialGPTsetup(page, {
+    await configureLoopbackOpenAI(page, {
       skipAdjustScreenView: true,
-      skipSelectGptModel: true,
     });
-    // TODO: Uncomment this when we have a way to test Anthropic
-    // await page.getByTestId("dropdown_str_provider").click();
-    // await page.getByTestId("Anthropic-1-option").click();
-
-    await selectGptModel(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -50,7 +44,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 40000 });
 
     if (await stopButton.isVisible()) {

@@ -1,0 +1,62 @@
+{
+  "display_information": {
+    "name": "Langflow",
+    "description": "Run Langflow flows from Slack, and let flows act in Slack.",
+    "background_color": "#1a1a2e"
+  },
+  "features": {
+    "bot_user": {
+      "display_name": "Langflow",
+      "always_online": true
+    }
+  },
+  "oauth_config": {
+    "redirect_urls": [
+      "https://LANGFLOW_HOST/api/v1/connections/oauth/slack/callback"
+    ],
+    "scopes": {
+      "bot": [
+        "app_mentions:read",
+        "channels:history",
+        "channels:read",
+        "chat:write",
+        "groups:history",
+        "groups:read",
+        "im:history",
+        "mpim:history",
+        "reactions:read",
+        "reactions:write",
+        "users:read"
+      ],
+      "user": [
+        "canvases:write",
+        "channels:history",
+        "chat:write",
+        "groups:history",
+        "im:history",
+        "mpim:history",
+        "search:read"
+      ]
+    }
+  },
+  "settings": {
+    "event_subscriptions": {
+      "request_url": "https://LANGFLOW_HOST/api/v1/triggers/ingress/slack/apps/REGISTRATION_ID",
+      "bot_events": [
+        "app_mention",
+        "message.channels",
+        "message.groups",
+        "message.im",
+        "message.mpim",
+        "reaction_added",
+        "reaction_removed"
+      ]
+    },
+    "interactivity": {
+      "is_enabled": false
+    },
+    "org_deploy_enabled": false,
+    "socket_mode_enabled": false,
+    "token_rotation_enabled": false
+  }
+}

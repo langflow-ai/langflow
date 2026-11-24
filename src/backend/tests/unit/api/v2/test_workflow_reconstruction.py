@@ -12,8 +12,39 @@ from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_response_from_job_id
+from langflow.api.v2.workflow_reconstruction import _recover_session_id, reconstruct_workflow_response_from_job_id
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from lfx.interface.components import component_cache
+from lfx.utils.flow_validation import CustomComponentValidationError
+
+
+class TestRecoverSessionId:
+    """``_recover_session_id`` digs the persisted session_id out of terminal data.
+
+    The session_id sits inside the serialized terminal Message at a depth that
+    varies by component, so the search walks the dict/list structure and ignores
+    serialized text blobs that merely contain the word ``session_id``.
+    """
+
+    def test_recovers_session_id_nested_like_persisted_message(self):
+        # Mirrors the real shape: results["message"]["data"]["session_id"].
+        data = {"results": {"message": {"text_key": "text", "data": {"session_id": "thread-1", "text": "hi"}}}}
+        assert _recover_session_id(data) == "thread-1"
+
+    def test_recovers_session_id_from_list_of_rows(self):
+        data = {"outputs": {"dataframe": {"message": [{"text": "hi", "session_id": "thread-9"}]}}}
+        assert _recover_session_id(data) == "thread-9"
+
+    def test_ignores_session_id_appearing_only_inside_serialized_text(self):
+        # A rendered table header is a string, not a dict key, so it is not matched.
+        data = {"outputs": {"prompt": {"message": "| sender | session_id | text |"}}}
+        assert _recover_session_id(data) is None
+
+    def test_returns_none_for_data_only_flow(self):
+        assert _recover_session_id({"results": {}, "outputs": {"data": {"value": 1}}}) is None
+
+    def test_blank_session_id_is_not_recovered(self):
+        assert _recover_session_id({"data": {"session_id": ""}}) is None
 
 
 class TestWorkflowReconstruction:
@@ -152,3 +183,155 @@ class TestWorkflowReconstruction:
             mock_converter.assert_called_once()
             # Verify filtering happened by checking terminal nodes were retrieved
             mock_graph.get_terminal_nodes.assert_called_once()
+
+    @pytest.mark.parametrize("is_superuser", [False, True])
+    @pytest.mark.parametrize("admin_only", [False, True])
+    async def test_reconstructed_outputs_carry_terminal_content(self, monkeypatch, tmp_path, is_superuser, admin_only):
+        """The rebuilt response must carry the persisted terminal content.
+
+        The persisted vertex_build ``data`` blob (a ``ResultDataResponse`` dump) has no
+        ``component_id`` — the component id lives on the row's ``id`` column. The rebuild
+        must attach it, or the converter's ``output_data_map`` (keyed by component_id)
+        stays empty and every completed background GET status returns ``content: null``
+        / ``output.text: null`` while the same run in sync mode returns the text.
+        Fixture mirrors a real ChatOutput row captured from a live background run.
+        """
+        from lfx.components.input_output import ChatInput, ChatOutput
+
+        chat_input = ChatInput(_id="chat_input")
+        chat_output = ChatOutput(_id="chat_output")
+        payload = {
+            "nodes": [
+                {"id": node["id"], "data": node["data"]}
+                for node in (chat_input.to_frontend_node(), chat_output.to_frontend_node())
+            ],
+            "edges": [
+                {
+                    "source": "chat_input",
+                    "target": "chat_output",
+                    "id": "chat_input-message-chat_output",
+                    "data": {
+                        "sourceHandle": {
+                            "dataType": "ChatInput",
+                            "id": "chat_input",
+                            "name": "message",
+                            "output_types": ["Message"],
+                        },
+                        "targetHandle": {
+                            "fieldName": "input_value",
+                            "id": "chat_output",
+                            "inputTypes": ["Message"],
+                            "type": "str",
+                        },
+                    },
+                }
+            ],
+        }
+        # A status read must use the saved result even if the stored component
+        # source changed after execution. Neither admins nor ordinary readers
+        # should instantiate that source as a side effect of reading a job.
+        from lfx.services.deps import get_settings_service
+
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "allow_custom_components", True)
+        monkeypatch.setattr(settings, "custom_component_admin_only", admin_only)
+        marker = tmp_path / "component-executed"
+        payload["nodes"][1]["data"]["node"]["template"]["code"]["value"] = f"""
+from pathlib import Path
+from lfx.custom import Component
+from lfx.io import Output
+from lfx.schema import Message
+
+class StoredComponent(Component):
+    Path({str(marker)!r}).write_text("executed")
+    outputs = [Output(name="message", display_name="Message", method="build")]
+
+    def build(self) -> Message:
+        return Message(text="new output")
+"""
+        mock_flow = MagicMock()
+        mock_flow.id = uuid4()
+        mock_flow.name = "echo"
+        mock_flow.data = payload
+
+        vb = MagicMock(spec=VertexBuildTable)
+        vb.id = "chat_output"
+        vb.data = {
+            "results": {
+                "message": {
+                    "text_key": "text",
+                    "data": {"text": "hello content probe", "session_id": "session-1", "sender": "Machine"},
+                    "text": "hello content probe",
+                    "session_id": "session-1",
+                }
+            },
+            "outputs": {"message": {"message": "hello content probe", "type": "text"}},
+            "logs": {"message": []},
+            "artifacts": {"message": "hello content probe", "type": "object"},
+            "duration": "8 ms",
+        }
+        vb.artifacts = {}
+        vb.timestamp = datetime.now(timezone.utc)
+
+        with patch("langflow.api.v2.workflow_reconstruction.get_vertex_builds_by_job_id") as mock_get_vb:
+            mock_get_vb.return_value = [vb]
+            response = await reconstruct_workflow_response_from_job_id(
+                session=MagicMock(),
+                flow=mock_flow,
+                job_id=str(uuid4()),
+                user_id=str(uuid4()),
+                is_superuser=is_superuser,
+            )
+
+        assert not marker.exists(), "Reading saved job outputs executed stored component code"
+        assert response.outputs["chat_output"].content == "hello content probe"
+        assert response.output.text == "hello content probe"
+        assert response.session_id == "session-1"
+
+    async def test_reconstruct_blocks_custom_components_when_disabled(self, monkeypatch):
+        flow_id = uuid4()
+        job_id = uuid4()
+        user_id = uuid4()
+
+        mock_flow = MagicMock()
+        mock_flow.id = flow_id
+        mock_flow.name = "Blocked Flow"
+        mock_flow.data = {
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "id": "node-1",
+                        "type": "TotallyCustom",
+                        "node": {
+                            "display_name": "Blocked Node",
+                            "template": {
+                                "code": {"value": "print('blocked')"},
+                            },
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        }
+        mock_session = MagicMock()
+        mock_vertex_build = MagicMock(spec=VertexBuildTable)
+        mock_vertex_build.id = "node-1"
+        mock_vertex_build.data = {"outputs": {"result": "output"}}
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: MagicMock(settings=MagicMock(allow_custom_components=False)),
+        )
+        monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+
+        with patch("langflow.api.v2.workflow_reconstruction.get_vertex_builds_by_job_id") as mock_get_vb:
+            mock_get_vb.return_value = [mock_vertex_build]
+            with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+                await reconstruct_workflow_response_from_job_id(
+                    session=mock_session,
+                    flow=mock_flow,
+                    job_id=str(job_id),
+                    user_id=str(user_id),
+                )

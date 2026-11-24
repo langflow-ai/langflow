@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import type { useQueryFunctionType } from "@/types/api";
 import type { MCPServerInfoType } from "@/types/mcp";
 import { api } from "../../api";
@@ -9,6 +9,21 @@ import { UseRequestProcessor } from "../../services/request-processor";
 // type getMCPServersResponse = Array<MCPServerInfoType>;
 
 export type getMCPServersResponse = Array<MCPServerInfoType>;
+
+export const mergeMCPServerCounts = (
+  oldData: getMCPServersResponse = [],
+  countsData: getMCPServersResponse,
+): getMCPServersResponse =>
+  oldData.map((server) => {
+    const updated = countsData.find((s) => s.name === server.name);
+    if (!updated) return server;
+
+    return {
+      ...server,
+      ...updated,
+      error: updated.error ?? undefined,
+    };
+  });
 
 export const useGetMCPServers: useQueryFunctionType<
   undefined,
@@ -69,23 +84,45 @@ export const useGetMCPServers: useQueryFunctionType<
     ...queryOptions,
   });
 
-  useEffect(() => {
-    if (withCounts && queryResult.data && queryResult.data.length > 0) {
-      fetchWithCounts().then((countsData) => {
-        if (!countsData || countsData.length === 0) return;
-        // Merge by name
-        queryClient.setQueryData(
-          ["useGetMCPServers"],
-          (oldData: getMCPServersResponse = []) => {
-            return oldData.map((server) => {
-              const updated = countsData.find((s) => s.name === server.name);
-              return updated ? { ...server, ...updated } : server;
-            });
-          },
-        );
-      });
-    }
-  }, [withCounts, queryResult.data]);
+  const serverNames = JSON.stringify(
+    (queryResult.data ?? []).map((server) => server.name).sort(),
+  );
+  const countsQuery = query(
+    ["useGetMCPServerCounts", serverNames],
+    fetchWithCounts,
+    {
+      enabled: Boolean(withCounts && queryResult.data?.length),
+    },
+  );
 
-  return queryResult;
+  useEffect(() => {
+    const countsData = countsQuery.data as getMCPServersResponse | undefined;
+    if (!withCounts || !countsData?.length) return;
+
+    queryClient.setQueryData(
+      ["useGetMCPServers"],
+      (oldData: getMCPServersResponse = []) =>
+        mergeMCPServerCounts(oldData, countsData),
+    );
+  }, [withCounts, countsQuery.data, queryClient]);
+
+  const refetch = useCallback(
+    async (...args: Parameters<typeof queryResult.refetch>) => {
+      const result = await queryResult.refetch(...args);
+      const refreshedServerNames = JSON.stringify(
+        (result.data ?? []).map((server) => server.name).sort(),
+      );
+      if (
+        withCounts &&
+        result.data?.length &&
+        refreshedServerNames === serverNames
+      ) {
+        await countsQuery.refetch();
+      }
+      return result;
+    },
+    [countsQuery.refetch, queryResult.refetch, serverNames, withCounts],
+  );
+
+  return { ...queryResult, refetch };
 };

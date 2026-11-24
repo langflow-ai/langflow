@@ -233,6 +233,25 @@ describe("MustachePromptAreaComponent", () => {
       const button = screen.getByTestId("button_open_mustache_prompt_modal");
       expect(button).toBeInTheDocument();
     });
+
+    it("should forward ariaLabelledBy to the modal trigger button", () => {
+      render(
+        <MustachePromptAreaComponent
+          {...defaultProps}
+          ariaLabelledBy="field-label-id"
+        />,
+      );
+
+      const button = screen.getByTestId("button_open_mustache_prompt_modal");
+      expect(button).toHaveAttribute("aria-labelledby", "field-label-id");
+    });
+
+    it("should render the modal trigger with no aria-labelledby when the field label is absent", () => {
+      render(<MustachePromptAreaComponent {...defaultProps} />);
+
+      const button = screen.getByTestId("button_open_mustache_prompt_modal");
+      expect(button).not.toHaveAttribute("aria-labelledby");
+    });
   });
 
   describe("variable highlighting", () => {
@@ -255,7 +274,7 @@ describe("MustachePromptAreaComponent", () => {
       );
     });
 
-    it("should highlight variables starting with underscore", () => {
+    it("should mark variables starting with underscore as invalid", () => {
       render(
         <MustachePromptAreaComponent
           {...defaultProps}
@@ -263,9 +282,37 @@ describe("MustachePromptAreaComponent", () => {
         />,
       );
 
+      // The underscore namespace is reserved for template metadata, so the name will be
+      // rejected on Check & Save -- the preview says so instead of looking valid.
       const sanitizedHtml = screen.getByTestId("sanitized-html");
       expect(sanitizedHtml.innerHTML).toContain(
-        '<span class="chat-message-highlight">{{_private}}</span>',
+        '<span class="chat-message-highlight-invalid">{{_private}}</span>',
+      );
+    });
+
+    it("should mark a reserved template name as invalid", () => {
+      // `code` is one of the seven names that collide with node-template keys, rejected
+      // by Check & Save for the same reason as the underscore namespace.
+      render(
+        <MustachePromptAreaComponent {...defaultProps} value="Run {{code}}" />,
+      );
+
+      expect(screen.getByTestId("sanitized-html").innerHTML).toContain(
+        '<span class="chat-message-highlight-invalid">{{code}}</span>',
+      );
+    });
+
+    it("should keep an underscore that is not the first character valid", () => {
+      render(
+        <MustachePromptAreaComponent
+          {...defaultProps}
+          value="Value: {{user_name}}"
+        />,
+      );
+
+      const sanitizedHtml = screen.getByTestId("sanitized-html");
+      expect(sanitizedHtml.innerHTML).toContain(
+        '<span class="chat-message-highlight">{{user_name}}</span>',
       );
     });
 

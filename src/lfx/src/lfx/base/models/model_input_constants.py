@@ -103,7 +103,7 @@ def _get_watsonx_inputs_and_fields():
 
         watsonx_inputs = get_filtered_inputs(WatsonxAIComponent, provider_name="IBM watsonx.ai")
     except ImportError as e:
-        msg = "IBM watsonx.ai is not installed. Please install it with `pip install langchain-ibm-watsonx`."
+        msg = "IBM watsonx.ai is not installed. Please install it with `pip install langchain-ibm`."
         raise ImportError(msg) from e
     return watsonx_inputs, create_input_fields_dict(watsonx_inputs, "")
 
@@ -114,17 +114,14 @@ def _get_google_generative_ai_inputs_and_fields():
 
         google_generative_ai_inputs = get_filtered_inputs(GoogleGenerativeAIComponent)
     except ImportError as e:
-        msg = (
-            "Google Generative AI is not installed. Please install it with "
-            "`pip install langchain-google-generative-ai`."
-        )
+        msg = "Google Generative AI is not installed. Please install it with `pip install langchain-google-genai`."
         raise ImportError(msg) from e
     return google_generative_ai_inputs, create_input_fields_dict(google_generative_ai_inputs, "")
 
 
 def _get_openai_inputs_and_fields():
     try:
-        from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+        from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
         openai_inputs = get_filtered_inputs(OpenAIModelComponent)
     except ImportError as e:
@@ -139,7 +136,7 @@ def _get_azure_inputs_and_fields():
 
         azure_inputs = get_filtered_inputs(AzureChatOpenAIComponent)
     except ImportError as e:
-        msg = "Azure OpenAI is not installed. Please install it with `pip install langchain-azure-openai`."
+        msg = "Azure OpenAI is not installed. Please install it with `pip install langchain-openai`."
         raise ImportError(msg) from e
     return azure_inputs, create_input_fields_dict(azure_inputs, "")
 
@@ -157,7 +154,7 @@ def _get_groq_inputs_and_fields():
 
 def _get_anthropic_inputs_and_fields():
     try:
-        from lfx.components.anthropic.anthropic import AnthropicModelComponent
+        from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
 
         anthropic_inputs = get_filtered_inputs(AnthropicModelComponent)
     except ImportError as e:
@@ -172,18 +169,18 @@ def _get_nvidia_inputs_and_fields():
 
         nvidia_inputs = get_filtered_inputs(NVIDIAModelComponent)
     except ImportError as e:
-        msg = "NVIDIA is not installed. Please install it with `pip install langchain-nvidia`."
+        msg = "NVIDIA is not installed. Please install it with `pip install langchain-nvidia-ai-endpoints`."
         raise ImportError(msg) from e
     return nvidia_inputs, create_input_fields_dict(nvidia_inputs, "")
 
 
 def _get_amazon_bedrock_inputs_and_fields():
     try:
-        from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+        from lfx_amazon.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
         amazon_bedrock_inputs = get_filtered_inputs(AmazonBedrockComponent)
     except ImportError as e:
-        msg = "Amazon Bedrock is not installed. Please install it with `pip install langchain-amazon-bedrock`."
+        msg = "Amazon Bedrock is not installed. Please install it with `pip install langchain-aws`."
         raise ImportError(msg) from e
     return amazon_bedrock_inputs, create_input_fields_dict(amazon_bedrock_inputs, "")
 
@@ -203,7 +200,7 @@ MODEL_PROVIDERS_DICT: dict[str, ModelProvidersDict] = {}
 
 # Try to add each provider
 try:
-    from lfx.components.openai.openai_chat_model import OpenAIModelComponent
+    from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
     openai_inputs, openai_fields = _get_openai_inputs_and_fields()
     MODEL_PROVIDERS_DICT["OpenAI"] = {
@@ -248,7 +245,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.anthropic.anthropic import AnthropicModelComponent
+    from lfx_anthropic.components.anthropic.anthropic import AnthropicModelComponent
 
     anthropic_inputs, anthropic_fields = _get_anthropic_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Anthropic"] = {
@@ -278,7 +275,7 @@ except ImportError:
     pass
 
 try:
-    from lfx.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
+    from lfx_amazon.components.amazon.amazon_bedrock_model import AmazonBedrockComponent
 
     bedrock_inputs, bedrock_fields = _get_amazon_bedrock_inputs_and_fields()
     MODEL_PROVIDERS_DICT["Amazon Bedrock"] = {

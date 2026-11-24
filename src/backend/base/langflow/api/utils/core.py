@@ -1,59 +1,115 @@
 from __future__ import annotations
 
-import uuid
-from ast import literal_eval
+import json as _json
+import re
 from datetime import timedelta
 from enum import Enum
 from typing import TYPE_CHECKING, Annotated, Any
+from urllib.parse import quote
 
 from fastapi import Depends, HTTPException, Path, Query
 from fastapi_pagination import Params
-from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
-from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly, session_scope
+from lfx.services.deps import injectable_session_scope, injectable_session_scope_readonly
+from lfx.utils import flow_code as _flow_code
 from lfx.utils.validate_cloud import raise_error_if_astra_cloud_disable_component
-from sqlalchemy import delete
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth.utils import get_current_active_user, get_current_active_user_mcp
 from langflow.services.database.models.flow.model import Flow
-from langflow.services.database.models.flow_version.model import FlowVersion
-from langflow.services.database.models.message.model import MessageTable
-from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.user.model import User
-from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.store.utils import get_lf_version_from_pypi
+from langflow.utils import flow_secrets as _flow_secrets
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
 
 if TYPE_CHECKING:
-    from langflow.services.chat.service import ChatService
     from langflow.services.store.schema import StoreComponentCreate
 
 
-API_WORDS = ["api", "key", "token"]
+API_WORDS = _flow_secrets.API_WORDS
+normalize_code_for_import = _flow_code.normalize_code_for_import
+has_api_terms = _flow_secrets.has_api_terms
+remove_api_keys = _flow_secrets.remove_api_keys
+strip_flow_secrets = _flow_secrets.strip_flow_secrets
+strip_secret_field_values = _flow_secrets.strip_secret_field_values
+strip_secret_field_values_in_place = _flow_secrets.strip_secret_field_values_in_place
 
 MAX_PAGE_SIZE = 50
 MIN_PAGE_SIZE = 1
+# Mirrors the `le` ceiling fastapi_pagination.Params puts on `size`; MAX_PAGE_SIZE (50) stays the
+# default when size is absent, not a bound.
+PARAMS_MAX_PAGE_SIZE = 100
+
+# Bounds are declared on the query because a bound violated inside the dependency (when Params is
+# built) escapes the route's try/except and reaches the app-wide Exception handler as a 500;
+# declaring it here lets FastAPI reject it as 422 like routes that depend on Params directly.
+PageQuery = Annotated[int | None, Query(ge=MIN_PAGE_SIZE)]
+SizeQuery = Annotated[int | None, Query(ge=MIN_PAGE_SIZE, le=PARAMS_MAX_PAGE_SIZE)]
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
 CurrentActiveMCPUser = Annotated[User, Depends(get_current_active_user_mcp)]
-# DbSession with auto-commit for write operations
-DbSession = Annotated[AsyncSession, Depends(injectable_session_scope)]
-# DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention)
+# DbSession with auto-commit for write operations.
+# ``scope="function"`` is load-bearing: a dependency with yield defaults to
+# request scope, whose exit stack FastAPI unwinds *after* the response has been
+# sent to the client. The auto-commit lives in that teardown, so at request
+# scope a handler answers 201 with a row id that is not committed yet and a
+# client that immediately reads it back can get a 404. Function scope runs the
+# teardown right after the endpoint returns and before the response is sent, so
+# the write is durable by the time the caller holds the id.
+# Every Depends(injectable_session_scope) site must carry the same scope: the
+# scope is part of FastAPI's dependency cache key, so a mixed set would resolve
+# two distinct sessions per request instead of one shared session.
+#
+# Consequence to respect when writing a streaming route: the session is closed
+# once the handler returns, so anything running later -- a StreamingResponse
+# body, a BackgroundTask -- must open its own ``session_scope()`` rather than
+# capture this one. ORM objects loaded during the request (``current_user``
+# included) are detached by then; reading already-loaded columns is safe because
+# the session maker sets ``expire_on_commit=False``, but touching a relationship
+# raises DetachedInstanceError.
+DbSession = Annotated[AsyncSession, Depends(injectable_session_scope, scope="function")]
+# DbSessionReadOnly for read-only operations (no auto-commit, reduces lock contention).
+# Deliberately left at the default request scope: it never commits, so there is no
+# write-visibility window to close, and keeping it request-scoped avoids detaching
+# ORM objects that read-only streaming routes may still be reading from.
 DbSessionReadOnly = Annotated[AsyncSession, Depends(injectable_session_scope_readonly)]
 
 
-def _get_validated_file_name(file_name: str = Path()) -> str:
-    """Validate file_name path parameter to prevent path traversal attacks."""
-    if ".." in file_name or "/" in file_name or "\\" in file_name:
+async def release_db_transaction(session: AsyncSession) -> None:
+    """End the session's current transaction before long-running work.
+
+    A handler that awaits a model, tool, or workflow after its DB reads must
+    not keep the transaction from those reads open for the wait: the session
+    would pin a pooled connection for the whole run (on Postgres as
+    ``idle in transaction``, which a nonzero
+    ``idle_in_transaction_session_timeout`` kills mid-run). Committing ends
+    the transaction and returns the connection to the pool; any later DB work
+    on the same session begins a fresh short transaction, and the dependency
+    teardown's final commit becomes a no-op.
+    """
+    await session.commit()
+
+
+def _get_validated_path_segment(value: str, *, label: str = "name") -> str:
+    """Validate a path segment to prevent path traversal attacks."""
+    if ".." in value or "/" in value or "\\" in value:
         raise HTTPException(
             status_code=400,
-            detail="Invalid file name. Use a simple file name without directory paths or '..'.",
+            detail=f"Invalid {label}. Use a simple {label} without directory paths or '..'.",
         )
-    return file_name
+    return value
+
+
+def _get_validated_file_name(file_name: str = Path()) -> str:
+    return _get_validated_path_segment(file_name, label="file name")
+
+
+def _get_validated_folder_name(folder_name: str = Path()) -> str:
+    return _get_validated_path_segment(folder_name, label="folder name")
 
 
 ValidatedFileName = Annotated[str, Depends(_get_validated_file_name)]
+ValidatedFolderName = Annotated[str, Depends(_get_validated_folder_name)]
 
 # Message to raise if we're in an Astra cloud environment and a component or endpoint is not supported
 disable_endpoint_in_astra_cloud_msg = "This endpoint is not supported in Astra cloud environment."
@@ -63,10 +119,6 @@ class EventDeliveryType(str, Enum):
     STREAMING = "streaming"
     DIRECT = "direct"
     POLLING = "polling"
-
-
-def has_api_terms(word: str):
-    return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
 
 
 def _get_provider_from_template(template: dict) -> str | None:
@@ -80,21 +132,75 @@ def _get_provider_from_template(template: dict) -> str | None:
     return None
 
 
-def remove_api_keys(flow: dict):
-    """Remove api keys from flow data."""
+# ---------------------------------------------------------------------------
+# Export normalisation
+# ---------------------------------------------------------------------------
+
+# Top-level fields that vary between instances / users without changing logic.
+_VOLATILE_TOP_LEVEL: frozenset[str] = frozenset(
+    {"updated_at", "created_at", "user_id", "folder_id", "access_type", "gradient"}
+)
+
+# Node-level fields that track UI interaction state (position, drag, selection).
+_VOLATILE_NODE_FIELDS: frozenset[str] = frozenset({"positionAbsolute", "dragging", "selected"})
+
+
+def _split_code_to_lines(flow: dict) -> None:
+    """In-place: split code template field values from strings to line arrays.
+
+    Converts ``template.<field>.value`` from a single string to a
+    ``list[str]`` (one element per line) when the field type is ``"code"``.
+    This gives git line-level diffs instead of a single opaque blob.
+    """
     for node in flow.get("data", {}).get("nodes", []):
-        node_data = node.get("data")
-        if not isinstance(node_data, dict):
-            continue
-        node_inner = node_data.get("node")
-        if not isinstance(node_inner, dict):
-            continue
-        template = node_inner.get("template")
+        template = node.get("data", {}).get("node", {}).get("template", {})
         if not isinstance(template, dict):
             continue
-        for value in template.values():
-            if isinstance(value, dict) and "name" in value and has_api_terms(value["name"]) and value.get("password"):
-                value["value"] = None
+        for field_data in template.values():
+            if not isinstance(field_data, dict):
+                continue
+            if field_data.get("type") == "code":
+                value = field_data.get("value")
+                if isinstance(value, str):
+                    # split("\n") — not splitlines() — so that the trailing newline
+                    # is preserved as a final empty string, keeping the round-trip
+                    # lossless: "\n".join(s.split("\n")) == s for any string s.
+                    field_data["value"] = value.split("\n")
+
+
+def normalize_flow_for_export(flow: dict) -> dict:
+    """Return a git-friendly, deterministic copy of a flow dict.
+
+    Applied to every flow before it is written into a download ZIP.
+
+    Transformations
+    ---------------
+    * Strips volatile top-level fields (``updated_at``, ``created_at``,
+      ``user_id``, ``folder_id``, ``access_type``, ``gradient``) — these
+      change between instances / users without affecting flow logic.
+    * Strips node UI-state fields (``positionAbsolute``, ``dragging``,
+      ``selected``) — these change on every canvas interaction.
+    * Converts ``template.<field>.value`` strings to ``list[str]`` for
+      ``type == "code"`` fields, enabling line-level git diffs.
+
+    Key sorting is handled at serialisation time via
+    ``orjson_dumps(sort_keys=True)``.
+    """
+    import copy
+
+    flow = copy.deepcopy(flow)
+
+    # Strip volatile top-level metadata
+    for key in _VOLATILE_TOP_LEVEL:
+        flow.pop(key, None)
+
+    # Strip node UI state
+    for node in flow.get("data", {}).get("nodes", []):
+        for key in _VOLATILE_NODE_FIELDS:
+            node.pop(key, None)
+
+    # Code → line arrays
+    _split_code_to_lines(flow)
 
     return flow
 
@@ -129,7 +235,13 @@ def build_input_keys_response(langchain_object, artifacts):
     return input_keys_response
 
 
-def validate_is_component(flows: list[Flow]):
+def validate_is_component(flows: list[Flow]) -> list[Flow]:
+    """Return flows with ``is_component`` inferred from flow data when unset.
+
+    Note: mutates the ORM instances in-place because SQLAlchemy requires
+    mutation for dirty-tracking.  This is an intentional exception to the
+    immutability guideline — creating copies would detach them from the session.
+    """
     for flow in flows:
         if not flow.data or flow.is_component is not None:
             continue
@@ -189,68 +301,6 @@ def format_elapsed_time(elapsed_time: float) -> str:
     return f"{minutes} {minutes_unit}, {seconds} {seconds_unit}"
 
 
-async def _get_flow_name(flow_id: uuid.UUID) -> str:
-    async with session_scope() as session:
-        flow = await session.get(Flow, flow_id)
-        if flow is None:
-            msg = f"Flow {flow_id} not found"
-            raise ValueError(msg)
-    return flow.name
-
-
-async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
-    """Build and cache the graph."""
-    # Get flow name
-    if "flow_name" not in kwargs:
-        flow_name = await _get_flow_name(flow_id if isinstance(flow_id, uuid.UUID) else uuid.UUID(flow_id))
-    else:
-        flow_name = kwargs["flow_name"]
-    str_flow_id = str(flow_id)
-    session_id = kwargs.get("session_id") or str_flow_id
-
-    graph = Graph.from_payload(payload, str_flow_id, flow_name, kwargs.get("user_id"))
-    for vertex_id in graph.has_session_id_vertices:
-        vertex = graph.get_vertex(vertex_id)
-        if vertex is None:
-            msg = f"Vertex {vertex_id} not found"
-            raise ValueError(msg)
-        if not vertex.raw_params.get("session_id"):
-            vertex.update_raw_params({"session_id": session_id}, overwrite=True)
-
-    graph.session_id = session_id
-    await graph.initialize_run()
-    return graph
-
-
-async def build_graph_from_db_no_cache(flow_id: uuid.UUID, session: AsyncSession, **kwargs):
-    """Build and cache the graph."""
-    flow: Flow | None = await session.get(Flow, flow_id)
-    if not flow or not flow.data:
-        msg = "Invalid flow ID"
-        raise ValueError(msg)
-    kwargs["user_id"] = kwargs.get("user_id") or str(flow.user_id)
-    return await build_graph_from_data(flow_id, flow.data, flow_name=flow.name, **kwargs)
-
-
-async def build_graph_from_db(flow_id: uuid.UUID, session: AsyncSession, chat_service: ChatService, **kwargs):
-    graph = await build_graph_from_db_no_cache(flow_id=flow_id, session=session, **kwargs)
-    await chat_service.set_cache(str(flow_id), graph)
-    return graph
-
-
-async def build_and_cache_graph_from_data(
-    flow_id: uuid.UUID | str,
-    chat_service: ChatService,
-    graph_data: dict,
-):  # -> Graph | Any:
-    """Build and cache the graph."""
-    # Convert flow_id to str if it's UUID
-    str_flow_id = str(flow_id) if isinstance(flow_id, uuid.UUID) else flow_id
-    graph = Graph.from_payload(graph_data, str_flow_id)
-    await chat_service.set_cache(str_flow_id, graph)
-    return graph
-
-
 def format_syntax_error_message(exc: SyntaxError) -> str:
     """Format a SyntaxError message for returning to the frontend."""
     if exc.text is None:
@@ -259,8 +309,18 @@ def format_syntax_error_message(exc: SyntaxError) -> str:
 
 
 def get_causing_exception(exc: BaseException) -> BaseException:
-    """Get the causing exception from an exception."""
-    if hasattr(exc, "__cause__") and exc.__cause__:
+    """Get the causing exception from an exception.
+
+    Walks the ``__cause__`` chain to the root, but stops at a bundle-shim
+    ``ModuleNotFoundError`` whose curated "components moved to ..." message is
+    raised ``from`` the raw ``No module named '<x>'`` it wraps, so the curated
+    message wins instead of unwrapping past it to the bare cause underneath.
+    """
+    # A raw import error reads "No module named '<x>'"; anything else is a
+    # curated message (e.g. a bundle shim) that should win over its cause.
+    if isinstance(exc, ModuleNotFoundError) and not str(exc).startswith("No module named"):
+        return exc
+    if getattr(exc, "__cause__", None):
         return get_causing_exception(exc.__cause__)
     return exc
 
@@ -269,9 +329,14 @@ def format_exception_message(exc: Exception) -> str:
     """Format an exception message for returning to the frontend."""
     # We need to check if the __cause__ is a SyntaxError
     # If it is, we need to return the message of the SyntaxError
+    from lfx.utils.exceptions import module_not_found_hint
+
     causing_exception = get_causing_exception(exc)
     if isinstance(causing_exception, SyntaxError):
         return format_syntax_error_message(causing_exception)
+    hint = module_not_found_hint(causing_exception)
+    if hint is not None:
+        return hint
     return str(exc)
 
 
@@ -331,113 +396,57 @@ def parse_value(value: Any, input_type: str) -> Any:
         if isinstance(value, dict):
             return value
         try:
-            return literal_eval(value) if value is not None else {}
-        except (ValueError, SyntaxError):
+            parsed = _json.loads(value) if value is not None else {}
+            return parsed if isinstance(parsed, dict) else {}
+        except (ValueError, TypeError):
             return {}
     return value
 
 
-async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None:
-    try:
-        # TODO: Verify if deleting messages is safe in terms of session id relevance
-        # If we delete messages directly, rather than setting flow_id to null,
-        # it might cause unexpected behaviors because the session id could still be
-        # used elsewhere to search for these messages.
-        await session.exec(delete(MessageTable).where(MessageTable.flow_id == flow_id))
-        await session.exec(delete(TransactionTable).where(TransactionTable.flow_id == flow_id))
-        await session.exec(delete(VertexBuildTable).where(VertexBuildTable.flow_id == flow_id))
-        # Explicit delete despite FK CASCADE — SQLite doesn't enforce FK cascades
-        # by default (requires PRAGMA foreign_keys = ON), and this function follows
-        # the existing pattern of explicitly deleting all child records.
-        await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
-        await session.exec(delete(Flow).where(Flow.id == flow_id))
-    except Exception as e:
-        msg = f"Unable to cascade delete flow: {flow_id}"
-        raise RuntimeError(msg, e) from e
-
-
-def custom_params(
-    page: int | None = Query(None),
-    size: int | None = Query(None),
-):
+def custom_params(page: PageQuery = None, size: SizeQuery = None):
     if page is None and size is None:
         return None
     return Params(page=page or MIN_PAGE_SIZE, size=size or MAX_PAGE_SIZE)
 
 
-async def verify_public_flow_and_get_user(flow_id: uuid.UUID, client_id: str | None) -> tuple[User, uuid.UUID]:
-    """Verify a public flow request and generate a deterministic flow ID.
-
-    This utility function:
-    1. Checks that a client_id cookie is provided
-    2. Verifies the flow exists and is marked as PUBLIC
-    3. Creates a deterministic UUID based on client_id and original flow_id
-    4. Retrieves the flow owner user for permission purposes
-
-    This function is used to support public flow endpoints that don't require
-    authentication but still need to operate within the permission model.
-
-    Args:
-        flow_id: The original flow ID to verify
-        client_id: The client ID from the request cookie
-
-    Returns:
-        tuple: (flow owner user, deterministic flow ID for tracking)
-
-    Raises:
-        HTTPException:
-            - 400 if no client_id is provided
-            - 403 if flow doesn't exist or isn't public
-            - 403 if unable to retrieve the flow owner user
-            - 403 if user is not found for public flow
-    """
-    if not client_id:
-        raise HTTPException(status_code=400, detail="No client_id cookie found")
-
-    # Check if the flow is public
-    async with session_scope() as session:
-        from sqlmodel import select
-
-        from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
-
-        flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
-        if not flow or flow.access_type is not AccessTypeEnum.PUBLIC:
-            raise HTTPException(status_code=403, detail="Flow is not public")
-
-    # Create a new flow ID using the client_id and flow_id
-    new_id = f"{client_id}_{flow_id}"
-    new_flow_id = uuid.uuid5(uuid.NAMESPACE_DNS, new_id)
-
-    # Get the user associated with the flow
-    try:
-        from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
-
-        user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-
-    except Exception as exc:
-        await logger.aexception(f"Error getting user for public flow {flow_id}")
-        raise HTTPException(status_code=403, detail="Flow is not accessible") from exc
-
-    if not user:
-        msg = f"User not found for public flow {flow_id}"
-        raise HTTPException(status_code=403, detail=msg)
-
-    return user, new_flow_id
+# Well-known authentication headers that can be propagated to nested MCP calls
+# when ``include_auth_headers=True`` is passed. These are stored under their
+# lowercase header names so that nested server configs can reference them
+# directly, e.g. ``{"x-api-key": "x-api-key"}`` in the MCP server headers config.
+_AUTH_HEADERS_TO_PROPAGATE = frozenset({"x-api-key", "authorization"})
 
 
-def extract_global_variables_from_headers(headers) -> dict[str, str]:
-    """Extract global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*.
+def extract_global_variables_from_headers(headers, *, include_auth_headers: bool = False) -> dict[str, str]:
+    """Extract global variables from HTTP headers.
+
+    By default, only headers with the ``X-LANGFLOW-GLOBAL-VAR-*`` prefix are
+    extracted. When ``include_auth_headers=True``, the well-known authentication
+    headers ``x-api-key`` and ``authorization`` are additionally captured under
+    their lowercase names so that nested MCP server configs can reference them
+    directly (e.g. ``{"x-api-key": "x-api-key"}``).
+
+    SECURITY NOTE: Only pass ``include_auth_headers=True`` from MCP call sites
+    (see ``api/v1/mcp_projects.py``). On non-MCP routes such as ``/run`` and
+    ``/workflow``, ``x-api-key`` is Langflow's own authentication key — exposing
+    it in ``request_variables`` would make it readable by any component that
+    reads the graph context.
 
     Args:
-        headers: HTTP headers object (e.g., from FastAPI Request.headers)
+        headers: HTTP headers object (e.g., from FastAPI Request.headers).
+        include_auth_headers: When True, also extract well-known authentication
+            headers (``x-api-key``, ``authorization``) under their lowercase
+            names. Should only be set by MCP request handlers that need to
+            propagate these values to nested MCP calls.
 
     Returns:
-        Dictionary mapping variable names (uppercase) to their values
+        Dictionary mapping variable names to their values.
 
     Example:
-        headers = {"X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret", "Content-Type": "application/json"}
-        result = extract_global_variables_from_headers(headers)
-        # Returns: {"API_KEY": "secret"}
+        headers = {"X-LANGFLOW-GLOBAL-VAR-API-KEY": "secret", "x-api-key": "mykey"}
+        extract_global_variables_from_headers(headers)
+        # Returns: {"API-KEY": "secret"}
+        extract_global_variables_from_headers(headers, include_auth_headers=True)
+        # Returns: {"API-KEY": "secret", "x-api-key": "mykey"}
     """
     variables: dict[str, str] = {}
 
@@ -447,6 +456,8 @@ def extract_global_variables_from_headers(headers) -> dict[str, str]:
             if header_lower.startswith(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX):
                 var_name = header_lower[len(LANGFLOW_GLOBAL_VAR_HEADER_PREFIX) :].upper()
                 variables[var_name] = header_value
+            elif include_auth_headers and header_lower in _AUTH_HEADERS_TO_PROPAGATE:
+                variables[header_lower] = header_value
     except Exception as exc:  # noqa: BLE001
         # Log the error but don't raise - we want to continue execution
         logger.exception("Failed to extract global variables from headers: %s", exc)
@@ -460,3 +471,20 @@ def raise_error_if_astra_cloud_env():
         raise_error_if_astra_cloud_disable_component(disable_endpoint_in_astra_cloud_msg)
     except Exception as e:
         raise HTTPException(status_code=403, detail=str(e)) from e
+
+
+_FORBIDDEN_HEADER_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def build_content_disposition(filename: str) -> str:
+    """Build a RFC 5987-compliant Content-Disposition header value.
+
+    Strips ASCII control chars (CR/LF/NUL/etc.) to prevent header injection,
+    then produces a dual-param header: an ASCII fallback (with backslash and
+    double-quote escaped per RFC 6266 §4.1) and a percent-encoded UTF-8 param
+    so both legacy and modern clients receive an unambiguous filename.
+    """
+    safe_filename = _FORBIDDEN_HEADER_CHARS.sub("_", filename)
+    ascii_fallback = safe_filename.encode("ascii", "replace").decode("ascii").replace("\\", "\\\\").replace('"', '\\"')
+    encoded = quote(safe_filename, safe="")
+    return f"attachment; filename=\"{ascii_fallback}\"; filename*=UTF-8''{encoded}"

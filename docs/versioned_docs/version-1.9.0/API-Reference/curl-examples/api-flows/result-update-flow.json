@@ -1,0 +1,17 @@
+{
+  "name": "string",
+  "description": "string",
+  "icon": "Braces",
+  "icon_bg_color": null,
+  "gradient": "2",
+  "data": {},
+  "is_component": false,
+  "updated_at": "2024-12-30T18:30:22+00:00",
+  "webhook": false,
+  "endpoint_name": "my_new_endpoint_name",
+  "tags": null,
+  "locked": true,
+  "id": "01ce083d-748b-4b8d-97b6-33adbb6a528a",
+  "user_id": "f58396d4-a387-4bb8-b749-f40825c3d9f3",
+  "project_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+}

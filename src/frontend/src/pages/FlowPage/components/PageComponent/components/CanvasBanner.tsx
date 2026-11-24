@@ -57,7 +57,7 @@ export default function CanvasBanner({
   variant = "readme",
 }: CanvasBannerProps) {
   return (
-    <div className="version-preview-banner-enter pointer-events-auto absolute bottom-7 left-1/2 w-[650px]">
+    <div className="version-preview-banner-enter pointer-events-auto absolute bottom-20 left-1/2 w-[650px]">
       <div className={canvasBannerVariants[variant]}>
         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#6366F1]/20">
           <ForwardedIconComponent

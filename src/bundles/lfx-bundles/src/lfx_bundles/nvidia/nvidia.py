@@ -1,0 +1,155 @@
+from typing import Any
+
+from lfx.base.models.model import LCModelComponent
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
+from lfx.field_typing import LanguageModel
+from lfx.field_typing.range_spec import RangeSpec
+from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, MessageTextInput, SecretStrInput, SliderInput
+from lfx.schema.dotdict import dotdict
+
+from lfx_bundles.nvidia._client import DEFAULT_NVIDIA_BASE_URL, nvidia_client_policy
+from lfx_bundles.nvidia._client import _install_session_policy as _install_redirect_policy  # noqa: F401
+
+
+class NVIDIAModelComponent(LCModelComponent):
+    display_name = "NVIDIA"
+    description = "Generates text using NVIDIA LLMs."
+    icon = "NVIDIA"
+
+    inputs = [
+        *LCModelComponent.get_base_inputs(),
+        IntInput(
+            name="max_tokens",
+            display_name="Max Tokens",
+            advanced=True,
+            info="The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+        ),
+        DropdownInput(
+            name="model_name",
+            display_name="Model Name",
+            info="The name of the NVIDIA model to use.",
+            advanced=False,
+            value=None,
+            options=[],
+            combobox=True,
+            refresh_button=True,
+        ),
+        BoolInput(
+            name="detailed_thinking",
+            display_name="Detailed Thinking",
+            info="If true, the model will return a detailed thought process. Only supported by reasoning models.",
+            value=False,
+            show=False,
+        ),
+        BoolInput(
+            name="tool_model_enabled",
+            display_name="Enable Tool Models",
+            info="If enabled, only show models that support tool-calling.",
+            advanced=False,
+            value=False,
+            real_time_refresh=True,
+        ),
+        MessageTextInput(
+            name="base_url",
+            display_name="NVIDIA Base URL",
+            value=DEFAULT_NVIDIA_BASE_URL,
+            info="The base URL of the NVIDIA API. Defaults to https://integrate.api.nvidia.com/v1.",
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="NVIDIA API Key",
+            info="The NVIDIA API Key.",
+            advanced=False,
+            value="NVIDIA_API_KEY",
+        ),
+        SliderInput(
+            name="temperature",
+            display_name="Temperature",
+            value=0.1,
+            info="Run inference with this temperature.",
+            range_spec=RangeSpec(min=0, max=1, step=0.01),
+            advanced=True,
+        ),
+        IntInput(
+            name="seed",
+            display_name="Seed",
+            info="The seed controls the reproducibility of the job.",
+            advanced=True,
+            value=1,
+        ),
+    ]
+
+    def get_models(self, *, tool_model_enabled: bool | None = None) -> list[str]:
+        """List models from the configured endpoint, optionally filtering for tool support."""
+        ensure_credential_endpoint_allowed(
+            self.api_key or None,
+            self.base_url,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
+            # An absent key is not an absent credential: ChatNVIDIA reads NVIDIA_API_KEY
+            # from the server environment itself and sends it to whatever base URL is set.
+            sdk_env_fallback="NVIDIA_API_KEY",
+        )
+        try:
+            from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        except ImportError as e:
+            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+            raise ImportError(msg) from e
+
+        with nvidia_client_policy(self.base_url):
+            model = ChatNVIDIA(base_url=self.base_url, api_key=self.api_key or None)
+        if tool_model_enabled:
+            tool_models = [m for m in model.available_models if m.supports_tools]
+            return sorted(m.id for m in tool_models)
+        return sorted(m.id for m in model.available_models)
+
+    def update_build_config(self, build_config: dotdict, _field_value: Any, field_name: str | None = None):
+        if field_name in {"model_name", "tool_model_enabled", "base_url", "api_key"}:
+            try:
+                ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
+                build_config["model_name"]["options"] = ids
+
+                if "value" not in build_config["model_name"] or build_config["model_name"]["value"] is None:
+                    build_config["model_name"]["value"] = ids[0]
+                elif build_config["model_name"]["value"] not in ids:
+                    build_config["model_name"]["value"] = None
+
+                # TODO: use api to determine if model supports detailed thinking
+                if build_config["model_name"]["value"] == "nemotron":
+                    build_config["detailed_thinking"]["show"] = True
+                else:
+                    build_config["detailed_thinking"]["value"] = False
+                    build_config["detailed_thinking"]["show"] = False
+            except Exception as e:
+                msg = f"Error getting model names: {e}"
+                build_config["model_name"]["value"] = None
+                build_config["model_name"]["options"] = []
+                raise ValueError(msg) from e
+
+        return build_config
+
+    def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        api_key = self.api_key or None
+        ensure_credential_endpoint_allowed(
+            api_key,
+            self.base_url,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
+            sdk_env_fallback="NVIDIA_API_KEY",
+        )
+        try:
+            from langchain_nvidia_ai_endpoints import ChatNVIDIA
+        except ImportError as e:
+            msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
+            raise ImportError(msg) from e
+        temperature = self.temperature
+        model_name: str = self.model_name
+        max_tokens = self.max_tokens
+        seed = self.seed
+        with nvidia_client_policy(self.base_url):
+            return ChatNVIDIA(
+                max_tokens=max_tokens or None,
+                model=model_name,
+                base_url=self.base_url,
+                api_key=api_key,
+                temperature=temperature or 0.1,
+                seed=seed,
+            )

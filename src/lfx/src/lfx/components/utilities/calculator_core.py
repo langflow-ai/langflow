@@ -43,11 +43,6 @@ class CalculatorComponent(Component):
                 return float(node.value)
             error_msg = f"Unsupported constant type: {type(node.value).__name__}"
             raise TypeError(error_msg)
-        if isinstance(node, ast.Num):  # For backwards compatibility
-            if isinstance(node.n, int | float):
-                return float(node.n)
-            error_msg = f"Unsupported number type: {type(node.n).__name__}"
-            raise TypeError(error_msg)
 
         if isinstance(node, ast.BinOp):
             op_type = type(node.op)

@@ -6,6 +6,7 @@ from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.component import Component
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.custom.utils import update_component_build_config
+from lfx.inputs.inputs import MultilineSecretInput, SecretStrInput, StrInput
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.template import Output
@@ -24,6 +25,25 @@ def test_set_invalid_output():
     chatoutput = ChatOutput()
     with pytest.raises(ValueError, match="Method build_config is not a valid output of ChatInput"):
         chatoutput.set(input_value=chatinput.build_config)
+
+
+@pytest.mark.parametrize("repr_value", ["", "Explicit preview", {"preview": "Explicit preview"}])
+def test_custom_repr_tracks_status_without_overwriting_explicit_value(repr_value):
+    component = Component()
+    component.repr_value = repr_value
+    component.status = "First output"
+    first_repr = component.custom_repr()
+
+    component.status = "Second output"
+    second_repr = component.custom_repr()
+
+    if repr_value == "":
+        assert first_repr == "First output"
+        assert second_repr == "Second output"
+    else:
+        assert first_repr == second_repr
+        assert "Explicit preview" in second_repr
+    assert component.repr_value == repr_value
 
 
 @pytest.mark.xfail(reason="CrewAI is not outdated")
@@ -140,6 +160,31 @@ async def test_send_message_without_database():
     assert event_manager.on_message.called
 
 
+@pytest.mark.asyncio
+async def test_process_chunk_marks_first_event_partial_without_mutating_message():
+    component = Component()
+    messages: list[dict] = []
+    tokens: list[dict] = []
+
+    class EventManager:
+        def on_message(self, data):
+            messages.append(data)
+
+        def on_token(self, data):
+            tokens.append(data)
+
+    component._event_manager = EventManager()
+    message = Message(text="", sender="AI")
+    message.properties.state = "complete"
+
+    complete_message = await component._process_chunk("", "", "message-id", message, first_chunk=True)
+
+    assert complete_message == ""
+    assert message.properties.state == "complete"
+    assert messages[0]["properties"]["state"] == "partial"
+    assert tokens == [{"chunk": "", "id": "message-id"}]
+
+
 @pytest.mark.usefixtures("use_noop_session")
 @pytest.mark.asyncio
 async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
@@ -168,3 +213,57 @@ async def test_agent_component_send_message_events(monkeypatch):  # noqa: ARG001
     assert result.sender_name == "Test"
     # The focus is on testing the message handling logic, not the database persistence layer
     assert event_manager.on_message.called
+
+
+def test_extract_data_returns_dataframe_unchanged():
+    pd = pytest.importorskip("pandas")
+
+    component = Component()
+    dataframe = pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})
+
+    extracted = component.extract_data(dataframe)
+    assert extracted is dataframe
+
+
+def test_extract_data_returns_series_unchanged():
+    pd = pytest.importorskip("pandas")
+
+    component = Component()
+    series = pd.Series([1, 2, 3], name="numbers")
+
+    extracted = component.extract_data(series)
+    assert extracted is series
+
+
+def test_trace_redacts_runtime_and_metadata_secrets():
+    class TraceComponent(Component):
+        inputs = [
+            # These two types do not opt into the predefined-input trace map,
+            # so they exercise the runtime-input map exclusively.
+            SecretStrInput(name="runtime_secret", display_name="Runtime Secret"),
+            StrInput(name="runtime_label", display_name="Runtime Label", value="metadata-safe-label"),
+            MultilineSecretInput(
+                name="metadata_secret",
+                display_name="Metadata Secret",
+                value="metadata-secret-sentinel",  # pragma: allowlist secret
+            ),
+        ]
+
+    component = TraceComponent()
+    component.set_attributes(
+        {
+            "runtime_secret": "secret-sentinel",  # pragma: allowlist secret
+            "runtime_label": "runtime-safe-label",
+            "metadata_secret": "runtime-metadata-secret-sentinel",  # pragma: allowlist secret
+        }
+    )
+
+    assert component.get_trace_as_inputs() == {
+        "runtime_secret": "**********",
+        "runtime_label": "runtime-safe-label",
+        "metadata_secret": "**********",
+    }
+    assert component.get_trace_as_metadata() == {
+        "runtime_label": "metadata-safe-label",
+        "metadata_secret": "**********",
+    }

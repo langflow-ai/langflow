@@ -1,7 +1,7 @@
-import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
 test(
   "user should interact with tab component",
@@ -67,9 +67,9 @@ test(
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     // Verify that all tabs are visible
-    expect(await page.getByText("Tab 1").isVisible()).toBeTruthy();
-    expect(await page.getByText("Tab 2").isVisible()).toBeTruthy();
-    expect(await page.getByText("Tab 3").isVisible()).toBeTruthy();
+    await expect(page.getByTestId("tab_0_tab_1")).toBeVisible();
+    await expect(page.getByTestId("tab_1_tab_2")).toBeVisible();
+    await expect(page.getByTestId("tab_2_tab_3")).toBeVisible();
 
     // Verify that Tab 1 is active by default (as specified in the value)
     expect(
@@ -96,31 +96,11 @@ test(
   },
 );
 
-async function extractAndCleanCode(page: Page): Promise<string> {
-  const outerHTML = await page
-    .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
-
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the HTML");
-  }
-
-  const codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/");
-
-  return codeContent;
-}
-
 function updateComponentCode(
   code: string,
   updates: {
     imports?: string[];
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     inputs?: Array<{ name: string; config: Record<string, any> }>;
   },
 ): string {

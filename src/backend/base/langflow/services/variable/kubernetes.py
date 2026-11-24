@@ -5,6 +5,7 @@ import os
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.variable import VariableNotFoundError
 from typing_extensions import override
 
 from langflow.services.auth import utils as auth_utils
@@ -67,7 +68,7 @@ class KubernetesSecretService(VariableService, Service):
         variables = self.kubernetes_secrets.get_secret(name=secret_name)
         if not variables:
             msg = f"user_id {user_id} variable not found."
-            raise ValueError(msg)
+            raise VariableNotFoundError(msg)
 
         if name in variables:
             return name, variables[name]
@@ -75,7 +76,7 @@ class KubernetesSecretService(VariableService, Service):
         if credential_name in variables:
             return credential_name, variables[credential_name]
         msg = f"user_id {user_id} variable name {name} not found."
-        raise ValueError(msg)
+        raise VariableNotFoundError(msg)
 
     @override
     async def get_variable(self, user_id: UUID | str, name: str, field: str, session: AsyncSession) -> str:
@@ -198,6 +199,7 @@ class KubernetesSecretService(VariableService, Service):
             variable = Variable.model_validate(variable_base, from_attributes=True, update={"user_id": user_id})
             variable_read = VariableRead.model_validate(variable, from_attributes=True)
             variable_read.value = decrypted_value
+            variable_read.has_value = bool(value.strip())
             variables_read.append(variable_read)
 
         return variables_read

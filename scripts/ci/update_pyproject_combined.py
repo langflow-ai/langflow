@@ -3,19 +3,45 @@
 import sys
 from pathlib import Path
 
+from bundle_release_plan import PlanError, PyPIClient, ensure_unpublished_bundles_fit_lfx_line, restamp_nightly_bundles
 from update_lf_base_dependency import update_lfx_dep_in_base
-from update_pyproject_name import update_pyproject_name
-from update_pyproject_name import update_uv_dep as update_name_uv_dep
 from update_pyproject_version import update_pyproject_version
 from update_uv_dependency import update_uv_dep as update_version_uv_dep
 
 # Add the current directory to the path so we can import the other scripts
 current_dir = Path(__file__).resolve().parent
 sys.path.append(str(current_dir))
+BASE_DIR = current_dir.parents[1]
+
+
+def update_projects_for_nightly(main_tag: str, base_tag: str, lfx_tag: str) -> None:
+    """Apply a coordinated full/base/LFX nightly version chain."""
+    main_version = main_tag.removeprefix("v")
+    base_version = base_tag.removeprefix("v")
+    lfx_version = lfx_tag.removeprefix("v")
+
+    # Lockstep invariant: full -> base must use dev versions published by this
+    # run. pypi_nightly_tag.py gives both packages the same tag.
+
+    # First handle base package updates (canonical name kept).
+    update_pyproject_version("src/backend/base/pyproject.toml", base_version)
+
+    # Update LFX dependency in langflow-base (exact canonical dev pin).
+    update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
+
+    # Then handle main package updates (canonical name kept).
+    update_pyproject_version("pyproject.toml", main_version)
+    # Main delegates directly to the product-aligned base distribution.
+    update_version_uv_dep(base_version)
+    restamp_nightly_bundles(lfx_version, base_dir=BASE_DIR)
 
 
 def main():
-    """Universal update script that handles both base and main updates in a single run.
+    """Universal update script that handles base and main in a single run.
+
+    The packages keep their CANONICAL names (``langflow``, ``langflow-base``) -- they are NOT
+    renamed to ``*-nightly``. This script only sets the nightly ``.devN`` versions and re-pins the
+    inter-package dependencies to exact canonical dev versions. See ``src/bundles/NIGHTLY.md``.
 
     Usage:
     update_pyproject_combined.py main <main_tag> <base_tag> <lfx_tag>
@@ -32,26 +58,13 @@ def main():
         print("Usage: update_pyproject_combined.py main <main_tag> <base_tag> <lfx_tag>")
         sys.exit(1)
 
-    main_tag = sys.argv[2]
-    base_tag = sys.argv[3]
-    lfx_tag = sys.argv[4]
-
-    # First handle base package updates
-    update_pyproject_name("src/backend/base/pyproject.toml", "langflow-base-nightly")
-    update_name_uv_dep("pyproject.toml", "langflow-base-nightly")
-    update_pyproject_version("src/backend/base/pyproject.toml", base_tag)
-
-    # Update LFX dependency in langflow-base
-    lfx_version = lfx_tag.lstrip("v")
-    update_lfx_dep_in_base("src/backend/base/pyproject.toml", lfx_version)
-
-    # Then handle main package updates
-    update_pyproject_name("pyproject.toml", "langflow-nightly")
-    update_name_uv_dep("pyproject.toml", "langflow-nightly")
-    update_pyproject_version("pyproject.toml", main_tag)
-    # Update dependency version (strip 'v' prefix if present)
-    base_version = base_tag.lstrip("v")
-    update_version_uv_dep(base_version)
+    # The nightly publishes every unpublished bundle version, so it must not claim another lfx line's minor.
+    try:
+        ensure_unpublished_bundles_fit_lfx_line(sys.argv[4].removeprefix("v"), PyPIClient(), base_dir=BASE_DIR)
+    except PlanError as exc:
+        print(exc)
+        sys.exit(1)
+    update_projects_for_nightly(sys.argv[2], sys.argv[3], sys.argv[4])
 
 
 if __name__ == "__main__":

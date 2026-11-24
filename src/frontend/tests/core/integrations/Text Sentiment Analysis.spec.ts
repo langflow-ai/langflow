@@ -1,44 +1,26 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { unselectNodes } from "../../utils/unselect-nodes";
+import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "user should be able to analyze text sentiment",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    await seedLoopbackProvider(page);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page
       .getByRole("heading", { name: "Text Sentiment Analysis" })
       .click();
-    await initialGPTsetup(page);
+    await configureLoopbackOpenAI(page);
 
-    await page.getByTestId("input-file-component").last().click();
-    const fileChooserPromise = page.waitForEvent("filechooser");
-    await page.getByTestId("drag-files-component").last().click();
-
-    const fileChooser = await fileChooserPromise;
-    await fileChooser.setFiles(
-      path.join(__dirname, "../../assets/test_file.txt"),
-    );
-    await page.getByText("test_file.txt").last().isVisible();
-
-    await page.waitForTimeout(500);
-    await page.getByTestId("select-files-modal-button").click();
+    await uploadFile(page, "test_file.txt");
 
     await page.waitForSelector('[data-testid="title-Chat Output"]', {
       timeout: 3000,
@@ -48,20 +30,33 @@ withEventDeliveryModes(
     await page.getByTestId("icon-MoreHorizontal").click();
     await page.getByText("Expand").click();
     await unselectNodes(page);
-    await page.getByTestId("button_run_chat output").last().click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    const [buildResponse] = await Promise.all([
+      page.waitForResponse(
+        (response) =>
+          response.request().method() === "POST" &&
+          new URL(response.url()).pathname === "/api/v2/workflows",
+      ),
+      page.getByTestId("button_run_chat output").last().click(),
+    ]);
+    expect(buildResponse.ok()).toBeTruthy();
+    expect(await buildResponse.finished()).toBeNull();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
-      .getByText("Add a Chat Input component to your flow to send messages.", {
-        exact: true,
-      })
-      .last()
-      .isVisible();
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
+    await expect(
+      page
+        .getByText(
+          "Add a Chat Input component to your flow to send messages.",
+          {
+            exact: true,
+          },
+        )
+        .last(),
+    ).toBeVisible();
 
-    await page.waitForTimeout(5000);
-
-    const textAnalysis = await page.locator(".markdown").last().textContent();
-    expect(textAnalysis?.length).toBeGreaterThan(50);
+    await expect(page.locator(".markdown").last()).toContainText("positive", {
+      ignoreCase: true,
+    });
   },
 );

@@ -1,14 +1,15 @@
+import os
 import re
 from collections.abc import Callable, Sequence
 from typing import Any
 
-from langchain.agents import (
+from langchain_classic.agents import (
     create_json_chat_agent,
     create_openai_tools_agent,
     create_tool_calling_agent,
     create_xml_agent,
 )
-from langchain.agents.xml.base import render_text_description
+from langchain_classic.agents.xml.base import render_text_description
 from langchain_core.language_models import BaseLanguageModel
 from langchain_core.messages import BaseMessage
 from langchain_core.prompts import BasePromptTemplate, ChatPromptTemplate
@@ -60,7 +61,7 @@ def data_to_messages(data: list[Data | Message]) -> list[BaseMessage]:
             else:
                 logger.warning("Skipping message with empty content in chat history")
         except (ValueError, AttributeError) as e:
-            logger.warning(f"Failed to convert message to BaseMessage: {e}")
+            logger.warning("Failed to convert message to BaseMessage", exc_info=e)
             continue
     return messages
 
@@ -178,7 +179,7 @@ def safe_cache_set(cache: CacheService, key, value):
     try:
         cache.set(key, value)
     except (AttributeError, TypeError) as e:
-        logger.warning(f"Failed to set cache key '{key}': {e}")
+        logger.warning(f"Failed to set cache key '{key}'", exc_info=e)
 
 
 def maybe_unflatten_dict(flat: dict[str, Any]) -> dict[str, Any]:
@@ -239,3 +240,34 @@ def get_chat_output_sender_name(self) -> str | None:
             return vertex.raw_params.get("sender_name")
 
     return None
+
+
+def resolve_agent_verbose() -> bool:
+    """Resolve whether LangChain's ``AgentExecutor`` should emit stdout chain markers.
+
+    When ``verbose`` is truthy, ``AgentExecutor`` attaches a ``StdOutCallbackHandler``
+    that writes ``> Entering new ... chain`` / ``> Finished chain.`` lines straight to
+    **stdout** via ``print()`` -- bypassing Langflow's logging system entirely (no log
+    level, no formatting). That output is pure noise in container/Kubernetes/OpenShift
+    deployments where stdout is harvested as logs, and the same agent steps are already
+    surfaced through Langflow's own event stream (the "Agent Steps" content blocks).
+
+    The markers are therefore **off by default** and gated behind LangChain's own
+    ``LANGCHAIN_VERBOSE`` environment variable -- the conventional switch for this
+    behavior. Setting ``LANGCHAIN_VERBOSE`` to a truthy value (``true``/``1``/``yes``/
+    ``on``) re-enables them; any other value, or leaving it unset, keeps them
+    suppressed -- including for saved flows that baked in ``verbose=True`` before this
+    change. The component's legacy ``verbose`` input no longer attaches the stdout
+    handler on its own.
+
+    The environment variable is read directly (rather than via
+    ``langchain_core.globals.get_verbose()``) so the behavior is deterministic and
+    test-mockable with ``patch.dict(os.environ, ...)``.
+
+    Returns:
+        bool: True only when ``LANGCHAIN_VERBOSE`` is explicitly set to a truthy value.
+    """
+    env_value = os.getenv("LANGCHAIN_VERBOSE")
+    if env_value is not None:
+        return env_value.strip().lower() in ("true", "1", "yes", "on")
+    return False

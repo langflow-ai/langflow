@@ -9,11 +9,36 @@ export interface CreateKnowledgeBaseRequest {
   name: string;
   embedding_provider: string;
   embedding_model: string;
+  /**
+   * Exact unified-model selection captured at create time. Retrieval uses
+   * this instead of resolving by provider/name again, which avoids drift
+   * when multiple providers expose the same model name.
+   */
+  model_selection?: unknown;
   column_config?: Array<{
     column_name: string;
     vectorize: boolean;
     identifier: boolean;
   }>;
+  /**
+   * Vector-store backend selector. When omitted (``undefined``), the server
+   * resolves the deployment default — "postgres" when pgVector is configured
+   * via ``PGVECTOR_CONNECTION_STRING``, otherwise "chroma". Accepted explicit
+   * values are "chroma", "opensearch", and "postgres"; the server rejects
+   * others.
+   */
+  backend_type?: string;
+  /**
+   * Per-backend configuration. Shape depends on ``backend_type``:
+   *
+   * - ``"chroma"``: ``{}`` (no config — uses the on-disk KB directory)
+   * - ``"opensearch"``: ``{ url_variable?, username_variable?,
+   *   password_variable?, index_name, vector_field?, text_field? }``
+   *
+   * Credentials are referenced by Langflow-variable *name*, never
+   * embedded as raw secrets.
+   */
+  backend_config?: Record<string, unknown>;
 }
 
 export const useCreateKnowledgeBase: useMutationFunctionType<
@@ -21,7 +46,7 @@ export const useCreateKnowledgeBase: useMutationFunctionType<
   CreateKnowledgeBaseRequest,
   KnowledgeBaseInfo
 > = (options?) => {
-  const { mutate, queryClient } = UseRequestProcessor();
+  const { mutate } = UseRequestProcessor();
 
   const createKnowledgeBaseFn = async (
     payload: CreateKnowledgeBaseRequest,
@@ -35,7 +60,7 @@ export const useCreateKnowledgeBase: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     KnowledgeBaseInfo,
-    any,
+    Error,
     CreateKnowledgeBaseRequest
   > = mutate(["useCreateKnowledgeBase"], createKnowledgeBaseFn, {
     ...options,

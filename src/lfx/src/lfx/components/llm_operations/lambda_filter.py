@@ -6,18 +6,17 @@ from collections.abc import Callable  # noqa: TC003 - required at runtime for dy
 from typing import Any
 
 from lfx.base.models.unified_models import (
-    apply_provider_variable_config_to_build_config,
-    get_language_model_options,
     get_llm,
-    get_provider_for_model_name,
-    update_model_options_in_build_config,
+    handle_model_input_update,
 )
 from lfx.custom.custom_component.component import Component
 from lfx.io import DataInput, IntInput, ModelInput, MultilineInput, Output, SecretStrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.schema.token_usage import extract_usage_from_message
 from lfx.utils.constants import MESSAGE_SENDER_AI
+from lfx.utils.python_repl_security import safe_builtins, validate_code_safety
 
 TEXT_TRANSFORM_PROMPT = (
     "Given this text, create a Python lambda function that transforms it "
@@ -67,7 +66,7 @@ class LambdaFilterComponent(Component):
         SecretStrInput(
             name="api_key",
             display_name="API Key",
-            info="Model Provider API key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
             real_time_refresh=True,
             advanced=True,
         ),
@@ -118,27 +117,7 @@ class LambdaFilterComponent(Component):
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
-        build_config = update_model_options_in_build_config(
-            component=self,
-            build_config=build_config,
-            cache_key_prefix="language_model_options",
-            get_options_func=get_language_model_options,
-            field_name=field_name,
-            field_value=field_value,
-        )
-
-        current_model_value = field_value if field_name == "model" else build_config.get("model", {}).get("value")
-        provider = ""
-        if isinstance(current_model_value, list) and current_model_value:
-            selected_model = current_model_value[0]
-            provider = (selected_model.get("provider") or "").strip()
-            if not provider and selected_model.get("name"):
-                provider = get_provider_for_model_name(str(selected_model["name"]))
-
-        if provider:
-            build_config = apply_provider_variable_config_to_build_config(build_config, provider)
-
-        return build_config
+        return handle_model_input_update(self, build_config, field_value, field_name)
 
     def get_data_structure(self, data):
         """Extract the structure of data, replacing values with their types."""
@@ -261,7 +240,18 @@ class LambdaFilterComponent(Component):
             msg = f"Invalid lambda format: {lambda_text}"
             raise ValueError(msg)
 
-        return eval(lambda_text)  # noqa: S307
+        # The lambda text is produced by an LLM from the user-controlled `filter_instruction`,
+        # so it is untrusted: a prompt-injection can steer it to "lambda x: __import__('os')...".
+        # Reject sandbox-escape gadgets (dunder/frame attribute access, inline imports) via the
+        # shared AST check, then eval with a curated builtins mapping so __import__/open/eval/exec
+        # are unreachable. Defense-in-depth, not a guaranteed sandbox.
+        try:
+            validate_code_safety(lambda_text)
+        except (ValueError, SyntaxError) as exc:
+            msg = f"Refusing to evaluate unsafe lambda: {exc}"
+            raise ValueError(msg) from exc
+
+        return eval(lambda_text, {"__builtins__": safe_builtins()})  # noqa: S307
 
     async def _execute_lambda(self) -> Any:
         """Generate and execute a lambda function based on input type."""
@@ -273,7 +263,8 @@ class LambdaFilterComponent(Component):
             prompt = self._build_data_prompt(data)
 
         llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
-        response = await llm.ainvoke(prompt)
+        response = await llm.ainvoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
+        self._token_usage = extract_usage_from_message(response)
         response_text = response.content if hasattr(response, "content") else str(response)
 
         fn = self._parse_lambda_from_response(response_text)

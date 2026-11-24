@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import IconComponent from "../../../components/common/genericIconComponent";
@@ -17,6 +18,8 @@ export const ContentRenderKey = ({
   textCopied: boolean;
   renderKey: boolean;
 }) => {
+  const { t } = useTranslation();
+
   return (
     <>
       <div className="flex items-center gap-3">
@@ -29,6 +32,7 @@ export const ContentRenderKey = ({
 
           <Input
             data-testid="api-key-input"
+            aria-label={t("apiKey.generated")}
             ref={inputRef}
             readOnly={true}
             value={apiKeyValue}
@@ -41,12 +45,17 @@ export const ContentRenderKey = ({
             e.stopPropagation();
           }}
           data-testid="btn-copy-api-key"
+          aria-label={t("apiKey.copy")}
           unstyled
         >
           {textCopied ? (
-            <IconComponent name="Copy" className="h-4 w-4" />
+            <IconComponent name="Copy" className="h-4 w-4" aria-hidden="true" />
           ) : (
-            <IconComponent name="Check" className="h-4 w-4" />
+            <IconComponent
+              name="Check"
+              className="h-4 w-4"
+              aria-hidden="true"
+            />
           )}
         </Button>
       </div>

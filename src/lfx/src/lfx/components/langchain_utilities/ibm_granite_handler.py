@@ -13,8 +13,8 @@ not just Granite models. This includes:
 
 import re
 
-from langchain.agents.format_scratchpad.tools import format_to_tool_messages
-from langchain.agents.output_parsers.tools import ToolsAgentOutputParser
+from langchain_classic.agents.format_scratchpad.tools import format_to_tool_messages
+from langchain_classic.agents.output_parsers.tools import ToolsAgentOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda
 
@@ -31,11 +31,17 @@ def is_watsonx_model(llm) -> bool:
     """Check if the LLM is an IBM WatsonX model (any model, not just Granite).
 
     This detects the provider (WatsonX) rather than a specific model,
-    since tool calling issues affect all models on the WatsonX platform.
+    since tool calling issues affect all models on the WatsonX platform. OpenAI-compatible
+    proxies identify WatsonX routes with a ``watsonx/`` model-name prefix.
     """
     # Check class name for WatsonX (e.g., ChatWatsonx)
     class_name = type(llm).__name__.lower()
     if "watsonx" in class_name:
+        return True
+
+    # LiteLLM Proxy returns ChatOpenAI, so the model name is the only provider signal.
+    model_name = getattr(llm, "model_name", "")
+    if isinstance(model_name, str) and model_name.lower().startswith("watsonx/"):
         return True
 
     # Fallback: check module name (e.g., langchain_ibm)

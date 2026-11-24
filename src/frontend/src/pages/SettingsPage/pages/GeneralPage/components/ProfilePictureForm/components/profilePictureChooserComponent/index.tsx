@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ProfilePicturesQueryResponse } from "@/controllers/API/queries/files";
 import { customPreLoadImageUrl } from "@/customization/utils/custom-pre-load-image-url";
 import { Button } from "../../../../../../../../components/ui/button";
@@ -20,6 +21,7 @@ export default function ProfilePictureChooserComponent({
   value,
   onChange,
 }: ProfilePictureChooserComponentProps) {
+  const { t } = useTranslation();
   const ref = useRef<HTMLButtonElement>(null);
   const dark = useDarkStore((state) => state.dark);
   const [imagesLoaded, setImagesLoaded] = useState(false);
@@ -40,7 +42,9 @@ export default function ProfilePictureChooserComponent({
         Object.keys(profilePictures!).map((folder, index) => (
           <div className="flex flex-col gap-2" key={index}>
             <div className="edit-flow-arrangement">
-              <span className="font-normal">{folder}</span>
+              <span className="font-normal">
+                {t(`settings.profilePictureCategory.${folder}`, folder)}
+              </span>
             </div>
             <div className="block overflow-hidden">
               <div className="flex items-center gap-1 overflow-x-auto rounded-lg bg-muted px-1 custom-scroll">
@@ -51,10 +55,18 @@ export default function ProfilePictureChooserComponent({
                     unstyled
                     onClick={() => onChange(folder + "/" + path)}
                     className="shrink-0 px-0.5 py-2"
+                    aria-pressed={value === folder + "/" + path}
                   >
                     <img
                       key={idx}
                       src={customPreLoadImageUrl(`${folder}/${path}`)}
+                      alt={t("settings.avatarAlt", {
+                        folder: t(
+                          `settings.profilePictureCategory.${folder}`,
+                          folder,
+                        ),
+                        index: idx + 1,
+                      })}
                       style={{
                         filter:
                           value === folder + "/" + path

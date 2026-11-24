@@ -10,6 +10,7 @@ from pathlib import Path
 import anyio
 import pytest
 from asgi_lifespan import LifespanManager
+from fastapi import status
 from httpx import ASGITransport, AsyncClient
 from langflow.main import create_app
 from langflow.services.auth.utils import get_password_hash
@@ -50,6 +51,32 @@ async def files_created_api_key(files_client, files_active_user):  # noqa: ARG00
             await session.delete(key_to_delete)
 
 
+@pytest.fixture(name="files_other_created_api_key")
+async def files_other_created_api_key(files_client, files_other_active_user):  # noqa: ARG001
+    # Separate API key to emulate requests from a second tenant.
+    hashed = get_password_hash("other_random_key")
+    api_key = ApiKey(
+        name="files_other_created_api_key",
+        user_id=files_other_active_user.id,
+        api_key="other_random_key",
+        hashed_api_key=hashed,
+    )
+    # Reuse an existing key when present, otherwise create one, then clean it up after the test.
+    async with session_scope() as session:
+        stmt = select(ApiKey).where(ApiKey.api_key == api_key.api_key)
+        if existing_api_key := (await session.exec(stmt)).first():
+            api_key = existing_api_key
+        else:
+            session.add(api_key)
+            await session.flush()
+            await session.refresh(api_key)
+    yield api_key
+    async with session_scope() as session:
+        key_to_delete = await session.get(ApiKey, api_key.id)
+        if key_to_delete:
+            await session.delete(key_to_delete)
+
+
 @pytest.fixture(name="files_active_user")
 async def files_active_user(files_client):  # noqa: ARG001
     async with session_scope() as session:
@@ -76,6 +103,31 @@ async def files_active_user(files_client):  # noqa: ARG001
         await session.delete(user)
 
 
+@pytest.fixture(name="files_other_active_user")
+async def files_other_active_user(files_client):  # noqa: ARG001
+    # Secondary user used to validate cross-user access restrictions.
+    async with session_scope() as session:
+        user = User(
+            username="files_other_active_user",
+            password=get_password_hash("testpassword"),
+            is_active=True,
+            is_superuser=False,
+        )
+        stmt = select(User).where(User.username == user.username)
+        if active_user := (await session.exec(stmt)).first():
+            user = active_user
+        else:
+            session.add(user)
+            await session.flush()
+            await session.refresh(user)
+        user = UserRead.model_validate(user, from_attributes=True)
+    yield user
+    async with session_scope() as session:
+        user = await session.get(User, user.id, options=[selectinload(User.flows)])
+        await _delete_transactions_and_vertex_builds(session, user.flows)
+        await session.delete(user)
+
+
 @pytest.fixture(name="files_flow")
 async def files_flow(
     files_client,  # noqa: ARG001
@@ -84,7 +136,7 @@ async def files_flow(
 ):
     loaded_json = json.loads(json_flow)
     flow_data = FlowCreate(name="test_flow", data=loaded_json.get("data"), user_id=files_active_user.id)
-    flow = Flow.model_validate(flow_data)
+    flow = Flow.model_validate(flow_data.model_dump(exclude={"id"}))
     async with session_scope() as session:
         session.add(flow)
         await session.flush()
@@ -128,6 +180,8 @@ async def files_client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
+            monkeypatch.setenv("LANGFLOW_SUPERUSER_PASSWORD", "test-superuser-password")
             from lfx.services.manager import get_service_manager
 
             get_service_manager().factories.clear()
@@ -163,8 +217,14 @@ async def test_upload_file(files_client, files_created_api_key, files_flow):
     assert response_json["flowId"] == str(files_flow.id)
 
     # Check that the file_path matches the expected pattern
-    file_path_pattern = re.compile(rf"{files_flow.id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_test\.txt")
+    file_path_pattern = re.compile(rf"flow-{files_flow.id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_test\.txt")
     assert file_path_pattern.match(response_json["file_path"])
+
+    from langflow.services.deps import get_storage_service
+
+    stored_name = response_json["file_path"].split("/")[-1]
+    stored = await get_storage_service().get_file(flow_id=f"flow-{files_flow.id}", file_name=stored_name)
+    assert stored == b"test content"
 
 
 async def test_download_file(files_client, files_created_api_key, files_flow):
@@ -186,6 +246,134 @@ async def test_download_file(files_client, files_created_api_key, files_flow):
     response = await files_client.get(f"api/v1/files/download/{files_flow.id}/{file_name}", headers=headers)
     assert response.status_code == 200
     assert response.content == b"test content"
+
+
+async def test_legacy_flow_file_still_downloads(files_client, files_created_api_key, files_flow):
+    """Owner-checked routes retain legacy flow files without migrating user data."""
+    from langflow.services.deps import get_storage_service
+
+    await get_storage_service().save_file(
+        flow_id=str(files_flow.id), file_name="legacy.txt", data=b"legacy flow content"
+    )
+
+    response = await files_client.get(
+        f"api/v1/files/download/{files_flow.id}/legacy.txt",
+        headers={"x-api-key": files_created_api_key.api_key},
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.content == b"legacy flow content"
+
+
+async def test_colliding_flow_id_cannot_read_legacy_user_files(
+    files_client, files_created_api_key, files_active_user, files_other_active_user
+):
+    """A preexisting colliding flow may use typed storage, never the raw user fallback."""
+    from langflow.services.deps import get_storage_service
+
+    async with session_scope() as session:
+        session.add(
+            Flow(
+                id=files_other_active_user.id,
+                user_id=files_active_user.id,
+                name="Legacy colliding flow",
+                data={"nodes": [], "edges": []},
+            )
+        )
+        await session.commit()
+    storage = get_storage_service()
+    await storage.save_file(flow_id=str(files_other_active_user.id), file_name="private.txt", data=b"PRIVATE")
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+    legacy_response = await files_client.get(
+        f"api/v1/files/download/{files_other_active_user.id}/private.txt", headers=headers
+    )
+    assert legacy_response.status_code != 200
+    assert b"PRIVATE" not in legacy_response.content
+
+    upload_response = await files_client.post(
+        f"api/v1/files/upload/{files_other_active_user.id}",
+        files={"file": ("typed.txt", b"typed content")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201, upload_response.text
+    # The upload adds its timestamp; use the returned name for the typed read below.
+    typed_name = upload_response.json()["file_path"].split("/")[-1]
+    typed_response = await files_client.get(
+        f"api/v1/files/download/{files_other_active_user.id}/{typed_name}", headers=headers
+    )
+    assert typed_response.status_code == 200, typed_response.text
+    assert typed_response.content == b"typed content"
+
+
+async def _seed_colliding_flow_files(files_active_user, files_other_active_user):
+    from langflow.services.deps import get_storage_service
+
+    async with session_scope() as session:
+        flow = Flow(
+            id=files_other_active_user.id,
+            user_id=files_active_user.id,
+            name="Colliding flow with typed and raw files",
+            data={"nodes": [], "edges": []},
+        )
+        session.add(flow)
+        await session.commit()
+    storage = get_storage_service()
+    await storage.save_file(str(flow.id), "private.png", b"PRIVATE_IMAGE")
+    await storage.save_file(f"flow-{flow.id}", "typed.png", b"TYPED_IMAGE")
+    return flow, storage
+
+
+async def test_colliding_flow_list_image_and_delete_preserve_raw_user_files(
+    files_client, files_created_api_key, files_active_user, files_other_active_user
+):
+    flow, storage = await _seed_colliding_flow_files(files_active_user, files_other_active_user)
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    listed = await files_client.get(f"api/v1/files/list/{flow.id}", headers=headers)
+    assert listed.status_code == 200, listed.text
+    assert listed.json()["files"] == ["typed.png"]
+
+    raw_image = await files_client.get(f"api/v1/files/images/{flow.id}/private.png", headers=headers)
+    assert raw_image.status_code != 200
+    assert b"PRIVATE_IMAGE" not in raw_image.content
+    typed_image = await files_client.get(f"api/v1/files/images/{flow.id}/typed.png", headers=headers)
+    assert typed_image.status_code == 200, typed_image.text
+    assert typed_image.content == b"TYPED_IMAGE"
+
+    raw_delete = await files_client.delete(f"api/v1/files/delete/{flow.id}/private.png", headers=headers)
+    assert raw_delete.status_code == 200, raw_delete.text
+    assert await storage.get_file(str(flow.id), "private.png") == b"PRIVATE_IMAGE"
+    typed_delete = await files_client.delete(f"api/v1/files/delete/{flow.id}/typed.png", headers=headers)
+    assert typed_delete.status_code == 200, typed_delete.text
+    assert await storage.get_file(str(flow.id), "private.png") == b"PRIVATE_IMAGE"
+
+
+@pytest.mark.usefixtures("files_client")
+@pytest.mark.parametrize("operation", ["download", "image", "list", "delete"])
+async def test_sessionless_file_calls_are_typed_only_for_colliding_flows(
+    files_active_user,
+    files_other_active_user,
+    operation,
+):
+    from fastapi import HTTPException
+    from langflow.api.v1.files import delete_file, download_file, download_image, list_files
+
+    flow, storage = await _seed_colliding_flow_files(files_active_user, files_other_active_user)
+    kwargs = {"flow": flow, "session": None, "storage_service": storage}
+
+    if operation == "list":
+        result = await list_files(**kwargs)
+        assert result == {"files": ["typed.png"]}
+    elif operation == "delete":
+        result = await delete_file(file_name="private.png", current_user=files_active_user, **kwargs)
+        assert "deleted successfully" in result["message"]
+        assert await storage.get_file(str(flow.id), "private.png") == b"PRIVATE_IMAGE"
+    else:
+        handler = download_file if operation == "download" else download_image
+        with pytest.raises(HTTPException):
+            await handler(file_name="private.png", **kwargs)
+        assert await storage.get_file(str(flow.id), "private.png") == b"PRIVATE_IMAGE"
 
 
 async def test_list_files(files_client, files_created_api_key, files_flow):
@@ -233,7 +421,7 @@ async def test_file_operations(files_client, files_created_api_key, files_flow):
     assert response_json["flowId"] == str(flow_id)
 
     # Check that the file_path matches the expected pattern
-    file_path_pattern = re.compile(rf"{flow_id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_{file_name}")
+    file_path_pattern = re.compile(rf"flow-{flow_id}/\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}-\d{{2}}_{file_name}")
     assert file_path_pattern.match(response_json["file_path"])
 
     # Extract the full file name with timestamp from the response
@@ -642,8 +830,8 @@ async def test_download_profile_picture_path_traversal_attempt(empty_config_dir,
     """
     # Try path traversal to access parent directories
     response = await files_client.get("api/v1/files/profile_pictures/../../../etc/passwd")
-    # Should either be 404 (file not found) or the path should be sanitized
-    assert response.status_code in [404, 500]
+    # Should be 400 (invalid input), 404 (not found), or 422 (validation error)
+    assert response.status_code in [400, 404, 422, 500]
 
 
 async def test_download_profile_picture_special_characters_in_filename(empty_config_dir, files_client):  # noqa: ARG001
@@ -781,6 +969,7 @@ async def test_download_image_for_browser(files_client, files_created_api_key, f
     # Download the image - simulates browser <img> tag behavior
     response = await files_client.get(
         f"api/v1/files/images/{files_flow.id}/{file_name}",
+        headers=headers,
     )
 
     assert response.status_code == 200, (
@@ -789,6 +978,35 @@ async def test_download_image_for_browser(files_client, files_created_api_key, f
 
     # Verify content type is image
     assert "image" in response.headers.get("content-type", ""), "Response should be an image"
+
+    # Security: a tenant-uploaded SVG/HTML must not be able to execute inline in the app origin.
+    # nosniff blocks MIME sniffing and attachment forces a download on direct navigation; neither
+    # affects <img>/blob embedding (the download still succeeded above).
+    assert response.headers.get("x-content-type-options") == "nosniff"
+    assert response.headers.get("content-disposition") == "attachment"
+
+
+async def test_download_image_with_typed_flow_path(files_client, files_created_api_key, files_flow):
+    """Serve browser previews using the upload response's typed storage path."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+    png_content = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+        b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+    upload_response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("chain.png", png_content, "image/png")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201
+    file_path = upload_response.json()["file_path"]
+    assert file_path.startswith(f"flow-{files_flow.id}/")
+
+    response = await files_client.get(f"api/v1/files/images/{file_path}", headers=headers)
+
+    assert response.status_code == 200, response.text
+    assert response.content == png_content
 
 
 async def test_download_image_returns_correct_content_type(files_client, files_created_api_key, files_flow):
@@ -813,7 +1031,7 @@ async def test_download_image_returns_correct_content_type(files_client, files_c
     file_name = file_path.split("/")[-1]
 
     # Download image
-    response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}")
+    response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}", headers=headers)
 
     assert response.status_code == 200
     assert "image/png" in response.headers.get("content-type", "")
@@ -835,33 +1053,58 @@ async def test_download_image_rejects_non_image_files(files_client, files_create
     file_name = file_path.split("/")[-1]
 
     # Try to download via /images endpoint (should fail)
-    response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}")
+    response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}", headers=headers)
 
     # Should reject non-image content types
     assert response.status_code == 500
     assert "not an image" in response.json().get("detail", "").lower()
 
 
-async def test_download_image_with_invalid_flow_id(files_client):
-    """Test that /images returns 500 for non-existent flow_id."""
+async def test_download_image_requires_authentication(files_client, files_created_api_key, files_flow):
+    """Test that /images rejects unauthenticated requests."""
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    png_content = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
+        b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
+        b"\x00\x00\x05\x00\x01\r\n-\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": ("auth_required.png", png_content, "image/png")},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+
+    file_path = response.json()["file_path"]
+    file_name = file_path.split("/")[-1]
+
+    # No auth header: browser-like unauthenticated request must be rejected.
+    response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}")
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_download_image_with_invalid_flow_id(files_client, files_created_api_key):
+    """Test that /images returns 404 for non-existent flow_id when authenticated."""
     import uuid
 
     fake_flow_id = uuid.uuid4()
-
-    response = await files_client.get(f"api/v1/files/images/{fake_flow_id}/nonexistent.png")
-
-    # Should return 500 (file not found)
-    assert response.status_code == 500
-
-
-async def test_download_image_browser_compatible(files_client, files_created_api_key, files_flow):
-    """Test that /images endpoint works for browser <img> tag rendering.
-
-    This ensures the endpoint correctly serves images for chat display.
-    """
     headers = {"x-api-key": files_created_api_key.api_key}
 
-    # Upload an image
+    response = await files_client.get(f"api/v1/files/images/{fake_flow_id}/nonexistent.png", headers=headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+async def test_download_image_returns_404_for_other_users_flow(
+    files_client, files_created_api_key, files_other_created_api_key, files_flow
+):
+    """Test that /images does not disclose images across tenants."""
+    owner_headers = {"x-api-key": files_created_api_key.api_key}
+    other_headers = {"x-api-key": files_other_created_api_key.api_key}
+
     png_content = (
         b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01"
         b"\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDATx\x9cc\x00\x01"
@@ -871,21 +1114,20 @@ async def test_download_image_browser_compatible(files_client, files_created_api
     upload_response = await files_client.post(
         f"api/v1/files/upload/{files_flow.id}",
         files={"file": ("browser_test.png", png_content, "image/png")},
-        headers=headers,
+        headers=owner_headers,
     )
-    assert upload_response.status_code == 201
+    assert upload_response.status_code == status.HTTP_201_CREATED
 
     file_path = upload_response.json()["file_path"]
     file_name = file_path.split("/")[-1]
 
-    # Download - simulates browser <img> tag
-    download_response = await files_client.get(f"api/v1/files/images/{files_flow.id}/{file_name}")
-
-    assert download_response.status_code == 200, (
-        f"REGRESSION: /images endpoint broken! "
-        f"Got status {download_response.status_code}. "
-        "This breaks browser <img> tags in chat."
+    # Hide resource existence across tenants by returning 404 for non-owners.
+    download_response = await files_client.get(
+        f"api/v1/files/images/{files_flow.id}/{file_name}",
+        headers=other_headers,
     )
+
+    assert download_response.status_code == status.HTTP_404_NOT_FOUND
 
 
 # ============================================================================
@@ -1045,3 +1287,45 @@ async def test_delete_file_forward_slash_traversal_blocked(
     assert response.status_code == 404, (
         f"Forward slash traversal should be blocked by routing: {malicious_filename}, got {response.status_code}"
     )
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected_rfc5987"),
+    [
+        ("龙.txt", "%E9%BE%99.txt"),
+        ("测试文件.txt", "%E6%B5%8B%E8%AF%95%E6%96%87%E4%BB%B6.txt"),
+        ("日本語ファイル.txt", "%E6%97%A5%E6%9C%AC%E8%AA%9E%E3%83%95%E3%82%A1%E3%82%A4%E3%83%AB.txt"),
+        ("naïve_résumé.txt", "na%C3%AFve_r%C3%A9sum%C3%A9.txt"),
+        ("normal_file.txt", "normal_file.txt"),
+    ],
+)
+async def test_download_file_non_ascii_content_disposition(
+    files_client, files_created_api_key, files_flow, filename, expected_rfc5987
+):
+    """Non-ASCII filenames must be RFC 5987 encoded in Content-Disposition."""
+    from urllib.parse import unquote
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    upload_response = await files_client.post(
+        f"api/v1/files/upload/{files_flow.id}",
+        files={"file": (filename, b"content")},
+        headers=headers,
+    )
+    assert upload_response.status_code == 201
+
+    stored_name = upload_response.json()["file_path"].split("/")[-1]
+    download_response = await files_client.get(
+        f"api/v1/files/download/{files_flow.id}/{stored_name}",
+        headers=headers,
+    )
+    assert download_response.status_code == 200
+
+    content_disposition = download_response.headers["content-disposition"]
+    assert "attachment" in content_disposition
+    assert "filename*=UTF-8''" in content_disposition
+    # RFC 5987 part must contain the URL-encoded filename
+    assert expected_rfc5987 in content_disposition
+    # The decoded filename must match the original
+    rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
+    assert unquote(rfc5987_value) == stored_name

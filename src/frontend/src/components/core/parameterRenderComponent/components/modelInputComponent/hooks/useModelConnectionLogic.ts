@@ -1,5 +1,4 @@
 import { useCallback } from "react";
-import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useFlowStore from "@/stores/flowStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
@@ -7,120 +6,111 @@ import { groupByFamily } from "@/utils/utils";
 
 interface UseModelConnectionLogicProps {
   nodeId: string;
-  nodeClass: any;
-  handleNodeClass: (nodeClass: any) => void;
-  postTemplateValue: any;
-  setErrorData: (error: any) => void;
-  handleOnNewValue: (newValue: any) => void;
   closePopover: () => void;
   clearSelection: () => void;
 }
 
 export function useModelConnectionLogic({
   nodeId,
-  nodeClass,
-  handleNodeClass,
-  postTemplateValue,
-  setErrorData,
-  handleOnNewValue,
   closePopover,
   clearSelection,
 }: UseModelConnectionLogicProps) {
   const handleExternalOptions = useCallback(
-    async (optionValue: string) => {
+    (optionValue: string) => {
       closePopover();
       clearSelection();
 
-      // Pass the optionValue ("connect_other_models") as both the field value and to mutateTemplate
-      // This way the backend knows we're in connection mode
-      handleOnNewValue({ value: optionValue });
+      if (optionValue !== "connect_other_models") {
+        return;
+      }
 
-      await mutateTemplate(
-        optionValue,
-        nodeId!,
-        nodeClass!,
-        handleNodeClass!,
-        postTemplateValue,
-        setErrorData,
-        "model",
-        () => {
-          // Enable connection mode for connect_other_models AFTER mutation completes
-          try {
-            if (optionValue === "connect_other_models") {
-              const store = useFlowStore.getState();
-              const node = store.getNode(nodeId!);
-              const templateField = node?.data?.node?.template?.["model"];
-              if (!templateField) {
-                return;
-              }
+      try {
+        const store = useFlowStore.getState();
+        const node = store.getNode(nodeId!);
+        const templateField = node?.data?.node?.template?.["model"];
+        if (!templateField) {
+          return;
+        }
 
-              const inputTypes: string[] =
-                (Array.isArray(templateField.input_types)
-                  ? templateField.input_types
-                  : []) || [];
-              const effectiveInputTypes =
-                inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
+        const inputTypes: string[] =
+          (Array.isArray(templateField.input_types)
+            ? templateField.input_types
+            : []) || [];
+        const effectiveInputTypes =
+          inputTypes.length > 0 ? inputTypes : ["LanguageModel"];
 
-              const tooltipTitle: string =
-                (inputTypes && inputTypes.length > 0
-                  ? inputTypes.join("\n")
-                  : templateField.type) || "";
+        const tooltipTitle: string =
+          (inputTypes && inputTypes.length > 0
+            ? inputTypes.join("\n")
+            : templateField.type) || "";
 
-              const myId = scapedJSONStringfy({
-                inputTypes: effectiveInputTypes,
-                type: templateField.type,
-                id: nodeId,
-                fieldName: "model",
-                proxy: templateField.proxy,
-              });
+        const typesData = useTypesStore.getState().data;
+        const grouped = groupByFamily(
+          typesData,
+          (effectiveInputTypes && effectiveInputTypes.length > 0
+            ? effectiveInputTypes.join("\n")
+            : tooltipTitle) || "",
+          true,
+          store.nodes,
+        );
 
-              const typesData = useTypesStore.getState().data;
-              const grouped = groupByFamily(
-                typesData,
-                (effectiveInputTypes && effectiveInputTypes.length > 0
-                  ? effectiveInputTypes.join("\n")
-                  : tooltipTitle) || "",
-                true,
-                store.nodes,
-              );
+        // Build a pseudo source so compatible target handles (left side) glow
+        const pseudoSourceHandle = scapedJSONStringfy({
+          fieldName: "model",
+          id: nodeId,
+          inputTypes: effectiveInputTypes,
+          type: "str",
+        });
 
-              // Build a pseudo source so compatible target handles (left side) glow
-              const pseudoSourceHandle = scapedJSONStringfy({
-                fieldName: "model",
-                id: nodeId,
-                inputTypes: effectiveInputTypes,
-                type: "str",
-              });
+        const filterObj = {
+          source: undefined,
+          sourceHandle: undefined,
+          target: nodeId,
+          targetHandle: pseudoSourceHandle,
+          type: "LanguageModel",
+          color: "datatype-fuchsia",
+        } as any;
 
-              const filterObj = {
-                source: undefined,
-                sourceHandle: undefined,
-                target: nodeId,
-                targetHandle: pseudoSourceHandle,
-                type: "LanguageModel",
-                color: "datatype-fuchsia",
-              } as any;
-
-              // Show compatible handles glow
-              store.setFilterEdge(grouped);
-              store.setFilterType(filterObj);
+        // Mark this node as being in connection mode, clear the model value
+        // and provider-specific credential fields so the backend cannot
+        // execute with stale config when no external model is connected.
+        store.setNode(
+          nodeId,
+          (prevNode) => {
+            const template = { ...prevNode.data.node.template };
+            if (template.model) {
+              template.model = {
+                ...template.model,
+                value: [],
+                _connection_mode: true,
+              };
             }
-          } catch (error) {
-            console.warn("Error setting up connection mode:", error);
-          }
-        },
-      );
+            for (const [key, field] of Object.entries(template)) {
+              const f = field as any;
+              if (f?.password || f?._input_type === "SecretStrInput") {
+                template[key] = { ...f, value: "", load_from_db: false };
+              }
+            }
+            return {
+              ...prevNode,
+              data: {
+                ...prevNode.data,
+                _connectionMode: true,
+                node: { ...prevNode.data.node, template },
+              },
+            };
+          },
+          true,
+        );
+
+        // Show compatible handles glow
+        store.setFilterEdge(grouped);
+        store.setFilterType(filterObj);
+      } catch (error) {
+        console.warn("Error setting up connection mode:", error);
+      }
     },
-    [
-      nodeId,
-      nodeClass,
-      handleNodeClass,
-      postTemplateValue,
-      setErrorData,
-      handleOnNewValue,
-      closePopover,
-      clearSelection,
-    ],
+    [nodeId, closePopover, clearSelection],
   );
 
   return { handleExternalOptions };

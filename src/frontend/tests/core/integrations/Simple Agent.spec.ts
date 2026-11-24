@@ -1,29 +1,17 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { expect } from "../../fixtures";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Simple Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
-    await initialGPTsetup(page);
+    await seedLoopbackProvider(page);
+    await openStarterProject(page, "Simple Agent");
+    await configureLoopbackOpenAI(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -34,7 +22,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
 
     if (await stopButton.isVisible()) {

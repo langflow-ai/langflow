@@ -59,17 +59,24 @@ jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
   })),
 }));
 
+interface MockProviderListItemProps {
+  provider: { provider: string; model_count?: number };
+  isSelected: boolean;
+  onSelect: (provider: MockProviderListItemProps["provider"]) => void;
+}
+
 // Mock ProviderListItem
 jest.mock("../components/ProviderListItem", () => ({
   __esModule: true,
-  default: ({ provider, isSelected, onSelect }: any) => (
-    <div
+  default: ({ provider, isSelected, onSelect }: MockProviderListItemProps) => (
+    <button
+      type="button"
       data-testid={`provider-item-${provider.provider}`}
       data-selected={isSelected}
       onClick={() => onSelect(provider)}
     >
       {provider.provider} - {provider.model_count} models
-    </div>
+    </button>
   ),
 }));
 
@@ -98,9 +105,88 @@ describe("ProviderList", () => {
       expect(screen.getByTestId("provider-list-loading")).toBeInTheDocument();
       expect(screen.getByText("Loading providers")).toBeInTheDocument();
     });
+
+    it("does not render stale provider cards during a scoped refetch", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: mockProviders,
+        isLoading: false,
+        isFetching: true,
+        isError: false,
+      });
+
+      render(<ProviderList modelType="all" flowId="flow-a" />);
+
+      expect(screen.getByTestId("provider-list-loading")).toBeInTheDocument();
+      expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("provider-item-OpenAI"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not render stale provider cards while a scoped refetch is paused", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: mockProviders,
+        isLoading: false,
+        isFetching: false,
+        fetchStatus: "paused",
+        isError: false,
+      });
+
+      render(<ProviderList modelType="all" flowId="flow-a" />);
+
+      expect(screen.getByTestId("provider-list-loading")).toBeInTheDocument();
+      expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("provider-item-OpenAI"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("does not render stale provider cards after a scoped refetch error", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+      useGetModelProvidersMock.mockReturnValueOnce({
+        data: mockProviders,
+        isLoading: false,
+        isFetching: false,
+        isError: true,
+        error: new Error("scope refresh denied"),
+      });
+
+      render(<ProviderList modelType="all" flowId="flow-a" />);
+
+      expect(screen.getByTestId("provider-list-error")).toBeInTheDocument();
+      expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+      expect(
+        screen.queryByTestId("provider-item-OpenAI"),
+      ).not.toBeInTheDocument();
+    });
   });
 
   describe("Provider Display", () => {
+    it("requests only providers configurable in the active scope", () => {
+      const useGetModelProvidersMock =
+        require("@/controllers/API/queries/models/use-get-model-providers").useGetModelProviders;
+
+      render(
+        <ProviderList
+          modelType="all"
+          flowId="flow-one"
+          projectId="project-one"
+        />,
+      );
+
+      expect(useGetModelProvidersMock).toHaveBeenCalledWith({
+        includeDeprecated: true,
+        flowId: "flow-one",
+        projectId: "project-one",
+        purpose: "configure",
+      });
+    });
+
     it("should render provider list container", () => {
       render(<ProviderList modelType="all" />);
 
@@ -153,6 +239,40 @@ describe("ProviderList", () => {
 
       const anthropicItem = screen.getByTestId("provider-item-Anthropic");
       expect(anthropicItem).toHaveAttribute("data-selected", "false");
+    });
+  });
+
+  describe("Search filtering", () => {
+    it("should render every provider when the query is empty", () => {
+      render(<ProviderList modelType="all" query="" />);
+
+      expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
+      expect(screen.getByTestId("provider-item-Anthropic")).toBeInTheDocument();
+    });
+
+    it("should filter providers by case-insensitive substring match", () => {
+      render(<ProviderList modelType="all" query="ANTHROP" />);
+
+      expect(
+        screen.queryByTestId("provider-item-OpenAI"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("provider-item-Anthropic")).toBeInTheDocument();
+    });
+
+    it("should show the no-results message when nothing matches", () => {
+      render(<ProviderList modelType="all" query="xyzzy" />);
+
+      expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+      expect(screen.getByTestId("provider-list-empty")).toBeInTheDocument();
+    });
+
+    it("should ignore leading and trailing whitespace in the query", () => {
+      render(<ProviderList modelType="all" query="  open  " />);
+
+      expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("provider-item-Anthropic"),
+      ).not.toBeInTheDocument();
     });
   });
 });

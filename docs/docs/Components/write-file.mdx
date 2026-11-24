@@ -16,7 +16,7 @@ Several file formats are supported, and you can store files in [Langflow storage
 
 To configure the **Write File** component and use it in a flow, do the following:
 
-1. Connect [`DataFrame`](/data-types#dataframe), [`Data`](/data-types#data), or [`Message`](/data-types#message) output from another component to the **Write File** component's **Input** port.
+1. Connect [`Table`](/data-types#table), [`JSON`](/data-types#json), or [`Message`](/data-types#message) output from another component to the **Write File** component's **Input** port.
 
     You can connect the same output to multiple **Write File** components if you want to create multiple files, save the data in different file formats, or save files to multiple locations.
 
@@ -44,9 +44,9 @@ To configure the **Write File** component and use it in a flow, do the following
 
     The available **File Format** options depend on the input data type:
 
-        * `DataFrame` can be saved to CSV (default), Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (fallback default), or Markdown.
+        * `Table` can be saved to CSV (default), Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (fallback default), or Markdown.
 
-        * `Data` can be saved to CSV, Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (default), or Markdown.
+        * `JSON` can be saved to CSV, Excel (requires `openpyxl` [custom dependency](/install-custom-dependencies)), JSON (default), or Markdown.
 
     * `Message` can be saved to TXT, JSON (default), or Markdown.
 

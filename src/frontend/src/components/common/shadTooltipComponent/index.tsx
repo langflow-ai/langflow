@@ -37,60 +37,67 @@ MemoizedTooltipContent.displayName = "MemoizedTooltipContent";
 
 // Memoize the main tooltip component
 const ShadTooltip = memo(
-  forwardRef<HTMLDivElement, ShadToolTipType>(
-    (
-      {
-        content,
-        side,
-        asChild = true,
-        children,
-        styleClasses,
-        delayDuration = 500,
+  forwardRef<HTMLDivElement, ShadToolTipType>((props, ref) => {
+    const {
+      content,
+      side,
+      asChild = true,
+      children,
+      styleClasses,
+      delayDuration = 500,
+      open,
+      align,
+      setOpen,
+      avoidCollisions = false,
+      ariaDescribedBy,
+    } = props;
+
+    // Early return if no content
+    if (!content) {
+      return children;
+    }
+
+    // Memoize className concatenation
+    const tooltipClassName = useMemo(
+      () => cn(BASE_TOOLTIP_CLASSES, styleClasses),
+      [styleClasses],
+    );
+
+    // Memoize tooltip props
+    const tooltipProps = useMemo(
+      () => ({
+        defaultOpen: !children,
         open,
-        align,
-        setOpen,
-        avoidCollisions = false,
-      },
-      ref,
-    ) => {
-      // Early return if no content
-      if (!content) {
-        return children;
-      }
+        onOpenChange: setOpen,
+        delayDuration,
+      }),
+      [children, open, setOpen, delayDuration],
+    );
 
-      // Memoize className concatenation
-      const tooltipClassName = useMemo(
-        () => cn(BASE_TOOLTIP_CLASSES, styleClasses),
-        [styleClasses],
-      );
+    const hasAriaDescribedByOverride = "ariaDescribedBy" in props;
 
-      // Memoize tooltip props
-      const tooltipProps = useMemo(
-        () => ({
-          defaultOpen: !children,
-          open,
-          onOpenChange: setOpen,
-          delayDuration,
-        }),
-        [children, open, setOpen, delayDuration],
-      );
-
-      return (
-        <Tooltip {...tooltipProps}>
-          <TooltipTrigger asChild={asChild}>{children}</TooltipTrigger>
-          <MemoizedTooltipContent
-            ref={ref}
-            className={tooltipClassName}
-            side={side}
-            avoidCollisions={avoidCollisions}
-            align={align}
-          >
-            {content}
-          </MemoizedTooltipContent>
-        </Tooltip>
-      );
-    },
-  ),
+    return (
+      <Tooltip {...tooltipProps}>
+        <TooltipTrigger
+          asChild={asChild}
+          {...(hasAriaDescribedByOverride
+            ? { "aria-describedby": ariaDescribedBy }
+            : {})}
+        >
+          {children}
+        </TooltipTrigger>
+        <MemoizedTooltipContent
+          ref={ref}
+          className={tooltipClassName}
+          side={side}
+          avoidCollisions={avoidCollisions}
+          align={align}
+        >
+          {content}
+        </MemoizedTooltipContent>
+      </Tooltip>
+    );
+  }),
 );
 
 // Add display name for dev tools

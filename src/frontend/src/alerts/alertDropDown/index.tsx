@@ -1,18 +1,19 @@
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { forwardRef, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../components/common/genericIconComponent";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "../../components/ui/popover";
-import { ZERO_NOTIFICATIONS } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type { AlertDropdownType } from "../../types/alerts";
 import SingleAlert from "./components/singleAlertComponent";
 
 const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
   function AlertDropdown({ children, notificationRef, onClose }, ref) {
+    const { t } = useTranslation();
     const notificationList = useAlertStore((state) => state.notificationList);
     const clearNotificationList = useAlertStore(
       (state) => state.clearNotificationList,
@@ -46,13 +47,15 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
         <PopoverTrigger asChild>{children}</PopoverTrigger>
         <PopoverContent
           ref={notificationRef}
+          aria-label={t("alerts.notificationsTitle")}
           data-testid="notification-dropdown-content"
           className="noflow nowheel nopan nodelete nodrag z-50 flex h-[500px] w-[500px] flex-col"
         >
           <div className="text-md flex flex-row justify-between pl-3 font-medium text-foreground">
-            Notifications
+            {t("alerts.notificationsTitle")}
             <div className="flex gap-3 pr-3">
               <button
+                aria-label={t("alerts.clearNotifications")}
                 className="text-muted-foreground hover:text-status-red"
                 onClick={() => {
                   setOpen(false);
@@ -62,12 +65,13 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
                 <IconComponent name="Trash2" className="h-4 w-4" />
               </button>
               <button
+                aria-label={t("alerts.closeNotifications")}
                 className="text-foreground opacity-70 hover:opacity-100"
                 onClick={() => {
                   setOpen(false);
                 }}
               >
-                <Cross2Icon className="h-4 w-4" />
+                <Cross2Icon className="h-4 w-4" aria-hidden="true" />
               </button>
             </div>
           </div>
@@ -82,7 +86,7 @@ const AlertDropdown = forwardRef<HTMLDivElement, AlertDropdownType>(
               ))
             ) : (
               <div className="flex h-full w-full items-center justify-center pb-16 text-ring">
-                {ZERO_NOTIFICATIONS}
+                {t("nav.notifications")}
               </div>
             )}
           </div>

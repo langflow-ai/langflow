@@ -5,6 +5,9 @@ slug: /bundles-mem0
 
 import Icon from "@site/src/components/icon";
 import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
 
@@ -31,7 +34,7 @@ The **Mem0 Chat Memory** component retrieves and stores chat messages using Mem0
 
 ### Mem0 Chat Memory output
 
-The **Mem0 Chat Memory** component can output either **Mem0 Memory** ([`Memory`](/data-types#memory)) or **Search Results** ([`Data`](/data-types#data)).
+The **Mem0 Chat Memory** component can output either **Mem0 Memory** ([`Memory`](/data-types#memory)) or **Search Results** ([`JSON`](/data-types#json)).
 You can select the output type near the component's output port.
 
 Use **Mem0 Chat Memory** for memory storage and retrieval operations with the [**Message History** component](/message-history).

@@ -80,7 +80,7 @@ As an alternative to the previous setup, particularly for self-hosted Langfuse, 
     :::tip
     Langflow previously used `LANGFUSE_HOST` as the variable for the Langfuse base URL.
     `LANGFUSE_HOST` is still supported for backward compatibility, but `LANGFUSE_BASE_URL` is the preferred environment variable.
-    If both values are set, then `LANGFLOW_BASE_URL` is used.
+    If both values are set, then `LANGFUSE_BASE_URL` is used.
     :::
 
 3. Add your Langflow credentials to your Langflow `docker-compose.yml` file in the `environment` section.
@@ -107,7 +107,10 @@ As an alternative to the previous setup, particularly for self-hosted Langfuse, 
           - langflow-data:/app/langflow
 
       postgres:
-        image: postgres:16
+        # Pinned to a specific Debian base (trixie) so the postgres:16 tag does
+        # not silently roll its OS, which triggers a glibc collation mismatch
+        # warning on existing volumes. See https://github.com/langflow-ai/langflow/issues/9608
+        image: postgres:16-trixie
         environment:
           POSTGRES_USER: langflow
           POSTGRES_PASSWORD: langflow

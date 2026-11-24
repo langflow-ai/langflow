@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,9 +12,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
+import {
+  type SessionsPagination,
+  ShowMoreSessions,
+} from "./show-more-sessions";
 
 interface ChatSessionsDropdownProps {
   sessions: string[];
+  sessionsPagination: SessionsPagination;
   onNewChat?: () => void;
   onSessionSelect?: (sessionId: string) => void;
   currentSessionId?: string;
@@ -23,12 +29,14 @@ interface ChatSessionsDropdownProps {
 
 export function ChatSessionsDropdown({
   sessions,
+  sessionsPagination,
   onNewChat,
   onSessionSelect,
   currentSessionId,
   open: controlledOpen,
   onOpenChange: controlledOnOpenChange,
 }: ChatSessionsDropdownProps) {
+  const { t } = useTranslation();
   const currentFlowId = useGetFlowId();
   const hasSessions: boolean = sessions.length > 0;
   const [internalOpen, setInternalOpen] = useState(false);
@@ -44,7 +52,7 @@ export function ChatSessionsDropdown({
           variant="ghost"
           size="icon"
           className="h-8 w-8 rounded"
-          aria-label="Chat sessions"
+          aria-label={t("playgroundComponent.chatSessions")}
           data-testid="session-selector-trigger"
         >
           <ForwardedIconComponent name="ListRestart" className="h-4 w-4" />
@@ -70,6 +78,7 @@ export function ChatSessionsDropdown({
                     {session === currentFlowId ? "Default Session" : session}
                   </DropdownMenuItem>
                 ))}
+                <ShowMoreSessions pagination={sessionsPagination} asMenuItem />
               </DropdownMenuGroup>
             </div>
             <DropdownMenuSeparator className="!my-0" />

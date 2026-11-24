@@ -67,9 +67,9 @@ In the **Read File** component, select one or more files, and then click <Icon n
 
     ![Retrieval from a vector store](/img/vector-store-retrieval.png)
 
-    To avoid passing the entire block of raw search results to the LLM, the **Parser** component extracts `text` strings from the search results `Data` object, and then passes them to the **Prompt Template** component in `Message` format.
+    To avoid passing the entire block of raw search results to the LLM, the **Parser** component extracts `text` strings from the search results `JSON` object, and then passes them to the **Prompt Template** component in `Message` format.
     From there, the strings and other template content are compiled into natural language instructions for the LLM.
 
-    You can use other components for this transformation, such as the **Data Operations** component, depending on how you want to use the search results.
+    You can use other components for this transformation, such as the **JSON Operations** component, depending on how you want to use the search results.
 
     To view the raw search results, click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** on the vector store component after running the **Retriever** subflow.

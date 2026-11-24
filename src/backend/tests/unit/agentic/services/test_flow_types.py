@@ -19,27 +19,58 @@ from langflow.agentic.services.flow_types import (
 )
 
 
+def test_should_expose_max_flow_verification_attempts_constant_when_importing_flow_types():
+    """flow_verification.py imports MAX_FLOW_VERIFICATION_ATTEMPTS from flow_types.
+
+    Without this constant, importing the agentic router at boot time raises
+    ImportError and the FastAPI server exits before binding the port (the
+    agentic router is mounted unconditionally at api/router.py:109).
+
+    Bug: PR-12575 round 6 — backend boot failure
+    """
+    # Importing flow_verification triggers the same import chain as boot.
+    from langflow.agentic.services import flow_types
+
+    assert hasattr(flow_types, "MAX_FLOW_VERIFICATION_ATTEMPTS"), (
+        "flow_verification.py imports MAX_FLOW_VERIFICATION_ATTEMPTS from "
+        "flow_types; the constant must be declared or the agentic router "
+        "fails to load at server boot."
+    )
+    assert isinstance(flow_types.MAX_FLOW_VERIFICATION_ATTEMPTS, int)
+    assert flow_types.MAX_FLOW_VERIFICATION_ATTEMPTS >= 1
+
+
+def test_should_load_flow_verification_module_when_constant_is_present():
+    """End-to-end import check: importing flow_verification must not raise.
+
+    This is the exact failure path observed at boot: the agentic router
+    transitively imports flow_verification, which imports the missing
+    constant. If this test passes, the boot path is clean.
+    """
+    # Must not raise ImportError.
+    from langflow.agentic.services import flow_verification
+
+    assert flow_verification.verify_built_flow is not None
+
+
 class TestFlowExecutionResult:
     """Tests for FlowExecutionResult dataclass."""
 
     def test_should_create_with_defaults(self):
         """Should create with empty result and no error by default."""
         result = FlowExecutionResult()
-
         assert result.result == {}
         assert result.error is None
 
     def test_should_detect_error_when_set(self):
         """Should return has_error=True when error is set."""
         result = FlowExecutionResult(error=ValueError("test error"))
-
         assert result.has_error is True
         assert result.has_result is False
 
     def test_should_detect_result_when_set(self):
         """Should return has_result=True when result is non-empty."""
         result = FlowExecutionResult(result={"key": "value"})
-
         assert result.has_result is True
         assert result.has_error is False
 
@@ -49,21 +80,18 @@ class TestFlowExecutionResult:
             result={"partial": "data"},
             error=RuntimeError("partial failure"),
         )
-
         assert result.has_result is True
         assert result.has_error is True
 
     def test_should_return_false_for_empty_dict_result(self):
         """Should return has_result=False for empty dict."""
         result = FlowExecutionResult(result={})
-
         assert result.has_result is False
 
     def test_should_store_exception_details(self):
         """Should preserve exception details."""
         error = ValueError("detailed message")
         result = FlowExecutionResult(error=error)
-
         assert result.error is error
         assert str(result.error) == "detailed message"
 
@@ -74,14 +102,12 @@ class TestIntentResult:
     def test_should_create_with_translation_and_intent(self):
         """Should create with translation and intent fields."""
         result = IntentResult(translation="hello world", intent="question")
-
         assert result.translation == "hello world"
         assert result.intent == "question"
 
     def test_should_support_generate_component_intent(self):
         """Should support generate_component as valid intent value."""
         result = IntentResult(translation="create a component", intent="generate_component")
-
         assert result.intent == "generate_component"
 
     def test_should_be_equality_comparable(self):
@@ -89,14 +115,12 @@ class TestIntentResult:
         result1 = IntentResult(translation="test", intent="question")
         result2 = IntentResult(translation="test", intent="question")
         result3 = IntentResult(translation="test", intent="generate_component")
-
         assert result1 == result2
         assert result1 != result3
 
     def test_should_allow_empty_translation(self):
         """Should allow empty string as translation."""
         result = IntentResult(translation="", intent="question")
-
         assert result.translation == ""
 
 
@@ -172,9 +196,7 @@ class TestValidationRetryTemplate:
         """Should format correctly with error and code values."""
         error = "SyntaxError: invalid syntax"
         code = "def broken():"
-
         result = VALIDATION_RETRY_TEMPLATE.format(error=error, code=code)
-
         assert error in result
         assert code in result
 
@@ -199,9 +221,7 @@ class TestValidationRetryTemplate:
         code = """def example():
     if True:
     print("wrong indent")"""
-
         result = VALIDATION_RETRY_TEMPLATE.format(error=error, code=code)
-
         assert error in result
         assert "def example():" in result
         assert 'print("wrong indent")' in result

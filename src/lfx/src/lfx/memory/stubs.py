@@ -16,6 +16,8 @@ from lfx.utils.async_helpers import run_until_complete
 async def astore_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
 ) -> list[Message]:
     """Store a message in the memory.
 
@@ -23,6 +25,8 @@ async def astore_message(
         message (Message): The message to store.
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list containing the stored message.
@@ -34,6 +38,14 @@ async def astore_message(
         logger.warning("No message provided.")
         return []
 
+    # Serving-plane ephemeral runs (anonymous end-user) must not persist chat
+    # memory. Mirrors the identical gate in langflow.memory.astore_message so the
+    # contract holds regardless of which memory implementation dispatch selects.
+    from lfx.memory.flow_context import should_persist_messages
+
+    if not should_persist_messages():
+        return [message]
+
     if not message.session_id or not message.sender or not message.sender_name:
         msg = (
             f"All of session_id, sender, and sender_name must be provided. Session ID: {message.session_id},"
@@ -41,11 +53,25 @@ async def astore_message(
         )
         raise ValueError(msg)
 
-    # Set flow_id if provided
+    # Set flow_id if provided. The stub is the fallback when no real database is
+    # registered, so be tolerant of non-UUID flow_ids (e.g. synthetic IDs from tests
+    # or callers that pass a string identifier). UUID parsing here only normalizes
+    # format; an invalid string is preserved verbatim, but logged so downstream
+    # UUID-expecting code paths have a breadcrumb if they later fail.
     if flow_id:
         if isinstance(flow_id, str):
-            flow_id = UUID(flow_id)
+            try:
+                flow_id = UUID(flow_id)
+            except ValueError:
+                logger.warning(
+                    f"flow_id {flow_id!r} is not a valid UUID; preserving verbatim. "
+                    "Downstream code that expects a UUID may surface a confusing error."
+                )
         message.flow_id = str(flow_id)
+    if run_id:
+        if isinstance(run_id, UUID):
+            run_id = str(run_id)
+        message.run_id = str(run_id)
 
     # In lfx, we use the service architecture - this is a simplified implementation
     # that doesn't persist to database but maintains the message in memory
@@ -79,6 +105,8 @@ async def astore_message(
 def store_message(
     message: Message,
     flow_id: str | UUID | None = None,
+    run_id: str | UUID | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
 ) -> list[Message]:
     """DEPRECATED: Stores a message in the memory.
 
@@ -88,6 +116,8 @@ def store_message(
         message (Message): The message to store.
         flow_id (Optional[str | UUID]): The flow ID associated with the message.
             When running from the CustomComponent you can access this using `self.graph.flow_id`.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the message.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored message.
 
     Returns:
         List[Message]: A list containing the stored message.
@@ -95,7 +125,7 @@ def store_message(
     Raises:
         ValueError: If any of the required parameters (session_id, sender, sender_name) is not provided.
     """
-    return run_until_complete(astore_message(message, flow_id=flow_id))
+    return run_until_complete(astore_message(message, flow_id=flow_id, run_id=run_id))
 
 
 async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
@@ -149,6 +179,11 @@ async def delete_message(id_: str) -> None:
     Args:
         id_ (str): The ID of the message to delete.
     """
+    from lfx.memory.flow_context import should_persist_messages
+
+    if not should_persist_messages():
+        return
+
     async with session_scope() as session:
         try:
             # In a real implementation, this would delete from database
@@ -170,6 +205,7 @@ async def aget_messages(
     order: str | None = "DESC",  # noqa: ARG001
     flow_id: UUID | None = None,  # noqa: ARG001
     limit: int | None = None,  # noqa: ARG001
+    user_id: str | UUID | None = None,  # noqa: ARG001
 ) -> list[Message]:
     """Retrieve messages based on the provided filters.
 
@@ -182,6 +218,7 @@ async def aget_messages(
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
         limit (Optional[int]): The maximum number of messages to retrieve.
+        user_id (Optional[str | UUID]): When provided, scope retrieval to this owning user.
 
     Returns:
         List[Message]: A list of Message objects representing the retrieved messages.
@@ -207,6 +244,7 @@ def get_messages(
     order: str | None = "DESC",
     flow_id: UUID | None = None,
     limit: int | None = None,
+    user_id: str | UUID | None = None,  # noqa: ARG001
 ) -> list[Message]:
     """DEPRECATED - Retrieve messages based on the provided filters.
 
@@ -257,11 +295,19 @@ def delete_messages(session_id: str | None = None, context_id: str | None = None
     return run_until_complete(adelete_messages(session_id, context_id))
 
 
-async def aadd_messages(messages: Message | list[Message]) -> list[Message]:
+async def aadd_messages(
+    messages: Message | list[Message],
+    flow_id: str | UUID | None = None,  # noqa: ARG001
+    run_id: str | UUID | None = None,  # noqa: ARG001
+    user_id: str | UUID | None = None,  # noqa: ARG001
+) -> list[Message]:
     """Add messages to the memory.
 
     Args:
         messages: Message or list of messages to add.
+        flow_id (Optional[str | UUID]): The flow ID associated with the messages.
+        run_id (Optional[str | UUID]): The graph/native run ID associated with the messages.
+        user_id (Optional[str | UUID]): The executing user's ID, stamped on the stored messages.
 
     Returns:
         List[Message]: Added messages.

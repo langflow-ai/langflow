@@ -1,22 +1,22 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import AlertDropdown from "@/alerts/alertDropDown";
-import LangflowLogo from "@/assets/LangflowLogo.svg?react";
-import { AssistantButton } from "@/components/common/assistant";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ModelProviderCount from "@/components/common/modelProviderCountComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import CustomAccountMenu from "@/customization/components/custom-AccountMenu";
+import CustomHeaderLogo from "@/customization/components/custom-header-logo";
 import CustomLangflowCounts from "@/customization/components/custom-langflow-counts";
 import { CustomOrgSelector } from "@/customization/components/custom-org-selector";
-import { LANGFLOW_AGENTIC_EXPERIENCE } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useTheme from "@/customization/hooks/use-custom-theme";
 import useAlertStore from "@/stores/alertStore";
 import FlowMenu from "./components/FlowMenu";
 
 export default function AppHeader(): JSX.Element {
+  const { t } = useTranslation();
   const notificationCenter = useAlertStore((state) => state.notificationCenter);
   const navigate = useCustomNavigate();
   const [activeState, setActiveState] = useState<"notifications" | null>(null);
@@ -50,7 +50,7 @@ export default function AppHeader(): JSX.Element {
   };
 
   return (
-    <div
+    <header
       className={`z-10 flex h-[48px] w-full items-center justify-between border-b pr-5 pl-2.5 dark:bg-background`}
       data-testid="app-header"
     >
@@ -62,10 +62,11 @@ export default function AppHeader(): JSX.Element {
         <Button
           unstyled
           onClick={() => navigate("/")}
-          className="mr-1 flex h-8 w-8 items-center"
+          className="mr-1 flex h-8 w-8 items-center justify-center"
           data-testid="icon-ChevronLeft"
+          aria-label={t("header.home")}
         >
-          <LangflowLogo className="h-5 w-5" />
+          <CustomHeaderLogo className="h-5 w-5" />
         </Button>
         <CustomOrgSelector />
       </div>
@@ -81,7 +82,6 @@ export default function AppHeader(): JSX.Element {
         data-testid="header_right_section_wrapper"
       >
         {false && <ModelProviderCount />}
-        {LANGFLOW_AGENTIC_EXPERIENCE && <AssistantButton type="header" />}
         <div className="hidden pr-2 whitespace-nowrap lg:inline-flex lg:items-center">
           <CustomLangflowCounts />
         </div>
@@ -90,14 +90,15 @@ export default function AppHeader(): JSX.Element {
           onClose={() => setActiveState(null)}
         >
           <ShadTooltip
-            content="Notifications and errors"
+            content={t("header.notifications")}
             side="bottom"
-            styleClasses="z-10"
+            ariaDescribedBy={undefined}
           >
             <AlertDropdown onClose={() => setActiveState(null)}>
               <Button
                 ref={notificationRef}
                 unstyled
+                aria-label={t("header.notifications")}
                 onClick={() =>
                   setActiveState((prev) =>
                     prev === "notifications" ? null : "notifications",
@@ -117,7 +118,7 @@ export default function AppHeader(): JSX.Element {
                     strokeWidth={2}
                   />
                   <span className="hidden whitespace-nowrap">
-                    Notifications
+                    {t("header.notificationsLabel")}
                   </span>
                 </div>
               </Button>
@@ -133,6 +134,6 @@ export default function AppHeader(): JSX.Element {
           <CustomAccountMenu />
         </div>
       </div>
-    </div>
+    </header>
   );
 }

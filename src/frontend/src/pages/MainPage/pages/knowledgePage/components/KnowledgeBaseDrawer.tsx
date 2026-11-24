@@ -1,7 +1,17 @@
+import { useEffect, useId, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { StorageUpgradePanel } from "@/components/common/storageUpgradeNotice";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { useGetKnowledgeBases } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import { STATUS_CONFIG } from "../config/statusConfig";
+import {
+  getKnowledgeBaseBackendLabel,
+  getKnowledgeBaseBackendTarget,
+} from "../utils/backendMetadata";
+import IngestionRunsSection from "./IngestionRunsSection";
 
 interface KnowledgeBaseDrawerProps {
   isOpen: boolean;
@@ -12,17 +22,60 @@ interface KnowledgeBaseDrawerProps {
 const KnowledgeBaseDrawer = ({
   isOpen,
   onClose,
-  knowledgeBase,
+  knowledgeBase: selectedKnowledgeBase,
 }: KnowledgeBaseDrawerProps) => {
+  const { t } = useTranslation();
+  const { data: knowledgeBases } = useGetKnowledgeBases({ enabled: isOpen });
+  const knowledgeBase =
+    knowledgeBases?.find((kb) => kb.id === selectedKnowledgeBase?.id) ??
+    selectedKnowledgeBase;
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const headingId = useId();
+
+  useEffect(() => {
+    if (!isOpen || !knowledgeBase) return;
+
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      // Nested dialogs (e.g. ingestion run detail) own Escape first.
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+      e.stopPropagation();
+      onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, knowledgeBase?.id, onClose]);
+
   if (!isOpen || !knowledgeBase) {
     return null;
   }
 
+  const backendLabel = getKnowledgeBaseBackendLabel(
+    knowledgeBase.backend_type,
+    knowledgeBase.backend_config as Record<string, unknown> | undefined,
+  );
+  const backendTarget = getKnowledgeBaseBackendTarget(knowledgeBase);
+
   return (
-    <div className="flex h-full w-80 flex-col border-l bg-background">
+    <div
+      role="region"
+      aria-labelledby={headingId}
+      data-testid="knowledge-base-drawer"
+      className="flex h-full w-80 flex-col border-l bg-background"
+    >
       <div className="flex items-center justify-between pt-4 px-4">
-        <h3 className="font-semibold">{knowledgeBase.name}</h3>
-        <Button variant="ghost" size="iconSm" onClick={onClose}>
+        <h3 id={headingId} className="font-semibold">
+          {knowledgeBase.name}
+        </h3>
+        <Button
+          ref={closeButtonRef}
+          variant="ghost"
+          size="iconSm"
+          onClick={onClose}
+          aria-label={t("knowledge.closeDetailsPanel")}
+        >
           <ForwardedIconComponent name="X" className="h-4 w-4" />
         </Button>
       </div>
@@ -31,34 +84,69 @@ const KnowledgeBaseDrawer = ({
         <div className="flex flex-col gap-4">
           <div className="px-4">
             <div className="text-sm text-muted-foreground">
-              No description available.
+              {t("knowledge.noDescription")}
             </div>
+          </div>
+
+          <div className="px-4">
+            <StorageUpgradePanel kbId={knowledgeBase.id} />
           </div>
 
           <Separator />
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">Embedding Provider</label>
-            <div className="flex items-center gap-2">
+            <div className="text-sm font-medium">
+              {t("knowledge.embeddingProviderLabel")}
+            </div>
+            <div className="text-sm font-medium text-muted-foreground">
+              {knowledgeBase.embedding_provider || t("knowledge.unknown")}
+            </div>
+          </div>
+
+          <div className="space-y-2 px-4">
+            <div className="text-sm font-medium">
+              {t("knowledge.embeddingModelLabel")}
+            </div>
+            <div className="text-sm font-medium text-muted-foreground">
+              {knowledgeBase.embedding_model || t("knowledge.unknown")}
+            </div>
+          </div>
+
+          <div className="space-y-2 px-4">
+            <div className="text-sm font-medium">
+              {t("knowledge.vectorStoreLabel")}
+            </div>
+            <div className="text-sm font-medium text-muted-foreground">
+              {backendLabel}
+            </div>
+          </div>
+
+          {backendTarget && (
+            <div className="space-y-2 px-4">
+              <div className="text-sm font-medium">
+                {t("knowledge.targetLabel")}
+              </div>
               <div className="text-sm font-medium text-muted-foreground">
-                {knowledgeBase.embedding_model || "Unknown"}
+                {backendTarget}
               </div>
             </div>
-          </div>
+          )}
 
-          <div className="space-y-3 px-4">
-            <h4 className="text-sm font-medium">Source Files</h4>
-            <div className="text-sm text-muted-foreground">
-              No source files available.
+          <div className="space-y-2 px-4">
+            <div className="text-sm font-medium">
+              {t("knowledge.statusLabel")}
+            </div>
+            <div className="text-sm font-medium text-muted-foreground">
+              {t(
+                STATUS_CONFIG[knowledgeBase.status ?? "empty"]?.label ??
+                  "knowledge.unknown",
+              )}
             </div>
           </div>
 
-          <div className="space-y-3 px-4">
-            <h4 className="text-sm font-medium">Linked Flows</h4>
-            <div className="text-sm text-muted-foreground">
-              No linked flows available.
-            </div>
-          </div>
+          <Separator />
+
+          <IngestionRunsSection kbName={knowledgeBase.dir_name} />
         </div>
       </div>
     </div>

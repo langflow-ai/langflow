@@ -8,12 +8,100 @@ import re
 import pytest
 from langflow.services.telemetry.schema import (
     ComponentPayload,
+    DeploymentPayload,
     EmailPayload,
     PlaygroundPayload,
     RunPayload,
     ShutdownPayload,
     VersionPayload,
 )
+
+
+class TestDeploymentPayload:
+    """Test cases for DeploymentPayload."""
+
+    def test_deployment_payload_initialization_with_valid_data(self):
+        """Test DeploymentPayload initialization with valid parameters."""
+        payload = DeploymentPayload(
+            deployment_action="deployment.create",
+            deployment_provider="test_provider",
+            deployment_seconds=1.5,
+            deployment_success=True,
+            deployment_error_message="",
+            wxo_tenant_id="tenant-abc",
+            client_type="oss",
+        )
+
+        assert payload.deployment_action == "deployment.create"
+        assert payload.deployment_provider == "test_provider"
+        assert payload.deployment_seconds == 1.5
+        assert payload.deployment_success is True
+        assert payload.deployment_error_message == ""
+        assert payload.wxo_tenant_id == "tenant-abc"
+        assert payload.client_type == "oss"
+
+    def test_deployment_payload_initialization_with_defaults(self):
+        """Test DeploymentPayload initialization with default values."""
+        payload = DeploymentPayload(
+            deployment_action="deployment.delete",
+            deployment_provider="test_provider",
+            deployment_seconds=0.5,
+            deployment_success=False,
+            deployment_error_message="404: Provider not found.",
+        )
+
+        assert payload.deployment_action == "deployment.delete"
+        assert payload.deployment_provider == "test_provider"
+        assert payload.deployment_seconds == 0.5
+        assert payload.deployment_success is False
+        assert payload.deployment_error_message == "404: Provider not found."
+        assert payload.wxo_tenant_id is None  # Default value
+        assert payload.client_type is None  # Default value
+
+    def test_deployment_payload_serialization(self):
+        """Test DeploymentPayload serialization to dictionary."""
+        payload = DeploymentPayload(
+            deployment_action="deployment.update",
+            deployment_provider="test_provider",
+            deployment_seconds=2.0,
+            deployment_success=True,
+            deployment_error_message="",
+            wxo_tenant_id="tenant-xyz",
+            client_type="desktop",
+        )
+
+        data = payload.model_dump(by_alias=True, exclude_none=True)
+
+        assert data["deploymentAction"] == "deployment.update"
+        assert data["deploymentProvider"] == "test_provider"
+        assert data["deploymentSeconds"] == 2.0
+        assert data["deploymentSuccess"] is True
+        assert data["deploymentErrorMessage"] == ""
+        assert data["wxoTenantId"] == "tenant-xyz"
+        assert data["clientType"] == "desktop"
+
+    def test_deployment_payload_roundtrip(self):
+        """Test DeploymentPayload roundtrip serialization."""
+        payload = DeploymentPayload(
+            deployment_action="provider.create",
+            deployment_provider="test_provider",
+            deployment_seconds=1.0,
+            deployment_success=False,
+            deployment_error_message="500: Adapter exploded.",
+            wxo_tenant_id="tenant-abc",
+            client_type="oss",
+        )
+
+        data = payload.model_dump()
+        new_payload = DeploymentPayload(**data)
+
+        assert new_payload.deployment_action == payload.deployment_action
+        assert new_payload.deployment_provider == payload.deployment_provider
+        assert new_payload.deployment_seconds == payload.deployment_seconds
+        assert new_payload.deployment_success == payload.deployment_success
+        assert new_payload.deployment_error_message == payload.deployment_error_message
+        assert new_payload.wxo_tenant_id == payload.wxo_tenant_id
+        assert new_payload.client_type == payload.client_type
 
 
 class TestRunPayload:

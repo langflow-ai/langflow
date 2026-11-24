@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from lfx.base.models.watsonx_constants import IBM_WATSONX_URLS
-from lfx.components.agentics.constants import DEFAULT_OLLAMA_URL
 from lfx.io import (
     DropdownInput,
     MessageInput,
@@ -50,7 +49,7 @@ GENERATED_FIELDS_TABLE_SCHEMA = [
     },
 ]
 
-GENERATED_FIELDS_DEFAULT_VALUE = []
+GENERATED_FIELDS_DEFAULT_VALUE: list[dict[str, str | bool]] = []
 
 
 def get_model_provider_inputs() -> list:
@@ -78,7 +77,7 @@ def get_api_key_input() -> SecretStrInput:
     return SecretStrInput(
         name="api_key",
         display_name="API Key",
-        info="API key for authenticating with the selected model provider.",
+        info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
         real_time_refresh=True,
         advanced=True,
     )
@@ -114,8 +113,7 @@ def get_ollama_url_input() -> MessageInput:
     return MessageInput(
         name="ollama_base_url",
         display_name="Ollama API URL",
-        info=f"API endpoint for Ollama (shown only when Ollama is selected). Defaults to {DEFAULT_OLLAMA_URL}.",
-        value=DEFAULT_OLLAMA_URL,
+        info="API endpoint for Ollama (shown only when Ollama is selected).",
         show=False,
         real_time_refresh=True,
         load_from_db=True,

@@ -1,9 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { zoomOut } from "../../utils/zoom-out";
+import { TEXTS } from "../../utils/constants/texts";
+import { skipIfComponentUnavailable } from "../../utils/skip-if-component-unavailable";
 
 test(
   "user must be able to save or delete a global variable",
@@ -17,11 +16,14 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("openai");
+    await page
+      .getByTestId("sidebar-search-input")
+      .fill(TEXTS.providerOpenAiSearch);
 
-    await page.waitForSelector('[data-testid="openaiOpenAI"]', {
-      timeout: 1000,
-    });
+    await skipIfComponentUnavailable(
+      page.getByTestId("openaiOpenAI"),
+      "OpenAI",
+    );
 
     await page
       .getByTestId("openaiOpenAI")
@@ -32,12 +34,6 @@ test(
 
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await initialGPTsetup(page, {
-      skipAdjustScreenView: true,
-      skipUpdateOldComponents: true,
-      skipSelectGptModel: true,
-    });
-
     const genericName = Math.random().toString();
     const credentialName = Math.random().toString();
 
@@ -46,7 +42,7 @@ test(
     await page.getByTestId("icon-Globe").nth(0).click();
     await page.getByText("Add New Variable", { exact: true }).click();
     await page
-      .getByPlaceholder("Enter a name for the variable...")
+      .getByPlaceholder(TEXTS.placeholderVariableName)
       .fill(genericName);
     await page.getByText("Generic", { exact: true }).first().isVisible();
     await page
@@ -58,7 +54,7 @@ test(
 
     await page.getByText("Add New Variable", { exact: true }).click();
     await page
-      .getByPlaceholder("Enter a name for the variable...")
+      .getByPlaceholder(TEXTS.placeholderVariableName)
       .fill(credentialName);
     await page.getByTestId("credential-tab").click();
     await page
@@ -73,7 +69,7 @@ test(
       .hover()
       .then(async () => {
         await page.getByTestId("icon-Trash2").last().click();
-        await page.getByText("Delete", { exact: true }).nth(1).click();
+        await page.getByText(TEXTS.delete, { exact: true }).nth(1).click();
       });
   },
 );

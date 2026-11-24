@@ -2,6 +2,9 @@ from unittest.mock import MagicMock
 
 import pytest
 from langflow.custom import Component
+
+pytest.importorskip("lfx_bundles")
+
 from lfx.components.wikipedia import WikipediaComponent
 from lfx.custom.utils import build_custom_component_template
 
@@ -28,6 +31,12 @@ class TestWikipediaComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
+
+    @pytest.fixture
+    def skipped_outputs(self):
+        return {
+            "dataframe": "queries the live Wikipedia API",
+        }
 
     def test_wikipedia_initialization(self, component_class):
         component = component_class()

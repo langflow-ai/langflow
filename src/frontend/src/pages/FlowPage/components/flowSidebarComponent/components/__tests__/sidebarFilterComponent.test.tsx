@@ -1,12 +1,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { SidebarFilterComponent } from "../sidebarFilterComponent";
 
 // Mock the UI components
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name, className }: any) => (
+  default: ({ name, className }: { name: string; className?: string }) => (
     <span data-testid={`icon-${name}`} className={className}>
       {name}
     </span>
@@ -15,7 +15,17 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children, content, side, styleClasses }: any) => (
+  default: ({
+    children,
+    content,
+    side,
+    styleClasses,
+  }: {
+    children?: ReactNode;
+    content?: ReactNode;
+    side?: string;
+    styleClasses?: string;
+  }) => (
     <div
       data-testid="tooltip"
       data-content={content}
@@ -28,7 +38,13 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 }));
 
 jest.mock("@/components/ui/button", () => ({
-  Button: ({ children, onClick, className, unstyled, ...props }: any) => (
+  Button: ({
+    children,
+    onClick,
+    className,
+    unstyled,
+    ...props
+  }: ButtonHTMLAttributes<HTMLButtonElement> & { unstyled?: boolean }) => (
     <button
       onClick={onClick}
       className={className}
@@ -362,7 +378,7 @@ describe("SidebarFilterComponent", () => {
     it("should handle missing resetFilters function gracefully", () => {
       const propsWithoutCallback = {
         ...defaultProps,
-        resetFilters: undefined as any,
+        resetFilters: undefined as unknown as () => void,
       };
 
       expect(() => {
@@ -487,6 +503,16 @@ describe("SidebarFilterComponent", () => {
 
       const resetButton = screen.getByTestId("sidebar-filter-reset");
       expect(resetButton.tagName).toBe("BUTTON");
+    });
+
+    it("should give the reset button an accessible name", () => {
+      // The icon is aria-hidden and a tooltip only supplies aria-describedby,
+      // so the button needs its own label to have a name at all.
+      render(<SidebarFilterComponent {...defaultProps} />);
+
+      expect(
+        screen.getByRole("button", { name: "Remove filter" }),
+      ).toBeInTheDocument();
     });
   });
 

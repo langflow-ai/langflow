@@ -1,0 +1,908 @@
+# Bundle API
+
+Stable surface that Langflow Extension Bundles consume.  Every public symbol
+listed below is part of the contract: changes to its name, signature, semantics,
+or visibility require a coordinated version bump and a `## Changelog` entry.
+
+This document is paired with the integer **`BUNDLE_API_VERSION`** declared in
+[`lfx.extension.manifest`](src/lfx/src/lfx/extension/manifest.py).  Manifests
+declare the contract versions they support via `lfx.compat: ["1"]`; a bundle
+that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
+`version-constraint-unsatisfied`.
+
+> **CI gate:** any PR that modifies a file containing an in-scope surface MUST
+> add a `## Changelog` entry describing the change.  The CI guard
+> [`scripts/migrate/check_bundle_api_changelog.py`](scripts/migrate/check_bundle_api_changelog.py)
+> enforces this.  Pure-internal refactors that preserve every public symbol's
+> name and signature do not require a changelog entry, but reviewers should be
+> skeptical.
+
+---
+
+## Surface (v0)
+
+### Component base class
+
+| Symbol | Source |
+| --- | --- |
+| `Component` | `lfx.custom.custom_component.component.Component` |
+| `Component.build()` (declared on subclasses) | call site of every loaded bundle module |
+| `Component.inputs` | declarative input list |
+| `Component.outputs` | declarative output list |
+| `Component.display_name` / `Component.description` / `Component.icon` / `Component.documentation` | metadata read by the palette |
+| `Component.name` | optional override of the registry class name |
+
+### Inputs
+
+| Symbol | Source |
+| --- | --- |
+| `Input` (base) | `lfx.io` |
+| `MessageTextInput` / `MultilineInput` / `SecretStrInput` | `lfx.io` |
+| `IntInput` / `FloatInput` / `BoolInput` | `lfx.io` |
+| `DropdownInput` / `TabInput` | `lfx.io` |
+| `DictInput` / `NestedDictInput` | `lfx.io` |
+| `FileInput` / `LinkInput` | `lfx.io` |
+| `HandleInput` | `lfx.io` |
+| `ConnectionInput` (legacy Composio connection flow) | `lfx.inputs` |
+| `ConnectionRefInput` (portable host-resolved reference) | `lfx.io` |
+
+### Integrations
+
+| Symbol | Source |
+| --- | --- |
+| `ConnectionRef` / `ResolvedCredential` / `CredentialLease` | `lfx.integrations` |
+| `ConnectionResolutionRequest` / `ConnectionStatus` | `lfx.integrations` |
+| `IntegrationError` and typed subclasses / `INTEGRATION_ERROR_CODES` | `lfx.integrations` |
+| `normalize_integration_error()` / `register_error_normalizer()` | `lfx.integrations` |
+| `IntegrationProvider` / `OAuthProfile` / `IntegrationCapability` / `ScopeSet` | `lfx.integrations` |
+| `McpToolPin` (pinned MCP action contract on a capability) | `lfx.integrations` |
+| `integration_action()` | `lfx.integrations` |
+| `Component.resolve_connection(field_name)` | `lfx.custom.custom_component.component.Component` |
+| `Component.select_integration_capabilities(capability_ids)` | `lfx.custom.custom_component.component.Component` |
+| `BaseConnectionResolverService`, `ConnectionAccessPolicy` | `lfx.services.connection` |
+
+### Triggers
+
+| Symbol | Source |
+| --- | --- |
+| `BaseTriggerComponent` (`trigger_kind`, `provider`, `needs_connection`, `trigger_config()`, `build_event()`) | `lfx.base.triggers.base` |
+| `TRIGGER_EVENT_FIELD` (the input the server writes the firing event into) | `lfx.base.triggers.base` |
+| `TriggerDefinition` | `lfx.base.triggers.base` |
+
+### Preset MCP components
+
+| Symbol | Source |
+| --- | --- |
+| `MCPPresetComponent` (`_mcp_server_config`, `_pinned_spec`, `_get_tools`, `run_tool`) | `lfx.base.mcp.preset` |
+| `preset_control_inputs()` | `lfx.base.mcp.preset` |
+| `PinnedServerSpec` / `PinnedToolSpec` / `PinnedToolDiff` | `lfx.base.mcp.pinned` |
+| `pinned_spec_from_capabilities()` / `tools_list_digest()` / `enforce_pinned_tools()` | `lfx.base.mcp.pinned` |
+
+### Outputs
+
+| Symbol | Source |
+| --- | --- |
+| `Output` | `lfx.io` |
+
+### Schema types
+
+| Symbol | Source |
+| --- | --- |
+| `Data` | `lfx.schema.data` |
+| `DataFrame` | `lfx.schema.dataframe` |
+| `Message` | `lfx.schema.message` |
+
+### Lazy-import helper (consumed by bundle ``__init__.py`` files)
+
+| Symbol | Source |
+| --- | --- |
+| `import_mod(attr_name, module_name, package)` | `lfx.utils.lazy_import` (canonical; `lfx.components._importing` re-exports it for backward compatibility) |
+
+### Manifest contract (consumed by the loader)
+
+| Symbol | Source |
+| --- | --- |
+| Manifest schema (`extension.json` / `[tool.langflow.extension]`) | `lfx.extension.manifest.ExtensionManifest` |
+| `BundleRef` (one entry in optional `bundles[]`; bundle names must be unique) | `lfx.extension.manifest.BundleRef` |
+| `ProviderManifestEntry` (one entry in the optional `providers[]`) | `lfx.extension.manifest.ProviderManifestEntry` |
+| `IntegrationManifestRef` entries in optional `integrations[]` | `lfx.extension.manifest.IntegrationManifestRef` |
+| `IntegrationCapabilityManifest` (bundle-owned versioned provider catalog) | `lfx.integrations.IntegrationCapabilityManifest` |
+| `LfxCompat` (declared as `manifest.lfx`) | `lfx.extension.manifest.LfxCompat` |
+| `BUNDLE_API_VERSION` (the integer this lfx ships) | `lfx.extension.manifest` |
+| `EXTENSION_SCHEMA_URL` / `SCHEMA_VERSION` | `lfx.extension.manifest` |
+
+Slot vocabulary: `official` (installed pip distributions and seed
+directories) and `extra` (paths declared in `LANGFLOW_COMPONENTS_PATH`).
+Component IDs at runtime are `ext:<bundle>:<Class>@<slot>`.
+
+### Discovery + loading entry points
+
+| Symbol | Source |
+| --- | --- |
+| `load_extension(root, *, bundle_name=None)` | `lfx.extension.loader` |
+| `load_extension_bundles(root)` | `lfx.extension.loader` |
+| `load_installed_extensions()` | `lfx.extension.loader` |
+| `discover_inline_bundles()` | `lfx.extension.loader` |
+| `discover_installed_extensions()` / `discover_seed_extensions()` / `discover_all_extensions()` | `lfx.extension.discovery` |
+| `LoadedComponent` | `lfx.extension.loader` (frozen dataclass; what the registry stores) |
+| `LoadedIntegration` | `lfx.extension.loader` (validated capability metadata for discovery and policy) |
+| `LoadResult` | `lfx.extension.loader` |
+| `SLOT_OFFICIAL` / `SLOT_EXTRA` | `lfx.extension.loader` |
+
+### Reload pipeline
+
+| Symbol | Source |
+| --- | --- |
+| `reload_bundle(registry, bundle_name)` | `lfx.extension.reload` |
+| `BundleRegistry` (`list_components()`, `list_integrations()`) | `lfx.extension.bundle_registry` |
+| `BundleRecord` (components plus validated integration metadata) | `lfx.extension.bundle_registry` |
+| `ReloadInProgressError` | `lfx.extension.bundle_registry` |
+| `POST /api/v1/extensions/{id}/bundles/{name}/reload` | `langflow.api.v1.extensions` |
+
+### Errors
+
+| Symbol | Source |
+| --- | --- |
+| `ExtensionError` | `lfx.extension.errors` |
+| `ExtensionErrorCollection` | `lfx.extension.errors` |
+| `format_extension_error(error)` | `lfx.extension.errors` |
+| `ERROR_CODES` (frozenset of every typed code) | `lfx.extension.errors` |
+
+The full kebab-case discriminant set is the contract — adding a code is
+backward-compatible; removing or renaming a code is a breaking change and
+requires a `BUNDLE_API_VERSION` bump.
+
+### Validate / authoring CLI
+
+| Symbol | Source |
+| --- | --- |
+| `validate_extension(root, *, execute_imports=False)` | `lfx.extension.validate` |
+| `ValidateReport` | `lfx.extension.validate` |
+| `lfx extension validate` (CLI) | `lfx.cli._extension_commands` |
+| `lfx extension schema` (CLI) | `lfx.cli._extension_commands` |
+| `lfx extension init` (CLI) | `lfx.cli._extension_commands` |
+| `lfx extension dev` (CLI -- registers a local path and execs `langflow run`) | `lfx.cli._extension_commands` |
+| `lfx extension list` (CLI) | `lfx.cli._extension_commands` |
+| `lfx extension reload` (CLI) | `lfx.cli._extension_commands` |
+| `register_dev_extension` / `unregister_dev_extension` (Python API) | `lfx.extension.dev_registry` |
+
+### Migration
+
+| Symbol | Source |
+| --- | --- |
+| Migration-table file | `src/lfx/src/lfx/extension/migration/migration_table.json` |
+| `MigrationEntry` | `lfx.extension.migration.schema` |
+| `MigrationTable` | `lfx.extension.migration.schema` |
+| `migrate_flow_payload(payload, table)` | `lfx.extension.migration.rewrite` |
+| `MIGRATION_SCHEMA_VERSION` | `lfx.extension.migration.schema` |
+
+---
+
+## Out of scope (v0)
+
+These are reserved in the manifest schema and produce a typed
+`field-deferred-in-this-milestone` error if set; they are NOT part of the
+v0 contract:
+
+- `services` — bundle-declared service factories
+- `routes` — bundle-mounted HTTP routes
+- `hooks` — bundle-declared lifecycle hooks
+- `starter_projects` — bundle-shipped starter flows
+- `userConfig` — bundle-declared user-config schema
+- Multi-bundle manifests (`bundles` list with length > 1)
+
+---
+
+## Pilot bundle: `lfx-duckduckgo`
+
+The shipped LE-1023 pilot is **`duckduckgo`**, extracted into the
+standalone distribution
+[`lfx-duckduckgo`](src/bundles/duckduckgo/) under `src/bundles/duckduckgo/`
+with its own `pyproject.toml`.  `langflow`'s own `pyproject.toml`
+declares `lfx-duckduckgo>=0.1.0` as a regular dependency so a flat
+`pip install langflow` continues to ship the bundle as before.
+
+Why this bundle:
+
+- Single component (`DuckDuckGoSearchComponent`) in a single file
+  (`duck_duck_go_search_run.py`).
+- Zero git churn over the last six months.
+- Modern `Component` base class (no `LCToolComponent` legacy).
+- No authentication required — failure mode is a single failed request, not a
+  paid-API outage.
+- Class name is globally unique across `src/lfx/src/lfx/components/**`, so the
+  bare-name migration entry is allowed by `check_bare_names.py`.
+
+The runtime half of the M1 proof-of-delivery gate (save a flow on
+pre-migration Langflow, upgrade, confirm it loads AND runs identically)
+lives in the dogfood checklist at
+[`src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md`](src/bundles/duckduckgo/M1_DOGFOOD_CHECKLIST.md);
+the deserialize half is covered by
+`src/lfx/tests/integration/extension/test_pilot_duckduckgo_upgrade.py`.
+
+---
+
+## Changelog
+
+- **Google Workspace network diagnostics (2026-10-15).** `lfx.integrations` exports
+  `IntegrationNetworkError` with the additive `network-error` code. Google transport
+  failures report a fixed reason and API hostname, with server-network guidance in
+  the visible message. They are non-retryable and use HTTP 504 for timeouts or 502
+  for other connectivity failures. HTTP provider failures retain their existing
+  codes. No existing symbol or signature changes, so `BUNDLE_API_VERSION` remains `1`.
+  The stable `lfx-google` wheel requires `lfx>=1.13.0,<2.0.0`, excluding older
+  prereleases that lack this export. Publish the compatible LFX release before
+  the Google bundle. Nightly and RC builds restamp the bundle to a prerelease
+  with a matching LFX requirement instead of weakening the stable wheel's
+  requirement. Nightlies pin LFX exactly so older RCs cannot satisfy the dependency.
+
+- **Output artifact previews.** `Component.custom_repr()` derives automatic
+  previews from the current output's `status` without storing them in
+  `repr_value`. Explicitly configured non-empty `repr_value` overrides remain
+  supported. Public signatures and `BUNDLE_API_VERSION = 1` remain unchanged.
+
+- **Knowledge storage provider defaults.** `DBProviderInput` defaults to the
+  application-provided SQLite backend. Its public name, fields and signature
+  remain unchanged, so `BUNDLE_API_VERSION` remains `1`. Recognized historical
+  Knowledge and Memory sources resolve to current implementations without
+  loading the retired Chroma SDKs. Custom component source remains untouched.
+  Extension backends that implement only `add_documents` retain their guarded
+  ingestion path. Writing precomputed embeddings remains optional for ordinary
+  ingestion and required for migration imports.
+
+### 2026-09-24 — Async file loader dispatch
+
+Graph outputs and the Read File tool now await `@delegates_to` coroutine methods
+directly. `BaseFileComponent` provides `aload_files_*` and `aprocess_files` for
+native async loaders; existing sync overrides still run in worker threads. Bundle
+coroutines should await these methods instead of calling their sync wrappers on
+the event loop. The public sync method signatures remain unchanged, and
+`BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-23 — Slack sources for triggers (TRG-5)
+
+- `ConnectionNotAuthorizedError`'s `reason` additionally accepts
+  `listener-only`: the connection holds a credential that only a trigger
+  listener process may resolve. A Slack app-level token (`xapp-`) opens
+  Socket Mode sockets and has no other use, so the host resolver refuses it
+  everywhere else, including in a triggered run, and a component is told to
+  choose a different connection. The error code and HTTP 403 status are
+  unchanged. This is additive; `BUNDLE_API_VERSION` remains `1`.
+- `lfx.base.triggers` joins the surface: `lfx-slack` 0.2.0 subclasses
+  `BaseTriggerComponent` for its `Slack: On Message` and `Slack: On Reaction`
+  nodes, so the base class, `TRIGGER_EVENT_FIELD` and `TriggerDefinition` are
+  now a bundle contract and `check_bundle_api_changelog.py` guards the module.
+  Every lfx 1.13.0 release ships it; nightlies before `1.13.0.dev17` do not.
+  `lfx-slack` 0.2.0 keeps the line-wide `lfx>=1.13.0.dev0` floor the release
+  plan requires and imports its triggers lazily, so on those nightlies its
+  actions still load and only the two trigger modules report an import error.
+
+### 2026-09-22 — Lazy manifest discovery for legacy plugin filtering
+
+`filter_plugin_entry_points()` and `filter_component_entry_points()` inspect
+installed manifests only when an entry point has an identifiable distribution.
+App startup with no legacy plugins avoids scanning installed package files.
+Manifest precedence, entry-point ordering, and public signatures are unchanged;
+`BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-17 — `ResolvedCredential.identity = None` is not an identity proof
+
+- Clarify the documented meaning of `ResolvedCredential.identity is None`: the
+  resolver does not know the executing identity (the headless
+  `LF_CONNECTION__*` wire format has no place to declare one). It no longer
+  reads as "the operator vouched for this token". A capability that must run as
+  one identity has to establish it another way (`lfx-slack` reads the token's
+  type prefix) or fail closed with `connection-not-authorized`. Documentation
+  only: no symbol, signature, or default changes, and `BUNDLE_API_VERSION`
+  stays `1`.
+
+### 2026-09-15 — Permanent provider request and resource errors
+
+- Add `InvalidRequestError` (`invalid-request`) and `ResourceNotFoundError`
+  (`resource-not-found`) to `lfx.integrations` and `INTEGRATION_ERROR_CODES`.
+  Both are non-retryable and provide sanitized input/access hints. Bundles can
+  distinguish invalid inputs and missing resources from temporary provider
+  failures and unsupported actions. Existing codes and normalization defaults
+  remain compatible; this additive change retains `BUNDLE_API_VERSION = 1`.
+
+### 2026-09-14 — Integration action selection and execution denials
+
+- Add the pure `Component.select_integration_capabilities(capability_ids)` hook.
+  Its argument is the tuple of declared capability IDs from a connection input
+  or the loaded manifest's `component_ref`. An action-picker bundle returns a
+  non-empty subset based on the invocation's current inputs. Empty or undeclared
+  selections fail with HTTP 422 and `action-unsupported`, independently of
+  governance policy. The default requires all declared capabilities, so
+  existing single-action components need no change. The hook runs before the
+  output body in graph and sync/async tool execution, after tool arguments are
+  applied, and before creating a credential lease. The resolver receives only
+  the selected IDs. Graph construction using the default `ComponentToolkit`
+  checks its providers; selected-action checks wait until the agent supplies
+  invocation arguments. Custom `_get_tools()` or `to_toolkit()` implementations
+  require every declared capability at construction, and their connection leases
+  carry every declared capability. The selection hook cannot narrow an opaque
+  toolset whose returned callables bypass the standard invocation wrappers.
+  Picker option filtering remains bundle-owned; changing the
+  picker alone never authorizes an action. For example:
+
+  ```python
+  def select_integration_capabilities(self, capability_ids: tuple[str, ...]) -> tuple[str, ...]:
+      return ({"search": "google.drive.search", "delete": "google.drive.delete"}[self.action],)
+  ```
+
+  Use the same action-to-capability mapping to dispatch the output's adapter.
+  Implementations must inspect input values without I/O or side effects; the
+  hook may run more than once. For a component requiring several actions in one
+  invocation, return every capability it will use. This is additive;
+  `BUNDLE_API_VERSION` remains `1`.
+- `IntegrationPolicyError` also implements `IntegrationError`, retaining
+  `PermissionError` compatibility while carrying `policy-blocked`, HTTP 403,
+  an administrator-action hint and owner-only key details. Component policy
+  denials now pass through the normal error-message persistence handler.
+- Empty persisted integration ceilings retain unrestricted semantics when a
+  plugin is installed. External deny-all must be explicitly configured; plugins
+  changing semantics must provide an operator-visible migration/configuration
+  step. No automatic Enterprise migration is included here.
+
+### 2026-09-14 — Integration policy review follow-up
+
+- Policy bundle coordinators expose `read_state()` to atomically return the
+  immutable revision and source availability. Custom `BasePolicyBundleService`
+  implementations must supply this method. Integration policy resolution pins
+  both provider and action decisions to that state, including across async
+  plugin hooks, so concurrent publication cannot combine different revisions.
+- Failure to look up a component's integration identity now stops execution;
+  `None` is reserved for a successful lookup with no matching capability.
+  Template building clears previous integration identity stamps before lookup,
+  including when registry access fails.
+
+### 2026-09-14 — Integration policy review
+
+- Component and host resolver gates require metadata for every declared
+  capability when an action deny-list is configured. Missing or unavailable
+  metadata produces a typed policy denial before credential access; an
+  unconfigured installation retains pass-through behavior.
+- Integration policy snapshots support dotted provider IDs and expire cached
+  allows when refreshing a configured shared policy fails, including policies
+  that restrict integration actions without a provider ceiling.
+- The synchronous and asynchronous `require_integration_actions` helpers accept
+  optional `capability_ids`; `policy_keys_for_capabilities` accepts optional
+  `require_loaded` validation. These additions do not change previously released
+  Bundle API signatures; `BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-14 — Actionable connection authorization denials
+
+- `ConnectionNotAuthorizedError.reason` and `details.reason` identify the denial.
+  The optional `reason` argument additionally accepts `anonymous-principal`,
+  `unknown-principal`, and `non-interactive-opt-in-required`, each with a safe,
+  actionable hint. The existing `principal` and `provider` reasons, error code,
+  and HTTP 403 status are preserved. Owner/share authorization is checked before
+  reporting a missing opt-in; credentials are never read for a denied request.
+  This is additive; `BUNDLE_API_VERSION` remains `1`.
+
+### 2026-09-10 — Integration identity ownership and runtime floors
+
+- The bundle registry rejects duplicate integration provider IDs, capability IDs,
+  and policy keys across providers or bundles with `integration-identity-conflict`.
+  Policy keys may group actions within one provider. Startup reports rejected
+  bundles, and reload validates before swapping modules or registry metadata.
+- Integration references require `lfx>=1.13.0.dev0`. The loader and validator
+  report `lfx-version-too-old` before schema parsing on older runtimes. CI checks
+  every declaring bundle's runtime dependency against the same feature floor;
+  `scripts/ci/sync_bundle_lfx_pin.py 1.13.0` remains the floor update mechanism.
+  Manifests without integrations retain their existing behavior.
+
+### v0 (this release)
+
+- **Integration policy gating of bundle capabilities (additive).**
+  `IntegrationPolicyBlockedError` (code `policy-blocked`, HTTP 403) is added to
+  the typed integration error envelope and to `INTEGRATION_ERROR_CODES`.
+  `IntegrationCapability.policy_keys` is now validated against the
+  `integrations.<provider_id>.<action>` grammar and `IntegrationProvider`
+  rejects capability policy keys outside its own provider prefix, so every
+  declared action is addressable by an operator deny-list.
+  `ConnectionResolutionRequest.capability_ids` carries the capability ids
+  declared by the requesting input, letting a host resolver enforce the
+  deny-list before it selects a credential row.  `Component` gains
+  `require_integration_policy()`, called from `build_results()`, so a blocked
+  provider or action fails before the component body runs and before any
+  credential is minted, decrypted, or refreshed.  Bundles that declare no
+  integrations are unaffected; `BUNDLE_API_VERSION` remains `1`.
+
+- **Owner-only route families on the execution principal (additive).**
+  `ExecutionPrincipal.allow_explicit_shares` is a new field defaulting to `True`,
+  so every family that already honored explicit shares keeps doing so. Route
+  families whose admission never admits a delegated caller (the legacy MCP
+  transports) stamp it `False`, and a host resolver that evaluates share grants
+  must skip its share branch for those principals. The portable deny floor in
+  `BaseConnectionResolverService.authorize_principal` is unchanged in behavior:
+  it admits a share only when the host passes `explicit_share_authorized`, and
+  its docstring now states that a host must never authorize a share for a
+  principal with this flag set to `False`. Additive for bundles and
+  resolvers alike; `BUNDLE_API_VERSION` remains `1`.
+
+- **2026-09-05 (`lfx-microsoft`).** First consumer of the bundle-owned
+  integration manifest: `lfx-microsoft` ships eight Microsoft Graph delegated
+  actions and builds its `ConnectionRefInput` scopes *from* its own
+  `capabilities.v1.json`. No surface in this document changed --
+  `BUNDLE_API_VERSION` remains `1` -- the entry is recorded so the contract's
+  history names its first out-of-tree consumer.
+
+- **Optional rejected-token digest for connection refresh.**
+  `ConnectionResolutionRequest.rejected_token_digest` carries a SHA-256 digest only
+  after a provider rejects a cached credential. `CredentialLease` supplies it on
+  its single reactive retry so a host can coordinate replacement across workers
+  without transferring token material. Existing request construction and resolver
+  implementations remain compatible; `BUNDLE_API_VERSION` remains `1`.
+
+- **Bundle-owned integration capability manifests (additive).**
+  `ExtensionManifest.integrations[]` now carries `IntegrationManifestRef`
+  values (`provider_id`, owning `bundle`, relative JSON `path`). The referenced
+  `IntegrationCapabilityManifest` is versioned with `schema_version=1` and
+  declares authentication profiles plus executable actions, required and
+  conditional scopes, policy keys, substrate, maturity, deployment contexts,
+  risk, and execution targets. The loader validates bundle ownership and
+  provider identity and exposes the parsed catalog as `LoadedIntegration` in
+  `LoadResult.integrations` and retains it in `BundleRecord.integrations` for
+  process-wide discovery and policy reads through
+  `BundleRegistry.list_integrations()`. Manifests that omit `integrations`
+  still load with an empty list; `BUNDLE_API_VERSION` remains `1`.
+  Capability paths require a lowercase `.json` suffix in both the runtime
+  validator and exported schema. Multi-bundle loading registers extension-wide
+  model providers only after every bundle validates and loads successfully.
+
+- Enforced the unreleased connection resolver contract through a final `resolve`
+  entry point. Hosts now implement `_get_access_policy` and `_resolve`; ownership
+  and non-interactive/share checks run before credential access. Required scopes
+  reject unverified credentials with a typed diagnostic. Resolution failures carry
+  fixed reason codes and actionable guidance without raw credential values or
+  exception chains. `run_flow` now activates its injected variables and environment
+  policy for credential lookups, restoring the prior scope after execution.
+  No previously released API changes; `BUNDLE_API_VERSION` remains 1.
+- Added the `credential-undecryptable` `ConnectionUnresolvedReason`, raised when
+  a stored credential exists but cannot be decrypted (for example after the server
+  secret key changed). It keeps that case distinct from a missing credential, and
+  its guidance tells the user to reconnect. Code that matches on reason values
+  should handle the new value. Additive to the unreleased connection contract;
+  `BUNDLE_API_VERSION` remains 1.
+- Initial surface enumerated above.  Frozen as `BUNDLE_API_VERSION = 1`.
+- Added the provider-neutral connection-reference, resolver, capability,
+  integration-error, and telemetry contracts used by dedicated integration
+  bundles. This is an additive surface change and does not change
+  `BUNDLE_API_VERSION`.
+- Hardened the new connection contracts before their first release: integration
+  exports load lazily; `ScopeSet.covers` requires an explicit `provider` and shares
+  normalization with resolvers through `ScopeSet.missing`; leases activate
+  conditional scopes and support pre-run construction. Malformed credentials
+  produce sanitized typed errors; wrapped HTTP failures preserve their status,
+  and ambiguous 403s no longer claim missing scopes. The authorization floor
+  accepts an optional host-verified `explicit_share_authorized` decision for
+  actor ownership mismatches without bypassing other denies. No previously
+  released Bundle API signature changes; `BUNDLE_API_VERSION` remains 1.
+- `ExtensionManifest.version` now accepts the canonical PEP 440 stable, dev,
+  alpha, beta, and release-candidate forms emitted by the repository's bundle
+  release pipeline, in addition to the existing SemVer 2.0.0 forms.  Runtime
+  and published JSON Schema validation remain equivalent; this is additive and
+  does not change `BUNDLE_API_VERSION`.
+- Typed loader diagnostics now distinguish unavailable optional providers from
+  broken bundle imports.  `optional-dependency-missing` is added to
+  `ERROR_CODES`; a manifest-less `lfx-bundles` module emits this warning only
+  when its declared provider distribution is genuinely absent, allowing the
+  remaining bundle components to load.  Undeclared imports and installed but
+  broken distributions remain `module-import-failed` errors.  Expected
+  `bundle-shadowed` / `seed-bundle-shadowed` precedence outcomes are warnings;
+  winner selection is unchanged.
+- Extension manifests may now declare multiple component bundles.  Startup
+  discovery loads every declared bundle through `load_extension_bundles()`;
+  direct callers may select one with `load_extension(..., bundle_name=...)`.
+  Single-bundle and provider-only manifests retain their existing behavior,
+  so this is additive and does not change `BUNDLE_API_VERSION`.
+- Inline bundle discovery now skips Langflow-owned component compatibility
+  shims marked with `# lfx-bundles-shim` or `# lfx-compat-shim`.  These
+  packages remain importable, but are not treated as user inline bundles
+  and no longer emit `bundle-empty`.
+- `BundleRegistry.write_locked()` exposed as a public context manager so the
+  reload pipeline can hold the registry write lock across both the
+  `sys.modules` swap and the `BundleRecord` install.  Concurrent readers
+  can no longer observe new modules paired with the old record.  No change
+  to the addressable component contract.
+- HTTP reload endpoint (`POST /api/v1/extensions/{id}/bundles/{name}/reload`)
+  returns `422 Unprocessable Entity` for structural failures (broken
+  bundle, missing source path, name mismatch) instead of `200 OK` with
+  `ok=false`.  Body is `{...primaryError, result: ReloadResult}` so the
+  full typed result is preserved under the FastAPI `detail` envelope.
+  `409 Conflict` for `reload-in-progress` is unchanged.
+- CLI table updated to remove the obsolete `dev register` / `dev unregister`
+  / `dev list` subcommands; the actual surface is `extension dev <path>`
+  plus the Python helpers `register_dev_extension` / `unregister_dev_extension`.
+- `MigrationTable.ambiguous_bare_names` added.  Each entry is
+  `{name, candidates: [list of canonical IDs]}` and registers a bare
+  class name that exists in 2+ bundles.  The deserializer now surfaces
+  `component-name-ambiguous` (with the candidate targets) for any bare
+  name listed here, instead of falling through to the generic
+  `component-not-found-with-hint`.  Seeded with the canonical regression
+  cases (`MergeDataComponent`, `SplitTextComponent`, `SubFlowComponent`).
+  `check_bare_names.py` now verifies every Component class found in
+  2+ bundle folders has a matching marker, so a future bundle move that
+  introduces a new ambiguity is caught at PR time.
+- Router-trust CI guard broadened to scan every `.py` under
+  `src/backend/base/langflow/api/**` and `src/lfx/src/lfx/**`; a new file
+  that mounts an `APIRouter(prefix=".../extensions...")` is auto-detected
+  and checked for forbidden install/uninstall/registry-mutation handlers.
+  Authors of files with non-literal prefixes can opt in via a
+  `# router-trust: in-scope` marker.
+- Router-trust guard rewritten to use AST-based cross-file resolution.
+  A forbidden handler in module A is now caught when module B mounts A's
+  router via `parent.include_router(child, prefix=".../extensions...")`,
+  and the same applies transitively across multi-hop include_router
+  chains.  An imported router that cannot be statically resolved is
+  ignored (the guard never flags routes it cannot prove reachable from
+  `/extensions`); routes co-located with an in-scope router ARE flagged.
+- `check_migration_append_only.py` now compares
+  `ambiguous_bare_names` alongside `entries`.  A marker may not be
+  removed once published, and its `candidates` list may only grow --
+  shrinking it would silently regress flows from
+  `component-name-ambiguous` to `component-not-found-with-hint`.
+- Router-trust guard now resolves dotted attribute references in
+  `include_router` and decorators.  ``include_router(child.api.router,
+  prefix="/extensions")`` after ``import child.api`` (and the
+  ``import child.api as alias; alias.router`` shape) are caught -- not
+  just ``from child.api import router as child_router``.  The parser
+  flattens any ``Name``/``Attribute`` chain, and the resolver walks
+  imports of either kind (``from M import N`` and ``import M``,
+  with or without an asname) back to the source file.
+- Router-trust guard's relative-import resolver is now
+  ``__init__.py``-aware.  Inside a package, ``from .child import Y``
+  anchors at the package itself (level=1 -> ``pkg``); inside a regular
+  module ``pkg.foo`` it anchors at the parent package (level=1 ->
+  ``pkg``).  The arithmetic differs because ``__init__.py``'s file
+  module IS the package, while ``pkg/foo.py``'s file module is
+  ``pkg.foo``.  The resolver tracks ``is_package`` and decrements
+  ``level`` by one for ``__init__.py`` files so both shapes resolve
+  correctly.
+- Code-review hardening pass across the extension subsystem.  No public
+  symbol's name or signature changed; this entry covers behavioural
+  tightening that bundle authors and operators should be aware of:
+  - **Path-safety contract honored on every discovery path.**
+    ``DiscoveredExtension`` records emitted from
+    ``discover_installed_extensions`` / ``discover_seed_extensions``
+    now run the same resolve-and-``relative_to`` containment check that
+    ``validate_extension`` performs.  A symlinked ``bundles[0].path``
+    or a symlinked seed subdirectory that escapes the extension root
+    is now rejected with ``path-escape`` *before* reaching the loader,
+    instead of slipping through to ``exec_module()``.  The shared
+    primitive lives at ``lfx.extension._paths.is_within``; every
+    walker (loader, validator, seed discovery, inline-bundle discovery)
+    uses the same function and the same ``SKIP_DIR_NAMES``.
+  - **``--execute-imports`` env allowlist.** The validator's
+    ``--execute-imports`` subprocess now inherits an explicit allowlist
+    (``PATH``, ``LANG``, ``LC_*``, ``SYSTEMROOT``, ``TMPDIR``, ``TZ``,
+    Python locale + encoding vars) instead of denylisting only
+    ``LANGFLOW_*``/``LFX_*``.  Cloud / CI credentials
+    (``AWS_*``, ``OPENAI_API_KEY``, ``GITHUB_TOKEN``, ...) no longer
+    propagate into untrusted bundle import.  The CLI / module docs
+    re-frame this pass as best-effort hygiene lint, not a sandbox.
+  - **AST hygiene lint widened.** ``_find_top_level_io`` now flags
+    ``exec``, ``eval``, ``__import__``, ``compile`` as top-level
+    primitives and ``importlib.import_module`` /
+    ``importlib.__import__`` as dotted-name primitives.  Still
+    best-effort literal-name matching; trivially bypassable by
+    obfuscation, and documented as such.
+  - **Reload swap is non-destructive.** ``_swap_sys_modules`` now
+    builds the staging->prod rename map **before** any ``sys.modules``
+    mutation, snapshots popped old modules into a recovery map, and
+    restores them on any mid-swap exception.  The length-mismatch
+    tripwire on ``zip(strict=True)`` no longer leaves the prod
+    namespace shredded.  A new typed code,
+    ``reload-class-retag-failed``, is appended to
+    ``ReloadResult.warnings`` when ``cls.__module__`` cannot be
+    retagged so the empty-palette-after-reload regression leaves a
+    trail instead of silently failing.
+  - **Cross-source bundle-name collision.**
+    ``load_installed_extensions`` now detects two distributions with
+    different canonical names but identical ``bundle.name`` (which
+    would silently clobber each other at
+    ``_lfx_ext.official.<name>.*``) and emits a typed
+    ``duplicate-bundle-name`` error on the loser, dropping its
+    components.  ``BundleRegistry.install_bundle`` additionally logs a
+    WARNING when an existing record is replaced by a record from a
+    different ``source_path`` (catches collisions the upstream
+    precedence resolver missed).
+  - **Reload endpoint off event loop.**
+    ``POST /api/v1/extensions/{id}/bundles/{name}/reload`` now invokes
+    ``reload_bundle`` via ``asyncio.to_thread`` so slow or large
+    bundle imports do not freeze the worker for other in-flight
+    requests.  The wire contract (status codes, body shape) is
+    unchanged.
+  - **Stable typed-error code rename.**
+    ``multi-bundle-deferred-in-this-milestone`` is renamed to the
+    stable ``multi-bundle-unsupported``.  The old code is retained in
+    ``ERROR_CODES`` as a deprecated alias for one milestone for log
+    scrapers.  Three new codes are added to
+    ``ERROR_CODES``: ``duplicate-bundle-name`` (see above),
+    ``reload-class-retag-failed`` (see above), and
+    ``reload-transport-error`` (CLI-side connectivity failure,
+    previously misreported as ``reload-source-missing``).
+  - **Discovery preserves "unreadable" vs "absent" distinction.**
+    ``_pyproject_declares_extension`` now propagates ``OSError`` so a
+    permission failure on a pyproject that *might* declare an
+    extension surfaces as ``manifest-unreadable`` instead of being
+    silently dropped as "no extension here".
+  - **Dev registry corruption is logged.** ``_read_state`` now
+    distinguishes file absent (silent, legitimate empty registry),
+    file present but unreadable (WARNING), and file present but
+    corrupt JSON / wrong shape (WARNING with detail).  The state
+    file is written with mode 0600 so a hostile third-party process
+    cannot inject an extension path into the developer's next
+    ``langflow run``.
+  - **Entry-point predicate avoids module-level side effects.**
+    ``_entry_point_loads_to_component`` now consults
+    ``importlib.util.find_spec`` first and only falls through to
+    ``ep.load()`` when the spec lookup is insufficient.  The
+    ``except BaseException`` was narrowed to ``except Exception`` so
+    ``SystemExit`` / ``KeyboardInterrupt`` are no longer swallowed at
+    filter time.
+  - **Frontend reload-success warnings surfaced.**  The reload route's
+    ``ReloadResult.warnings`` (non-empty on success) now reach the
+    user via a notice toast in addition to the green success toast.
+    Wire shape unchanged; this is a UI fix that consumes existing
+    payload fields.
+  - **Internal-only file split.** ``sys.modules`` surgery primitives
+    moved to ``lfx.extension.reload_swap``; ``load_installed_extensions``
+    / ``load_seed_extensions`` moved to
+    ``lfx.extension.loader._startup``.  Both are re-exported from
+    their previous import paths so external imports are unchanged.
+  - **Editable installs are discovered via the entry-point fallback.**
+    ``_distribution_manifest_path`` now falls back to the
+    ``langflow.extensions`` entry-point group when ``dist.files`` only
+    surfaces ``dist-info/`` entries (the ``pip install -e`` /
+    ``uv pip install -e`` case).  The entry-point value is resolved
+    via ``importlib.util.find_spec`` -- which runs import-system
+    finders but never executes the module body -- and the resulting
+    package directory is scanned for ``extension.json`` or a
+    ``[tool.langflow.extension]`` pyproject.  Wheel installs are
+    unaffected: the fallback only fires when the primary ``dist.files``
+    scan finds no manifest.  Previously, editable-installed bundles
+    were silently dropped by ``lfx extension list`` and the registry,
+    even though the bundle pyproject already declared the
+    entry-point.
+  - **Reload CLI: ``--bundle`` is optional; ``--all`` is implemented.**
+    ``lfx extension reload <ext_id>`` now resolves the bundle name
+    from local ``discover_all_extensions`` when ``--bundle`` is
+    omitted; explicit ``--bundle`` still wins for cases where the
+    local install is not visible to the running server.
+    ``lfx extension reload --all`` iterates every locally-discovered
+    bundle, POSTs reload to each, and exits non-zero if any reload
+    fails (previously hard-errored as "not yet wired").  ``--all`` is
+    mutually exclusive with a positional id / ``--bundle`` (exit 2).
+    The HTTP wire contract (``POST /api/v1/extensions/{id}/bundles/
+    {name}/reload`` per-bundle) is unchanged; this is a CLI-only
+    surface change.
+- **User-scoped extension events.**  Bundle lifecycle events
+  (``bundle_reloaded``, ``bundle_reload_failed``, ``flow_migrated``,
+  ``extension_error``) now publish to a per-user keyspace
+  (``user:<user_id>``) instead of the shared ``"global"`` bucket so
+  flow-migration and reload payloads cannot leak across users via the
+  poll endpoint.
+  - ``reload_bundle`` gains an optional keyword-only ``user_id: str |
+    None = None`` argument.  When supplied, ``bundle_reloaded`` /
+    ``bundle_reload_failed`` events are emitted to keyspace
+    ``user:<user_id>``; ``None`` (CLI / authless dev) keeps the legacy
+    ``"global"`` emission.  Existing positional callers are unaffected.
+  - ``POST /api/v1/extensions/{id}/bundles/{name}/reload`` now resolves
+    the authenticated user and threads its id into ``reload_bundle``, so
+    every reload triggered via HTTP is published to that user's
+    keyspace.  Wire contract (status codes, body shape) unchanged.
+  - ``GET /api/v1/extensions/events`` drops its client-supplied
+    ``keyspace`` query parameter.  The endpoint derives the keyspace
+    from the authenticated user server-side, so an authenticated client
+    can no longer poll another user's keyspace.  Frontends that polled
+    without ``keyspace`` (the in-tree consumer) are unaffected;
+    third-party callers that explicitly passed ``keyspace=...`` will
+    now receive ``422`` from FastAPI's strict parameter validation.
+- **Reload event payload aligned with ``ReloadResult``.**  Both
+  ``bundle_reloaded`` and ``bundle_reload_failed`` events now carry the
+  full ``ReloadResult.to_dict()`` envelope (``ok``, ``bundle``,
+  ``reload_id``, ``components_added``, ``components_removed``,
+  ``components_changed``, ``warnings``, ``errors``) instead of a
+  hand-rolled subset.  Polling clients can now (a) detect body-only
+  edits via ``components_changed`` instead of mis-reporting them as
+  "no source changes detected", and (b) surface a failed reload's
+  ``errors[0].message`` instead of degrading to a generic
+  "check server logs" fallback.  HTTP response shape unchanged.
+- **``GET /api/v1/extensions/events`` rejects ``keyspace`` explicitly.**
+  Previously the endpoint accepted but silently ignored any
+  client-supplied ``keyspace`` query parameter (server-derived from the
+  authenticated user since the prior entry).  Silent drop masked client
+  bugs that assumed the value had effect.  The route now returns ``422
+  Unprocessable Entity`` with a typed
+  ``extension-events-keyspace-forbidden`` error envelope when the
+  parameter is present.  ``extension-events-keyspace-forbidden`` is
+  added to ``ERROR_CODES`` (additive; codes-as-contract semantics
+  preserved).  In-tree polling clients that never sent the parameter
+  are unaffected.
+- **Manifest-less `lfx.bundles` discovery (metapackage split, 1.11).**  A
+  distribution may declare `[project.entry-points."lfx.bundles"]` whose
+  value is an importable package; each immediate subdirectory is loaded as
+  one bundle at the `@official` slot with **no `extension.json`** (the
+  langchain-community model; these directories are not inputs to
+  `lfx extension validate` -- the validator requires an `extension.json` or
+  `[tool.langflow.extension]` manifest and reports `manifest-not-found`
+  without one).
+  `load_lfx_bundles_extensions` is exported from `lfx.extension` (additive).
+  Discovery precedence for cross-source bundle-name collisions becomes
+  `installed > seed > lfx_bundles > dev > inline` -- **manifest always
+  wins**, so a manifest-shipping `lfx-<provider>` shadows the same-named
+  provider in a metapackage with the existing `bundle-shadowed` warning
+  (graduation requires no lockstep release).  A metapackage provider whose
+  name is already claimed by an installed or seed source is **never
+  imported** -- all `@official` sources share the
+  `_lfx_ext.official.<bundle>.*` sys.modules namespace, so importing the
+  losing copy would overwrite the winner's live modules; the skipped copy
+  carries the same typed `bundle-shadowed` diagnostic (on `errors`, matching
+  the resolver) so filtering by code never mixes severities.  Namespace
+  packages are walked across **all portions**, and resolved roots are
+  deduplicated by path so duplicate declarations never self-shadow.  This
+  precedence is a **startup-time** property: `load_lfx_bundles_extensions`
+  runs in the component-loading path, not in `discover_all_extensions`, so
+  `lfx extension list` -- which walks only the installed and seed
+  (manifest-bearing) sources -- does **not** enumerate manifest-less
+  metapackage providers.  A live `lfx.bundles` provider is therefore
+  invisible at list-time, and its shadowing against a manifest-shipping
+  package is resolved only when the server assembles the
+  `_lfx_ext.official.<bundle>.*` namespace at startup.  New
+  warning-only codes added to `ERROR_CODES` (additive), one per discovery
+  failure mode and none of which abort startup: `bundle-discovery-malformed`
+  (declaration does not resolve to an importable package directory --
+  including a parent package whose `__init__` raises during `find_spec`),
+  `bundles-provider-name-invalid` (provider folder is not a valid bundle
+  name), `bundles-root-unreadable` (root cannot be enumerated), and
+  `duplicate-lfx-bundles-provider` (same provider name in more than one
+  root; first wins).  Manifest-less bundles bypass the
+  `version-constraint-unsatisfied` API-version gate by construction (no
+  manifest to carry `lfx.compat`); install-time compatibility rides on the
+  metapackage's PEP 508 `lfx>=X,<Y` pin instead.  Manifest-less records
+  register with `manifestless=True` (additive field on `LoadResult` /
+  `BundleRecord`) and are **not hot-reloadable**: the reload pipeline
+  refuses them with the new typed code `reload-manifestless-unsupported`
+  (additive in `ERROR_CODES`) instead of failing `manifest-not-found`;
+  pick up metapackage changes by upgrading the distribution and
+  restarting the process.
+- **`import_mod` promoted to a stable public home.**  The lazy-import helper
+  that bundle packages call from their `__getattr__`-based `__init__.py`
+  files moved from the internal `lfx.components._importing` to
+  `lfx.utils.lazy_import` and is now part of the BUNDLE_API surface (name,
+  signature, and semantics contract-stable).  `lfx.components._importing`
+  re-exports it unchanged, so existing in-tree and third-party callers are
+  unaffected (additive).
+- **Validator accepts inherited entry-points.**  `validate_extension` no
+  longer emits `build-method-missing` for a Component subclass whose base
+  is a *derived* Component base (name ends with `Component`, e.g.
+  `LCVectorStoreComponent` / `LCToolComponent`): such classes inherit the
+  class-level `outputs` declaration and only override the output method,
+  which the AST-only check cannot resolve across modules.  Direct
+  subclasses of the root `Component` keep the strict inline
+  `build`-or-`outputs` requirement.  Surfaced by the partner graduations
+  (`lfx-datastax` et al.); previously-passing bundles are unaffected
+  (strictly fewer false positives).
+- **Manifest `providers[]` — bundles can register model providers (additive).**
+  `ExtensionManifest` gains an optional `providers[]` list
+  (`ProviderManifestEntry`).  Each entry declares a model provider — name,
+  metadata (icon, credential variables, `mapping.model_class`), optional lazy
+  `model_class` / `embedding` import refs, `api_key_required`, `live` /
+  `conditional_live`, and dotted-path `live_discovery` / `validator` callables —
+  which the loader merges into lfx's unified model system at load time via
+  `lfx.base.models.provider_registry`.  Built-in providers always win on a name
+  collision.  `bundles[]` is now **0-or-1** rather than exactly one, so a
+  *provider-only* extension may ship providers with no component bundle; an
+  extension must declare at least one of `bundles` or `providers`.  Existing
+  single-bundle manifests are unaffected.  Discovery
+  (`discover_installed_extensions` / `discover_seed_extensions`) surfaces a
+  provider-only extension with `DiscoveredExtension.bundle_name = None`, and
+  `registry.Extension.bundle_name` is likewise now `str | None` (the
+  `lfx extension list` BUNDLE column shows `—` for such extensions).
+- **Provider base-URL suffixes (additive).**  A provider metadata variable whose
+  `langchain_param` is `base_url` may declare `base_url_suffix` (for example,
+  `/v1`).  Runtime chat and embedding clients append the normalized suffix only
+  when the configured URL does not already end with it.  The field is published
+  in the extension JSON Schema, and unrecognized sibling keys on base-URL
+  variables are rejected so misspellings cannot silently disable normalization.
+- **Provider identity and static catalogs (additive).**  A `providers[]` entry
+  may now declare a stable lowercase `provider_id`, an independent
+  `display_name`, legacy `aliases`, and a dotted-path `catalog_loader`.  The
+  loader must return a flat list of model metadata rows; Langflow validates
+  model identities and stamps provider ownership before merging those rows
+  into the unified catalog.  Manifests that omit `provider_id` retain their
+  existing behavior through a deterministic ID derived from `name`.
+  `ProviderDescriptor` is the preferred public registry type and
+  `ProviderSpec` remains an alias for source compatibility.  The registry also
+  exposes an immutable generation-tagged snapshot plus an eager catalog
+  validation hook for deployment readiness.  Existing provider manifests are
+  unaffected and `BUNDLE_API_VERSION` remains `1`.
+- **Provider identity resolution and policy snapshots (additive).**
+  `resolve_provider_id()` is the canonical resolver for registered names,
+  display names, aliases, stable IDs, and deterministic legacy fallbacks.
+  Model-provider policy services now expose cached synchronous `resolve()`,
+  async `aresolve()`, single-provider `is_allowed()`, and `invalidate()`
+  hooks while preserving the existing immutable snapshot and allow-all OSS
+  behavior. The process-local snapshot cache has a bounded TTL, and async
+  implementations can override `aget_allowed_provider_ids()` without
+  bypassing it. Existing synchronous policy subclasses, including subclasses
+  that did not call `super().__init__()`, remain source-compatible.
+- **New typed error codes (additive): `provider-invalid`, `provider-skipped`.**
+  A malformed provider spec surfaces `provider-invalid`; a provider whose name
+  collides with a built-in or already-loaded provider surfaces
+  `provider-skipped`.  Both are warning-only — the rest of the extension still
+  loads — so adding them is backward-compatible (no `BUNDLE_API_VERSION` bump).
+- **`ExtensionError.ref_url` / CLI ``see:`` no longer carry per-code anchors.**
+  Auto-derived ``ref_url`` values (and the rendered ``see:`` line) now point
+  to the single extension-error guidance page
+  (``https://docs.langflow.org/extensions/errors``) instead of
+  ``…/extensions/errors#<code>``.  The ``code``, ``message``, ``location``,
+  ``content``, and ``hint`` fields are unchanged; only the docs link shape
+  changed.  Callers that deep-linked on ``ref_url`` suffix should read
+  ``code`` directly instead.
+- **`duplicate-distribution` detection resolves symlinks first.**
+  `load_installed_extensions` collapses manifest paths that are merely
+  different spellings of the same physical file (compared via
+  `Path.resolve()`; an `OSError` during resolution falls back to the raw
+  path) before the duplicate check.  RHEL-family (ubi) venvs symlink
+  `lib64 -> lib` and put both spellings on `sys.path`, so
+  `importlib.metadata.distributions()` yields every installed distribution
+  twice — previously each manifest-shipping bundle logged a false
+  `duplicate-distribution` error at Docker startup.  The
+  lexicographically-first unresolved spelling remains the winner, so error
+  messages and winner selection are unchanged, and two physically distinct
+  manifests for one canonical name still error.  No public symbol's name or
+  signature changed.
+- **`ResolvedCredential.identity` (additive, optional).**
+  `lfx.integrations.models.ResolvedCredential` gained
+  `identity: Literal["user_delegated", "bot", "service"] | None = None`,
+  mirroring `lfx.integrations.capabilities.IntegrationIdentity`.  The
+  database-backed resolver populates it from the connection row's
+  `executing_identity`; the headless environment resolver leaves it `None`
+  because the `LF_CONNECTION__*` wire format has no place to declare one.
+  Providers whose user and bot tokens share scope names — Slack's `chat:write`
+  is both a User Token Scope and a Bot Token Scope — cannot distinguish the two
+  identities from `granted_scopes`, so a bundle capability that must run as a
+  bot compares this field and fails closed with `connection-not-authorized`
+  before its first request.  The field defaults to `None`, no existing field
+  changed name, type, or meaning, and every existing construction site keeps
+  working, so `BUNDLE_API_VERSION` remains `1`.
+
+- **Pinned action-to-tool mode for preset MCP components (additive).**
+  `MCPPresetComponent` gains a `_pinned_spec()` hook returning a
+  `PinnedServerSpec` (`lfx.base.mcp.pinned`); in pinned mode the component fixes
+  the endpoint and transport, refuses any pinned tool that was removed, renamed,
+  or re-shaped relative to the pin, compares the pinned subset's `tools/list` content digest and
+  the `InitializeResult.serverInfo` name/version when they are pinned, keeps the
+  Tool dropdown off the live server, and re-checks call arguments against the
+  pinned schema on both of a tool's call paths (`coroutine` and `func`). Only an
+  argument the pin does not declare is treated as drift; an omitted required
+  field is left to the derived args schema, whose error is self-correctable.
+  `pinned_spec_from_capabilities()` additionally refuses a `tools_list_hash`
+  that is not the digest of exactly the tools the manifest pins, so that
+  authoring mistake surfaces at build time instead of as runtime "drift".
+  Drift raises the new `IncompatibleToolError`
+  (`incompatible-tool`, added to `INTEGRATION_ERROR_CODES`). Capabilities carry
+  the pin as `IntegrationCapability.mcp_pin: McpToolPin`; a capability whose
+  `substrate` is `mcp` must now declare both `mcp_tool` and `mcp_pin`. Tools
+  discovered by `update_tools` carry their raw `input_schema`/`output_schema` on
+  `metadata`, and a server config may set `allow_sse_fallback=False` to pin the
+  transport. Components that do not override `_pinned_spec()` are unaffected;
+  `BUNDLE_API_VERSION` remains `1`.
+  Pinned discovery validates the raw tool list before schema conversion can skip
+  entries and rejects duplicate or unnamed tools. Extra unpinned tools may vary
+  with the user's grant: they are informational in `PinnedToolDiff.added`, do not
+  affect `is_compatible` or the pinned digest, and are excluded before conversion
+  from the component's toolset and execution cache. A missing pinned tool's error
+  hint also directs the operator to check the connection's grants.
+  Session reuse separates callers that permit SSE fallback from callers
+  that require Streamable HTTP, so a live legacy session cannot bypass the pin.
+
+- **`discovered_tool()` accepts a recorded `tools/list` entry.**
+  `lfx.base.mcp.pinned.discovered_tool()` (and therefore `tools_list_digest()`)
+  now normalizes a plain mapping in addition to a live MCP tool object, so a
+  bundle author can compute a pin's `tools_list_hash` directly from the recorded
+  `tools/list` response that the pin is derived from. Additive;
+  `BUNDLE_API_VERSION` remains `1`.

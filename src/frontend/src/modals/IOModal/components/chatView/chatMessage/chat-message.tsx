@@ -1,18 +1,22 @@
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
+import { resolveContentBlockLayout } from "@/components/core/playgroundComponent/chat-view/chat-messages/utils/content-blocks";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
+import { applyBasePath } from "@/customization/utils/urls";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { isGroupedBlock } from "@/types/chat";
 import Robot from "../../../../../assets/robot.png";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
-import { EMPTY_INPUT_SEND_MESSAGE } from "../../../../../constants/constants";
 import useAlertStore from "../../../../../stores/alertStore";
 import type { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";
@@ -29,6 +33,7 @@ export default function ChatMessage({
   closeChat,
   playgroundPage,
 }: chatMessagePropsType): JSX.Element {
+  const { t } = useTranslation();
   const convert = new Convert({ newline: true });
   const [hidden, setHidden] = useState(true);
   const [streamUrl, setStreamUrl] = useState(chat.stream_url);
@@ -61,20 +66,20 @@ export default function ChatMessage({
   const streamChunks = (url: string) => {
     setIsStreaming(true); // Streaming starts
     return new Promise<boolean>((resolve, reject) => {
-      eventSource.current = new EventSource(url);
+      eventSource.current = new EventSource(applyBasePath(url));
       eventSource.current.onmessage = (event) => {
         const parsedData = JSON.parse(event.data);
         if (parsedData.chunk) {
           setChatMessage((prev) => prev + parsedData.chunk);
         }
       };
-      eventSource.current.onerror = (event: any) => {
+      eventSource.current.onerror = (event: Event & { data?: string }) => {
         setIsStreaming(false);
         eventSource.current?.close();
         setStreamUrl(undefined);
         if (JSON.parse(event.data)?.error) {
           setErrorData({
-            title: "Error on Streaming",
+            title: t("errors.errorOnStreaming"),
             list: [JSON.parse(event.data)?.error],
           });
         }
@@ -128,6 +133,12 @@ export default function ChatMessage({
   const isEmpty = decodedMessage?.trim() === "";
   const { mutate: updateMessageMutation } = useUpdateMessage();
 
+  const { displayedContentBlocks, showBubbleBody } = resolveContentBlockLayout(
+    chat.content_blocks ?? [],
+    chat.message?.toString(),
+    Boolean(editMessage),
+  );
+
   const handleEditMessage = (message: string) => {
     updateMessageMutation(
       {
@@ -149,7 +160,7 @@ export default function ChatMessage({
         },
         onError: () => {
           setErrorData({
-            title: "Error updating messages.",
+            title: t("errors.errorUpdatingMessages"),
           });
         },
       },
@@ -177,7 +188,7 @@ export default function ChatMessage({
       {
         onError: () => {
           setErrorData({
-            title: "Error updating messages.",
+            title: t("errors.errorUpdatingMessages"),
           });
         },
       },
@@ -189,7 +200,10 @@ export default function ChatMessage({
   ) : null;
 
   if (chat.category === "error") {
-    const blocks = chat.content_blocks ?? [];
+    // ErrorView walks block.contents on each entry, so filter to the grouped
+    // ContentBlock shape (it has `contents`). Flat ContentType items can now
+    // also appear in content_blocks and would otherwise crash ErrorView.
+    const blocks = (chat.content_blocks ?? []).filter(isGroupedBlock);
 
     return (
       <ErrorView
@@ -267,7 +281,7 @@ export default function ChatMessage({
             <div>
               <div
                 className={cn(
-                  "flex max-w-full items-baseline gap-3 truncate pb-2 text-sm font-semibold",
+                  "flex w-full items-baseline gap-3 pb-2 text-sm font-semibold",
                 )}
                 style={
                   chat.properties?.text_color
@@ -294,12 +308,19 @@ export default function ChatMessage({
                     {chat.properties?.source.source}
                   </div>
                 )}
+                {!chat.isSend && (
+                  <MessageMetadata
+                    duration={chat.properties?.build_duration}
+                    usage={chat.properties?.usage}
+                    timestamp={chat.timestamp}
+                  />
+                )}
               </div>
             </div>
-            {chat.content_blocks && chat.content_blocks.length > 0 && (
+            {displayedContentBlocks.length > 0 && (
               <ContentBlockDisplay
                 playgroundPage={playgroundPage}
-                contentBlocks={chat.content_blocks}
+                contentBlocks={displayedContentBlocks}
                 isLoading={
                   chat.properties?.state === "partial" &&
                   isBuilding &&
@@ -309,7 +330,7 @@ export default function ChatMessage({
                 chatId={chat.id}
               />
             )}
-            {!chat.isSend ? (
+            {!chat.isSend && !showBubbleBody ? null : !chat.isSend ? (
               <div className="form-modal-chat-text-position flex-grow">
                 <div className="form-modal-chat-text">
                   {hidden && chat.thought && chat.thought !== "" && (
@@ -395,7 +416,7 @@ export default function ChatMessage({
                         )}
                         data-testid={`chat-message-${chat.sender_name}-${chatMessage}`}
                       >
-                        {isEmpty ? EMPTY_INPUT_SEND_MESSAGE : decodedMessage}
+                        {isEmpty ? t("input.noInputMessage") : decodedMessage}
                         {editedFlag}
                       </div>
                     </>
@@ -412,7 +433,7 @@ export default function ChatMessage({
             )}
           </div>
           {!editMessage && (
-            <div className="invisible absolute -top-4 right-0 group-hover:visible">
+            <div className="pointer-events-none absolute bottom-full right-0 opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100">
               <div>
                 <EditMessageButton
                   onCopy={() => {
@@ -421,7 +442,7 @@ export default function ChatMessage({
                   onEdit={
                     playgroundPage ? undefined : () => setEditMessage(true)
                   }
-                  className="h-fit group-hover:visible"
+                  className="h-fit"
                   isBotMessage={!chat.isSend}
                   onEvaluate={handleEvaluateAnswer}
                   evaluation={chat.properties?.positive_feedback}

@@ -5,6 +5,7 @@ import type {
 import type { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableModal from "@/modals/tableModal";
 import { isMarkdownTable } from "@/utils/markdownUtils";
@@ -24,11 +25,16 @@ export default function TableNodeComponent({
   disabled = false,
   table_options,
   trigger_icon = "Table",
-  trigger_text = "Open Table",
+  trigger_text,
   table_icon,
   showParameter = true,
+  ariaLabelledBy,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[], TableComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
+  const effectiveTriggerText = trigger_text ?? t("component.openTable");
   const dataTypeDefinitions: {
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     [cellDataType: string]: DataTypeDefinition<any>;
   } = useMemo(() => {
     return {
@@ -69,7 +75,9 @@ export default function TableNodeComponent({
       },
     };
   }, []);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [tempValue, setTempValue] = useState<any[]>(cloneDeep(value));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const agGrid = useRef<AgGridReact>(null);
@@ -103,6 +111,7 @@ export default function TableNodeComponent({
   });
   function setAllRows() {
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
       setTempValue(rows);
@@ -163,6 +172,7 @@ export default function TableNodeComponent({
         columns?.find((c) => c.name === col.field)?.disable_edit !== true,
     );
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   function parseTSVorMarkdownTable(clipboard: string, columns: any[]) {
     if (!clipboard.trim()) return [];
 
@@ -303,12 +313,13 @@ export default function TableNodeComponent({
               "w-full " +
               (disabled ? "pointer-events-none cursor-not-allowed" : "")
             }
+            aria-labelledby={ariaLabelledBy}
           >
             <ForwardedIconComponent
               name={trigger_icon}
               className="mt-px h-4 w-4"
             />
-            <span className="font-normal">{trigger_text}</span>
+            <span className="font-normal">{effectiveTriggerText}</span>
           </Button>
         </TableModal>
       </div>

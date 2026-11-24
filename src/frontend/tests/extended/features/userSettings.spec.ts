@@ -1,13 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-test.beforeAll(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 10000));
-});
-
-test.afterEach(async () => {
-  await new Promise((resolve) => setTimeout(resolve, 10000));
-});
+import { TEXTS } from "../../utils/constants/texts";
+import { waitForNewProjectButton } from "../../utils/flow/new-project-flow";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { waitForFlowEditorReady } from "../../utils/flow/wait-for-flow-editor-ready";
 
 test(
   "should see general profile gradient",
@@ -16,17 +12,16 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page, {
       skipModal: true,
+      seedFlowIfEmpty: false,
     });
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
     });
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
+    await waitForNewProjectButton(page);
     await page.getByTestId("user-profile-settings").click();
 
-    await page.getByText("Settings").click();
+    await page.getByText(TEXTS.settings).click();
 
     // Wait for settings page to fully load
     await page
@@ -83,17 +78,16 @@ test(
 
     await awaitBootstrapTest(page, {
       skipModal: true,
+      seedFlowIfEmpty: false,
     });
     await page.getByTestId("user-profile-settings").click();
-    await page.getByText("Settings").click();
+    await page.getByText(TEXTS.settings).click();
     await page.getByText("Global Variables").click();
     await expect(
       page.getByText("Global Variables", { exact: true }).nth(1),
     ).toBeVisible({ timeout: 10000 });
     await page.getByText("Add New").click();
-    await page
-      .getByPlaceholder("Enter a name for the variable...")
-      .fill(randomName);
+    await page.getByPlaceholder(TEXTS.placeholderVariableName).fill(randomName);
     await expect(page.getByText("Generic", { exact: true }).last()).toBeVisible(
       { timeout: 10000 },
     );
@@ -103,8 +97,6 @@ test(
       .getByPlaceholder("Enter a value for the variable...")
       .fill("testtesttesttesttesttesttesttest");
     await page.getByTestId("popover-anchor-apply-to-fields").click();
-
-    const fieldsCount = await page.getByPlaceholder("Fields").count();
 
     await page.getByPlaceholder("Fields").first().waitFor({
       state: "visible",
@@ -128,13 +120,13 @@ test(
 
     await page.locator(`.ag-cell:has-text("${randomName}")`).first().click();
 
-    await page.getByPlaceholder("Enter a name for the variable...").waitFor({
+    await page.getByPlaceholder(TEXTS.placeholderVariableName).waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     await page
-      .getByPlaceholder("Enter a name for the variable...")
+      .getByPlaceholder(TEXTS.placeholderVariableName)
       .fill(randomName2);
 
     await page
@@ -151,13 +143,13 @@ test(
 
     await page.locator(`.ag-cell:has-text("${randomName2}")`).first().click();
 
-    await page.getByPlaceholder("Enter a name for the variable...").waitFor({
+    await page.getByPlaceholder(TEXTS.placeholderVariableName).waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     await page
-      .getByPlaceholder("Enter a name for the variable...")
+      .getByPlaceholder(TEXTS.placeholderVariableName)
       .fill(randomName3);
 
     await page
@@ -182,17 +174,16 @@ test(
 test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
   await awaitBootstrapTest(page, {
     skipModal: true,
+    seedFlowIfEmpty: false,
   });
   await page.waitForSelector('[data-testid="mainpage_title"]', {
     timeout: 30000,
   });
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+  await waitForNewProjectButton(page);
   await page.getByTestId("user-profile-settings").click();
 
-  await page.getByText("Settings").click();
+  await page.getByText(TEXTS.settings).click();
 
   // Wait for settings page to fully load
   await page
@@ -238,7 +229,7 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
   await expect(page.getByText("Changes Save", { exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByText("Delete", { exact: true })).toBeVisible({
+  await expect(page.getByText(TEXTS.delete, { exact: true })).toBeVisible({
     timeout: 10000,
   });
   await expect(page.getByText("Open Playground", { exact: true })).toBeVisible({
@@ -313,22 +304,32 @@ test(
   "should interact with API Keys",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
+    await page.addInitScript(() => {
+      const clipboardWrites: string[] = [];
+      Object.defineProperty(window, "__playwrightClipboardWrites", {
+        configurable: true,
+        value: clipboardWrites,
+      });
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (value: string) => {
+            clipboardWrites.push(value);
+          },
+        },
+      });
+    });
+
     await awaitBootstrapTest(page, {
       skipModal: true,
+      seedFlowIfEmpty: false,
     });
     await page.getByTestId("user-profile-settings").click();
-    await page.getByText("Settings").click();
+    await page.getByText(TEXTS.settings).click();
 
-    // Wait for settings page to fully load
-    await page
-      .waitForLoadState("networkidle", { timeout: 10000 })
-      .catch(() => {});
-    await page.waitForTimeout(1000);
-
-    await page.getByText("Langflow API").first().click();
-
-    // Wait for API section to load
-    await page.waitForTimeout(1000);
+    const langflowApiNavItem = page.getByText("Langflow API").first();
+    await expect(langflowApiNavItem).toBeVisible({ timeout: 10000 });
+    await langflowApiNavItem.click();
 
     await expect(
       page.getByText("Langflow API Keys", { exact: true }).nth(1),
@@ -343,16 +344,38 @@ test(
     await page.getByPlaceholder("My API Key").fill(randomName);
     await page.getByText("Generate API Key", { exact: true }).click();
 
-    // Wait for api key creation to complete
-    await page.waitForSelector("text=Please save", { timeout: 30000 });
-    await page.waitForSelector('[data-testid="btn-copy-api-key"]', {
-      timeout: 3000,
-      state: "visible",
+    await expect(page.getByText("Please save")).toBeVisible({
+      timeout: 30000,
     });
+    const generatedKeyInput = page.getByTestId("api-key-input");
+    await expect(generatedKeyInput).toHaveValue(/\S+/, { timeout: 30000 });
 
     await page.getByTestId("btn-copy-api-key").click();
 
-    await page.waitForSelector("text=Api Key Copied!", { timeout: 30000 });
+    await expect(
+      page.getByText("API Key copied!", { exact: true }),
+    ).toBeVisible();
+
+    const clipboardCapture = await page.evaluate(() => {
+      const renderedKey = document.querySelector<HTMLInputElement>(
+        '[data-testid="api-key-input"]',
+      )?.value;
+      const writes = (
+        window as Window & { __playwrightClipboardWrites?: string[] }
+      ).__playwrightClipboardWrites;
+
+      return {
+        copiedRenderedKey:
+          Boolean(renderedKey) &&
+          writes?.length === 1 &&
+          writes[0] === renderedKey,
+        writeCount: writes?.length ?? 0,
+      };
+    });
+    expect(clipboardCapture).toEqual({
+      copiedRenderedKey: true,
+      writeCount: 1,
+    });
 
     await page.getByTestId("secret_key_modal_submit_button").click();
 
@@ -367,12 +390,8 @@ test(
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 100000,
+    await openStarterProject(page, TEXTS.templateBasicPrompting, {
+      skipBootstrap: true,
     });
 
     // Now navigate to user settings
@@ -381,7 +400,7 @@ test(
 
     // Verify we're on the settings page
     await expect(page.getByText("General").nth(2)).toBeVisible({
-      timeout: 4000,
+      timeout: 15000,
     });
 
     // Navigate to Global Variables
@@ -393,10 +412,10 @@ test(
     // Click the back button - this should take us back to the flow, not to the main settings page
     await page.getByTestId("back_page_button").click();
 
-    // Verify we're back on the flow page, not the settings main page
-    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 5000,
-    });
+    // Verify we're back on the flow page, not the settings main page.
+    // Re-rendering the flow canvas after leaving settings is slow on busy
+    // (e.g. Windows) CI runners, so allow a generous window before asserting.
+    await waitForFlowEditorReady(page);
 
     // Additional verification that we're on the flow page
     expect(page.url()).toMatch(/\/flow\//);

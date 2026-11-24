@@ -1,8 +1,9 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { expect } from "../../fixtures";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { configureLoopbackWebSearch } from "../../utils/configure-loopback-web-search";
+import { TEXTS } from "../../utils/constants/texts";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 function getRandomSocialMediaQuery(): string {
@@ -57,37 +58,11 @@ withEventDeliveryModes(
   "Social Media Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.APIFY_API_TOKEN,
-      "APIFY_API_TOKEN required to run this test",
-    );
+    await seedLoopbackProvider(page);
+    await openStarterProject(page, "Social Media Agent");
 
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Social Media Agent" }).click();
-
-    await initialGPTsetup(page);
-
-    const apifyApiTokenInputCount = await page
-      .getByTestId("popover-anchor-input-apify_token")
-      .count();
-
-    for (let i = 0; i < apifyApiTokenInputCount; i++) {
-      await page
-        .getByTestId("popover-anchor-input-apify_token")
-        .nth(i)
-        .fill(process.env.APIFY_API_TOKEN ?? "");
-    }
-
-    await page
-      .getByTestId("popover-anchor-input-apify_token")
-      .nth(apifyApiTokenInputCount - 1)
-      .fill(process.env.APIFY_API_TOKEN ?? "");
+    await configureLoopbackOpenAI(page);
+    await configureLoopbackWebSearch(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -98,7 +73,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 30000 });
 
     if (await stopButton.isVisible()) {
@@ -111,5 +86,6 @@ withEventDeliveryModes(
       .innerText();
 
     expect(output.length).toBeGreaterThan(100);
+    expect(output).toContain("LOOPBACK_WEB_SEARCH_USED");
   },
 );

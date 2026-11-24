@@ -1,0 +1,185 @@
+---
+title: Global variables
+slug: /configuration-global-variables
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+Use global variables to store and reuse credentials and generic values across all of your flows.
+Global variables are typically used by components in flow, and you can use them in any field with the <Icon name="Globe" aria-hidden="true"/> global variable icon.
+
+In contrast, [environment variables](/environment-variables), like `LANGFLOW_PORT` or `LANGFLOW_LOG_LEVEL`, are generally for broader settings that configure how Langflow runs.
+However, Langflow can also source global variables from environment variables.
+
+Langflow stores global variables in its internal database, and it encrypts the values using a secret key.
+
+## Create a global variable
+
+To create a new global variable, follow these steps.
+
+1. In the Langflow header, click your profile icon, and then select **Settings**.
+2. Click **Global Variables**.
+
+3. Click **Add New**.
+
+4. In the **Create Variable** dialog, enter a name for your variable in the **Variable Name** field.
+
+5. Optional: Select a **Type** for your global variable. The available types are **Generic** (default) and **Credential**.
+
+   Langflow encrypts both **Generic** and **Credential** type global variables.
+   However, **Generic** variables aren't masked in the visual editor, whereas **Credential** variables are masked.
+   **Session ID** fields don't accept **Credential** (masked) variables.
+
+6. Enter the **Value** for your global variable.
+
+7. Optional: Use the **Apply To Fields** menu to select one or more fields that you want Langflow to automatically apply your global variable to. For example, if you select **OpenAI API Key**, Langflow automatically applies the variable to any **OpenAI API Key** field.
+
+8. Click **Save Variable**.
+
+You can now select your global variable from any text input field that displays the <Icon name="Globe" aria-hidden="true"/> **Globe** icon.
+
+## Edit a global variable
+
+1. In the Langflow header, click your profile icon, and then select **Settings**.
+
+2. Click **Global Variables**.
+
+3. Click on the global variable you want to edit.
+
+4. In the **Update Variable** dialog, you can edit the following fields: **Variable Name**, **Value**, and **Apply To Fields**.
+
+5. Click **Update Variable**.
+
+## Delete a global variable
+
+Deleting a global variable permanently deletes the value from the database.
+Flows that reference the deleted global variable will fail.
+
+1. In the Langflow header, click your profile icon, and then select **Settings**.
+
+2. Click **Global Variables**.
+
+3. Click the checkbox next to the global variable that you want to delete.
+
+4. Click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+
+The global variable is deleted from the database.
+
+## Add custom global variables from the environment {#add-custom-global-variables-from-the-environment}
+
+Langflow can source custom global variables from your runtime environment.
+For information about how Langflow detects and applies environment variables, see [Langflow environment variables](/environment-variables).
+
+Langflow automatically generates global variables based on [`constants.py`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/services/settings/constants.py) if it detects any matching environment variables.
+For example, if you set `OPENAI_API_KEY` in your runtime environment, Langflow automatically generates a global variable using that value.
+
+You can declare additional variables in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`.
+For example, `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=WATSONX_PROJECT_ID,WATSONX_API_KEY` creates global variables named `WATSONX_PROJECT_ID` and `WATSONX_API_KEY` in Langflow's database.
+Then, you can use these variables wherever they are needed in your component settings.
+
+<Tabs>
+<TabItem value="local" label="Local" default>
+
+If you installed Langflow locally, set `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` in your Langflow `.env` file:
+
+1. Create or edit your Langflow `.env` file.
+
+2. Add the `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` environment variable as follows:
+
+   You can specify the variables either as a comma-separated string with no spaces, or as a JSON list:
+
+   ```text
+   # Option 1: Comma-separated string (no spaces)
+   LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=VARIABLE1,VARIABLE2
+
+   # Option 2: JSON list format
+   LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT=["VARIABLE1", "VARIABLE2"]
+   ```
+
+   Replace `VARIABLE1,VARIABLE2` with your additional variables that you want Langflow to source from the environment, such as `CUSTOM_API_KEY,INTERNAL_SERVICE_URL` or `["CUSTOM_API_KEY", "INTERNAL_SERVICE_URL"]`.
+
+3. Save and close the file.
+
+4. Start Langflow with the `.env` file:
+
+   ```bash
+   uv run langflow run --env-file .env
+   ```
+
+   Alternatively, you can set environment variables directly in the command line:
+
+   ```bash
+   VARIABLE1="VALUE1" VARIABLE2="VALUE2" uv run langflow run --env-file .env
+   ```
+
+   The command-line variables override matching variables in the `.env` file.
+   Expose your environment variables to Langflow in a manner that best suits your own environment.
+
+5. Confirm that Langflow successfully sourced the global variables from the environment:
+
+   1. In the Langflow header, click your profile icon, and then select **Settings**.
+
+   2. Click **Global Variables**, and then make sure that your environment variables appear in the **Global Variables** list.
+
+</TabItem>
+<TabItem value="docker" label="Docker">
+
+If you're using Docker, there are two ways that you can set `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT`:
+
+* On the command line:
+
+   ```bash
+   docker run -it --rm \
+      -p 7860:7860 \
+      -e LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT="VARIABLE1,VARIABLE2" \
+      -e VARIABLE1="VALUE1" \
+      -e VARIABLE2="VALUE2" \
+      langflowai/langflow:latest
+   ```
+
+* In your `.env` file:
+
+   ```bash
+   docker run -it --rm \
+      -p 7860:7860 \
+      --env-file .env \
+      -e VARIABLE1="VALUE1" \
+      -e VARIABLE2="VALUE2" \
+      langflowai/langflow:latest
+   ```
+
+The list in `LANGFLOW_VARIABLES_TO_GET_FROM_ENVIRONMENT` includes only the variable names.
+You must ensure that these environment variables are defined in your Docker environment, such as with `-e` or otherwise.
+
+</TabItem>
+</Tabs>
+
+After starting Langflow, go to your Langflow **Settings** to confirm that the variables were created.
+
+Only the **Name** and **Value** are taken from the environment.
+You can edit the variables in your Langflow **Settings** if you want to configure additional options, such as the **Apply To Fields** option.
+
+Global variables sourced from the environment are assigned the **Credential** type, which masks the values in the visual editor.
+However, Langflow automatically encrypts _all_ global variables stored in the database.
+
+## Disallow global variables from the environment
+
+If you want to explicitly prevent Langflow from sourcing global variables from the environment, set `LANGFLOW_STORE_ENVIRONMENT_VARIABLES=False` in your `.env` file.
+
+## Use environment variables for missing global variables {#use-environment-variables-for-missing-global-variables}
+
+If you want to automatically set fallback values for your global variables to environment variables, set `LANGFLOW_FALLBACK_TO_ENV_VAR=True` in your `.env` file.
+When this setting is enabled, if a global variable isn't found, Langflow attempts to use an environment variable with the same name as a backup.
+
+For example, assume you have the following Langflow `.env` configuration, and your flow has a component that expects a `WATSONX_API_KEY` global variable:
+
+```text
+LANGFLOW_FALLBACK_TO_ENV_VAR=True
+WATSONX_PROJECT_ID=your_project_id
+WATSONX_API_KEY=your_api_key
+```
+
+When you run the flow, if there is no global variable named `WATSONX_API_KEY`, Langflow looks for an environment variable named `WATSONX_API_KEY`.
+In this example, Langflow uses the `WATSONX_API_KEY` value from the `.env` to run the flow.

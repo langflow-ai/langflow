@@ -10,7 +10,6 @@ globs:
 alwaysApply: false
 ---
 
-
 # Documentation Development Guidelines
 
 ## Purpose
@@ -29,10 +28,10 @@ Guidelines for developing and maintaining Langflow documentation using Docusauru
 ```bash
 cd docs
 npm install       # Install dependencies
-npm run start     # Start dev server (usually port 3001)
+npm run start     # Start dev server
 ```
 - Auto-reloads on documentation changes
-- Access at: http://localhost:3001/
+- Access at: http://localhost:3000/
 - Documentation source: `docs/`
 
 ---
@@ -52,188 +51,109 @@ docs/
 │   ├── develop/             # Guides for developing apps with Langflow
 │   ├── support/             # Help and release notes
 │   ├── contributing/        # Contribution guidelines
-│   └── api-reference/       # API documentation
+│   ├── api-reference/       # API documentation
+│   └── _partial-*.mdx       # Shared content partials (imported by other pages)
 ├── src/                     # Custom React components
 ├── static/                  # Static assets (images, etc.)
-├── sidebars.js             # Sidebar configuration
-├── docusaurus.config.js    # Main configuration
-└── package.json            # Dependencies
+├── sidebars.js              # Sidebar configuration
+├── docusaurus.config.js     # Main configuration
+└── package.json             # Dependencies
 ```
-
-### Content Types
-- **Guides:** Step-by-step tutorials (`docs/getting-started/`)
-- **Reference:** API and component reference (`docs/api-reference/`)
-- **How-to:** Problem-solving articles (`docs/components/`)
-- **Concepts:** Explanatory articles about Langflow concepts
-- **Blog:** Release notes, announcements (`blog/`)
 
 ---
 
 ## 3. Writing Documentation
 
-### Markdown Conventions
-```markdown
+### Frontmatter
+Every `.mdx` file uses only `title` and `slug`. No `description` or `sidebar_position`.
+
+```
 ---
 title: Page Title
-description: Brief description for SEO
-sidebar_position: 1
+slug: /page-slug
 ---
+```
 
-# Page Title
+The `title` value is used as the page heading — do not add a duplicate `# h1` after the frontmatter.
 
-Brief introduction paragraph.
+### MDX Imports
+Most pages import one or more of these at the top, after frontmatter:
 
-## Section Header
+```
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import SomePartial from '@site/docs/_partial-some-content.mdx';
+```
 
-Content with proper formatting.
+- Use `<Icon name="IconName" aria-hidden="true" />` to reference Lucide icons inline. Always include `aria-hidden="true"` and bold the button name next to it for accessibility: `<Icon name="Play" aria-hidden="true" /> **Run**`.
+- Use `<SomePartial />` to embed shared content partials.
 
-### Subsection
-
-More detailed content.
-
+### Admonitions
+```
 :::tip
-Use admonitions for important information.
+Use for helpful tips.
 :::
 
 :::warning
-Use warnings for potential issues.
+Use for potential issues.
 :::
 
 :::danger
-Use danger for critical warnings.
+Use for critical warnings.
 :::
 ```
 
-### Code Blocks
-````markdown
-```python title="component_example.py"
-from langflow.components.base import Component
-
-class MyComponent(Component):
-    display_name = "My Component"
-    description = "Example component"
-
-    def run(self):
-        return "Hello, World!"
-```
-````
-
 ### Images and Assets
-```markdown
-<!-- Images go in static/img/ -->
-![Component Overview](/img/components/overview.png)
-
-<!-- Use descriptive alt text -->
-![Langflow interface showing the flow editor with nodes and connections](/img/flow-editor.png)
 ```
+![Descriptive alt text](/img/some-image.png)
+```
+
+Images go in `static/img/`. Use descriptive alt text.
 
 ---
 
 ## 4. Component Documentation
 
 ### Component Page Template
-```markdown
+```
 ---
 title: Component Name
-description: Brief description of what the component does
-sidebar_position: 1
+slug: /component-name
 ---
 
-# Component Name
+import Icon from "@site/src/components/icon";
 
-Brief overview of the component's purpose.
+One-sentence description of what the component does.
 
-## Overview
+## Use the Component Name component in a flow
 
-What this component does and when to use it.
+Step-by-step instructions for using the component.
 
-## Configuration
+## Component Name parameters
 
-### Inputs
-
-| Input | Type | Required | Description |
-|-------|------|----------|-------------|
-| `input_text` | String | Yes | The text to process |
-| `model_name` | String | No | Model to use (default: gpt-3.5-turbo) |
-
-### Outputs
-
-| Output | Type | Description |
-|--------|------|-------------|
-| `result` | Message | Processed result |
-
-## Usage Example
-
-```python
-# Example of using the component
-component = MyComponent(
-    input_text="Hello, world!",
-    model_name="gpt-4"
-)
-result = component.run()
-```
-
-## Common Issues
-
-### Issue: Component not loading
-
-**Solution:** Check that all required inputs are provided.
-
-### Issue: API key errors
-
-**Solution:** Ensure your API key is properly configured.
+| Name | Type | Description |
+|------|------|-------------|
+| `input_name` | MessageTextInput | Description of the input. |
+| `output_name` | Message | Description of the output. |
 ```
 
 ### API Documentation
-```markdown
+```
 ---
-title: API Endpoint
-description: REST API endpoint documentation
+title: API Endpoint Name
+slug: /api-endpoint-name
 ---
-
-# API Endpoint Name
 
 ## Endpoint
 
 `POST /api/v1/endpoint`
 
-## Request
+## Request body
 
-### Headers
-```json
-{
-  "Authorization": "Bearer <token>",
-  "Content-Type": "application/json"
-}
-```
-
-### Body
-```json
-{
-  "parameter": "value",
-  "optional_param": "optional_value"
-}
-```
-
-## Response
-
-### Success (200)
-```json
-{
-  "success": true,
-  "data": {
-    "result": "success"
-  }
-}
-```
-
-### Error (400)
-```json
-{
-  "success": false,
-  "error": "Error message"
-}
-```
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `param` | string | Description. |
 
 ## Example
 
@@ -241,141 +161,25 @@ description: REST API endpoint documentation
 curl -X POST http://localhost:7860/api/v1/endpoint \
   -H "Authorization: Bearer your-token" \
   -H "Content-Type: application/json" \
-  -d '{"parameter": "value"}'
+  -d '{"param": "value"}'
 ```
 ```
 
 ---
 
-## 5. Blog Posts and Announcements
+## 5. Documentation Testing
 
-### Blog Post Template
-```markdown
----
-title: "Release: Langflow v1.1.0"
-description: "New features and improvements in Langflow v1.1.0"
-authors: [author-name]
-date: 2024-01-15
-tags: [release, features]
----
-
-# Release: Langflow v1.1.0
-
-Brief introduction to the release.
-
-## New Features
-
-### Feature 1
-Description of the feature and how to use it.
-
-### Feature 2
-Another feature description.
-
-## Improvements
-
-- List of improvements
-- Bug fixes
-- Performance enhancements
-
-## Breaking Changes
-
-:::warning
-List any breaking changes that require user action.
-:::
-
-## Migration Guide
-
-Steps to migrate from previous versions.
-```
-
-### Announcement Posts
-```markdown
----
-title: "Announcement: New Integration"
-description: "Langflow now supports integration with XYZ service"
-authors: [author-name]
-date: 2024-01-15
-tags: [announcement, integration]
----
-
-Brief announcement content with clear call-to-action.
-```
-
----
-
-## 6. Configuration
-
-### Sidebar Configuration (`sidebars.js`)
-```javascript
-module.exports = {
-  docs: [
-    'introduction',
-    {
-      type: 'category',
-      label: 'Getting Started',
-      items: [
-        'getting-started/installation',
-        'getting-started/quickstart',
-        'getting-started/first-flow',
-      ],
-    },
-    {
-      type: 'category',
-      label: 'Components',
-      items: [
-        'components/overview',
-        'components/inputs',
-        'components/outputs',
-        'components/processing',
-      ],
-    },
-  ],
-};
-```
-
-### Site Configuration (`docusaurus.config.js`)
-```javascript
-module.exports = {
-  title: 'Langflow Documentation',
-  tagline: 'Build AI flows visually',
-  url: 'https://docs.langflow.org',
-  baseUrl: '/',
-
-  themeConfig: {
-    navbar: {
-      title: 'Langflow',
-      logo: {
-        alt: 'Langflow Logo',
-        src: 'img/logo.svg',
-      },
-      items: [
-        {
-          type: 'doc',
-          docId: 'introduction',
-          position: 'left',
-          label: 'Docs',
-        },
-        {
-          to: '/blog',
-          label: 'Blog',
-          position: 'left'
-        },
-      ],
-    },
-  },
-};
-```
-
----
-
-## 7. Documentation Testing
-
-### Link Checking
+### Build and serve
 ```bash
-# Check for broken internal links
-npm run build
-npm run serve
-# Manual testing or use link checker tools
+cd docs
+npm run build     # Build static site
+npm run serve     # Serve built site locally
+```
+
+### API examples
+```bash
+make api_examples_local          # Run API sample files against a local Langflow server
+make api_examples_local_syntax   # Syntax-check API sample files without executing them
 ```
 
 ### Content Review
@@ -392,7 +196,7 @@ npm run serve
 
 ---
 
-## 8. Style Guide
+## 6. Style Guide
 
 ### Writing Style
 - **Tone:** Professional but approachable
@@ -415,18 +219,20 @@ npm run serve
 
 ---
 
-## 9. Deployment
+## 7. Deployment
 
 ### Local Testing
 ```bash
-npm run build    # Build static site
-npm run serve    # Serve built site locally
+cd docs
+npm run build     # Build static site
+npm run serve     # Serve built site locally
 ```
 
 ### Production Deployment
-- Documentation is automatically deployed on commit to main branch
-- Build artifacts go to `build/` directory
-- Static site is served via CDN
+- Documentation changes are submitted as pull requests to the **release branch**, not directly to `main`.
+- The release branch is merged to `main` as part of the release process.
+- Build artifacts go to the `build/` directory.
+- The static site is served via CDN.
 
 ---
 
@@ -441,3 +247,4 @@ npm run serve    # Serve built site locally
 - [ ] Screenshots are current and properly formatted
 - [ ] Cross-references between related topics
 - [ ] Build succeeds with `npm run build`
+- [ ] Changes target the release branch (not `main`)

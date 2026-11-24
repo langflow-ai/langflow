@@ -28,7 +28,7 @@ def replace_none_and_null_with_empty_str(data: list[dict], required_fields: list
                 if math.isnan(v):
                     return "Not available"
             except Exception as e:  # noqa: BLE001
-                logger.aexception(f"Error converting value {v} to float: {e}")
+                logger.exception(f"Error converting value {v} to float: {e}")
 
         if hasattr(v, "isnat") and getattr(v, "isnat", False):
             return "Not available"

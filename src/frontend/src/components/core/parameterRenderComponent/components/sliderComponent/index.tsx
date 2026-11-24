@@ -1,6 +1,7 @@
 import * as SliderPrimitive from "@radix-ui/react-slider";
 import clsx from "clsx";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getMinOrMaxValue } from "@/components/core/parameterRenderComponent/components/sliderComponent/helpers/get-min-max-value";
 import type { InputProps } from "@/components/core/parameterRenderComponent/types";
 import { Case } from "@/shared/components/caseComponent";
@@ -47,9 +48,12 @@ export default function SliderComponent({
   minLabelIcon = MIN_LABEL_ICON,
   maxLabelIcon = MAX_LABEL_ICON,
   sliderButtons = false,
+  valueInverted = false,
+  sliderColor = "default",
   sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS,
   handleOnNewValue,
   showParameter = true,
+  ariaLabelledBy,
 }: InputProps<string[] | number[], SliderComponentType>): JSX.Element | null {
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
@@ -64,7 +68,8 @@ export default function SliderComponent({
   minLabel = minLabel || MIN_LABEL;
   maxLabel = maxLabel || MAX_LABEL;
 
-  const valueAsNumber = getMinOrMaxValue(Number(value), min, max);
+  const storedValue = getMinOrMaxValue(Number(value), min, max);
+  const valueAsNumber = valueInverted ? min + max - storedValue : storedValue;
   const step = rangeSpec?.step ?? 0.01;
 
   useEffect(() => {
@@ -74,7 +79,11 @@ export default function SliderComponent({
   }, [disabled]);
 
   const handleChange = (newValue: number[]) => {
-    handleOnNewValue({ value: newValue[0] });
+    const displayed = newValue[0];
+    const stored = valueInverted ? min + max - displayed : displayed;
+    handleOnNewValue({
+      value: valueInverted ? Number(stored.toFixed(10)) : stored,
+    });
   };
 
   const handleOptionClick = (option: number) => {
@@ -82,11 +91,29 @@ export default function SliderComponent({
 
     if (selectedPercentage !== undefined) {
       const calculatedValue = min + (max - min) * selectedPercentage;
-      handleOnNewValue({ value: calculatedValue });
+      handleChange([calculatedValue]);
     }
 
     return null;
   };
+
+  const { t } = useTranslation();
+
+  const labelTranslations: Record<string, string> = {
+    Precise: t("slider.precise"),
+    Balanced: t("slider.balanced"),
+    Creative: t("slider.creative"),
+    Wild: t("slider.wild"),
+    Strict: t("slider.strict"),
+    Permissive: t("slider.permissive"),
+  };
+
+  const displayMinLabel = labelTranslations[minLabel] ?? minLabel;
+  const displayMaxLabel = labelTranslations[maxLabel] ?? maxLabel;
+  const displaySliderButtonsOptions = sliderButtonsOptions.map((opt) => ({
+    ...opt,
+    label: labelTranslations[opt.label] ?? opt.label,
+  }));
 
   const isDark = useDarkStore((state) => state.dark);
 
@@ -151,7 +178,7 @@ export default function SliderComponent({
     const newValue = parseFloat(inputValue);
     if (!isNaN(newValue)) {
       const clampedValue = Math.min(Math.max(newValue, min), max);
-      handleOnNewValue({ value: clampedValue });
+      handleChange([clampedValue]);
     }
     setIsEditing(false);
     setInputValue(valueAsNumber.toFixed(2));
@@ -181,8 +208,18 @@ export default function SliderComponent({
   const accentPinkForeground = getComputedStyle(
     document.documentElement,
   ).getPropertyValue("--accent-pink-foreground");
+  const accentRedForeground = getComputedStyle(
+    document.documentElement,
+  ).getPropertyValue("--accent-red-foreground");
 
-  const getThumbColor = (percentage) => {
+  const getThumbColor = (percentage: number) => {
+    if (sliderColor === "red") {
+      return buildColorByName(
+        accentIndigoForeground || DEFAULT_ACCENT_INDIGO_FOREGROUND_COLOR,
+        accentRedForeground || "0 72% 51%",
+        percentage,
+      );
+    }
     if (accentIndigoForeground && accentPinkForeground) {
       return buildColorByName(
         accentIndigoForeground,
@@ -226,16 +263,20 @@ export default function SliderComponent({
                 data-testid="slider_input"
               />
             ) : (
-              <span
+              <button
+                type="button"
                 onClick={() => {
                   setIsEditing(true);
                   setInputValue(valueAsNumber.toFixed(2));
                 }}
+                aria-label={t("paramRender.editSliderValue", {
+                  value: valueAsNumber.toFixed(2),
+                })}
                 data-testid={`default_slider_display_value${editNode ? "_advanced" : ""}`}
                 className="relative bottom-[1px] font-mono text-sm hover:cursor-text"
               >
                 {valueAsNumber.toFixed(2)}
-              </span>
+              </button>
             )}
           </div>
         </div>
@@ -252,10 +293,19 @@ export default function SliderComponent({
       </Case>
 
       <div className="flex cursor-default items-center justify-center">
+        {/*
+          Isolate the slider from React Flow's node interactions. Radix drives the
+          slider with pointer events, while the node selects on click and pans/drags
+          on pointer down. Without stopping propagation (and the nodrag/nopan opt-out
+          classes), the first interaction on an unselected node is consumed by node
+          selection and the value the user set is silently lost or mis-registered.
+        */}
         <SliderPrimitive.Root
-          className="relative flex h-5 w-full touch-none select-none items-center"
+          className="noflow nowheel nopan nodelete nodrag relative flex h-5 w-full touch-none select-none items-center"
           value={[valueAsNumber]}
           onValueChange={handleChange}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           min={min}
           max={max}
           step={step}
@@ -288,6 +338,7 @@ export default function SliderComponent({
             style={{
               backgroundColor: getThumbColor(percentage),
             }}
+            aria-labelledby={ariaLabelledBy}
           />
         </SliderPrimitive.Root>
       </div>
@@ -295,7 +346,7 @@ export default function SliderComponent({
       {sliderButtons && (
         <div className="my-3">
           <div className={clsx("flex rounded-md bg-background")}>
-            {sliderButtonsOptions?.map((option) => (
+            {displaySliderButtonsOptions?.map((option) => (
               <button
                 key={option.id}
                 onClick={() => handleOptionClick(option.id)}
@@ -316,8 +367,8 @@ export default function SliderComponent({
       )}
 
       <SliderLabels
-        minLabel={minLabel}
-        maxLabel={maxLabel}
+        minLabel={displayMinLabel}
+        maxLabel={displayMaxLabel}
         minLabelIcon={minLabelIcon}
         maxLabelIcon={maxLabelIcon}
       />

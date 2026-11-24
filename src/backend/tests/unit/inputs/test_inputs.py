@@ -169,6 +169,19 @@ def test_bool_input_invalid():
         BoolInput(name="invalid_bool", value="not_a_bool")
 
 
+def test_bool_input_accepts_message():
+    """Regression test for #9424.
+
+    BoolInput must coerce Message values so that MCP-tool boolean fields can be
+    wired from Message-producing components.
+    """
+    bool_input = BoolInput(name="bool_from_message", value=Message(text="true"))
+    assert bool_input.value is True
+
+    bool_input_false = BoolInput(name="bool_from_message_false", value=Message(text="false"))
+    assert bool_input_false.value is False
+
+
 def test_nested_dict_input_valid():
     nested_dict_input = NestedDictInput(name="valid_nested_dict", value={"key": "value"})
     assert nested_dict_input.value == {"key": "value"}
@@ -187,6 +200,16 @@ def test_dict_input_valid():
 def test_dict_input_invalid():
     with pytest.raises(ValidationError):
         DictInput(name="invalid_dict", value="not_a_dict")
+
+
+def test_dict_input_accepts_json_message():
+    """Regression test for #9424.
+
+    DictInput must accept Message/JSON-string payloads so MCP-tool dict/JSON
+    fields can be wired from upstream components.
+    """
+    dict_input = DictInput(name="dict_from_message", value=Message(text='{"k": "v"}'))
+    assert dict_input.value == {"k": "v"}
 
 
 def test_dropdown_input_valid():

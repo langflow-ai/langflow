@@ -7,7 +7,7 @@ import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-base
 
 const mockApiGet = jest.fn();
 jest.mock("@/controllers/API/api", () => ({
-  api: { get: (...args: any[]) => mockApiGet(...args) },
+  api: { get: (...args: unknown[]) => mockApiGet(...args) },
 }));
 
 jest.mock("@/controllers/API/helpers/constants", () => ({
@@ -107,6 +107,40 @@ describe("useKnowledgeBasePolling", () => {
   });
 
   describe("polling behavior", () => {
+    it.each(["ready", "needs_attention", "detached"])(
+      "publishes a storage-only transition to %s and stops polling",
+      async (storageState) => {
+        const qc = makeQueryClient();
+        const kb = makeKb({ storage_state: "migrating" });
+        const updatedKb = { ...kb, storage_state: storageState };
+        const onStatusChange = jest.fn();
+        qc.setQueryData(["useGetKnowledgeBases"], [kb]);
+        mockApiGet.mockResolvedValue({ data: [updatedKb] });
+        const { result } = renderHook(
+          () =>
+            useKnowledgeBasePolling({
+              knowledgeBases: [kb],
+              tableRef: { current: null },
+              onStatusChange,
+            }),
+          { wrapper: createWrapper(qc) },
+        );
+        expect(result.current.pollingRef.current).toBe(true);
+        await act(async () => {
+          jest.advanceTimersByTime(6000);
+          await Promise.resolve();
+          await Promise.resolve();
+        });
+        expect(qc.getQueryData(["useGetKnowledgeBases"])).toEqual([updatedKb]);
+        expect(result.current.pollingRef.current).toBe(false);
+        expect(onStatusChange).not.toHaveBeenCalled();
+        await act(async () => {
+          jest.advanceTimersByTime(6000);
+        });
+        expect(mockApiGet).toHaveBeenCalledTimes(1);
+      },
+    );
+
     it("calls api.get after the polling interval when a KB is busy", async () => {
       const qc = makeQueryClient();
       const tableRef = { current: null };

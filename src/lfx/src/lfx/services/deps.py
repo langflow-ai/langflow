@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager, suppress
 from typing import TYPE_CHECKING, cast
 
 from fastapi import HTTPException
-from sqlalchemy.exc import InvalidRequestError
+from fastapi.exceptions import RequestValidationError, WebSocketRequestValidationError
 
 from lfx.log.logger import logger
 from lfx.services.config_discovery import resolve_config_dir
@@ -20,10 +20,12 @@ if TYPE_CHECKING:
     from sqlalchemy.ext.asyncio import AsyncSession
 
     from lfx.services.adapters.registry import AdapterRegistry
+    from lfx.services.catalog_policy.base import BaseCatalogPolicyService
     from lfx.services.interfaces import (
         AuthServiceProtocol,
         CacheServiceProtocol,
         ChatServiceProtocol,
+        ConnectionResolverProtocol,
         DatabaseServiceProtocol,
         DeploymentServiceProtocol,
         SettingsServiceProtocol,
@@ -32,6 +34,7 @@ if TYPE_CHECKING:
         TransactionServiceProtocol,
         VariableServiceProtocol,
     )
+    from lfx.services.policy_bundle.base import BasePolicyBundleService
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -62,7 +65,90 @@ def get_service(service_type: ServiceType, default=None):
     try:
         return service_manager.get(service_type, default)
     except Exception:  # noqa: BLE001
+        # Preserve the traceback in logs so callers seeing a None return have something to grep
+        # for. Returning None remains the contract because several callers (e.g. get_db_service)
+        # treat absence as "not configured" and substitute a noop implementation.
+        logger.exception("Failed to resolve service %s", service_type)
         return None
+
+
+def get_model_provider_policy_service():
+    """Return the configured model-provider policy service or fail closed."""
+    from lfx.services.model_provider_policy.base import BaseModelProviderPolicyService
+    from lfx.services.model_provider_policy.service import ModelProviderPolicyService  # noqa: F401
+
+    service = get_service(ServiceType.MODEL_PROVIDER_POLICY_SERVICE)
+    if not isinstance(service, BaseModelProviderPolicyService) or not service.ready:
+        msg = "A valid, ready model_provider_policy_service is required"
+        raise TypeError(msg)
+    return service
+
+
+def get_integration_policy_service():
+    """Return the configured integration policy service or fail closed."""
+    from lfx.services.integration_policy.base import BaseIntegrationPolicyService
+    from lfx.services.integration_policy.service import IntegrationPolicyService  # noqa: F401
+
+    service = get_service(ServiceType.INTEGRATION_POLICY_SERVICE)
+    if not isinstance(service, BaseIntegrationPolicyService) or not service.ready:
+        msg = "A valid, ready integration_policy_service is required"
+        raise TypeError(msg)
+    return service
+
+
+def get_policy_bundle_service() -> BasePolicyBundleService:
+    """Return the ready process-local shared policy bundle coordinator."""
+    from lfx.services.policy_bundle import BasePolicyBundleService, PolicyBundleService  # noqa: F401
+
+    service = get_service(ServiceType.POLICY_BUNDLE_SERVICE)
+    if not isinstance(service, BasePolicyBundleService) or not service.ready:
+        msg = "A valid, ready policy_bundle_service is required"
+        raise TypeError(msg)
+    return service
+
+
+_catalog_policy_fallback: BaseCatalogPolicyService | None = None
+_catalog_policy_fallback_lock = threading.Lock()
+
+
+def get_catalog_policy_service():
+    """Return the ready catalog-policy service.
+
+    Standalone LFX resolves the built-in allow-all implementation. Langflow
+    overrides it with the database-backed process-local snapshot service. A
+    broken configured implementation is replaced with one stable built-in
+    allow-all instance so later lookups remain fail-open instead of retrying a
+    failing constructor.
+    """
+    from lfx.services.catalog_policy.base import BaseCatalogPolicyService
+    from lfx.services.catalog_policy.service import CatalogPolicyService
+    from lfx.services.manager import get_service_manager
+
+    service_manager = get_service_manager()
+    cached = service_manager.services.get(ServiceType.CATALOG_POLICY_SERVICE)
+    if isinstance(cached, BaseCatalogPolicyService) and cached.ready:
+        return cached
+
+    service = get_service(ServiceType.CATALOG_POLICY_SERVICE)
+    if isinstance(service, BaseCatalogPolicyService) and service.ready:
+        return service
+
+    global _catalog_policy_fallback  # noqa: PLW0603
+    with _catalog_policy_fallback_lock:
+        cached = service_manager.services.get(ServiceType.CATALOG_POLICY_SERVICE)
+        if isinstance(cached, BaseCatalogPolicyService) and cached.ready:
+            return cached
+        fallback = _catalog_policy_fallback
+        if fallback is None:
+            fallback = CatalogPolicyService()
+            _catalog_policy_fallback = fallback
+        service_manager.services[ServiceType.CATALOG_POLICY_SERVICE] = fallback
+
+    logger.warning(
+        "Configured catalog_policy_service is unavailable or invalid; "
+        "using the built-in allow-all policy for this process"
+    )
+    return fallback
 
 
 def get_db_service() -> DatabaseServiceProtocol:
@@ -103,6 +189,56 @@ def get_variable_service() -> VariableServiceProtocol | None:
     return get_service(ServiceType.VARIABLE_SERVICE)
 
 
+_connection_resolver_fallback_lock = threading.Lock()
+
+
+def get_connection_resolver() -> ConnectionResolverProtocol:
+    """Return the configured resolver or the stable headless environment fallback.
+
+    Only a genuinely absent plugin selects the fallback. Import, construction,
+    type, and readiness failures remain operator-visible so a broken connection
+    plugin cannot silently change credential sources.
+    """
+    from lfx.services.connection.base import BaseConnectionResolverService
+    from lfx.services.connection.env_resolver import EnvConnectionResolver
+    from lfx.services.manager import NoFactoryRegisteredError, get_service_manager
+
+    service_manager = get_service_manager()
+    cached = service_manager.services.get(ServiceType.CONNECTION_RESOLVER_SERVICE)
+    if cached is not None:
+        if not isinstance(cached, BaseConnectionResolverService) or not cached.ready:
+            msg = "A configured connection_resolver_service must be valid and ready"
+            raise RuntimeError(msg)
+        return cast("ConnectionResolverProtocol", cached)
+
+    try:
+        service = service_manager.get(ServiceType.CONNECTION_RESOLVER_SERVICE)
+    except NoFactoryRegisteredError:
+        if (
+            ServiceType.CONNECTION_RESOLVER_SERVICE in service_manager.service_classes
+            or ServiceType.CONNECTION_RESOLVER_SERVICE in service_manager.factories
+        ):
+            raise  # A configured resolver can fail because one of its dependencies is absent.
+        service = None
+
+    if service is not None:
+        if not isinstance(service, BaseConnectionResolverService) or not service.ready:
+            msg = "A configured connection_resolver_service must be valid and ready"
+            raise RuntimeError(msg)
+        return cast("ConnectionResolverProtocol", service)
+
+    with _connection_resolver_fallback_lock:
+        cached = service_manager.services.get(ServiceType.CONNECTION_RESOLVER_SERVICE)
+        if cached is not None:
+            if not isinstance(cached, BaseConnectionResolverService) or not cached.ready:
+                msg = "A configured connection_resolver_service must be valid and ready"
+                raise RuntimeError(msg)
+            return cast("ConnectionResolverProtocol", cached)
+        if service_manager.connection_resolver_fallback is None:
+            service_manager.connection_resolver_fallback = EnvConnectionResolver()
+        return service_manager.connection_resolver_fallback
+
+
 def get_shared_component_cache_service() -> CacheServiceProtocol | None:
     """Retrieves the shared component cache service instance."""
     from lfx.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
@@ -110,11 +246,34 @@ def get_shared_component_cache_service() -> CacheServiceProtocol | None:
     return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
 
 
+def get_extension_events_service():
+    """Retrieves the ExtensionEventsService instance.
+
+    Returns None if the service manager is not initialised (e.g. in unit-test
+    environments that don't boot the full service stack).  Callers must guard
+    against None and fall back to structured logging.
+    """
+    from lfx.services.extension_events.factory import ExtensionEventsServiceFactory
+
+    return get_service(ServiceType.EXTENSION_EVENTS_SERVICE, ExtensionEventsServiceFactory())
+
+
 def get_chat_service() -> ChatServiceProtocol | None:
     """Retrieves the chat service instance."""
     from lfx.services.schema import ServiceType
 
     return get_service(ServiceType.CHAT_SERVICE)
+
+
+def get_checkpoint_service():
+    """Checkpoint store: registered service, or the in-memory standalone fallback."""
+    from lfx.graph.checkpoint.store import default_checkpoint_store
+    from lfx.services.schema import ServiceType
+
+    service = get_service(ServiceType.CHECKPOINT_SERVICE)
+    if service is not None:
+        return service
+    return default_checkpoint_store()
 
 
 def get_tracing_service() -> TracingServiceProtocol | None:
@@ -223,11 +382,17 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         try:
             yield session
             await session.commit()
-        except HTTPException:
+        except (HTTPException, RequestValidationError, WebSocketRequestValidationError):
             # HTTPExceptions are control flow in FastAPI (returning 4xx/5xx responses),
             # not actual errors. Don't log them - FastAPI's exception handlers will
             # take care of the HTTP response. Just rollback any uncommitted changes.
+            # A request that fails validation is the same: FastAPI validates after this
+            # dependency is open and throws the error in here on its way to the 422
+            # (or the websocket close). Its text and traceback quote the submitted
+            # values, so logging it would put the request body in the server log.
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     await session.rollback()
             raise
@@ -237,6 +402,8 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
 
             # Only rollback if session is still in a valid state
             if session.is_active:
+                from sqlalchemy.exc import InvalidRequestError
+
                 with suppress(InvalidRequestError):
                     # Session was already rolled back by SQLAlchemy
                     await session.rollback()

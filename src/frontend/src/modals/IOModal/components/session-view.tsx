@@ -1,19 +1,33 @@
-import { useIsFetching } from "@tanstack/react-query";
-import type { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
+import type {
+  CellKeyDownEvent,
+  NewValueParams,
+  SelectionChangedEvent,
+  SuppressKeyboardEventParams,
+} from "ag-grid-community";
 import cloneDeep from "lodash/cloneDeep";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { removeMessages } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import Loading from "@/components/ui/loading";
 import {
   useDeleteMessages,
-  useGetMessagesQuery,
   useUpdateMessage,
 } from "@/controllers/API/queries/messages";
+import { useGetMessageHistory } from "@/controllers/API/queries/messages/use-get-message-history";
 import useFlowStore from "@/stores/flowStore";
 import TableComponent from "../../../components/core/parameterRenderComponent/components/tableComponent";
 import useAlertStore from "../../../stores/alertStore";
 import { useMessagesStore } from "../../../stores/messagesStore";
 import { extractColumnsFromRows, messagesSorter } from "../../../utils/utils";
+import { MessageHistoryLoader } from "./message-history-loader";
+
+function suppressMessageRowActionKeys(params: SuppressKeyboardEventParams) {
+  return (
+    params.event.key === "Enter" ||
+    params.event.key === " " ||
+    params.event.key === "Spacebar"
+  );
+}
 
 export default function SessionView({
   session,
@@ -22,8 +36,8 @@ export default function SessionView({
   session?: string;
   id?: string;
 }) {
+  const { t } = useTranslation();
   const messages = useMessagesStore((state) => state.messages);
-  const setMessages = useMessagesStore((state) => state.setMessages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const updateMessage = useMessagesStore((state) => state.updateMessage);
@@ -31,43 +45,34 @@ export default function SessionView({
   const playgroundPage = useFlowStore((state) => state.playgroundPage);
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
 
-  // Fetch messages for the specific session
-  const messageQueryParams = useMemo(() => {
-    const params: Record<string, string> = {};
-    if (session) {
-      params.session_id = session;
-    }
-    return {
-      id: id,
-      mode: "union" as const,
-      params: params,
-    };
-  }, [session, id]);
-
-  const { data: queryData, isFetching: isQueryFetching } = useGetMessagesQuery(
-    messageQueryParams,
-    {
-      enabled: !playgroundPage, // Only fetch if not in playground page
-    },
-  );
-
-  // Update messages store when data is fetched
-  useEffect(() => {
-    if (queryData && typeof queryData === "object" && "rows" in queryData) {
-      const rowsData = queryData.rows as { data?: unknown[] } | undefined;
-      if (rowsData && typeof rowsData === "object" && "data" in rowsData) {
-        const fetchedMessages = rowsData.data || [];
-        setMessages(fetchedMessages);
-      }
-    }
-  }, [queryData, setMessages]);
-
-  const columns = extractColumnsFromRows(messages, "intersection");
-  const isFetchingCount = useIsFetching({
-    queryKey: ["useGetMessagesQuery"],
-    exact: false,
+  const history = useGetMessageHistory({
+    id,
+    sessionId: session,
+    enabled: !playgroundPage,
   });
-  const isFetching = isFetchingCount > 0 || isQueryFetching;
+
+  const columnHeaderMap: Record<string, string> = {
+    timestamp: t("messages.column.timestamp"),
+    text: t("messages.column.text"),
+    sender: t("messages.column.sender"),
+    sender_name: t("messages.column.senderName"),
+    session_id: t("messages.column.sessionId"),
+    files: t("messages.column.files"),
+  };
+
+  const columns = extractColumnsFromRows(messages, "intersection").map(
+    (col) => ({
+      ...col,
+      ...(col.field && columnHeaderMap[col.field]
+        ? { headerName: columnHeaderMap[col.field] }
+        : {}),
+      ...(col.field === "text"
+        ? { flex: 3, minWidth: 320, tooltipField: "text" }
+        : {}),
+      suppressKeyboardEvent: suppressMessageRowActionKeys,
+    }),
+  );
+  const isFetching = !playgroundPage && history.isLoading;
 
   const { mutate: deleteMessages } = useDeleteMessages({
     onSuccess: () => {
@@ -77,12 +82,12 @@ export default function SessionView({
       }
       setSelectedRows([]);
       setSuccessData({
-        title: "Messages deleted successfully.",
+        title: t("success.messagesDeleted"),
       });
     },
     onError: () => {
       setErrorData({
-        title: "Error deleting messages.",
+        title: t("errors.deletingMessages"),
       });
     },
   });
@@ -106,12 +111,12 @@ export default function SessionView({
           updateMessage(data);
           // Set success message
           setSuccessData({
-            title: "Messages updated successfully.",
+            title: t("success.messagesUpdated"),
           });
         },
         onError: () => {
           setErrorData({
-            title: "Error updating messages.",
+            title: t("errors.updatingMessages"),
           });
           event.data[field] = event.oldValue;
           event.api.refreshCells();
@@ -134,6 +139,18 @@ export default function SessionView({
     deleteMessages({ ids: selectedRows });
   }
 
+  function handleCellKeyDown(event: CellKeyDownEvent) {
+    const keyboardEvent = event.event as KeyboardEvent | undefined;
+    if (keyboardEvent?.key !== " " && keyboardEvent?.key !== "Spacebar") {
+      return;
+    }
+
+    keyboardEvent.preventDefault();
+    keyboardEvent.stopPropagation();
+    event.node.setSelected(!event.node.isSelected(), false);
+    setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
+  }
+
   const editable = useMemo(() => {
     return playgroundPage
       ? false
@@ -141,24 +158,33 @@ export default function SessionView({
   }, [handleUpdateMessage]);
 
   return isFetching ? (
-    <div className="flex h-full w-full items-center justify-center align-middle">
+    <div
+      aria-label={t("common.loading")}
+      className="flex h-full w-full items-center justify-center align-middle"
+      role="status"
+    >
       <Loading></Loading>
     </div>
   ) : (
-    <TableComponent
-      key={"sessionView"}
-      onDelete={playgroundPage ? undefined : handleRemoveMessages}
-      readOnlyEdit
-      editable={editable}
-      overlayNoRowsTemplate="No data available"
-      onSelectionChanged={(event: SelectionChangedEvent) => {
-        setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
-      }}
-      rowSelection={playgroundPage ? undefined : "multiple"}
-      suppressRowClickSelection={true}
-      pagination={true}
-      columnDefs={columns.sort(messagesSorter)}
-      rowData={filteredMessages}
-    />
+    <div className="flex h-full min-h-0 flex-col">
+      {!playgroundPage && <MessageHistoryLoader history={history} />}
+      <TableComponent
+        key={"sessionView"}
+        tableLabel={t("messages.title")}
+        onDelete={playgroundPage ? undefined : handleRemoveMessages}
+        readOnlyEdit
+        editable={editable}
+        overlayNoRowsTemplate={t("table.noRowsToShow")}
+        onSelectionChanged={(event: SelectionChangedEvent) => {
+          setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
+        }}
+        onCellKeyDown={handleCellKeyDown}
+        rowSelection={playgroundPage ? undefined : "multiple"}
+        suppressRowClickSelection={true}
+        pagination={true}
+        columnDefs={columns.sort(messagesSorter)}
+        rowData={filteredMessages}
+      />
+    </div>
   );
 }

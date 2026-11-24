@@ -4,6 +4,9 @@ slug: /bundles-apify
 ---
 
 import Icon from "@site/src/components/icon";
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
 
 [Apify](https://apify.com/) is a web scraping and data extraction platform with more than 3,000 ready-made cloud tools called **Actors**.
 
@@ -23,7 +26,7 @@ The component can be used to perform tasks as a standalone step in a flow or as 
 
     To enable **Tool Mode** for this component, change the component's output type from **Output** to **Tool**, and then connect it to the **Tools** port on an **Agent** component.
 
-    **Apify Actors** components output the results of the Actor run as a JSON object in Langflow's [`Data` type](/data-types#data).
+    **Apify Actors** components output the results of the Actor run as a JSON object in Langflow's [`JSON` type](/data-types#json).
 
 ## Example Apify Actors flows
 

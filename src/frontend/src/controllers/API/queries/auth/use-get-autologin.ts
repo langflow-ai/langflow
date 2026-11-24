@@ -21,7 +21,14 @@ export interface AutoLoginResponse {
 
 export interface AutoLoginErrorResponse {
   auto_login?: boolean;
+  detail?: {
+    auto_login?: boolean;
+  };
 }
+
+export const isAutoLoginDisabledResponse = (
+  data: AutoLoginErrorResponse | undefined,
+): boolean => data?.auto_login === false || data?.detail?.auto_login === false;
 
 export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   options,
@@ -31,7 +38,6 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
   const setAutoLogin = useAuthStore((state) => state.setAutoLogin);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const isLoginPage = location.pathname.includes("login");
-  const autoLogin = useAuthStore((state) => state.autoLogin);
 
   const retryCountRef = useRef(0);
   const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -58,8 +64,9 @@ export const useGetAutoLogin: useQueryFunctionType<undefined, undefined> = (
       if (error.name !== "CanceledError") {
         setAutoLogin(false);
         // Don't retry if backend explicitly says auto-login is disabled
-        const autoLoginDisabledByBackend =
-          error.response?.data?.auto_login === false;
+        const autoLoginDisabledByBackend = isAutoLoginDisabledResponse(
+          error.response?.data,
+        );
         if (!isLoginPage && !autoLoginDisabledByBackend) {
           await handleAutoLoginError();
         }

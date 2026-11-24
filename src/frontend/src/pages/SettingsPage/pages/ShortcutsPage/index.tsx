@@ -1,15 +1,18 @@
 import type { ColDef } from "ag-grid-community";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { toCamelCase } from "@/utils/utils";
 import ForwardedIconComponent from "../../../../components/common/genericIconComponent";
 import TableComponent from "../../../../components/core/parameterRenderComponent/components/tableComponent";
 import { Button } from "../../../../components/ui/button";
 import { defaultShortcuts } from "../../../../constants/constants";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
+import SettingsPageHeader from "../../components/SettingsPageHeader";
 import CellRenderShortcuts from "./CellRenderWrapper";
 import EditShortcutButton from "./EditShortcutButton";
 
 export default function ShortcutsPage() {
+  const { t } = useTranslation();
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const shortcuts = useShortcutsStore((state) => state.shortcuts);
   const setShortcuts = useShortcutsStore((state) => state.setShortcuts);
@@ -17,14 +20,18 @@ export default function ShortcutsPage() {
   // Column Definitions: Defines the columns to be displayed.
   const colDefs: ColDef[] = [
     {
-      headerName: "Functionality",
+      headerName: t("shortcuts.columnFunctionality"),
       field: "display_name",
       flex: 1,
       editable: false,
       resizable: false,
+      valueFormatter: (params) =>
+        t(`shortcuts.name.${toCamelCase(params.data.name)}`, {
+          defaultValue: params.value,
+        }),
     }, //This column will be twice as wide as the others
     {
-      headerName: "Keyboard Shortcut",
+      headerName: t("shortcuts.columnKeyboardShortcut"),
       field: "shortcut",
       flex: 2,
       editable: false,
@@ -55,52 +62,35 @@ export default function ShortcutsPage() {
     localStorage.removeItem("langflow-shortcuts");
   }
 
+  function openShortcutEditor(shortcutName: string) {
+    setSelectedRows([shortcutName]);
+    setOpen(true);
+  }
+
   return (
     <div className="flex h-full w-full flex-col gap-6">
-      <div className="flex w-full items-start justify-between gap-6">
-        <div className="flex w-full flex-col">
-          <h2
-            className="flex items-center text-lg font-semibold tracking-tight"
-            data-testid="settings_menu_header"
+      <SettingsPageHeader
+        title={t("shortcuts.title")}
+        description={t("shortcuts.description")}
+      >
+        {open && (
+          <EditShortcutButton
+            disable={selectedRows.length === 0}
+            shortcut={selectedRows}
+            shortcuts={shortcuts}
+            defaultShortcuts={defaultShortcuts}
+            open={open}
+            setOpen={setOpen}
+            setSelected={setSelectedRows}
           >
-            Shortcuts
-            <ForwardedIconComponent
-              name="Keyboard"
-              className="ml-2 h-5 w-5 text-primary"
-            />
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Manage Shortcuts for quick access to frequently used actions.
-          </p>
-        </div>
-        <div>
-          <div className="align-end flex w-full justify-end">
-            <div className="justify center flex items-center">
-              {open && (
-                <EditShortcutButton
-                  disable={selectedRows.length === 0}
-                  shortcut={selectedRows}
-                  shortcuts={shortcuts}
-                  defaultShortcuts={defaultShortcuts}
-                  open={open}
-                  setOpen={setOpen}
-                  setSelected={setSelectedRows}
-                >
-                  <div style={{ display: "none" }} />
-                </EditShortcutButton>
-              )}
-              <Button
-                variant="primary"
-                className="flex gap-2"
-                onClick={handleRestore}
-              >
-                <ForwardedIconComponent name="RotateCcw" className="w-4" />
-                Restore
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
+            <div style={{ display: "none" }} />
+          </EditShortcutButton>
+        )}
+        <Button size="sm" className="gap-2" onClick={handleRestore}>
+          <ForwardedIconComponent name="RotateCcw" className="w-4" />
+          {t("shortcuts.restoreButton")}
+        </Button>
+      </SettingsPageHeader>
       <div className="grid gap-6 pb-8">
         <div>
           {colDefs && nodesRowData.length > 0 && (
@@ -111,8 +101,15 @@ export default function ShortcutsPage() {
               columnDefs={colDefs}
               rowData={nodesRowData}
               onCellDoubleClicked={(e) => {
-                setSelectedRows([e.data.name]);
-                setOpen(true);
+                openShortcutEditor(e.data.name);
+              }}
+              onCellKeyDown={(e) => {
+                const event = e.event as KeyboardEvent | undefined;
+                if (event?.key !== "Enter" && event?.key !== " ") {
+                  return;
+                }
+                event.preventDefault();
+                openShortcutEditor(e.data.name);
               }}
             />
           )}

@@ -1,12 +1,12 @@
 import type { Edge } from "@xyflow/react";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
-import { findPrimaryInput } from "../utils";
+import { type FindPrimaryInputTemplate, findPrimaryInput } from "../utils";
 
 // Helper to create a mock edge for testing
 const createMockEdge = (
   nodeId: string,
   fieldName: string,
-  template: { type?: string; input_types?: string[]; proxy?: any },
+  template: Pick<FindPrimaryInputTemplate, "type" | "input_types" | "proxy">,
 ): Edge => {
   const handleId = scapedJSONStringfy(
     template.proxy
@@ -125,6 +125,23 @@ describe("Primary Input Identification", () => {
           edges,
         ).primaryInputFieldName,
       ).toBe("secondary");
+    });
+    it("should never pick a connection_ref field as primary input", () => {
+      const templates = {
+        google_connection: { type: "connection_ref" },
+        calendar_id: { type: "str", input_types: ["Message"] },
+      };
+
+      const result = findPrimaryInput(
+        ["google_connection", "calendar_id"],
+        templates,
+        false,
+        nodeId,
+        [],
+      );
+
+      expect(result.displayHandleMap.get("google_connection")).toBe(false);
+      expect(result.primaryInputFieldName).toBe("calendar_id");
     });
   });
 

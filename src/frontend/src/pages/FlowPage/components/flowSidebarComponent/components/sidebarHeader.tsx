@@ -1,13 +1,9 @@
 import { memo } from "react";
-
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import {
-  Disclosure,
-  DisclosureContent,
-  DisclosureTrigger,
-} from "@/components/ui/disclosure";
+import { Disclosure, DisclosureContent } from "@/components/ui/disclosure";
 import { SidebarHeader, SidebarTrigger } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import type { SidebarHeaderComponentProps } from "../types";
@@ -32,6 +28,7 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
   filterDescription,
   resetFilters,
 }: SidebarHeaderComponentProps) {
+  const { t } = useTranslation();
   return (
     <SidebarHeader className="flex w-full flex-col gap-2 group-data-[collapsible=icon]:hidden border-b">
       {!ENABLE_NEW_SIDEBAR && (
@@ -41,24 +38,27 @@ export const SidebarHeaderComponent = memo(function SidebarHeaderComponent({
               <ForwardedIconComponent name="PanelLeftClose" />
             </SidebarTrigger>
             <h3 className="flex-1 cursor-default text-sm font-semibold">
-              Components
+              {t("sidebar.components")}
             </h3>
-            <DisclosureTrigger>
-              <div>
-                <ShadTooltip content="Component settings" styleClasses="z-50">
-                  <Button
-                    variant={showConfig ? "ghostActive" : "ghost"}
-                    size="iconMd"
-                    data-testid="sidebar-options-trigger"
-                  >
-                    <ForwardedIconComponent
-                      name="SlidersHorizontal"
-                      className="h-4 w-4"
-                    />
-                  </Button>
-                </ShadTooltip>
-              </div>
-            </DisclosureTrigger>
+            <ShadTooltip
+              content={t("sidebar.componentSettings")}
+              styleClasses="z-50"
+              ariaDescribedBy={undefined}
+            >
+              <Button
+                variant={showConfig ? "ghostActive" : "ghost"}
+                size="iconMd"
+                data-testid="sidebar-options-trigger"
+                aria-label={t("sidebar.componentSettings")}
+                aria-expanded={showConfig}
+                onClick={() => setShowConfig(!showConfig)}
+              >
+                <ForwardedIconComponent
+                  name="SlidersHorizontal"
+                  className="h-4 w-4"
+                />
+              </Button>
+            </ShadTooltip>
           </div>
           <DisclosureContent>
             <FeatureToggles

@@ -1,5 +1,8 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { usePermissions } from "@/contexts/permissionsContext";
+import CustomFlowShareAction from "@/customization/components/custom-flow-share-action";
 import useAlertStore from "@/stores/alertStore";
 import type { FlowType } from "@/types/flow";
 import useDuplicateFlow from "../../hooks/use-handle-duplicate";
@@ -18,6 +21,12 @@ const DropdownComponent = ({
   handleExport,
   handleEdit,
 }: DropdownComponentProps) => {
+  const { t } = useTranslation();
+  const { can } = usePermissions();
+  const canEdit = can(flowData.id, "write");
+  const canExport = can(flowData.id, "read");
+  const canDuplicate = can(flowData.id, "create");
+  const canDelete = can(flowData.id, "delete");
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { handleDuplicate } = useDuplicateFlow({ flow: flowData });
@@ -25,7 +34,9 @@ const DropdownComponent = ({
   const duplicateFlow = () => {
     handleDuplicate().then(() =>
       setSuccessData({
-        title: `${flowData.is_component ? "Component" : "Flow"} duplicated successfully`,
+        title: t("flow.duplicatedSuccess", {
+          type: flowData.is_component ? "Component" : "Flow",
+        }),
       }),
     );
   };
@@ -42,6 +53,7 @@ const DropdownComponent = ({
   return (
     <>
       <DropdownMenuItem
+        disabled={!canEdit}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectOptionsChange("edit");
@@ -54,9 +66,10 @@ const DropdownComponent = ({
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Edit details
+        {t("flow.menu.editDetails")}
       </DropdownMenuItem>
       <DropdownMenuItem
+        disabled={!canExport}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectOptionsChange("export");
@@ -69,9 +82,10 @@ const DropdownComponent = ({
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Export
+        {t("flow.menu.export")}
       </DropdownMenuItem>
       <DropdownMenuItem
+        disabled={!canDuplicate}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectOptionsChange("duplicate");
@@ -84,9 +98,15 @@ const DropdownComponent = ({
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Duplicate
+        {t("flow.menu.duplicate")}
       </DropdownMenuItem>
+      <CustomFlowShareAction
+        resourceId={flowData.id}
+        resourceType="flow"
+        resourceName={flowData.name}
+      />
       <DropdownMenuItem
+        disabled={!canDelete}
         onClick={(e) => {
           e.stopPropagation();
           setOpenDelete(true);
@@ -99,7 +119,7 @@ const DropdownComponent = ({
           aria-hidden="true"
           className="mr-2 h-4 w-4"
         />
-        Delete
+        {t("flow.menu.delete")}
       </DropdownMenuItem>
     </>
   );

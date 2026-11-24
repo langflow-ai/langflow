@@ -12,10 +12,9 @@ from lfx.cli.common import flow_id_from_path, load_graph_from_path, validate_scr
 from lfx.cli.serve_app import (
     ErrorResponse,
     FlowMeta,
+    FlowRegistry,
     RunRequest,
     RunResponse,
-    _analyze_graph_structure,
-    _generate_dynamic_run_description,
     create_multi_serve_app,
 )
 from lfx.graph import Graph
@@ -73,89 +72,6 @@ class TestDataModels:
         error = ErrorResponse(error="Something went wrong")
         assert error.error == "Something went wrong"
         assert error.success is False
-
-
-class TestGraphAnalysis:
-    """Test graph analysis functions."""
-
-    def test_analyze_graph_structure_basic(self):
-        """Test basic graph structure analysis."""
-        # Create a mock graph that matches what _analyze_graph_structure expects
-        mock_graph = Mock()
-
-        # Create mock node objects with the expected structure
-        node1 = Mock()
-        node1.data = {
-            "type": "ChatInput",
-            "display_name": "Chat Input",
-            "description": "Input component",
-            "template": {"input_value": {"type": "str"}},
-        }
-
-        node2 = Mock()
-        node2.data = {
-            "type": "ChatOutput",
-            "display_name": "Chat Output",
-            "description": "Output component",
-            "template": {"output_value": {"type": "str"}},
-        }
-
-        mock_graph.nodes = {"input-1": node1, "output-1": node2}
-
-        # Create mock edges
-        edge = Mock()
-        edge.source = "input-1"
-        edge.target = "output-1"
-        mock_graph.edges = [edge]
-
-        analysis = _analyze_graph_structure(mock_graph)
-
-        assert analysis["node_count"] == 2
-        assert analysis["edge_count"] == 1
-        assert len(analysis["components"]) == 2
-        assert isinstance(analysis["input_types"], list)
-        assert isinstance(analysis["output_types"], list)
-
-    def test_analyze_graph_structure_error_handling(self):
-        """Test graph analysis with malformed graph."""
-        mock_graph = Mock()
-        mock_graph.nodes = {}
-        mock_graph.edges = []
-
-        # Force an exception during analysis
-        mock_graph.nodes = None
-
-        analysis = _analyze_graph_structure(mock_graph)
-
-        # Should provide fallback values
-        assert len(analysis["components"]) == 1
-        assert analysis["components"][0]["type"] == "Unknown"
-        assert "text" in analysis["input_types"]
-        assert "text" in analysis["output_types"]
-
-    def test_generate_dynamic_run_description(self):
-        """Test dynamic description generation."""
-        # Create a mock graph for _generate_dynamic_run_description
-        mock_graph = Mock()
-
-        # Mock the analyze function to return expected data
-        with patch("lfx.cli.serve_app._analyze_graph_structure") as mock_analyze:
-            mock_analyze.return_value = {
-                "node_count": 2,
-                "edge_count": 1,
-                "components": [{"type": "ChatInput"}, {"type": "ChatOutput"}],
-                "input_types": ["text"],
-                "output_types": ["text"],
-                "entry_points": [{"template": {"input_value": {"type": "str"}}}],
-                "exit_points": [{"template": {"output_value": {"type": "str"}}}],
-            }
-
-            description = _generate_dynamic_run_description(mock_graph)
-
-            assert "Execute the deployed LFX graph" in description
-            assert "Authentication Required" in description
-            assert "Example Request" in description
-            assert "Example Response" in description
 
 
 class TestCommonFunctions:
@@ -249,64 +165,45 @@ def create_real_graph():
     """Helper function to create a real LFX graph with nodes/edges for serve_app."""
     # Load real JSON data and create graph using from_payload
     json_data = simple_chat_json()
-    return Graph.from_payload(json_data, flow_id="test-flow-id")
+    return Graph.from_payload(json_data, flow_id="00000000-0000-0000-0000-000000000001")
 
 
 class TestFastAPIAppCreation:
     """Test FastAPI application creation."""
 
-    def test_create_multi_serve_app_basic(self, tmp_path):
+    def test_create_multi_serve_app_basic(self):
         """Test basic multi-serve app creation."""
-        root_dir = tmp_path
-        graphs = {"test-flow": create_real_graph()}
-        metas = {"test-flow": FlowMeta(id="test-flow", relative_path="test.json", title="Test Flow")}
+        meta = FlowMeta(id="test-flow", relative_path="test.json", title="Test Flow")
+        registry = FlowRegistry()
+        registry.add(create_real_graph(), meta)
 
-        def verbose_print(msg):
-            pass  # Real function
+        app = create_multi_serve_app(registry=registry)
 
-        with patch("lfx.cli.serve_app.verify_api_key"):
-            app = create_multi_serve_app(root_dir=root_dir, graphs=graphs, metas=metas, verbose_print=verbose_print)
+        assert app.title.startswith("LFX Multi-Flow Server")
+        assert "1" in app.title  # Should show count
 
-            assert app.title.startswith("LFX Multi-Flow Server")
-            assert "1" in app.title  # Should show count
+    def test_create_multi_serve_app_mismatched_keys(self):
+        """Test app creation — registry never has mismatched keys by design; verify basic creation."""
+        meta = FlowMeta(id="test-flow", relative_path="test.json", title="Test Flow")
+        registry = FlowRegistry()
+        registry.add(create_real_graph(), meta)
 
-    def test_create_multi_serve_app_mismatched_keys(self, tmp_path):
-        """Test app creation with mismatched graph/meta keys."""
-        root_dir = tmp_path
-        graphs = {"flow1": create_real_graph()}
-        metas = {"flow2": FlowMeta(id="flow2", relative_path="test.json", title="Test")}
-
-        def verbose_print(msg):
-            pass  # Real function
-
-        with pytest.raises(ValueError, match="graphs and metas must contain the same keys"):
-            create_multi_serve_app(root_dir=root_dir, graphs=graphs, metas=metas, verbose_print=verbose_print)
+        # Registry always keeps graphs and metas in sync — no mismatch possible
+        app = create_multi_serve_app(registry=registry)
+        assert app is not None
 
 
 class TestFastAPIEndpoints:
     """Test FastAPI endpoints using TestClient."""
 
-    def setup_method(self, tmp_path):
+    def setup_method(self, tmp_path=None):  # noqa: ARG002
         """Set up test client with mock data."""
-        self.root_dir = tmp_path
         self.real_graph = create_real_graph()
-        self.graphs = {"test-flow": self.real_graph}
-        self.metas = {
-            "test-flow": FlowMeta(
-                id="test-flow", relative_path="test.json", title="Test Flow", description="A test flow"
-            )
-        }
+        meta = FlowMeta(id="test-flow", relative_path="test.json", title="Test Flow", description="A test flow")
 
-        def verbose_print(msg):
-            pass  # Real function
-
-        self.verbose_print = verbose_print
-
-        # Create the app first
-        with patch("lfx.cli.serve_app.verify_api_key"):
-            self.app = create_multi_serve_app(
-                root_dir=self.root_dir, graphs=self.graphs, metas=self.metas, verbose_print=self.verbose_print
-            )
+        registry = FlowRegistry()
+        registry.add(self.real_graph, meta)
+        self.app = create_multi_serve_app(registry=registry)
 
         # Override the dependency for testing
         def mock_verify_key():
@@ -389,41 +286,41 @@ class TestFastAPIEndpoints:
 class TestErrorHandling:
     """Test error handling in various components."""
 
-    def test_invalid_json_in_request(self, tmp_path):
+    def test_invalid_json_in_request(self):
         """Test handling of invalid JSON in requests."""
-        with patch("lfx.cli.serve_app.verify_api_key", return_value="test-key"):
-            app = create_multi_serve_app(
-                root_dir=tmp_path,
-                graphs={"test": create_real_graph()},
-                metas={"test": FlowMeta(id="test", relative_path="test.json", title="Test")},
-                verbose_print=lambda msg: None,  # noqa: ARG005
-            )
-            client = TestClient(app)
+        from lfx.cli.serve_app import verify_api_key
 
-            response = client.post(
-                "/flows/test/run",
-                data="invalid json",
-                headers={"x-api-key": "test-key", "Content-Type": "application/json"},
-            )
+        meta = FlowMeta(id="test", relative_path="test.json", title="Test")
+        registry = FlowRegistry()
+        registry.add(create_real_graph(), meta)
+        app = create_multi_serve_app(registry=registry)
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
+        client = TestClient(app)
 
-            assert response.status_code == 422  # Validation error
+        response = client.post(
+            "/flows/test/run",
+            data="invalid json",
+            headers={"x-api-key": "test-key", "Content-Type": "application/json"},
+        )
 
-    def test_missing_flow_id(self, tmp_path):
+        assert response.status_code == 422  # Validation error
+
+    def test_missing_flow_id(self):
         """Test accessing non-existent flow."""
-        with patch("lfx.cli.serve_app.verify_api_key", return_value="test-key"):
-            app = create_multi_serve_app(
-                root_dir=tmp_path,
-                graphs={"test": create_real_graph()},
-                metas={"test": FlowMeta(id="test", relative_path="test.json", title="Test")},
-                verbose_print=lambda msg: None,  # noqa: ARG005
-            )
-            client = TestClient(app)
+        from lfx.cli.serve_app import verify_api_key
 
-            response = client.post(
-                "/flows/nonexistent/run", json={"input_value": "test"}, headers={"x-api-key": "test-key"}
-            )
+        meta = FlowMeta(id="test", relative_path="test.json", title="Test")
+        registry = FlowRegistry()
+        registry.add(create_real_graph(), meta)
+        app = create_multi_serve_app(registry=registry)
+        app.dependency_overrides[verify_api_key] = lambda: "test-key"
+        client = TestClient(app)
 
-            assert response.status_code == 404
+        response = client.post(
+            "/flows/nonexistent/run", json={"input_value": "test"}, headers={"x-api-key": "test-key"}
+        )
+
+        assert response.status_code == 404
 
 
 class TestIntegration:
@@ -462,21 +359,19 @@ class TestIntegration:
             )
 
             # Test app creation
-            with patch("lfx.cli.serve_app.verify_api_key", return_value="test-key"):
-                app = create_multi_serve_app(
-                    root_dir=flow_path.parent,
-                    graphs={flow_id: loaded_graph},
-                    metas={flow_id: meta},
-                    verbose_print=mock_verbose_print,
-                )
+            from lfx.cli.serve_app import verify_api_key as _verify_api_key
 
-                client = TestClient(app)
+            registry = FlowRegistry()
+            registry.add(loaded_graph, meta)
+            app = create_multi_serve_app(registry=registry)
+            app.dependency_overrides[_verify_api_key] = lambda: "test-key"
+            client = TestClient(app)
 
-                # Test endpoints
-                flows_response = client.get("/flows")
-                assert flows_response.status_code == 200
-                assert len(flows_response.json()) == 1
+            # Test endpoints
+            flows_response = client.get("/flows")
+            assert flows_response.status_code == 200
+            assert len(flows_response.json()) == 1
 
-                health_response = client.get("/health")
-                assert health_response.status_code == 200
-                assert health_response.json()["flow_count"] == 1
+            health_response = client.get("/health")
+            assert health_response.status_code == 200
+            assert health_response.json()["flow_count"] == 1

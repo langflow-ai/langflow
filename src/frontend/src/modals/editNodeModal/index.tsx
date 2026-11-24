@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { APIClassType } from "@/types/api";
 import { customStringify } from "@/utils/reactflowUtils";
 import { Badge } from "../../components/ui/badge";
@@ -17,6 +18,7 @@ const EditNodeModal = ({
   setOpen: (open: boolean) => void;
   data: NodeDataType;
 }) => {
+  const { t } = useTranslation();
   const isDark = useDarkStore((state) => state.dark);
 
   const [nodeClass, setNodeClass] = useState<APIClassType>(data.node!);
@@ -54,7 +56,7 @@ const EditNodeModal = ({
             onClick={() => setOpen(false)}
             data-testid="edit-button-close"
           >
-            Close
+            {t("editNode.close")}
           </Button>
         </div>
       </BaseModal.Footer>

@@ -4,23 +4,32 @@ from typing import TYPE_CHECKING
 
 from lfx.log import logger
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-from sqlmodel import col, delete, func, select
+from sqlmodel import col, delete, func, select, update
+
+from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.flow_version.exceptions import (
+    FlowVersionConflictError,
+    FlowVersionDeployedError,
+    FlowVersionNotFoundError,
+    FlowVersionPinnedError,
+    FlowVersionRetainedError,
+)
+from langflow.services.database.models.flow_version.model import (
+    FlowVersion,
+)
+from langflow.services.database.models.flow_version_deployment_attachment.model import (
+    FlowVersionDeploymentAttachment,
+)
+from langflow.services.database.models.trigger.model import Trigger
+from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.services.database.models.flow_version.exceptions import (
-    FlowVersionConflictError,
-    FlowVersionNotFoundError,
-)
-from langflow.services.database.models.flow_version.model import (
-    FlowVersion,
-)
-from langflow.services.deps import get_settings_service
-
 MAX_VERSION_RETRIES = 3
+MAX_VERSION_ID_FILTER_SIZE = 50
 
 
 async def get_next_version_number(session: AsyncSession, flow_id: UUID) -> int:
@@ -35,8 +44,15 @@ async def create_flow_version_entry(
     user_id: UUID,
     data: dict | None,
     description: str | None = None,
+    *,
+    prune: bool = True,
 ) -> FlowVersion:
     """Create a version entry with retry on version number collision.
+
+    Pass ``prune=False`` to insert without pruning the flow's oldest versions.
+    A version recorded this way by a user other than the flow owner is not
+    listed or deletable through the OSS version routes, which are owner-scoped;
+    the caller owns its lifecycle until a later prune reaps it.
 
     NOTE: This function does NOT verify that user_id owns the flow.
     Callers are responsible for checking ownership before calling this.
@@ -82,26 +98,67 @@ async def create_flow_version_entry(
         )
         raise FlowVersionConflictError(msg)
 
-    # Prune oldest entries beyond the configured limit.
+    if not prune:
+        return entry
+
+    # Retain versions used by deployments or trigger pins outside the history
+    # limit. A new snapshot must never change what a pinned trigger executes.
     # NOTE: Concurrent snapshot requests for the same flow could both insert
     # before either prunes, temporarily exceeding the limit by one or more
     # entries. This is acceptable — the excess self-corrects on the next
-    # snapshot, and serializing with SELECT FOR UPDATE would add contention
-    # for a non-critical constraint.
+    # snapshot.
     try:
         max_entries = get_settings_service().settings.max_flow_version_entries_per_flow
-        delete_older = delete(FlowVersion).where(
-            FlowVersion.flow_id == flow_id,
-            col(FlowVersion.id).in_(
+        # Count a version as "deployed" only when the attachment still points to
+        # a live deployment row. This prevents orphaned attachments from
+        # blocking versions from being deleted. The deployment may belong to a
+        # different user than the one snapshotting (a teammate deploying a
+        # shared flow), so this is deliberately not filtered by user_id.
+        deployed_version_ids = (
+            select(FlowVersionDeploymentAttachment.flow_version_id)
+            .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+            .where(
+                col(FlowVersionDeploymentAttachment.flow_version_id).in_(
+                    select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+                ),
+            )
+            .distinct()
+        )
+        pinned_version_ids = select(Trigger.flow_version_id).where(col(Trigger.flow_version_id).is_not(None))
+        version_ids_to_prune = (
+            await session.exec(
                 select(FlowVersion.id)
-                .where(FlowVersion.flow_id == flow_id)
+                .where(
+                    FlowVersion.flow_id == flow_id,
+                    col(FlowVersion.id).not_in(deployed_version_ids),
+                    col(FlowVersion.id).not_in(pinned_version_ids),
+                    col(FlowVersion.retained).is_(False),
+                )
                 .order_by(col(FlowVersion.version_number).desc())
                 .offset(max_entries)
-            ),
-        )
-        result = await session.exec(delete_older)
-        if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
-            await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
+            )
+        ).all()
+        if version_ids_to_prune:
+            # Delete attachment children first so the row is fully reaped under
+            # SQLite foreign_keys=OFF (no DB-level cascade). A version reaches
+            # this branch only when no attachment of it points to a live
+            # deployment, but stale orphan-deployment attachments may still
+            # exist; without this explicit delete those rows would survive the
+            # FlowVersion delete as doubly-orphaned and no cleanup helper
+            # catches that shape.
+            await session.exec(
+                delete(FlowVersionDeploymentAttachment).where(
+                    col(FlowVersionDeploymentAttachment.flow_version_id).in_(version_ids_to_prune)
+                )
+            )
+            # Re-checked in the DELETE itself: a version retained after it was selected stays.
+            result = await session.exec(
+                delete(FlowVersion).where(
+                    col(FlowVersion.id).in_(version_ids_to_prune), col(FlowVersion.retained).is_(False)
+                )
+            )
+            if hasattr(result, "rowcount") and result.rowcount:  # type: ignore[union-attr]
+                await logger.adebug("Pruned %d old version entries for flow %s", result.rowcount, flow_id)  # type: ignore[union-attr]
     except SQLAlchemyError:
         # Pruning is best-effort: we don't fail the snapshot because pruning broke.
         # Logged at error level because repeated failures cause unbounded table growth
@@ -115,21 +172,67 @@ async def create_flow_version_entry(
     return entry
 
 
-async def get_flow_version_list(
+async def get_flow_version_list_simple(
     session: AsyncSession,
     flow_id: UUID,
     user_id: UUID,
     limit: int = 50,
     offset: int = 0,
-) -> list[FlowVersion]:
-    result = await session.exec(
+) -> list[tuple[FlowVersion, bool]]:
+    """Return flow versions without deployment awareness.
+
+    Used when no deployment provider is configured, avoiding unnecessary
+    joins against the (empty) attachment table.  The boolean second
+    element is always ``False``.
+    """
+    stmt = (
         select(FlowVersion)
         .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
         .order_by(col(FlowVersion.version_number).desc())
         .offset(offset)
         .limit(limit)
     )
-    return list(result.all())
+    rows = (await session.exec(stmt)).all()
+    return [(version, False) for version in rows]
+
+
+async def get_flow_versions_with_provider_status(
+    session: AsyncSession,
+    flow_id: UUID,
+    user_id: UUID,
+    *,
+    provider_account_id: UUID,
+    limit: int = 50,
+    offset: int = 0,
+) -> list[tuple[FlowVersion, bool]]:
+    """Return flow versions with deployment status scoped to a provider account."""
+    # Deployment status is derived from live parent joins so stale attachment
+    # rows (missing deployment parent) do not leak into API status.
+    deployed_subquery = (
+        select(FlowVersionDeploymentAttachment.flow_version_id)
+        .join(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            Deployment.user_id == user_id,
+            Deployment.deployment_provider_account_id == provider_account_id,
+            col(FlowVersionDeploymentAttachment.flow_version_id).in_(
+                select(FlowVersion.id).where(FlowVersion.flow_id == flow_id)
+            ),
+        )
+        .distinct()
+        .subquery()
+    )
+    stmt = (
+        select(
+            FlowVersion,
+            deployed_subquery.c.flow_version_id.isnot(None).label("is_deployed"),
+        )
+        .outerjoin(deployed_subquery, deployed_subquery.c.flow_version_id == FlowVersion.id)
+        .where(FlowVersion.flow_id == flow_id, FlowVersion.user_id == user_id)
+    )
+    stmt = stmt.order_by(col(FlowVersion.version_number).desc()).offset(offset).limit(limit)
+    rows = (await session.exec(stmt)).all()
+    return [(version, bool(is_deployed)) for version, is_deployed in rows]
 
 
 async def get_flow_version_entry(
@@ -139,6 +242,30 @@ async def get_flow_version_entry(
 ) -> FlowVersion | None:
     result = await session.exec(select(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
     return result.first()
+
+
+async def get_flow_version_entries_by_ids(
+    session: AsyncSession,
+    version_ids: list[UUID],
+    user_id: UUID,
+) -> dict[UUID, FlowVersion]:
+    """Get flow-version entries for a user using a single query.
+
+    Returns a mapping of ``version_id -> FlowVersion`` for all found ids.
+    Missing ids are omitted from the returned mapping.
+    """
+    if not version_ids:
+        return {}
+    if len(version_ids) > MAX_VERSION_ID_FILTER_SIZE:
+        msg = f"version_ids supports at most {MAX_VERSION_ID_FILTER_SIZE} values."
+        raise ValueError(msg)
+
+    stmt = select(FlowVersion).where(
+        col(FlowVersion.id).in_(version_ids),
+        FlowVersion.user_id == user_id,
+    )
+    rows = (await session.exec(stmt)).all()
+    return {row.id: row for row in rows}
 
 
 async def get_flow_version_entry_or_raise(
@@ -158,15 +285,168 @@ async def get_flow_version_entry_or_raise(
     return entry
 
 
+async def is_flow_version_deployed(
+    session: AsyncSession,
+    flow_version_id: UUID,
+    user_id: UUID | None = None,
+) -> bool:
+    """Return True if the flow version is attached to at least one deployment."""
+    return await has_deployment_attachments(session, flow_version_id, user_id=user_id)
+
+
+async def has_deployment_attachments(
+    session: AsyncSession,
+    flow_version_id: UUID,
+    user_id: UUID | None = None,
+) -> bool:
+    """Check whether a flow version has live deployment attachments.
+
+    Returns True when at least one attachment row points to an existing
+    deployment.  When no live attachments are found, orphan attachment rows
+    (whose deployment parent was deleted without cascading) are pruned as a
+    side-effect so subsequent calls and delete guards do not keep
+    re-processing stale records.
+
+    Callers that only need a pure read should use a direct ``select`` with
+    an inner join on ``Deployment`` instead.
+    """
+    # First check only "live" attachments (attachment + existing deployment).
+    live_stmt = (
+        select(func.count(FlowVersionDeploymentAttachment.id))
+        .join(
+            Deployment,
+            Deployment.id == FlowVersionDeploymentAttachment.deployment_id,
+        )
+        .where(
+            FlowVersionDeploymentAttachment.flow_version_id == flow_version_id,
+        )
+    )
+    if user_id is not None:
+        live_stmt = live_stmt.where(
+            FlowVersionDeploymentAttachment.user_id == user_id,
+            Deployment.user_id == user_id,
+        )
+    live_count = (await session.exec(live_stmt)).one()
+    if int(live_count or 0) > 0:
+        return True
+
+    # If no live attachments remain, opportunistically clean orphan rows so
+    # repeated delete/version checks don't keep re-processing stale records.
+    stale_attachment_ids_stmt = (
+        select(FlowVersionDeploymentAttachment.id)
+        .outerjoin(Deployment, Deployment.id == FlowVersionDeploymentAttachment.deployment_id)
+        .where(
+            FlowVersionDeploymentAttachment.flow_version_id == flow_version_id,
+            Deployment.id.is_(None),
+        )
+    )
+    if user_id is not None:
+        stale_attachment_ids_stmt = stale_attachment_ids_stmt.where(FlowVersionDeploymentAttachment.user_id == user_id)
+    stale_attachment_ids = (await session.exec(stale_attachment_ids_stmt)).all()
+    if stale_attachment_ids:
+        await session.exec(
+            delete(FlowVersionDeploymentAttachment).where(
+                col(FlowVersionDeploymentAttachment.id).in_(stale_attachment_ids)
+            )
+        )
+        await logger.ainfo(
+            "Pruned %d orphan attachment(s) for flow_version %s",
+            len(stale_attachment_ids),
+            flow_version_id,
+        )
+    return False
+
+
+async def lock_flow_version_entry(
+    session: AsyncSession,
+    version_id: UUID,
+    user_id: UUID | None = None,
+    *,
+    key_share: bool = False,
+) -> bool:
+    """Lock a version until transaction end; return whether it still exists.
+
+    PostgreSQL attachments use key-share locks so they can run concurrently
+    while still excluding version deletion, which keeps the exclusive lock.
+    """
+    conditions = [FlowVersion.id == version_id]
+    if user_id is not None:
+        conditions.append(FlowVersion.user_id == user_id)
+    dialect = session.get_bind().dialect.name
+    if dialect == "sqlite":
+        # SQLite ignores FOR UPDATE. A no-op write takes its transaction-wide
+        # writer lock before either caller checks or changes attachments.
+        result = await session.exec(
+            update(FlowVersion)
+            .where(*conditions)
+            .values(id=FlowVersion.id)
+            .execution_options(synchronize_session=False)
+        )
+        return result.rowcount != 0
+    stmt = select(FlowVersion.id).where(*conditions).with_for_update()
+    if dialect == "postgresql" and key_share:
+        stmt = stmt.with_for_update(read=True, key_share=True)
+    return (await session.exec(stmt)).first() is not None
+
+
 async def delete_flow_version_entry(
     session: AsyncSession,
     version_id: UUID,
     user_id: UUID,
 ) -> None:
-    entry = await get_flow_version_entry(session, version_id, user_id)
-    if not entry:
+    # Serialize the deployment guard and delete with attachment creation.
+    if not await lock_flow_version_entry(session, version_id, user_id):
         msg = f"Version entry {version_id} not found"
         raise FlowVersionNotFoundError(msg)
 
-    await session.delete(entry)
+    # A deployment owned by another user still protects this version.
+    if await has_deployment_attachments(session, version_id):
+        msg = (
+            f"Version entry {version_id} is attached to one or more deployments "
+            f"and cannot be deleted. Remove its deployment attachment rows first."
+        )
+        raise FlowVersionDeployedError(msg)
+
+    if (await session.exec(select(Trigger.id).where(Trigger.flow_version_id == version_id).limit(1))).first():
+        msg = f"Version entry {version_id} is pinned by a trigger and cannot be deleted. Unpin it first."
+        raise FlowVersionPinnedError(msg)
+
+    row = (
+        await session.exec(
+            select(FlowVersion.retained, FlowVersion.retained_reason).where(FlowVersion.id == version_id)
+        )
+    ).first()
+    if row is not None and row.retained:
+        msg = f"Version entry {version_id} is retained and cannot be deleted."
+        if row.retained_reason:
+            msg += f" Reason: {row.retained_reason}."
+        raise FlowVersionRetainedError(msg)
+
+    # The entry can disappear after the preflight reads under concurrent DELETEs.
+    result = await session.exec(delete(FlowVersion).where(FlowVersion.id == version_id, FlowVersion.user_id == user_id))
+    if result.rowcount == 0:
+        msg = f"Version entry {version_id} not found"
+        raise FlowVersionNotFoundError(msg)
     await session.flush()
+
+
+async def set_flow_version_retained(
+    session: AsyncSession,
+    version_id: UUID,
+    *,
+    retained: bool,
+    reason: str | None = None,
+) -> FlowVersion:
+    """Set or clear the retained flag; clearing also clears the reason.
+
+    Flushes but does NOT commit. Does NOT check ownership: callers authorize.
+    """
+    version = (await session.exec(select(FlowVersion).where(FlowVersion.id == version_id))).first()
+    if version is None:
+        msg = f"Version entry {version_id} not found"
+        raise FlowVersionNotFoundError(msg)
+    version.retained = retained
+    version.retained_reason = reason if retained else None
+    session.add(version)
+    await session.flush()
+    return version

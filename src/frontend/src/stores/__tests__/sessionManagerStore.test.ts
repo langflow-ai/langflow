@@ -32,7 +32,7 @@ describe("useSessionManagerStore", () => {
     });
   });
 
-  it("adds sessions and persists only local ids", () => {
+  it("adds sessions newest first and persists only local ids", () => {
     act(() => {
       useSessionManagerStore.getState().initialize(FLOW_ID);
       useSessionManagerStore.getState().addSession({
@@ -46,8 +46,8 @@ describe("useSessionManagerStore", () => {
     });
 
     expect(useSessionManagerStore.getState().sessions).toEqual([
-      { id: "local-1", isLocal: true },
       { id: "server-1", isLocal: false },
+      { id: "local-1", isLocal: true },
     ]);
     expect(window.sessionStorage.getItem(STORAGE_KEY)).toBe(
       JSON.stringify(["local-1"]),
@@ -100,20 +100,20 @@ describe("useSessionManagerStore", () => {
     );
   });
 
-  it("syncs server sessions by promoting locals, cleaning up removed server sessions, and appending new ones", () => {
+  it("syncs server sessions by promoting locals, cleaning up removed server sessions, and placing new ones after their server predecessor", () => {
     act(() => {
       useSessionManagerStore.getState().initialize(FLOW_ID);
       useSessionManagerStore.getState().addSession({
-        id: "promoted-session",
-        isLocal: true,
+        id: "removed-on-server",
+        isLocal: false,
       });
       useSessionManagerStore.getState().addSession({
         id: "local-only-session",
         isLocal: true,
       });
       useSessionManagerStore.getState().addSession({
-        id: "removed-on-server",
-        isLocal: false,
+        id: "promoted-session",
+        isLocal: true,
       });
       useSessionManagerStore
         .getState()
@@ -122,12 +122,77 @@ describe("useSessionManagerStore", () => {
 
     expect(useSessionManagerStore.getState().sessions).toEqual([
       { id: "promoted-session", isLocal: false },
-      { id: "local-only-session", isLocal: true },
       { id: "new-server-session", isLocal: false },
+      { id: "local-only-session", isLocal: true },
     ]);
     expect(window.sessionStorage.getItem(STORAGE_KEY)).toBe(
       JSON.stringify(["local-only-session"]),
     );
+  });
+
+  describe("syncFromServer ordering", () => {
+    const sync = (ids: string[]) =>
+      act(() => {
+        useSessionManagerStore.getState().syncFromServer(ids);
+      });
+    const orderedIds = () =>
+      useSessionManagerStore.getState().getOrderedSessionIds();
+
+    beforeEach(() => {
+      act(() => {
+        useSessionManagerStore.getState().initialize(FLOW_ID);
+      });
+    });
+
+    it("takes the server order on the first sync", () => {
+      sync(["newest", "middle", "oldest"]);
+
+      expect(orderedIds()).toEqual([FLOW_ID, "newest", "middle", "oldest"]);
+    });
+
+    it("does not move a known session that became the newest on the server", () => {
+      sync(["a", "b", "c"]);
+
+      // A message was sent in "c", so the server now lists it first.
+      sync(["c", "a", "b"]);
+
+      expect(orderedIds()).toEqual([FLOW_ID, "a", "b", "c"]);
+    });
+
+    it("puts a session that is new on the server above the known ones", () => {
+      sync(["a", "b", "c"]);
+
+      sync(["brand-new", "a", "b", "c"]);
+
+      expect(orderedIds()).toEqual([FLOW_ID, "brand-new", "a", "b", "c"]);
+    });
+
+    it("appends a loaded page of older sessions below the known ones", () => {
+      sync(["page-1-a", "page-1-b"]);
+
+      sync(["page-1-a", "page-1-b", "page-2-a", "page-2-b"]);
+
+      expect(orderedIds()).toEqual([
+        FLOW_ID,
+        "page-1-a",
+        "page-1-b",
+        "page-2-a",
+        "page-2-b",
+      ]);
+    });
+
+    it("drops a session the server no longer lists but keeps the active one in place", () => {
+      sync(["a", "b", "c", "d"]);
+      act(() => {
+        useSessionManagerStore.getState().setActiveSessionId("b");
+      });
+
+      // "c" was deleted; newer activity pushed "b" onto a page not loaded.
+      sync(["a", "d"]);
+
+      expect(orderedIds()).toEqual([FLOW_ID, "a", "b", "d"]);
+      expect(useSessionManagerStore.getState().activeSessionId).toBe("b");
+    });
   });
 
   it("returns ordered session ids with the flow id first", () => {

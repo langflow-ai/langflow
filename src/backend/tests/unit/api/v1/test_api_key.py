@@ -33,6 +33,34 @@ async def test_create_api_key_route(client: AsyncClient, logged_in_headers, acti
     assert "name" in result, "The dictionary must contain a key called 'name'"
     assert "total_uses" in result, "The dictionary must contain a key called 'total_uses'"
     assert "user_id" in result, "The dictionary must contain a key called 'user_id'"
+    assert "expires_at" in result, "The dictionary must contain a key called 'expires_at'"
+    assert result["expires_at"] is None, "expires_at must be None when not provided"
+
+
+async def test_create_api_key_route_with_expiry(client: AsyncClient, logged_in_headers, active_user):
+    """Creating an API key with expires_at must persist and return the expiry."""
+    from datetime import datetime, timedelta, timezone
+
+    expiry = (datetime.now(timezone.utc) + timedelta(days=30)).strftime("%Y-%m-%dT%H:%M:%SZ")
+    payload = {
+        "name": "expiring-key",
+        "expires_at": expiry,
+        "user_id": str(active_user.id),
+    }
+    response = await client.post("api/v1/api_key/", json=payload, headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["expires_at"] is not None, "expires_at must be returned when provided"
+    # Normalise both datetimes to UTC-aware before comparing
+    raw = result["expires_at"]
+    if raw.endswith("Z"):
+        raw = raw[:-1] + "+00:00"
+    returned = datetime.fromisoformat(raw)
+    if returned.tzinfo is None:
+        returned = returned.replace(tzinfo=timezone.utc)
+    expected = datetime.fromisoformat(expiry.replace("Z", "+00:00"))
+    assert abs((returned - expected).total_seconds()) < 5
 
 
 async def test_delete_api_key_route(client: AsyncClient, logged_in_headers, active_user):

@@ -1,31 +1,45 @@
 import * as Form from "@radix-ui/react-form";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useState } from "react";
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import InputComponent from "@/components/core/parameterRenderComponent/components/inputComponent";
+import { extractApiErrorMessage } from "@/controllers/API/helpers/extract-api-error-message";
 import { useAddUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import useTheme from "@/customization/hooks/use-custom-theme";
 import { track } from "@/customization/utils/analytics";
-import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
-import { SIGNUP_ERROR_ALERT } from "../../constants/alerts_constants";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import {
-  CONTROL_INPUT_STATE,
-  SIGN_UP_SUCCESS,
-} from "../../constants/constants";
+  appendErrorSuggestion,
+  getRequiredFieldError,
+} from "@/utils/authErrorMessages";
+import { Button, buttonVariants } from "../../components/ui/button";
+import { Input } from "../../components/ui/input";
+import { CONTROL_INPUT_STATE } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import type {
   inputHandlerEventType,
   signUpInputStateType,
   UserInputType,
 } from "../../types/components";
+import { cn } from "../../utils/utils";
+import DotGridBackground from "../LoginPage/components/dot-grid-background";
 
 export default function SignUp(): JSX.Element {
   const [inputState, setInputState] =
     useState<signUpInputStateType>(CONTROL_INPUT_STATE);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
+  // Server-side rejection (e.g. username taken), mirrored inline so the error
+  // is programmatically associated with the username field (WCAG 3.3.1)
+  // instead of living only in the transient toast.
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const [isDisabled, setDisableBtn] = useState<boolean>(true);
-
+  const { t } = useTranslation();
+  useDocumentTitle(t("auth.signupButton"));
+  useTheme();
   const { password, cnfPassword, username } = inputState;
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -37,14 +51,8 @@ export default function SignUp(): JSX.Element {
     target: { name, value },
   }: inputHandlerEventType): void {
     setInputState((prev) => ({ ...prev, [name]: value }));
+    setServerError(null);
   }
-
-  useEffect(() => {
-    if (password !== cnfPassword) return setDisableBtn(true);
-    if (password === "" || cnfPassword === "") return setDisableBtn(true);
-    if (username === "") return setDisableBtn(true);
-    setDisableBtn(false);
-  }, [password, cnfPassword, username, handleInput]);
 
   function handleSignup(): void {
     const { username, password } = inputState;
@@ -57,148 +65,290 @@ export default function SignUp(): JSX.Element {
       onSuccess: (user) => {
         track("User Signed Up", user);
         setSuccessData({
-          title: SIGN_UP_SUCCESS,
+          title: t("auth.signUpSuccess"),
         });
         navigate("/login");
       },
       onError: (error) => {
-        const {
-          response: {
-            data: { detail },
-          },
-        } = error;
+        const message = appendErrorSuggestion(
+          extractApiErrorMessage(
+            error as Parameters<typeof extractApiErrorMessage>[0],
+            t("errors.signup"),
+          ),
+          t("errors.signupSuggestion", {
+            defaultValue:
+              "Use a different username or contact an administrator if you already have an account.",
+          }),
+        );
+        setServerError(message);
         setErrorData({
-          title: SIGNUP_ERROR_ALERT,
-          list: [detail],
+          title: t("errors.signup"),
+          list: [message],
         });
       },
     });
   }
 
+  const passwordMismatch =
+    password !== "" && cnfPassword !== "" && password !== cnfPassword;
+  const usernameError = getRequiredFieldError(
+    submitAttempted,
+    username,
+    t("auth.usernameRequired"),
+  );
+  const passwordError = getRequiredFieldError(
+    submitAttempted,
+    password,
+    t("auth.passwordEnterRequired"),
+  );
+  const shouldShowPasswordMismatch =
+    passwordMismatch && (submitAttempted || confirmPasswordTouched);
+  const confirmPasswordRequiredError = getRequiredFieldError(
+    submitAttempted,
+    cnfPassword,
+    t("auth.confirmPasswordRequired"),
+  );
+  const confirmPasswordError =
+    confirmPasswordRequiredError ??
+    (shouldShowPasswordMismatch
+      ? `${t("errors.passwordMismatch")}. ${t(
+          "errors.passwordMismatchSuggestion",
+          {
+            defaultValue: "Re-enter both passwords so they match.",
+          },
+        )}`
+      : undefined);
+
   return (
     <Form.Root
+      onInvalidCapture={() => setSubmitAttempted(true)}
       onSubmit={(event: FormEvent<HTMLFormElement>) => {
-        if (password === "") {
+        setSubmitAttempted(true);
+        if (
+          username.trim() === "" ||
+          password.trim() === "" ||
+          cnfPassword.trim() === "" ||
+          passwordMismatch
+        ) {
           event.preventDefault();
           return;
         }
 
-        const _data = Object.fromEntries(new FormData(event.currentTarget));
         event.preventDefault();
+        handleSignup();
       }}
-      className="h-screen w-full"
+      className="min-h-svh w-full overflow-auto bg-canvas text-foreground"
     >
-      <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
-        <div className="flex w-72 flex-col items-center justify-center gap-2">
-          <LangflowLogo
-            title="Langflow logo"
-            className="mb-4 h-10 w-10 scale-[1.5]"
-          />
-          <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign up for Langflow
-          </span>
-          <div className="mb-3 w-full">
-            <Form.Field name="username">
-              <Form.Label className="data-[invalid]:label-invalid">
-                Username <span className="font-medium text-destructive">*</span>
-              </Form.Label>
+      <DotGridBackground />
+      <main className="relative z-10 flex min-h-svh w-full flex-col items-center justify-center px-6 py-10">
+        <div className="flex w-full max-w-[420px] flex-col items-center gap-8">
+          <div className="flex items-center gap-2">
+            <LangflowLogo
+              title={t("common.langflowLogo")}
+              className="h-12 w-12 text-foreground"
+            />
+            <h1 className="pl-2 text-center text-4xl font-semibold tracking-tight">
+              {t("auth.signupTitle")}
+            </h1>
+          </div>
 
-              <Form.Control asChild>
+          <section className="w-full rounded-xl border border-border bg-card p-8 shadow-2xl shadow-black/10 dark:shadow-black/40 sm:p-10">
+            <div className="flex flex-col gap-6">
+              <Form.Field name="username" className="pb-3">
+                <label
+                  htmlFor="signup-username"
+                  className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                    usernameError ? "label-invalid" : ""
+                  }`}
+                >
+                  <ShadTooltip
+                    content={t("auth.usernameLabel")}
+                    styleClasses="z-50"
+                  >
+                    <span className="truncate">{t("auth.usernameLabel")}</span>
+                  </ShadTooltip>
+                  <span className="shrink-0 font-medium text-destructive">
+                    *
+                  </span>
+                </label>
+
                 <Input
-                  type="username"
+                  id="signup-username"
+                  name="username"
+                  type="text"
+                  allowAutofill
+                  autoComplete="username"
                   onChange={({ target: { value } }) => {
                     handleInput({ target: { name: "username", value } });
                   }}
                   value={username}
-                  className="w-full"
+                  className="h-11 w-full rounded-lg bg-muted"
                   required
-                  placeholder="Username"
+                  aria-describedby={
+                    [
+                      usernameError && "signup-username-error",
+                      serverError && "signup-form-error",
+                    ]
+                      .filter(Boolean)
+                      .join(" ") || undefined
+                  }
+                  aria-invalid={Boolean(usernameError || serverError)}
+                  placeholder={t("auth.usernamePlaceholder")}
                 />
-              </Form.Control>
 
-              <Form.Message match="valueMissing" className="field-invalid">
-                Please enter your username
-              </Form.Message>
-            </Form.Field>
-          </div>
-          <div className="mb-3 w-full">
-            <Form.Field name="password" serverInvalid={password != cnfPassword}>
-              <Form.Label className="data-[invalid]:label-invalid">
-                Password <span className="font-medium text-destructive">*</span>
-              </Form.Label>
-              <InputComponent
-                onChange={(value) => {
-                  handleInput({ target: { name: "password", value } });
-                }}
-                value={password}
-                isForm
-                password={true}
-                required
-                placeholder="Password"
-                className="w-full"
-              />
+                {usernameError && (
+                  <p
+                    id="signup-username-error"
+                    role="alert"
+                    className="field-invalid"
+                  >
+                    {usernameError}
+                  </p>
+                )}
+              </Form.Field>
 
-              <Form.Message className="field-invalid" match="valueMissing">
-                Please enter a password
-              </Form.Message>
-
-              {password != cnfPassword && (
-                <Form.Message className="field-invalid">
-                  Passwords do not match
-                </Form.Message>
-              )}
-            </Form.Field>
-          </div>
-          <div className="w-full">
-            <Form.Field
-              name="confirmpassword"
-              serverInvalid={password != cnfPassword}
-            >
-              <Form.Label className="data-[invalid]:label-invalid">
-                Confirm your password{" "}
-                <span className="font-medium text-destructive">*</span>
-              </Form.Label>
-
-              <InputComponent
-                onChange={(value) => {
-                  handleInput({ target: { name: "cnfPassword", value } });
-                }}
-                value={cnfPassword}
-                isForm
-                password={true}
-                required
-                placeholder="Confirm your password"
-                className="w-full"
-              />
-
-              <Form.Message className="field-invalid" match="valueMissing">
-                Please confirm your password
-              </Form.Message>
-            </Form.Field>
-          </div>
-          <div className="w-full">
-            <Form.Submit asChild>
-              <Button
-                disabled={isDisabled}
-                type="submit"
-                className="mr-3 mt-6 w-full"
-                onClick={() => {
-                  handleSignup();
-                }}
+              <Form.Field
+                name="password"
+                serverInvalid={Boolean(passwordError)}
+                className="pb-3"
               >
-                Sign up
-              </Button>
-            </Form.Submit>
-          </div>
-          <div className="w-full">
-            <CustomLink to="/login">
-              <Button className="w-full" variant="outline">
-                Already have an account?&nbsp;<b>Sign in</b>
-              </Button>
-            </CustomLink>
-          </div>
+                <label
+                  htmlFor="form-signup-password"
+                  className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                    passwordError ? "label-invalid" : ""
+                  }`}
+                >
+                  <ShadTooltip
+                    content={t("auth.passwordLabel")}
+                    styleClasses="z-50"
+                  >
+                    <span className="truncate">{t("auth.passwordLabel")}</span>
+                  </ShadTooltip>
+                  <span className="shrink-0 font-medium text-destructive">
+                    *
+                  </span>
+                </label>
+
+                <InputComponent
+                  onChange={(value) => {
+                    handleInput({ target: { name: "password", value } });
+                  }}
+                  value={password}
+                  isForm
+                  allowAutofill
+                  password={true}
+                  required
+                  id="signup-password"
+                  inputProps={{
+                    autoComplete: "new-password",
+                    "aria-describedby": passwordError
+                      ? "signup-password-error"
+                      : undefined,
+                    "aria-invalid": Boolean(passwordError) || undefined,
+                  }}
+                  placeholder={t("auth.passwordPlaceholder")}
+                  className="h-11 w-full rounded-lg bg-muted"
+                />
+
+                {passwordError && (
+                  <p
+                    id="signup-password-error"
+                    role="alert"
+                    className="field-invalid"
+                  >
+                    {passwordError}
+                  </p>
+                )}
+              </Form.Field>
+
+              <Form.Field
+                name="confirmpassword"
+                serverInvalid={Boolean(confirmPasswordError)}
+                className="pb-3"
+              >
+                <label
+                  htmlFor="form-signup-confirm-password"
+                  className={`mb-2 flex items-center gap-1 overflow-hidden text-sm font-medium ${
+                    confirmPasswordError ? "label-invalid" : ""
+                  }`}
+                >
+                  <ShadTooltip
+                    content={t("auth.confirmPasswordLabel")}
+                    styleClasses="z-50"
+                  >
+                    <span className="truncate">
+                      {t("auth.confirmPasswordLabel")}
+                    </span>
+                  </ShadTooltip>
+                  <span className="shrink-0 font-medium text-destructive">
+                    *
+                  </span>
+                </label>
+
+                <InputComponent
+                  onChange={(value) => {
+                    handleInput({ target: { name: "cnfPassword", value } });
+                  }}
+                  onBlur={() => setConfirmPasswordTouched(true)}
+                  value={cnfPassword}
+                  isForm
+                  allowAutofill
+                  password={true}
+                  required
+                  id="signup-confirm-password"
+                  inputProps={{
+                    autoComplete: "new-password",
+                    "aria-describedby": confirmPasswordError
+                      ? "signup-confirm-password-error"
+                      : undefined,
+                    "aria-invalid": Boolean(confirmPasswordError) || undefined,
+                  }}
+                  placeholder={t("auth.confirmPasswordPlaceholder")}
+                  className="h-11 w-full rounded-lg bg-muted"
+                />
+
+                {confirmPasswordError && (
+                  <p
+                    id="signup-confirm-password-error"
+                    role="alert"
+                    className="field-invalid"
+                  >
+                    {confirmPasswordError}
+                  </p>
+                )}
+              </Form.Field>
+
+              {serverError && (
+                <p
+                  id="signup-form-error"
+                  role="alert"
+                  className="field-invalid static"
+                >
+                  {serverError}
+                </p>
+              )}
+
+              <Form.Submit asChild>
+                <Button type="submit" className="h-11 w-full rounded-lg">
+                  {t("auth.signupButton")}
+                </Button>
+              </Form.Submit>
+
+              <ShadTooltip content={t("auth.signInPrompt")} styleClasses="z-50">
+                <CustomLink
+                  className={cn(
+                    buttonVariants({ variant: "outline" }),
+                    "h-11 w-full overflow-hidden rounded-lg",
+                  )}
+                  to="/login"
+                >
+                  <span className="truncate">{t("auth.signInPrompt")}</span>
+                </CustomLink>
+              </ShadTooltip>
+            </div>
+          </section>
         </div>
-      </div>
+      </main>
     </Form.Root>
   );
 }

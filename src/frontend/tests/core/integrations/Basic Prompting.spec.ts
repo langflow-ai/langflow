@@ -1,43 +1,32 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { expect } from "../../fixtures";
+import { configureLoopbackOpenAI } from "../../utils/configure-loopback-openai";
+import { TEXTS } from "../../utils/constants/texts";
+import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { seedLoopbackProvider } from "../../utils/seed-loopback-provider";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
 withEventDeliveryModes(
   "Basic Prompting (Hello, World)",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
+    await seedLoopbackProvider(page);
+    await openStarterProject(page, "Basic Prompting");
 
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    await configureLoopbackOpenAI(page);
+    await buildFlowAndWait(page);
 
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-
-    await initialGPTsetup(page);
-
-    await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
-
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
-      .getByText("No input message provided.", { exact: true })
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
+    await page
+      .getByText(TEXTS.labelNoInputMessage, { exact: true })
       .last()
       .isVisible();
 
     //create a new session - default session can not be deleted
     await page.getByTestId("new-chat").click();
-    await page.getByTitle("New Session 0").isVisible();
-
+    await expect(page.getByTitle("New Session 0")).toBeVisible();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });
@@ -57,16 +46,35 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await page.getByText("matey").last().isVisible();
+    await expect(page.getByText("matey").last()).toBeVisible();
 
-    await page.getByText("timestamp", { exact: true }).last().isVisible();
-    await page.getByText("text", { exact: true }).last().isVisible();
-    await page.getByText("sender", { exact: true }).last().isVisible();
-    await page.getByText("sender_name", { exact: true }).last().isVisible();
-    await page.getByText("session_id", { exact: true }).last().isVisible();
-    await page.getByText("files", { exact: true }).last().isVisible();
+    // Open the message logs table view to verify metadata columns
+    // (timestamp/text/sender/...). The header chat-menu is hidden in
+    // fullscreen, so click the sidebar session more-menu instead.
+    await page
+      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+      .last()
+      .click();
+    await page.getByTestId("message-logs-option").click();
 
-    await page.getByRole("gridcell").last().isVisible();
+    await expect(
+      page.getByText("timestamp", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(page.getByText("text", { exact: true }).last()).toBeVisible();
+    await expect(
+      page.getByText("sender", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(
+      page.getByText("sender_name", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(
+      page.getByText("session_id", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(page.getByText("files", { exact: true }).last()).toBeVisible();
+    await expect(page.getByRole("gridcell").last()).toBeVisible();
+
+    // Close the logs panel so the rest of the playground UI is reachable again.
+    await page.getByRole("button", { name: TEXTS.close }).click();
     // Use sidebar session more menu (chat-header-more-menu is hidden in fullscreen)
     await page
       .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
@@ -77,6 +85,8 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await page.getByTestId("input-chat-playground").last().isVisible();
+    await expect(
+      page.getByTestId("input-chat-playground").last(),
+    ).toBeVisible();
   },
 );

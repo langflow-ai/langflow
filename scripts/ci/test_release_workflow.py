@@ -1,0 +1,394 @@
+"""Regression tests for coordinated base/full release workflow boundaries."""
+
+from __future__ import annotations
+
+import ast
+from pathlib import Path
+
+import yaml
+
+WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
+WORKFLOW_PATH = WORKFLOWS_DIR / "release.yml"
+RELEASE_INVENTORY_WORKFLOW_PATH = WORKFLOWS_DIR / "release-inventory-gate.yml"
+BUNDLE_WORKFLOW_PATH = WORKFLOWS_DIR / "release_bundles.yml"
+NIGHTLY_WORKFLOW_PATH = WORKFLOWS_DIR / "release_nightly.yml"
+LFX_WORKFLOW_PATH = WORKFLOWS_DIR / "release-lfx.yml"
+CROSS_PLATFORM_WORKFLOW_PATH = WORKFLOWS_DIR / "cross-platform-test.yml"
+DB_MIGRATION_WORKFLOW_PATH = WORKFLOWS_DIR / "db-migration-validation.yml"
+PYTHON_TEST_WORKFLOW_PATH = WORKFLOWS_DIR / "python_test.yml"
+
+
+def _job_block(path: Path, start_job: str, end_job: str) -> str:
+    workflow = path.read_text(encoding="utf-8")
+    start = workflow.index(f"\n  {start_job}:")
+    end = workflow.index(f"\n  {end_job}:", start)
+    return workflow[start:end]
+
+
+def test_release_and_nightly_use_current_python_matrix() -> None:
+    for name, job_name in [("release.yml", "ci"), ("nightly_build.yml", "backend-unit-tests")]:
+        jobs = yaml.safe_load((WORKFLOWS_DIR / name).read_text())["jobs"]
+        versions = ast.literal_eval(jobs[job_name]["with"]["python-versions"])
+        assert set(versions) == {"3.11", "3.12", "3.13", "3.14", "3.15"}, name
+
+
+def test_installation_gate_requires_stable_python_and_isolates_preview() -> None:
+    jobs = yaml.safe_load(CROSS_PLATFORM_WORKFLOW_PATH.read_text())["jobs"]
+    stable = jobs["test-installation-stable"]
+    preview = jobs["test-installation-experimental"]
+    assert not stable.get("continue-on-error", False)
+    assert preview["continue-on-error"] is True
+    assert preview["strategy"]["fail-fast"] is False
+    for os_name in ("linux", "macos", "windows"):
+        versions = {leg["python-version"] for leg in stable["strategy"]["matrix"]["include"] if leg["os"] == os_name}
+        assert versions == {"3.11", "3.12", "3.13", "3.14"}, os_name
+    assert {leg["python-version"] for leg in preview["strategy"]["matrix"]["include"]} == {"3.15"}
+
+
+def test_release_python_preview_failures_cannot_cancel_required_jobs() -> None:
+    matrix_jobs = {
+        "backend-unit-tests.yml": ["test", "report"],
+        "python_test.yml": ["bundle-guarded-tests", "integration-tests", "lfx-tests", "test-cli"],
+        "release-inventory-gate.yml": ["python-base-inventory", "python-inventory"],
+        "release-lfx.yml": ["run-tests"],
+        "release_bundles.yml": ["test-install"],
+    }
+    for name, job_names in matrix_jobs.items():
+        jobs = yaml.safe_load((WORKFLOWS_DIR / name).read_text())["jobs"]
+        for job_name in job_names:
+            job = jobs[job_name]
+            assert job["continue-on-error"] == "${{ matrix.python-version == '3.15' }}", (name, job_name)
+            assert job["strategy"]["fail-fast"] is False, (name, job_name)
+
+
+def test_finalized_bundles_do_not_influence_shared_rc_number() -> None:
+    rc_job = _job_block(WORKFLOW_PATH, "determine-rc-number", "determine-base-version")
+
+    assert 'if grep -Fxq "$base_version" "$versions_file"; then' in rc_job
+    assert "excluding its historical RCs" in rc_job
+    assert 'consider_unreleased_versions "PyPI ${package_name}"' in rc_job
+    assert 'consider_unreleased_versions "PyPI langflow-sdk"' in rc_job
+    assert "langflow-core" not in rc_job
+
+
+def test_bundle_build_uses_one_content_aware_prerelease_plan() -> None:
+    bundle_job = _job_block(WORKFLOW_PATH, "build-bundles", "test-cross-platform")
+
+    assert "bundle_release_plan.py restamp" in bundle_job
+    assert "--rc-number" in bundle_job
+    assert "--lfx-version" in bundle_job
+    assert "bundle_release_plan.py artifacts" in bundle_job
+    assert "bundle-version-manifest.json" in bundle_job
+
+
+def test_standalone_bundle_workflow_uses_the_same_release_planner() -> None:
+    workflow = BUNDLE_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "bundle_release_plan.py artifacts" in workflow
+    assert "bundle_release_plan.py publish" in workflow
+    assert "Skipping {name} {version}: already published" not in workflow
+
+
+def test_full_release_requires_and_consumes_the_aligned_base_artifact() -> None:
+    validation = _job_block(WORKFLOW_PATH, "validate-dependencies", "determine-rc-number")
+    main_build = _job_block(WORKFLOW_PATH, "build-main", "build-bundles")
+
+    assert "langflow ($main_version) and langflow-base ($base_version) must be version-aligned" in validation
+    assert "Please enable 'release_package_base' when releasing Langflow" in validation
+    assert "Download base artifact" in main_build
+    assert "Pin langflow-base release dependency" in main_build
+    assert "update_bundle_prerelease_dependencies.py" in main_build
+    assert "path: dist/langflow-*.whl" in main_build
+    assert "uv pip install dist/langflow-*.whl" in main_build
+    assert "dist-core" not in validation + main_build
+    assert "pypi/langflow-core" not in validation + main_build
+
+
+def test_core_pins_and_wheel_checks_run_for_stable_and_prerelease() -> None:
+    workflow = yaml.safe_load(WORKFLOW_PATH.read_text())
+    for job, step_name in [
+        ("build-base", "Pin LFX release dependency"),
+        ("build-main", "Pin langflow-base release dependency"),
+    ]:
+        steps = workflow["jobs"][job]["steps"]
+        pin = next(step for step in steps if step["name"] == step_name)
+        assert "if" not in pin
+        assert any("check_core_dependency_pins.py" in step.get("run", "") for step in steps)
+
+    nightly = yaml.safe_load(NIGHTLY_WORKFLOW_PATH.read_text())
+    for job in ["build-nightly-base", "build-nightly-main"]:
+        assert any("check_core_dependency_pins.py" in step.get("run", "") for step in nightly["jobs"][job]["steps"])
+
+    base_build = next(
+        step["run"]
+        for step in nightly["jobs"]["build-nightly-base"]["steps"]
+        if "check_core_dependency_pins.py" in step.get("run", "")
+    )
+    assert "src/lfx/pyproject.toml" in base_build
+    assert "inputs.nightly_tag_lfx" not in base_build
+
+
+def test_main_build_prefers_release_wheels_over_workspace_sources() -> None:
+    main_build = _job_block(WORKFLOW_PATH, "build-main", "build-bundles")
+
+    assert 'uv pip install --no-sources "${FIND_LINKS[@]}" --prerelease=allow -e .' in main_build
+
+
+def test_bundle_releases_enter_the_dependency_validation_gate() -> None:
+    validation = _job_block(WORKFLOW_PATH, "validate-dependencies", "determine-rc-number")
+
+    assert "inputs.release_bundles" in validation
+    assert "persist-credentials: false" in validation
+
+
+def test_publish_order_is_sdk_lfx_bundles_base_full() -> None:
+    sdk = _job_block(WORKFLOW_PATH, "publish-sdk", "publish-lfx")
+    lfx = _job_block(WORKFLOW_PATH, "publish-lfx", "call_docker_build_base")
+    bundles = _job_block(WORKFLOW_PATH, "publish-bundles", "publish-main")
+    base = _job_block(WORKFLOW_PATH, "publish-base", "publish-bundles")
+    main = _job_block(WORKFLOW_PATH, "publish-main", "publish-sdk")
+
+    assert "publish-sdk" in lfx
+    assert "needs.publish-sdk.result" in lfx
+    assert "publish-lfx" in bundles
+    assert "needs.publish-lfx.result" in bundles
+    assert "publish-bundles" in base
+    assert "needs.publish-bundles.result" in base
+    assert "publish-base" in main
+    assert "needs.publish-base.result" in main
+    assert "langflow-core" not in sdk + lfx + bundles + base + main
+
+
+def test_nightly_publish_order_uses_the_same_dependency_chain() -> None:
+    workflow = NIGHTLY_WORKFLOW_PATH.read_text(encoding="utf-8")
+    lfx = _job_block(NIGHTLY_WORKFLOW_PATH, "publish-nightly-lfx", "publish-nightly-sdk")
+    sdk = _job_block(NIGHTLY_WORKFLOW_PATH, "publish-nightly-sdk", "publish-nightly-base")
+    base = _job_block(NIGHTLY_WORKFLOW_PATH, "publish-nightly-base", "publish-nightly-bundles")
+    bundles = _job_block(
+        NIGHTLY_WORKFLOW_PATH,
+        "publish-nightly-bundles",
+        "check-nightly-main-pypi-dependencies",
+    )
+    main = _job_block(NIGHTLY_WORKFLOW_PATH, "publish-nightly-main", "call_docker_build_base")
+
+    assert "publish-nightly-sdk" in lfx
+    assert "publish-nightly-lfx" in bundles
+    assert "publish-nightly-bundles" in base
+    assert "publish-nightly-base" in main
+    assert "langflow-core" not in workflow
+    assert "build-nightly-core" not in workflow
+    assert "publish-nightly-core" not in workflow
+    assert "make sdk_publish" in sdk
+
+
+def test_lfx_docker_build_injects_production_segment_key() -> None:
+    docker_job = _job_block(LFX_WORKFLOW_PATH, "build-docker", "create-release")
+
+    injection = "python3 scripts/ci/inject_segment_write_key.py"
+    build = "uses: docker/build-push-action@v7"
+    assert "LANGFLOW_SEGMENT_WRITE_KEY: ${{ secrets.LANGFLOW_SEGMENT_WRITE_KEY }}" in docker_job
+    assert injection in docker_job
+    assert docker_job.index(injection) < docker_job.index(build)
+
+
+def test_cross_platform_run_has_a_base_runtime_gate() -> None:
+    workflow = CROSS_PLATFORM_WORKFLOW_PATH.read_text(encoding="utf-8")
+    summary = workflow[workflow.index("\n  test-summary:") :]
+
+    assert "\n  test-base-runtime:" in workflow
+    assert "EXPECT_BASE_RUNTIME" in summary
+    assert 'if [ "$EXPECT_BASE_RUNTIME" = "true" ]' in summary
+    assert "EXPECT_CORE_RUNTIME" not in workflow
+
+
+def test_nightly_migration_install_requests_base_explicitly() -> None:
+    workflow = DB_MIGRATION_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "'langflow-base>=0.0.0.dev0'" in workflow
+    assert workflow.count('"langflow-base==$VERSION"') == 2
+    assert "langflow-core" not in workflow
+
+
+def test_cli_wheel_gate_checks_published_base() -> None:
+    workflow = PYTHON_TEST_WORKFLOW_PATH.read_text(encoding="utf-8")
+    cli_job = workflow[workflow.index("\n  test-cli:") :]
+
+    assert "src/backend/base/pyproject.toml" in cli_job
+    assert "https://pypi.org/pypi/langflow-base/json" in cli_job
+    assert "ignore-nothing-to-cache: true" in cli_job
+    assert 'if [ "$status" = "404" ]' in cli_job
+    assert "langflow-core" not in cli_job
+
+
+def test_dry_run_accepts_non_tag_refs_and_disables_external_writes() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    validation = _job_block(WORKFLOW_PATH, "validate-tag", "validate-tag-format")
+
+    assert "immutable commit SHA / pull request ref when dry_run is true" in workflow
+    assert "Validated dry-run source" in workflow
+    assert "RELEASE_REF: ${{ inputs.release_tag }}" in validation
+    assert '[[ "$RELEASE_REF" =~ ^[0-9a-fA-F]{40}$ ]]' in validation
+    assert '[[ "$RELEASE_REF" =~ ^refs/pull/[0-9]+/(head|merge)$ ]]' in validation
+    assert "push_to_registry: ${{ !inputs.dry_run }}" in workflow
+    assert workflow.count("if: ${{ !inputs.dry_run }}") >= 5
+    assert "!inputs.dry_run &&" in workflow
+
+
+def test_release_docker_builds_consume_built_wheels() -> None:
+    main_docker_job = _job_block(WORKFLOW_PATH, "call_docker_build_main", "call_docker_build_main_backend")
+    base_docker_job = _job_block(WORKFLOW_PATH, "call_docker_build_base", "call_docker_build_main")
+    docker_workflow = (WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8")
+
+    assert "build-main" in main_docker_job
+    assert "build-bundles" in main_docker_job
+    assert "release_artifacts: ${{ needs.build-main.result == 'success' }}" in main_docker_job
+    assert "build-base" in base_docker_job
+    assert "release_artifacts: ${{ needs.build-base.result == 'success' }}" in base_docker_job
+    assert "pattern: dist-*" in docker_workflow
+    assert "path: .release-artifacts" in docker_workflow
+
+
+def test_backend_release_docker_build_consumes_the_base_release_artifacts() -> None:
+    jobs = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))["jobs"]
+    backend = jobs["call_docker_build_main_backend"]
+
+    assert "build-base" in backend["needs"]
+    assert backend["with"]["release_artifacts"] == "${{ needs.build-base.result == 'success' }}"
+
+
+def test_backend_docker_job_downloads_release_wheels_only_when_requested() -> None:
+    workflow = yaml.safe_load((WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build-main-backend"]["steps"]
+    downloads = [step for step in steps if step.get("uses", "").startswith("actions/download-artifact@")]
+
+    assert len(downloads) == 1
+    download = downloads[0]
+    assert download["if"] == "${{ inputs.release_artifacts }}"
+    assert download["with"] == {"pattern": "dist-*", "path": ".release-artifacts", "merge-multiple": True}
+    first_build = next(step for step in steps if step.get("uses", "").startswith("docker/build-push-action@"))
+    assert steps.index(download) < steps.index(first_build)
+
+
+def test_backend_docker_builds_pass_the_resolved_version_to_both_registries() -> None:
+    workflow = yaml.safe_load((WORKFLOWS_DIR / "docker-build-v2.yml").read_text(encoding="utf-8"))
+    steps = workflow["jobs"]["build-main-backend"]["steps"]
+    builds = [step["with"] for step in steps if step.get("uses", "").startswith("docker/build-push-action@")]
+
+    assert len(builds) == 2
+    for build in builds:
+        assert build["file"] == "./docker/build_and_push_backend.Dockerfile"
+        assert "BASE_VERSION=${{ needs.determine-main-version.outputs.version }}" in build["build-args"].splitlines()
+        assert "LANGFLOW_IMAGE=" not in build["build-args"]
+
+
+def test_backend_docker_build_applies_release_version_and_wheels_after_source_install() -> None:
+    dockerfile = (WORKFLOWS_DIR.parents[1] / "docker" / "build_and_push_backend.Dockerfile").read_text(encoding="utf-8")
+
+    assert 'ARG BASE_VERSION=""' in dockerfile
+    restamp = dockerfile.index('if [ -n "$BASE_VERSION" ]; then')
+    source_install = dockerfile.index("uv pip install")
+    release_install = dockerfile.index("python3.14 /tmp/install_release_wheels.py")
+    frontend_cleanup = dockerfile.index('shutil.rmtree(Path(find_spec("langflow").origin).parent / "frontend"')
+    runtime_copy = dockerfile.index("COPY --from=builder --chown=1000:0 /app/.venv /app/.venv")
+
+    assert restamp < source_install < release_install < frontend_cleanup < runtime_copy
+    assert 'sed -i "s/^version = .*/version = \\"${BASE_VERSION}\\"/"' in dockerfile[restamp:source_install]
+    assert "/app/src/backend/base/pyproject.toml" in dockerfile[restamp:source_install]
+    assert "COPY ./.release-artifacts /tmp/release-artifacts" in dockerfile
+    assert "--mode base" in dockerfile[release_install:runtime_copy]
+    assert "--frontend-source" not in dockerfile
+    assert 'metadata.version("langflow-base")' in dockerfile[release_install:runtime_copy]
+    assert 'os.environ["BASE_VERSION"]' in dockerfile[release_install:runtime_copy]
+
+
+def test_release_docker_jobs_are_not_skipped_by_skipped_ancestors() -> None:
+    # Without a status function GitHub adds an implicit success(). It is false when any transitive
+    # ancestor was skipped, and build-sdk is skipped whenever the SDK version is unchanged.
+    jobs = yaml.safe_load(WORKFLOW_PATH.read_text(encoding="utf-8"))["jobs"]
+    docker_jobs = {name: job for name, job in jobs.items() if name.startswith("call_docker_build_")}
+
+    assert {"call_docker_build_main_backend", "call_docker_build_main_frontend"} <= docker_jobs.keys()
+    for name, job in docker_jobs.items():
+        condition = " ".join(str(job.get("if", "")).strip().removeprefix("${{").removesuffix("}}").split())
+        assert condition.startswith("always() && !cancelled() &&"), name
+        assert "needs.reserve-final-release.result == 'success'" in condition, name
+        if "call_docker_build_main" in job["needs"]:
+            assert "needs.call_docker_build_main.result == 'success'" in condition, name
+
+
+def test_base_wheel_gate_checks_the_public_langflow_entry_point() -> None:
+    lfx_job = _job_block(WORKFLOW_PATH, "build-lfx", "build-base")
+    base_job = _job_block(WORKFLOW_PATH, "build-base", "build-main")
+
+    assert "Verify base wheel composition" not in lfx_job
+    assert "Verify base wheel composition" in base_job
+    assert 'assert "langflow = langflow.langflow_launcher:main" in entry_points' in base_job
+    assert 'assert "langflow = langflow.__main__:main" in entry_points' not in base_job
+    assert "uv run --no-sync python" in base_job
+
+
+def test_release_inventory_build_args_use_environment_values() -> None:
+    workflow = RELEASE_INVENTORY_WORKFLOW_PATH.read_text(encoding="utf-8")
+
+    assert "BASE_VERSION: ${{ inputs.base-version }}" in workflow
+    assert "MAIN_VERSION: ${{ inputs.main-version }}" in workflow
+    assert '--build-arg "BASE_VERSION=$BASE_VERSION"' in workflow
+    assert '--build-arg "MAIN_VERSION=$MAIN_VERSION"' in workflow
+
+
+def test_expanded_image_reinstalls_release_wheels_after_source_sync() -> None:
+    dockerfile = (WORKFLOWS_DIR.parents[1] / "docker" / "build_and_push.Dockerfile").read_text(encoding="utf-8")
+    expanded = dockerfile[
+        dockerfile.index("FROM full-builder AS full-bundles-builder") : dockerfile.index(
+            "################################\n# SHARED RUNTIME"
+        )
+    ]
+
+    sync_index = expanded.index("uv sync --frozen --extra postgresql --extra bundles")
+    release_wheels_index = expanded.index("python3.14 /tmp/install_release_wheels.py")
+    pip_check_index = expanded.index("uv pip check")
+
+    assert sync_index < release_wheels_index < pip_check_index
+    assert "--mode main" in expanded
+    assert "--frontend-source /app/src/backend/base/langflow/frontend" in expanded
+
+
+def test_docker_builds_share_the_base_constraint_rewrite() -> None:
+    repo_root = WORKFLOWS_DIR.parents[1]
+    helper = repo_root / "scripts" / "ci" / "rewrite_langflow_base_constraint.sh"
+    standard = (repo_root / "docker" / "build_and_push.Dockerfile").read_text(encoding="utf-8")
+    enterprise = (repo_root / "docker" / "build_and_push_ep.Dockerfile").read_text(encoding="utf-8")
+
+    assert helper.is_file()
+    helper_call = 'sh /tmp/rewrite_langflow_base_constraint.sh "$BASE_VERSION" /app/pyproject.toml'
+    assert standard.count(helper_call) == 1
+    assert enterprise.count(helper_call) == 1
+    assert "base_upper_bound=" not in standard
+    assert "base_upper_bound=" not in enterprise
+
+
+def test_main_wheel_gate_derives_bundle_requirements_from_project_metadata() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    main_gate = workflow[workflow.index("- name: Verify main wheel composition") :]
+
+    assert 'root_metadata["project"]["optional-dependencies"]["bundles"]' in main_gate
+    assert "opt_in_standalone" not in main_gate
+    assert "bundle_requirement_names == expected_bundle_names" in main_gate
+
+
+def test_publication_requires_application_evidence_without_a_separate_migration_helper() -> None:
+    workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+    reservation = _job_block(WORKFLOW_PATH, "reserve-final-release", "publish-base")
+    assert "migration_helper_release" not in workflow
+    assert "validate-migration-helper" not in workflow
+    needs = next(line for line in reservation.splitlines() if line.strip().startswith("needs:"))
+    jobs = {item.strip() for item in needs.split("[", 1)[1].rstrip("]").split(",")}
+    assert {"release-inventory", "test-cross-platform", "ci"} <= jobs
+
+
+def test_sqlite_runtime_workflow_references_existing_tests() -> None:
+    import re
+
+    workflow = (WORKFLOWS_DIR / "sqlite-runtime.yml").read_text(encoding="utf-8")
+    for path in re.findall(r"(?:src|scripts)/[\w/]+test_[\w]+\.py", workflow):
+        assert (WORKFLOWS_DIR.parents[1] / path).is_file(), path

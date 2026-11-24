@@ -5,6 +5,7 @@ import {
   Position,
 } from "@xyflow/react";
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import {
   ContextMenu,
@@ -32,6 +33,7 @@ export const DefaultEdge = memo(function DefaultEdge({
   targetY,
   ...props
 }: EdgeProps) {
+  const { t } = useTranslation();
   const getNode = useFlowStore((state) => state.getNode);
   const edges = useFlowStore((state) => state.edges);
   const setEdges = useFlowStore((state) => state.setEdges);
@@ -119,7 +121,7 @@ export const DefaultEdge = memo(function DefaultEdge({
             data-testid="context-menu-item-destructive"
           >
             <IconComponent name="Trash2" className="size-3.5 text-inherit" />
-            <span className="text-xs">Delete</span>
+            <span className="text-xs">{t("nodeToolbar.delete")}</span>
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>

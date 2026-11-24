@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sys
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Union
 
@@ -24,11 +25,16 @@ if TYPE_CHECKING:
 # to evaluate type annotations, and these types are used as return types for
 # dependency functions that FastAPI evaluates at module load time.
 from lfx.services.auth.base import BaseAuthService  # noqa: TC002
+from lfx.services.authorization.base import BaseAuthorizationService  # noqa: TC002
+from lfx.services.catalog_policy.base import BaseCatalogPolicyService  # noqa: TC002
+from lfx.services.connection.base import BaseConnectionResolverService  # noqa: TC002
+from lfx.services.policy_bundle.base import BasePolicyBundleService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
 from langflow.services.storage.service import StorageService  # noqa: TC001
 from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
+from langflow.services.triggers.service import TriggerService  # noqa: TC001
 
 
 def get_service(service_type: ServiceType, default=None):
@@ -247,11 +253,81 @@ def get_queue_service() -> JobQueueService:
     return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
 
 
+def _is_lfx_no_op_auth_service(service: object) -> bool:
+    """Report whether ``service`` is LFX's no-op auth stub.
+
+    Resolved through ``sys.modules`` rather than a direct import so that merely asking the
+    question cannot import ``lfx.services.auth.service`` -- that import is what registers
+    the stub for the ``auth_service`` slot in the first place. If the module was never
+    imported the stub cannot be the resolved service anyway.
+    """
+    lfx_auth_module = sys.modules.get("lfx.services.auth.service")
+    return lfx_auth_module is not None and isinstance(service, lfx_auth_module.AuthService)
+
+
 def get_auth_service() -> BaseAuthService:
-    """Retrieve the authentication service."""
+    """Retrieve the authentication service.
+
+    LFX's no-op ``AuthService`` claims the ``auth_service`` slot at import time via
+    ``@register_service(..., override=True)``, and a registered service class always wins
+    over the factory passed here as a fallback. That stub must never be the resolved
+    service in a Langflow process: it raises ``NotImplementedError`` for user/token
+    operations and answers API-key checks with ``None``. ``register_all_service_factories()``
+    overrides it during startup, so anything touching auth before (or without) that call
+    would otherwise get the stub -- swap it out for Langflow's implementation here.
+
+    A plugin-provided auth service (e.g. SSO, registered through ``lfx.toml``) is a
+    different class and is left untouched.
+    """
     from langflow.services.auth.factory import AuthServiceFactory
 
+    service = get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+    if not _is_lfx_no_op_auth_service(service):
+        return service
+
+    from lfx.services.manager import get_service_manager
+
+    from langflow.services.auth.service import AuthService
+
+    service_manager = get_service_manager()
+    service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
+    service_manager.update(ServiceType.AUTH_SERVICE)
     return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+
+
+def get_authorization_service() -> BaseAuthorizationService:
+    """Retrieve the authorization service."""
+    from langflow.services.authorization.factory import AuthorizationServiceFactory
+
+    return get_service(ServiceType.AUTHORIZATION_SERVICE, AuthorizationServiceFactory())
+
+
+def get_connection_resolver_service() -> BaseConnectionResolverService:
+    """Retrieve Langflow's active host-pluggable connection resolver."""
+    from langflow.services.connection.factory import ConnectionResolverServiceFactory
+
+    return get_service(ServiceType.CONNECTION_RESOLVER_SERVICE, ConnectionResolverServiceFactory())
+
+
+def get_trigger_service() -> TriggerService:
+    """Retrieve the trigger persistence service."""
+    from langflow.services.triggers.factory import TriggerServiceFactory
+
+    return get_service(ServiceType.TRIGGER_SERVICE, TriggerServiceFactory())
+
+
+def get_catalog_policy_service() -> BaseCatalogPolicyService:
+    """Retrieve catalog policy through LFX's validated fail-open dependency."""
+    from lfx.services.deps import get_catalog_policy_service as get_lfx_catalog_policy_service
+
+    return get_lfx_catalog_policy_service()
+
+
+def get_policy_bundle_service() -> BasePolicyBundleService:
+    """Retrieve the shared process-local policy bundle coordinator."""
+    from lfx.services.deps import get_policy_bundle_service as get_lfx_policy_bundle_service
+
+    return get_lfx_policy_bundle_service()
 
 
 def get_job_service():
@@ -263,3 +339,30 @@ def get_job_service():
     from langflow.services.jobs.factory import JobServiceFactory
 
     return get_service(ServiceType.JOB_SERVICE, JobServiceFactory())
+
+
+def get_flow_events_service():
+    from langflow.services.flow_events.factory import FlowEventsServiceFactory
+
+    return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())
+
+
+def get_memory_base_service():
+    """Retrieves the MemoryBaseService instance from the service manager."""
+    from langflow.services.memory_base.factory import MemoryBaseServiceFactory
+
+    return get_service(ServiceType.MEMORY_BASE_SERVICE, MemoryBaseServiceFactory())
+
+
+def get_background_execution_service():
+    """Retrieves the BackgroundExecutionService instance from the service manager."""
+    from langflow.services.background_execution.factory import BackgroundExecutionServiceFactory
+
+    return get_service(ServiceType.BACKGROUND_EXECUTION_SERVICE, BackgroundExecutionServiceFactory())
+
+
+def get_telemetry_writer_service():
+    """Return the TelemetryWriterService instance (always registered when langflow is installed)."""
+    from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory
+
+    return get_service(ServiceType.TELEMETRY_WRITER_SERVICE, TelemetryWriterServiceFactory())

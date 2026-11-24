@@ -1,8 +1,7 @@
 from typing import Any
 
-from langchain.tools import StructuredTool
 from langchain_community.utilities.serpapi import SerpAPIWrapper
-from langchain_core.tools import ToolException
+from langchain_core.tools import StructuredTool, ToolException
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -98,6 +97,7 @@ class SerpAPIComponent(LCToolComponent):
         return tool
 
     def run_model(self) -> list[Data]:
+        """Run a SerpAPI search with workflow callbacks and return results or an error."""
         tool = self.build_tool()
         try:
             results = tool.run(
@@ -106,7 +106,8 @@ class SerpAPIComponent(LCToolComponent):
                     "params": self.search_params or {},
                     "max_results": self.max_results,
                     "max_snippet_length": self.max_snippet_length,
-                }
+                },
+                callbacks=self.get_langchain_callbacks(),
             )
 
             data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]

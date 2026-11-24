@@ -1,0 +1,29 @@
+{
+  "api_app_id": "A0APP00001",
+  "authorizations": [
+    {
+      "enterprise_id": null,
+      "is_bot": true,
+      "is_enterprise_install": false,
+      "team_id": "T0TEAM0001",
+      "user_id": "U0BOT00001"
+    }
+  ],
+  "event": {
+    "event_ts": "1700000440.001100",
+    "item": {
+      "channel": "C0SUPPORT1",
+      "ts": "1700000000.000100",
+      "type": "message"
+    },
+    "item_user": "U0ALICE001",
+    "reaction": "white_check_mark",
+    "type": "reaction_added",
+    "user": "U0BOT00001"
+  },
+  "event_id": "Ev0REA00004",
+  "event_time": 1700000440,
+  "is_ext_shared_channel": false,
+  "team_id": "T0TEAM0001",
+  "type": "event_callback"
+}

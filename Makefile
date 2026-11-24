@@ -1,4 +1,4 @@
-.PHONY: all init format_backend format lint build run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install
+.PHONY: all init format_backend format lint build backend backend_base install_backend setup_env run_backend dev help tests coverage clean_python_cache clean_npm_cache clean_frontend_build clean_all run_clic load_test_setup load_test_setup_basic load_test_list_flows load_test_run load_test_langflow_quick load_test_stress load_test_example load_test_clean load_test_remote_setup load_test_remote_run load_test_help docs docs_build docs_install api_examples_local api_examples_local_syntax
 
 # Configurations
 VERSION=$(shell grep "^version" pyproject.toml | sed 's/.*\"\(.*\)\"$$/\1/')
@@ -23,6 +23,7 @@ workers ?= 1
 async ?= true
 lf ?= false
 ff ?= true
+UV_RUN_ARGS ?=
 all: help
 
 ######################
@@ -168,10 +169,17 @@ unit_tests: ## run unit tests
 unit_tests_looponfail:
 	@make unit_tests args="-f"
 
+real_services_tests: ## run tests that need real service instances (needs LANGFLOW_TEST_DATABASE_URI + LANGFLOW_TEST_REDIS_URL)
+	@uv sync --frozen
+	uv run pytest src/backend/tests/unit \
+	--ignore=src/backend/tests/integration \
+	--ignore=src/backend/tests/unit/template \
+	-m real_services -ra $(args)
+
 lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
 	@cd src/lfx && \
-	uv sync && \
+	uv sync --dev --extra otel && \
 	uv run pytest tests/unit -v --cov=src/lfx --cov-report=xml --cov-report=html --cov-report=term-missing $(args)
 
 integration_tests:
@@ -229,7 +237,7 @@ unsafe_fix:
 	@uv run ruff check . --fix --unsafe-fixes
 
 lint: install_backend ## run linters
-	@uv run mypy --namespace-packages -p "langflow"
+	@echo "No type checker configured. See PR #12448 for context."
 
 
 
@@ -278,12 +286,18 @@ setup_env: ## set up the environment
 
 
 
+backend_base: ## run the backend with only langflow-base installed
+	@UV_PROJECT_ENVIRONMENT="$(CURDIR)/src/backend/base/.venv" \
+		$(MAKE) backend \
+			EXTRA_ARGS="$(strip --package langflow-base $(EXTRA_ARGS))" \
+			UV_RUN_ARGS="$(strip --package langflow-base $(UV_RUN_ARGS))"
+
 
 backend: setup_env install_backend ## run the backend in development mode
 	@-kill -9 $$(lsof -t -i:7860) || true
 ifdef login
 	@echo "Running backend autologin is $(login)";
-	LANGFLOW_AUTO_LOGIN=$(login) uv run uvicorn \
+	LANGFLOW_AUTO_LOGIN=$(login) uv run$(if $(strip $(UV_RUN_ARGS)), $(strip $(UV_RUN_ARGS))) uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
@@ -293,7 +307,7 @@ ifdef login
 		$(if $(workers),--workers $(workers),)
 else
 	@echo "Running backend respecting the $(env) file";
-	uv run uvicorn \
+	uv run$(if $(strip $(UV_RUN_ARGS)), $(strip $(UV_RUN_ARGS))) uvicorn \
 		--factory langflow.main:create_app \
 		--host 0.0.0.0 \
 		--port $(port) \
@@ -398,14 +412,13 @@ dcdev_up:
 	$(DOCKER) compose -f docker/dev.docker-compose.yml up --remove-orphans
 
 lock_base:
-	cd src/backend/base && uv lock
+	uv lock
 
 lock_langflow:
 	uv lock
 
 lock: ## lock dependencies
 	@echo 'Locking dependencies'
-	cd src/backend/base && uv lock
 	uv lock
 
 update: ## update dependencies
@@ -439,6 +452,8 @@ endif
 
 publish_testpypi: ## build the frontend static files and package the project and publish it to PyPI
 	@echo 'Publishing the project'
+	$(MAKE) publish_base_testpypi
+	$(MAKE) publish_langflow_testpypi
 
 ######################
 # LFX PACKAGE
@@ -490,6 +505,38 @@ lfx_docker_test: ## run LFX tests in Docker
 	@echo 'Running LFX tests in Docker'
 	@cd src/lfx && make docker_test
 
+######################
+# SDK PACKAGE
+######################
+
+sdk_build: ## build the SDK package
+	@echo 'Building SDK package'
+	@cd src/sdk && make build
+
+sdk_publish: ## publish SDK package to PyPI
+	@echo 'Publishing SDK package'
+	@cd src/sdk && make publish
+
+sdk_publish_testpypi: ## publish SDK package to test PyPI
+	@echo 'Publishing SDK package to test PyPI'
+	@cd src/sdk && make publish_test
+
+sdk_test: ## run SDK tests
+	@echo 'Running SDK tests'
+	@cd src/sdk && make test
+
+sdk_format: ## format SDK code
+	@echo 'Formatting SDK code'
+	@cd src/sdk && make format
+
+sdk_lint: ## lint SDK code
+	@echo 'Linting SDK code'
+	@cd src/sdk && make lint
+
+sdk_clean: ## clean SDK build artifacts
+	@echo 'Cleaning SDK build artifacts'
+	@cd src/sdk && make clean
+
 # example make alembic-revision message="Add user table"
 alembic-revision: ## generate a new migration
 	@echo 'Generating a new Alembic revision'
@@ -524,7 +571,7 @@ alembic-stamp: ## stamp the database with a specific revision
 # VERSION MANAGEMENT
 ######################
 
-patch: ## Update version across all projects. Usage: make patch v=1.5.0
+patch: ## Update version across all projects. Usage: make patch v=1.5.0 [sdk_v=0.1.0]
 	@if [ -z "$(v)" ]; then \
 		echo "$(RED)Error: Version argument required.$(NC)"; \
 		echo "Usage: make patch v=1.5.0"; \
@@ -533,24 +580,45 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	echo "$(GREEN)Updating version to $(v)$(NC)"; \
 	\
 	LANGFLOW_VERSION="$(v)"; \
-	LANGFLOW_BASE_VERSION=$$(echo "$$LANGFLOW_VERSION" | sed -E 's/^[0-9]+\.(.*)$$/0.\1/'); \
+	SDK_VERSION="$(sdk_v)"; \
+	if [ -z "$$SDK_VERSION" ]; then SDK_VERSION=$$(grep "^version" src/sdk/pyproject.toml | sed 's/.*"\(.*\)"$$/\1/'); fi; \
 	\
 	echo "$(GREEN)Langflow version: $$LANGFLOW_VERSION$(NC)"; \
-	echo "$(GREEN)Langflow-base version: $$LANGFLOW_BASE_VERSION$(NC)"; \
+	echo "$(GREEN)Langflow-base version: $$LANGFLOW_VERSION$(NC)"; \
+	echo "$(GREEN)LFX (synced): $$LANGFLOW_VERSION$(NC)"; \
+	echo "$(GREEN)Langflow SDK version: $$SDK_VERSION$(NC)"; \
 	\
 	echo "$(GREEN)Updating main pyproject.toml...$(NC)"; \
-	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base==.*\"', '\"langflow-base==$$LANGFLOW_BASE_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"langflow-base(\[[^\]]*\])?(?:==|>=|~=)[^\";]*(;[^\"]*)?\"', lambda m: '\"langflow-base' + (m.group(1) or '') + '==$$LANGFLOW_VERSION' + (m.group(2) or '') + '\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Updating langflow-base pyproject.toml...$(NC)"; \
-	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_BASE_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='src/backend/base/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); txt=re.sub(r'\"lfx(?P<extra>\[[^\]]+\])?(?:==|~=|>=)[^\";]*(?P<marker>;[^\"]*)?\"', lambda m: f'\"lfx{m.group(\"extra\") or \"\"}==$$LANGFLOW_VERSION{m.group(\"marker\") or \"\"}\"', txt); open(fname, 'w').write(txt)"; \
+	\
+	echo "$(GREEN)Updating lfx pyproject.toml...$(NC)"; \
+	python -c "import re; fname='src/lfx/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
+	uv run --no-sync python scripts/ci/update_component_index_version.py src/lfx/src/lfx/_assets/component_index.json "$$LANGFLOW_VERSION"; \
+	\
+	echo "$(GREEN)Updating langflow-sdk pyproject.toml and LFX dependency...$(NC)"; \
+	python -c "import re; fname='src/sdk/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$SDK_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
+	python -c "import re; fname='src/lfx/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'\"langflow-sdk(?:==|>=|~=)[^\"]*\"', '\"langflow-sdk>=$$SDK_VERSION\"', txt); open(fname, 'w').write(txt)"; \
+	\
+	echo "$(GREEN)Syncing bundle lfx pins (src/bundles/*) -> $$LANGFLOW_VERSION...$(NC)"; \
+	python scripts/ci/sync_bundle_lfx_pin.py "$$LANGFLOW_VERSION"; \
 	\
 	echo "$(GREEN)Updating frontend package.json...$(NC)"; \
 	python -c "import re; fname='src/frontend/package.json'; txt=open(fname).read(); txt=re.sub(r'\"version\": \".*\"', '\"version\": \"$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
 	echo "$(GREEN)Validating version changes...$(NC)"; \
 	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml version validation failed$(NC)"; exit 1; fi; \
-	if ! grep -q "\"langflow-base==$$LANGFLOW_BASE_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
-	if ! grep -q "^version = \"$$LANGFLOW_BASE_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base==$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[audio]==$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base audio dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -qF "\"langflow-base[postgresql]==$$LANGFLOW_VERSION\"" pyproject.toml; then echo "$(RED)✗ Main pyproject.toml langflow-base PostgreSQL dependency validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml version validation failed$(NC)"; exit 1; fi; \
+	if ! grep -Eq "\"lfx(\[[^]]+\])?==$$LANGFLOW_VERSION\"" src/backend/base/pyproject.toml; then echo "$(RED)✗ Langflow-base pyproject.toml lfx pin validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "^version = \"$$LANGFLOW_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX pyproject.toml version validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "^version = \"$$SDK_VERSION\"" src/sdk/pyproject.toml; then echo "$(RED)✗ SDK pyproject.toml version validation failed$(NC)"; exit 1; fi; \
+	if ! grep -q "\"langflow-sdk>=$$SDK_VERSION\"" src/lfx/pyproject.toml; then echo "$(RED)✗ LFX SDK dependency validation failed$(NC)"; exit 1; fi; \
+	if ! python -c 'import json, sys; index = json.load(open(sys.argv[1], encoding="utf-8")); raise SystemExit(index.get("version") != sys.argv[2])' src/lfx/src/lfx/_assets/component_index.json "$$LANGFLOW_VERSION"; then echo "$(RED)✗ Component index version validation failed$(NC)"; exit 1; fi; \
 	if ! grep -q "\"version\": \"$$LANGFLOW_VERSION\"" src/frontend/package.json; then echo "$(RED)✗ Frontend package.json version validation failed$(NC)"; exit 1; fi; \
 	echo "$(GREEN)✓ All versions updated successfully$(NC)"; \
 	\
@@ -561,13 +629,14 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	\
 	echo "$(GREEN)Validating final state...$(NC)"; \
 	CHANGED_FILES=$$(git status --porcelain | wc -l | tr -d ' '); \
-	if [ "$$CHANGED_FILES" -lt 5 ]; then \
-		echo "$(RED)✗ Expected at least 5 changed files, but found $$CHANGED_FILES$(NC)"; \
+	if [ "$$CHANGED_FILES" -lt 7 ]; then \
+		echo "$(RED)✗ Expected at least 7 changed files, but found $$CHANGED_FILES$(NC)"; \
 		echo "$(RED)Changed files:$(NC)"; \
 		git status --porcelain; \
 		exit 1; \
 	fi; \
-	EXPECTED_FILES="pyproject.toml uv.lock src/backend/base/pyproject.toml src/frontend/package.json src/frontend/package-lock.json"; \
+	EXPECTED_FILES="pyproject.toml uv.lock src/backend/base/pyproject.toml src/lfx/pyproject.toml src/lfx/src/lfx/_assets/component_index.json src/frontend/package.json src/frontend/package-lock.json"; \
+	if [ -n "$(sdk_v)" ]; then EXPECTED_FILES="$$EXPECTED_FILES src/sdk/pyproject.toml"; fi; \
 	for file in $$EXPECTED_FILES; do \
 		if ! git status --porcelain | grep -q "$$file"; then \
 			echo "$(RED)✗ Expected file $$file was not modified$(NC)"; \
@@ -578,8 +647,11 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	\
 	echo "$(GREEN)Version update complete!$(NC)"; \
 	echo "$(GREEN)Updated files:$(NC)"; \
-	echo "  - pyproject.toml: $$LANGFLOW_VERSION"; \
-	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_BASE_VERSION"; \
+	echo "  - pyproject.toml: $$LANGFLOW_VERSION (langflow-base == $$LANGFLOW_VERSION)"; \
+	echo "  - src/backend/base/pyproject.toml: $$LANGFLOW_VERSION (lfx pin → $$LANGFLOW_VERSION)"; \
+	echo "  - src/lfx/pyproject.toml: $$LANGFLOW_VERSION"; \
+	echo "  - src/lfx/src/lfx/_assets/component_index.json: $$LANGFLOW_VERSION"; \
+	echo "  - src/sdk/pyproject.toml: $$SDK_VERSION"; \
 	echo "  - src/frontend/package.json: $$LANGFLOW_VERSION"; \
 	echo "  - uv.lock: dependency lock updated"; \
 	echo "  - src/frontend/package-lock.json: dependency lock updated"; \
@@ -833,6 +905,7 @@ help_backend: ## show backend-specific commands
 	@echo ''
 	@echo "$(GREEN)Development:$(NC)"
 	@echo "  $(GREEN)make backend$(NC)             - Run backend in development mode"
+	@echo "  $(GREEN)make backend_base$(NC)        - Run backend with only langflow-base installed"
 	@echo "  $(GREEN)make run_cli$(NC)             - Run Langflow CLI"
 	@echo "  $(GREEN)make run_clic$(NC)            - Run CLI with fresh frontend build"
 	@echo "  $(GREEN)make run_cli_debug$(NC)       - Run CLI in debug mode"
@@ -842,7 +915,7 @@ help_backend: ## show backend-specific commands
 	@echo "$(GREEN)Code Quality:$(NC)"
 	@echo "  $(GREEN)make format_backend$(NC)      - Format backend code (ruff)"
 	@echo "  $(GREEN)make format_frontend_check$(NC) - Check frontend formatting (biome)"
-	@echo "  $(GREEN)make lint$(NC)                - Run backend linters (mypy)"
+	@echo "  $(GREEN)make lint$(NC)                - Run backend linters"
 	@echo "  $(GREEN)make codespell$(NC)           - Check spelling errors"
 	@echo "  $(GREEN)make fix_codespell$(NC)       - Fix spelling errors automatically"
 	@echo "  $(GREEN)make unsafe_fix$(NC)          - Run ruff with unsafe fixes"
@@ -877,6 +950,14 @@ help_backend: ## show backend-specific commands
 	@echo "  $(GREEN)make lfx_docker_dev$(NC)      - Start LFX development environment"
 	@echo "  $(GREEN)make lfx_docker_test$(NC)     - Run LFX tests in Docker"
 	@echo ''
+	@echo "$(GREEN)SDK Package Commands:$(NC)"
+	@echo "  $(GREEN)make sdk_build$(NC)           - Build SDK package"
+	@echo "  $(GREEN)make sdk_test$(NC)            - Run SDK tests"
+	@echo "  $(GREEN)make sdk_format$(NC)          - Format SDK code"
+	@echo "  $(GREEN)make sdk_lint$(NC)            - Lint SDK code"
+	@echo "  $(GREEN)make sdk_clean$(NC)           - Clean SDK build artifacts"
+	@echo "  $(GREEN)make sdk_publish$(NC)         - Publish SDK to PyPI"
+	@echo ''
 	@echo "$(GREEN)═══════════════════════════════════════════════════════════════════$(NC)"
 	@echo ''
 
@@ -902,6 +983,7 @@ help_test: ## show testing commands
 	@echo "$(GREEN)Combined Tests:$(NC)"
 	@echo "  $(GREEN)make tests$(NC)               - Run all tests (unit + integration + coverage)"
 	@echo "  $(GREEN)make coverage$(NC)            - Run tests and generate coverage report"
+	@echo "  $(GREEN)make test_frontend_coverage_full$(NC)            - Run tests and generate coverage report"
 	@echo ''
 	@echo "$(GREEN)Frontend Tests:$(NC)"
 	@echo "  $(GREEN)make tests_frontend$(NC)      - Run Playwright e2e tests"
@@ -918,6 +1000,9 @@ help_test: ## show testing commands
 	@echo "  $(GREEN)make test_frontend_pattern pattern$(NC) - Run tests matching pattern"
 	@echo "  $(GREEN)make test_frontend_snapshots$(NC) - Update Jest snapshots"
 	@echo "  $(GREEN)make test_frontend_config$(NC) - Show Jest configuration"
+	@echo ''
+	@echo "$(GREEN)Combined Frontend Test Coverage:$(NC)"
+	@echo "  $(GREEN)make test_frontend_coverage_full$(NC) - Run frontend tests and generate coverage report"
 	@echo ''
 	@echo "$(GREEN)Load Testing:$(NC)"
 	@echo "  $(GREEN)make locust$(NC)              - Run locust load tests"
@@ -970,7 +1055,7 @@ help_advanced: ## show advanced and miscellaneous commands
 	@echo "$(GREEN)Version Management:$(NC)"
 	@echo "  $(GREEN)make patch v=X.Y.Z$(NC)       - Update version across all projects"
 	@echo "    Example: make patch v=1.5.0"
-	@echo "    This updates: pyproject.toml, langflow-base, frontend package.json"
+	@echo "    This updates: pyproject.toml, langflow-base, lfx, frontend package.json"
 	@echo ''
 	@echo "$(GREEN)Publishing:$(NC)"
 	@echo "  $(GREEN)make publish$(NC)             - Publish to PyPI (use: make publish base=1 or main=1)"
@@ -979,6 +1064,8 @@ help_advanced: ## show advanced and miscellaneous commands
 	@echo "  $(GREEN)make publish_langflow$(NC)    - Publish langflow to PyPI"
 	@echo "  $(GREEN)make lfx_publish$(NC)         - Publish LFX package to PyPI"
 	@echo "  $(GREEN)make lfx_publish_testpypi$(NC) - Publish LFX to test PyPI"
+	@echo "  $(GREEN)make sdk_publish$(NC)         - Publish SDK package to PyPI"
+	@echo "  $(GREEN)make sdk_publish_testpypi$(NC) - Publish SDK to test PyPI"
 	@echo ''
 	@echo "$(GREEN)Lock Files:$(NC)"
 	@echo "  $(GREEN)make lock$(NC)                - Lock all dependencies"
@@ -1025,6 +1112,18 @@ docs_build: docs_install ## build documentation for production
 docs_serve: docs_build ## build and serve documentation locally
 	@echo "$(GREEN)Serving built documentation...$(NC)"
 	@cd docs && npm run serve -- --port $(docs_port)
+
+# Comma-separated list; override e.g. suites=curl,javascript,python
+# Note: $(or $(suites),a,b,c) is wrong here — GNU make's `or` returns only the first non-empty token.
+suites ?= curl,python,javascript
+
+api_examples_local: ## run docs API sample files against a local Langflow server
+	@echo "$(GREEN)Running docs API examples locally...$(NC)"
+	@SUITES="$(suites)" EXECUTE_MODE=true ./scripts/test-api-examples-local.sh
+
+api_examples_local_syntax: ## syntax-check docs API sample files locally without execution
+	@echo "$(GREEN)Running docs API example syntax checks locally...$(NC)"
+	@SUITES="$(suites)" EXECUTE_MODE=false ./scripts/test-api-examples-local.sh
 
 ######################
 # INCLUDE FRONTEND MAKEFILE

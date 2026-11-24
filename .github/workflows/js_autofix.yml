@@ -16,16 +16,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Setup Node.js
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
 
       - name: Cache Node.js dependencies
-        uses: actions/cache@v5
+        uses: actions/cache@v6
         id: npm-cache
         with:
           path: ~/.npm
@@ -43,4 +43,4 @@ jobs:
           cd src/frontend
           npm run format
 
-      - uses: autofix-ci/action@635ffb0c9798bd160680f18fd73371e355b85f27
+      - uses: autofix-ci/action@c5b2d67aa2274e7b5a18224e8171550871fc7e4a

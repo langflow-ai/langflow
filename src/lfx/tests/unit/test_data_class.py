@@ -47,6 +47,22 @@ def test_add_method_for_integers():
     assert combined.number == expected_number
 
 
+@pytest.mark.parametrize("self_addition", [False, True])
+def test_add_method_does_not_mutate_list_operands(self_addition):
+    record1 = Data(data={"items": [1]})
+    record2 = record1 if self_addition else Data(data={"items": [2]})
+    expected_items = [1, 1] if self_addition else [1, 2]
+    record1_before, record2_before = copy.deepcopy(record1.data), copy.deepcopy(record2.data)
+
+    first = record1 + record2
+    second = record1 + record2
+
+    assert first.data["items"] == expected_items
+    assert second.data["items"] == expected_items
+    assert record1.data == record1_before
+    assert record2.data == record2_before
+
+
 def test_add_method_with_non_overlapping_keys():
     record1 = Data(data={"text": "Hello"})
     record2 = Data(data={"number": 10})

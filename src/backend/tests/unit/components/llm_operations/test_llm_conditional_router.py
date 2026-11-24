@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.language_models.fake_chat_models import FakeListChatModel
 from lfx.components.llm_operations.llm_conditional_router import SmartRouterComponent
 from lfx.schema.message import Message
 
@@ -49,6 +50,18 @@ class TestSmartRouterComponent(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         """Return an empty list since this component doesn't have version-specific files."""
         return []
+
+    async def component_setup(self, component_class, default_kwargs):
+        component = await super().component_setup(component_class, default_kwargs)
+        # Route outputs are dynamic: the frontend builds one per route.
+        await self.map_frontend_outputs(component, "routes", default_kwargs["routes"])
+        return component
+
+    async def test_latest_version(self, component_class, default_kwargs, skipped_outputs):
+        # Answer the classification prompt offline; the routing around it runs for real.
+        fake_llm = FakeListChatModel(responses=["Positive"])
+        with patch("lfx.components.llm_operations.llm_conditional_router.get_llm", return_value=fake_llm):
+            await super().test_latest_version(component_class, default_kwargs, skipped_outputs)
 
     def _create_component_with_mock_categorization(self, categorization_result, *, enable_else=False):
         """Helper to create a component with a mocked categorization result."""

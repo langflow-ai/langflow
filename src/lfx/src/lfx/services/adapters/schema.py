@@ -13,6 +13,11 @@ class AdapterType(str, Enum):
     """
 
     DEPLOYMENT = "deployment"
+    # Knowledge Base ingestion sources (file upload, folder, S3,
+    # Google Drive, OneDrive, SharePoint, plus any third-party source
+    # published as an ``lfx.ingestion_source.adapters`` entry point or
+    # wired up through ``[ingestion_source.adapters]`` in ``lfx.toml``).
+    INGESTION_SOURCE = "ingestion_source"
 
     @property
     def entry_point_group(self) -> str:

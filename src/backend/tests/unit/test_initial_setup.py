@@ -6,8 +6,10 @@ import uuid
 from copy import deepcopy
 from datetime import datetime
 from pathlib import Path as SyncPath
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+from urllib.parse import urlparse
 
+import orjson
 import pytest
 from anyio import Path
 from httpx import AsyncClient
@@ -15,6 +17,7 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
     copy_profile_pictures,
     detect_github_url,
+    filter_starter_projects_by_available_components,
     get_project_data,
     load_bundles_from_urls,
     load_starter_projects,
@@ -25,6 +28,7 @@ from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models import Flow
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
+from lfx.extension.bundle_registry import BundleRecord, BundleRegistry
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
 
@@ -34,6 +38,119 @@ async def test_load_starter_projects():
     assert isinstance(projects, list)
     assert all(isinstance(project[1], dict) for project in projects)
     assert all(isinstance(project[0], Path) for project in projects)
+
+
+def test_filter_starter_projects_by_available_components():
+    available_components = {
+        "input_output": {
+            "ChatInput": {
+                "display_name": "Chat Input",
+                "template": {"_type": "ChatInput"},
+            }
+        }
+    }
+    valid_project = {
+        "name": "Core starter",
+        "data": {
+            "nodes": [
+                {
+                    "data": {
+                        "type": "ChatInput",
+                        "node": {"metadata": {"module": "lfx.components.input_output.chat"}, "template": {}},
+                    }
+                },
+                {"data": {"type": "note", "node": {"metadata": {}, "template": {}}}},
+                {
+                    "data": {
+                        "type": "EmbeddedCustomComponent",
+                        "node": {"metadata": {}, "template": {"code": {"value": "class Embedded: pass"}}},
+                    }
+                },
+            ]
+        },
+    }
+    unavailable_project = {
+        "name": "Bundle starter",
+        "data": {
+            "nodes": [
+                {
+                    "data": {
+                        "type": "OpenAIModelComponent",
+                        "node": {
+                            "metadata": {"module": "lfx.components.openai.openai_chat_model"},
+                            "template": {"code": {"value": "class OpenAIModelComponent: pass"}},
+                        },
+                    }
+                }
+            ]
+        },
+    }
+    projects = [
+        (Path("core.json"), valid_project),
+        (Path("bundle.json"), unavailable_project),
+    ]
+
+    filtered = filter_starter_projects_by_available_components(projects, available_components)
+
+    assert filtered == [(Path("core.json"), valid_project)]
+
+
+async def test_core_catalog_filters_starter_projects_from_other_packages():
+    repo_root = SyncPath(__file__).resolve().parents[4]
+    index_path = repo_root / "src" / "lfx" / "src" / "lfx" / "_assets" / "component_index.json"
+    core_components = dict(orjson.loads(index_path.read_bytes())["entries"])
+    with patch("langflow.initial_setup.setup.get_default_registry", return_value=BundleRegistry()):
+        projects = await load_starter_projects()
+
+    filtered = filter_starter_projects_by_available_components(projects, core_components)
+
+    filtered_names = {project["name"] for _, project in filtered}
+    removed_names = {project["name"] for _, project in projects} - filtered_names
+    assert removed_names == {
+        "Hybrid Search RAG",
+        "Research Translation Loop",
+    }
+
+
+async def test_load_starter_projects_from_manifestless_bundle(tmp_path):
+    bundle_root = tmp_path / "youtube"
+    projects_dir = bundle_root / "starter_projects"
+    projects_dir.mkdir(parents=True)
+    project = {"name": "Bundle starter", "data": {"nodes": [], "edges": []}}
+    (projects_dir / "Bundle starter.json").write_bytes(orjson.dumps(project))
+
+    manifest_bundle_root = tmp_path / "manifest_bundle"
+    manifest_projects_dir = manifest_bundle_root / "starter_projects"
+    manifest_projects_dir.mkdir(parents=True)
+    deferred_project = {"name": "Deferred starter", "data": {"nodes": [], "edges": []}}
+    (manifest_projects_dir / "Deferred starter.json").write_bytes(orjson.dumps(deferred_project))
+
+    registry = BundleRegistry()
+    registry.install_bundle(
+        BundleRecord(
+            bundle="youtube",
+            extension_id="lfx-bundles",
+            extension_version="1.1.1",
+            slot="official",
+            source_path=bundle_root,
+            manifestless=True,
+        )
+    )
+    registry.install_bundle(
+        BundleRecord(
+            bundle="manifest_bundle",
+            extension_id="manifest-bundle",
+            extension_version="1.0.0",
+            slot="official",
+            source_path=manifest_bundle_root,
+        )
+    )
+
+    with patch("langflow.initial_setup.setup.get_default_registry", return_value=registry):
+        projects = await load_starter_projects()
+
+    assert (Path(projects_dir / "Bundle starter.json"), project) in projects
+    assert all(project_data != deferred_project for _, project_data in projects)
 
 
 async def test_get_project_data():
@@ -95,18 +212,18 @@ async def test_should_not_leak_caio_contexts_when_loading_starter_projects():
 @pytest.mark.usefixtures("client")
 async def test_create_or_update_starter_projects():
     async with session_scope() as session:
-        # Get the number of projects returned by load_starter_projects
-        num_projects = len(await load_starter_projects())
+        projects = await load_starter_projects()
+        all_types_dict = await get_and_cache_all_types_dict(get_settings_service())
+        expected_project_names = {
+            project["name"] for _, project in filter_starter_projects_by_available_components(projects, all_types_dict)
+        }
 
-        # Get the number of projects in the database
         stmt = select(Folder).options(selectinload(Folder.flows)).where(Folder.name == STARTER_FOLDER_NAME)
         folder = (await session.exec(stmt)).first()
         assert folder is not None
-        num_db_projects = len(folder.flows)
+        db_project_names = {flow.name for flow in folder.flows}
 
-        # Check that the number of projects in the database is the same as the number of projects returned by
-        # load_starter_projects
-        assert num_db_projects == num_projects
+        assert db_project_names == expected_project_names
 
 
 # Some starter projects require integration
@@ -248,16 +365,16 @@ async def test_refresh_starter_projects():
 )
 async def test_detect_github_url(url, expected):
     # Mock the GitHub API response for the default branch case
-    mock_response = AsyncMock()
-    mock_response.json = lambda: {"default_branch": "main"}  # Not async, just returns a dict
-    mock_response.raise_for_status.return_value = None
+    mock_response = MagicMock()
+    mock_response.json.return_value = {"default_branch": "main"}
 
     with patch("httpx.AsyncClient.get", return_value=mock_response) as mock_get:
         result = await detect_github_url(url)
         assert result == expected
 
         # Verify the API call was only made for GitHub repo URLs
-        if "github.com" in url and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
+        parsed = urlparse(url)
+        if parsed.hostname == "github.com" and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
             mock_get.assert_called_once()
         else:
             mock_get.assert_not_called()
@@ -328,6 +445,9 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         created_flow = response.json()
         flow_id = created_flow["id"]
         user_id = created_flow["user_id"]
+        async with session_scope() as session:
+            original_flow = (await session.exec(select(Flow).where(Flow.id == uuid.UUID(flow_id)))).one()
+            original_updated_at = original_flow.updated_at
 
         # Construct the full path where the file was saved
         # The API saves relative paths to: storage_service.data_dir / "flows" / user_id / filename
@@ -337,14 +457,15 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         flow_file = storage_service.data_dir / "flows" / str(user_id) / flow_filename
 
         # Read the file created by the API
-        content = await flow_file.read_text(encoding="utf-8")
-        fs_flow = Flow.model_validate_json(content)
-        fs_flow.name = "new name"
-        fs_flow.description = "new description"
-        fs_flow.data = {"nodes": {}, "edges": {}}
-        fs_flow.locked = True
+        fs_flow = orjson.loads(await flow_file.read_bytes())
+        fs_flow.update(
+            name="new name",
+            description="new description",
+            data={"nodes": {}, "edges": {}},
+            locked=True,
+        )
 
-        await flow_file.write_text(fs_flow.model_dump_json(), encoding="utf-8")
+        await flow_file.write_bytes(orjson.dumps(fs_flow))
 
         result = {}
         for i in range(10):
@@ -358,6 +479,9 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         assert result["description"] == "new description"
         assert result["data"] == {"nodes": {}, "edges": {}}
         assert result["locked"] is True
+        async with session_scope() as session:
+            updated_flow = (await session.exec(select(Flow).where(Flow.id == uuid.UUID(flow_id)))).one()
+            assert updated_flow.updated_at > original_updated_at
     finally:
         if "flow_file" in locals():
             await flow_file.unlink(missing_ok=True)
@@ -515,3 +639,320 @@ async def test_copy_profile_pictures_handles_missing_config_dir():
 
         with pytest.raises(ValueError, match="Config dir is not set"):
             await copy_profile_pictures()
+
+
+def test_update_projects_handles_components_without_metadata():
+    """Test that components without metadata are handled gracefully."""
+    all_types_dict = {
+        "agents": {
+            "Agent": {
+                "template": {
+                    "code": {"value": "test code"},
+                    "_type": "Component",
+                },
+                "display_name": "Agent",
+                # No metadata field at all
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Agent",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old code"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    # Should not raise an error
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    assert updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "test code"
+
+
+def test_update_projects_resolves_prompt_via_component_type_alias():
+    """Test that legacy Prompt nodes resolve via the explicit legacy alias.
+
+    Prompt Template is keyed as "Prompt Template" in the component dictionary,
+    but starter projects may still reference the legacy "Prompt" type.
+    """
+    all_types_dict = {
+        "models_and_agents": {
+            "Prompt Template": {
+                "template": {
+                    "code": {"value": "new_prompt_code_v2"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt Template",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt",  # Old type name, doesn't match key "Prompt Template"
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_prompt_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_prompt_code_v2", (
+        f"Expected code to be updated to 'new_prompt_code_v2' but got '{updated_code}'. "
+        "The legacy 'Prompt' type should resolve to 'Prompt Template'."
+    )
+
+
+def test_update_projects_preserves_current_prompt_custom_fields():
+    """Current Prompt Template nodes must retain serialized dynamic inputs."""
+    url_field = {
+        "name": "URL",
+        "type": "str",
+        "value": "",
+        "input_types": ["Message", "Text"],
+    }
+    all_types_dict = {
+        "models_and_agents": {
+            "Prompt Template": {
+                "template": {
+                    "_type": "Component",
+                    "code": {"value": "new_prompt_code"},
+                    "template": {"type": "prompt", "value": ""},
+                },
+                "display_name": "Prompt Template",
+            }
+        }
+    }
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt Template",
+                    "node": {
+                        "custom_fields": {"template": ["URL"]},
+                        "template": {
+                            "_type": "Component",
+                            "code": {"value": "old_prompt_code"},
+                            "template": {"type": "prompt", "value": "Source: {URL}"},
+                            "URL": url_field,
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+
+    updated_template = updated_project["nodes"][0]["data"]["node"]["template"]
+    assert updated_template["URL"] == url_field
+
+
+def test_update_projects_direct_key_takes_precedence_over_alias():
+    """Test that a direct key match is preferred over the derived alias."""
+    all_types_dict = {
+        "category": {
+            "Prompt": {
+                "template": {
+                    "code": {"value": "direct_match_code"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt",
+            },
+            "Prompt Template": {
+                "template": {
+                    "code": {"value": "renamed_code"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt Template",
+            },
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_code"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "direct_match_code", (
+        "Direct key match ('Prompt') should take precedence over the derived alias to 'Prompt Template'"
+    )
+
+
+def test_update_projects_resolves_url_via_component_type_alias():
+    """Test that legacy URL nodes resolve via the component class alias."""
+    all_types_dict = {
+        "tools": {
+            "URLComponent": {
+                "template": {
+                    "code": {"value": "new_url_code_v2"},
+                    "_type": "URLComponent",
+                },
+                "display_name": "URL",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "URL",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_url_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_url_code_v2"
+
+
+def test_update_projects_resolves_parser_via_component_type_alias():
+    """Test that legacy lowercase parser nodes resolve via the explicit alias."""
+    all_types_dict = {
+        "processing": {
+            "ParserComponent": {
+                "template": {
+                    "code": {"value": "new_parser_code_v2"},
+                    "_type": "Component",
+                },
+                "display_name": "Parser",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "parser",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_parser_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_parser_code_v2"
+
+
+# ==================== Update Project File Tests ====================
+
+
+async def test_update_project_file_success():
+    """Test that update_project_file successfully writes to a writable path."""
+    from langflow.initial_setup.setup import update_project_file
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_path = Path(temp_dir) / "test_project.json"
+        project = {"name": "Test Project", "data": {"old": "data"}}
+        updated_data = {"new": "data"}
+
+        await update_project_file(project_path, project, updated_data)
+
+        # Verify the file was written
+        assert await project_path.exists()
+        content = await project_path.read_text(encoding="utf-8")
+        import orjson
+
+        written_project = orjson.loads(content)
+        assert written_project["data"] == updated_data
+        assert written_project["name"] == "Test Project"
+
+
+async def test_update_project_file_readonly_filesystem():
+    """Test that update_project_file handles read-only filesystem gracefully."""
+    from langflow.initial_setup.setup import update_project_file
+
+    project_path = Path("/nonexistent/readonly/path/test_project.json")
+    project = {"name": "Test Project", "data": {"old": "data"}}
+    updated_data = {"new": "data"}
+
+    # This should NOT raise an exception - it should handle the error gracefully
+    await update_project_file(project_path, project, updated_data)
+
+    # Verify the project dict was still updated (in-memory)
+    assert project["data"] == updated_data
+
+
+async def test_update_project_file_permission_denied():
+    """Test that update_project_file handles permission denied gracefully."""
+    from langflow.initial_setup.setup import update_project_file
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_path = Path(temp_dir) / "test_project.json"
+        project = {"name": "Test Project", "data": {"old": "data"}}
+        updated_data = {"new": "data"}
+
+        # Mock aiofiles.open to raise OSError (permission denied)
+        with patch("langflow.initial_setup.setup.aiofiles.open") as mock_open:
+            mock_open.side_effect = OSError(13, "Permission denied")
+
+            # Should not raise
+            await update_project_file(project_path, project, updated_data)
+
+            # Verify the project dict was still updated (in-memory)
+            assert project["data"] == updated_data
+
+
+async def test_update_project_file_logs_debug_on_oserror():
+    """Test that update_project_file logs a debug message on OSError."""
+    from langflow.initial_setup.setup import update_project_file
+
+    project_path = Path("/nonexistent/readonly/path/test_project.json")
+    project = {"name": "Test Project", "data": {"old": "data"}}
+    updated_data = {"new": "data"}
+
+    with patch("langflow.initial_setup.setup.logger") as mock_logger:
+        mock_logger.adebug = AsyncMock()
+        await update_project_file(project_path, project, updated_data)
+        # Verify debug log was called (either success or error path)
+        assert mock_logger.adebug.called

@@ -93,6 +93,7 @@ export function TraceAccordionItem({
             <Badge
               variant={getStatusVariant(parseSpanStatus(traceStatus))}
               size="sm"
+              className="h-auto px-2 py-0.5"
             >
               {traceStatus}
             </Badge>

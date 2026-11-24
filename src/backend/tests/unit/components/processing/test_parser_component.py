@@ -1,6 +1,8 @@
 import re
 
+import pandas as pd
 import pytest
+from lfx.components.processing.converter import TypeConverterComponent
 from lfx.components.processing.parser import ParserComponent
 from lfx.schema import Data, DataFrame
 from lfx.schema.message import Message
@@ -41,6 +43,59 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "Name: John, Age: 30, Country: USA"
 
+    @pytest.mark.parametrize("id_template", ["{doc id}", "{doc id:d}"])
+    def test_parse_dataframe_preserves_numeric_types(self, component_class, id_template):
+        data = {"doc id": [2**53, 2**53 + 1], "_score": [0.5, 0.25]}
+        dataframe = DataFrame(data, index=[10, 20])
+        component = component_class(
+            input_data=dataframe,
+            pattern=id_template + ": {_score:.2f}",
+            sep=" | ",
+        )
+
+        result = component.parse_combined_text()
+
+        assert result.text == "9007199254740992: 0.50 | 9007199254740993: 0.25"
+        assert component.status == result.text
+        assert dataframe.to_dict(orient="list") == data
+
+    def test_parse_dataframe_without_columns(self, component_class):
+        component = component_class(input_data=DataFrame(index=[10, 20]), pattern="row", sep=" | ")
+
+        assert component.parse_combined_text().text == "row | row"
+
+    @pytest.mark.parametrize("dtype", ["Int64", "Float64", "boolean", "string"])
+    def test_parse_dataframe_nullable_value(self, component_class, dtype):
+        """Pair with the numeric-only test to preserve both sides of legacy row coercion."""
+        dataframe = DataFrame({"value": pd.Series([pd.NA], dtype=dtype), "label": ["row"]})
+        component = component_class(input_data=dataframe, pattern="{value} {label}")
+
+        assert component.parse_combined_text().text == "None row"
+
+    @pytest.mark.parametrize("dtype", ["Int64", "Float64"])
+    @pytest.mark.parametrize("pattern", ["{value}", "{value:.2f}"])
+    def test_parse_dataframe_numeric_nullable_value(self, component_class, dtype, pattern):
+        """Pair with the mixed-row test to retain legacy numeric nan rendering for this patch."""
+        dataframe = DataFrame({"value": pd.Series([pd.NA], dtype=dtype)})
+        component = component_class(input_data=dataframe, pattern=pattern)
+
+        assert component.parse_combined_text().text == "nan"
+
+    def test_parse_dataframe_missing_value_preserves_large_integer(self, component_class):
+        dataframe = DataFrame(
+            {"doc id": [2**53 + 1, 2**53 + 3], "score": pd.Series([pd.NA, 0.25], dtype="Float64")},
+        )
+        component = component_class(input_data=dataframe, pattern="{doc id:d} {score}", sep=" | ")
+
+        assert component.parse_combined_text().text == "9007199254740993 None | 9007199254740995 0.25"
+
+    @pytest.mark.parametrize(("value", "expected"), [(None, "None"), (float("nan"), "nan"), (pd.NaT, "NaT")])
+    def test_parse_dataframe_preserves_other_missing_values(self, component_class, value, expected):
+        dataframe = DataFrame({"value": pd.Series([value], dtype="object")})
+        component = component_class(input_data=dataframe, pattern="{value}")
+
+        assert component.parse_combined_text().text == expected
+
     def test_parse_data_object(self, component_class):
         # Arrange
         data = Data(text="Hello World")
@@ -58,6 +113,40 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Assert
         assert isinstance(result, Message)
         assert result.text == "text: Hello World"
+
+    def test_parse_data_list(self, component_class):
+        data = [
+            Data(data={"name": "John", "age": 30}),
+            Data(data={"name": "Jane", "age": 25}),
+        ]
+        component = component_class(
+            input_data=data,
+            pattern="{name} is {age} years old",
+            sep=" | ",
+            mode="Parser",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "John is 30 years old | Jane is 25 years old"
+
+    def test_parse_data_list_uses_each_item_default_value(self, component_class):
+        data = [
+            Data(data={"name": "John"}, default_value="unknown"),
+            Data(data={"name": "Jane"}, default_value="not provided"),
+        ]
+        component = component_class(
+            input_data=data,
+            pattern="{name}: {role}",
+            sep="\n",
+            mode="Parser",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "John: unknown\nJane: not provided"
 
     def test_stringify_dataframe(self, component_class):
         # Arrange
@@ -77,6 +166,19 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert "| Name   |   Age |" in result.text
         assert "| John   |    30 |" in result.text
         assert "| Jane   |    25 |" in result.text
+
+    def test_stringify_table_from_json_preserves_integer_ids(self, component_class):
+        converter = TypeConverterComponent(
+            input_data=Message(text='[{"id": 1234567, "score": 0.5}, {"id": 1234568, "score": 0.25}]'),
+            output_type="Table",
+            auto_parse=True,
+        )
+        component = component_class(input_data=converter.convert_to_dataframe(), mode="Stringify")
+
+        result = component.parse_combined_text()
+
+        rows = [[cell.strip() for cell in line.strip("|").split("|")] for line in result.text.splitlines()[2:]]
+        assert rows == [["1234567", "0.5"], ["1234568", "0.25"]]
 
     def test_stringify_data_object(self, component_class):
         # Arrange
@@ -114,6 +216,26 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "Test message content"
 
+    def test_stringify_list_without_clean_data(self, component_class):
+        component = component_class(
+            input_data=[Message(text="First"), Message(text="Second")],
+            mode="Stringify",
+        )
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == "First\nSecond"
+
+    @pytest.mark.parametrize(("input_data", "expected"), [("", ""), (0, "0")])
+    def test_stringify_preserves_falsy_scalar_input(self, component_class, input_data, expected):
+        component = component_class(input_data=input_data, mode="Stringify")
+
+        result = component.parse_combined_text()
+
+        assert isinstance(result, Message)
+        assert result.text == expected
+
     def test_clean_data_with_stringify(self, component_class):
         # Arrange
         data_frame = DataFrame(
@@ -143,8 +265,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         assert "| John" in result.text
         assert "| Jane" in result.text
         assert "| Bob" in result.text
-        assert "| Good" in result.text
-        assert "| Person" in result.text
+        assert "| Good<br/>Person" in result.text
         assert "| Nice" in result.text
         # Verify data is cleaned
         assert "Jane\n" not in result.text
@@ -164,7 +285,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Act & Assert
         with pytest.raises(
             ValueError,
-            match=re.escape("Unsupported input type: <class 'int'>. Expected DataFrame or Data."),
+            match=re.escape("Unsupported input type: <class 'int'>. Expected DataFrame, Data, or list[Data]."),
         ):
             component.parse_combined_text()
 
@@ -180,7 +301,7 @@ class TestParserComponent(ComponentTestBaseWithoutClient):
         # Act & Assert
         with pytest.raises(
             ValueError,
-            match=re.escape("Unsupported input type: <class 'NoneType'>. Expected DataFrame or Data."),
+            match=re.escape("Unsupported input type: <class 'NoneType'>. Expected DataFrame, Data, or list[Data]."),
         ):
             component.parse_combined_text()
 

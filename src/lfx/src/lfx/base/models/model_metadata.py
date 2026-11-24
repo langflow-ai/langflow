@@ -15,6 +15,12 @@ class ModelMetadata(TypedDict, total=False):
     deprecated: bool  # Whether model is deprecated (defaults to False)
     default: bool  # Whether model is a default/recommended option (defaults to False)
     model_type: str  # Type of model (defaults to "llm" or "embeddings")
+    # Optional release date as a Unix epoch (seconds). Populated by live
+    # fetches (OpenRouter ``created`` field) and by the models.dev override
+    # (``release_date`` parsed as YYYY-MM-DD). Drives newest-first sorting in
+    # the unified catalog. 0/absent → unknown; stable sort then preserves the
+    # original list order for that tier.
+    created: int
 
 
 def create_model_metadata(
@@ -30,6 +36,7 @@ def create_model_metadata(
     deprecated: bool = False,
     default: bool = False,
     model_type: str = "llm",
+    created: int = 0,
 ) -> ModelMetadata:
     """Helper function to create ModelMetadata with explicit defaults."""
     return ModelMetadata(
@@ -44,10 +51,17 @@ def create_model_metadata(
         deprecated=deprecated,
         default=default,
         model_type=model_type,
+        created=created,
     )
 
 
-LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]
+LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX", "OpenRouter"]
+
+# Live only with a custom endpoint configured; empty live fetch keeps the static catalog.
+CONDITIONAL_LIVE_MODEL_PROVIDERS: list[str] = ["OpenAI", "Azure AI Foundry"]
+
+# Catalog defaults are suggestions only; users must explicitly enable deployment names.
+EXPLICIT_ENABLE_ONLY_PROVIDERS: frozenset[str] = frozenset({"Azure AI Foundry"})
 
 # Provider metadata configuration
 # Defines the variables (credentials, URLs, etc.) required for each model provider
@@ -61,15 +75,24 @@ LIVE_MODEL_PROVIDERS: list[str] = ["Ollama", "IBM WatsonX"]
 #   - is_list: Whether the variable accepts multiple values
 #   - options: List of predefined options for the variable
 #   - langchain_param: The parameter name used when instantiating the LangChain class
+#   - is_header: If True, the value is forwarded as an HTTP header (via
+#                ChatOpenAI's ``default_headers``) instead of as a constructor
+#                kwarg. Used for OpenRouter attribution headers.
+#   - header_name: HTTP header name to use when ``is_header`` is True
+#                  (e.g. "HTTP-Referer", "X-Title").
 #
 # Variable attributes (component_metadata - for component inputs):
 #   - mapping_field: The component input field name that this variable maps to
 #   - required: Whether the variable is required in components (False = falls back to env var)
 #   - advanced: Whether to show the variable in the advanced section of components
 #   - info: Help text/description shown in the component input
+# Omit ``component_metadata`` entirely for variables that exist only as global
+# settings (no per-component input). The OpenRouter Site URL / App Name
+# attribution headers use this pattern.
 #
 MODEL_PROVIDER_METADATA: dict[str, Any] = {
     "OpenAI": {
+        "provider_id": "openai",
         "icon": "OpenAI",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -87,7 +110,20 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                     "advanced": True,
                     "info": "Falls back to OPENAI_API_KEY environment variable",
                 },
-            }
+            },
+            {
+                "variable_name": "OpenAI Base URL",
+                "variable_key": "OPENAI_BASE_URL",
+                "description": (
+                    "Optional. Point to an OpenAI-compatible server "
+                    "(e.g. vLLM, LM Studio, LiteLLM). Leave empty for api.openai.com."
+                ),
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "base_url",
+            },
         ],
         "api_docs_url": "https://platform.openai.com/docs/overview",
         "mapping": {
@@ -96,6 +132,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Anthropic": {
+        "provider_id": "anthropic",
         "icon": "Anthropic",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -122,6 +159,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Google Generative AI": {
+        "provider_id": "google-generative-ai",
         "icon": "GoogleGenerativeAI",
         "max_tokens_field_name": "max_output_tokens",
         "variables": [
@@ -148,6 +186,7 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         },
     },
     "Ollama": {
+        "provider_id": "ollama",
         "icon": "Ollama",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -173,7 +212,120 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
             "model_param": "model",
         },
     },
+    "Groq": {
+        "provider_id": "groq",
+        "icon": "Groq",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+            {
+                "variable_name": "Groq API Key",
+                "variable_key": "GROQ_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to GROQ_API_KEY environment variable",
+                },
+            }
+        ],
+        "api_docs_url": "https://console.groq.com/docs/overview",
+        "mapping": {
+            "model_class": "ChatGroq",
+            "model_param": "model",
+        },
+    },
+    "Azure OpenAI": {
+        "provider_id": "azure-openai",
+        "icon": "Azure",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+            {
+                "variable_name": "Azure OpenAI API Key",
+                "variable_key": "AZURE_OPENAI_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to AZURE_OPENAI_API_KEY environment variable",
+                },
+            }
+        ],
+        "api_docs_url": "https://learn.microsoft.com/en-us/azure/ai-services/openai/",
+        "mapping": {
+            "model_class": "AzureChatOpenAI",
+            "model_param": "model",
+        },
+    },
+    "Azure AI Foundry": {
+        "provider_id": "azure-ai-foundry",
+        "icon": "Azure",
+        "max_tokens_field_name": "max_tokens",
+        "variables": [
+            {
+                "variable_name": "Azure AI Foundry API Key",
+                "variable_key": "AZURE_AI_FOUNDRY_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "credential",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to AZURE_AI_FOUNDRY_API_KEY environment variable",
+                },
+            },
+            {
+                "variable_name": "Azure AI Foundry Endpoint",
+                "variable_key": "AZURE_AI_FOUNDRY_ENDPOINT",
+                "description": (
+                    "OpenAI-compatible endpoint from the Foundry portal (Get endpoint). "
+                    "Example: https://<resource>.services.ai.azure.com/openai/v1. "
+                    "Enable models using your portal deployment names (not catalog model IDs)."
+                ),
+                "required": True,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "endpoint",
+            },
+            {
+                "variable_name": "Azure AI Foundry API Version",
+                "variable_key": "AZURE_AI_FOUNDRY_API_VERSION",
+                "description": (
+                    "Optional. api-version used for the deployments listing that powers "
+                    "live model discovery. Leave empty for the default "
+                    "(2023-03-15-preview)."
+                ),
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                # No langchain_param / component_metadata: consumed by live discovery
+                # only — the OpenAI-compatible inference endpoint takes no api-version,
+                # so this must never reach the chat/embedding constructors.
+            },
+        ],
+        "api_docs_url": "https://learn.microsoft.com/en-us/azure/foundry/how-to/develop/langchain-models",
+        "mapping": {
+            "model_class": "AzureAIOpenAIApiChatModel",
+            "model_param": "model",
+        },
+    },
     "IBM WatsonX": {
+        "provider_id": "ibm-watsonx",
+        "aliases": ["IBM watsonx.ai"],
         "icon": "WatsonxAI",
         "max_tokens_field_name": "max_tokens",
         "variables": [
@@ -235,6 +387,56 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
         "mapping": {
             "model_class": "ChatWatsonx",
             "model_param": "model_id",
+        },
+    },
+    "OpenRouter": {
+        "provider_id": "openrouter",
+        "icon": "OpenRouter",
+        "max_tokens_field_name": "max_tokens",
+        "base_url": "https://openrouter.ai/api/v1",
+        "variables": [
+            {
+                "variable_name": "OpenRouter API Key",
+                "variable_key": "OPENROUTER_API_KEY",
+                "required": True,
+                "is_secret": True,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_key",
+                "component_metadata": {
+                    "mapping_field": "api_key",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Falls back to OPENROUTER_API_KEY environment variable",
+                },
+            },
+            {
+                "variable_name": "Site URL",
+                "variable_key": "OPENROUTER_SITE_URL",
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "is_header": True,
+                "header_name": "HTTP-Referer",
+                "description": "Optional. Sent as the HTTP-Referer header for OpenRouter attribution.",
+            },
+            {
+                "variable_name": "App Name",
+                "variable_key": "OPENROUTER_APP_NAME",
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "is_header": True,
+                "header_name": "X-Title",
+                "description": "Optional. Sent as the X-Title header for OpenRouter attribution.",
+            },
+        ],
+        "api_docs_url": "https://openrouter.ai/docs",
+        "mapping": {
+            "model_class": "ChatOpenAI",
+            "model_param": "model",
         },
     },
 }

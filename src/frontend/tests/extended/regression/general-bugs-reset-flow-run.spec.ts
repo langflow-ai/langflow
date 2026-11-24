@@ -1,22 +1,20 @@
-import dotenv from "dotenv";
-import { readFileSync } from "fs";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { routeTestScopedDefaultFlowNames } from "../../utils/flow/route-test-scoped-default-flow-names";
 import { zoomOut } from "../../utils/zoom-out";
+
+test.beforeEach(async ({ page }, testInfo) => {
+  await routeTestScopedDefaultFlowNames(page, testInfo, "reset-flow-run");
+});
 
 test(
   "user can run flow with If-Else component multiple times with different branches",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await addLegacyComponents(page);
 
@@ -39,7 +37,7 @@ test(
 
     //---------------------------------- Text Output
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
     await page.waitForSelector('[data-testid="input_outputText Output"]', {
       timeout: 100000,
     });
@@ -54,7 +52,7 @@ test(
 
     //---------------------------------- Text Output
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
     await page.waitForSelector('[data-testid="input_outputText Output"]', {
       timeout: 100000,
     });
@@ -69,18 +67,11 @@ test(
 
     await page.getByTestId("generic-node-title-arrangement").last().click();
 
-    await page.getByTestId("panel-description").hover();
-    await page
-      .getByTestId("panel-description")
-      .getByTestId("edit-name-description-button")
-      .click();
+    await page.getByTestId("node-edit-name-description-button").click();
 
-    await page.getByTestId("inspection-panel-name").fill("textoutputfalse");
+    await page.getByTestId("input-title-Text Output").fill("textoutputfalse");
 
-    await page
-      .getByTestId("panel-description")
-      .getByTestId("save-name-description-button")
-      .click();
+    await page.getByTestId("node-save-name-description-button").click();
 
     await page.waitForTimeout(2000);
 
@@ -108,7 +99,9 @@ test(
 
     await page.getByTestId("button_run_text output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.waitForTimeout(3000);
 
@@ -134,7 +127,9 @@ test(
 
     await page.waitForTimeout(2000);
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.waitForTimeout(3000);
 
@@ -162,7 +157,9 @@ test(
 
     await page.waitForTimeout(2000);
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.waitForTimeout(3000);
 
@@ -186,7 +183,9 @@ test(
     await page.getByTestId("popover-anchor-input-input_text").fill("2");
     await page.getByTestId("button_run_textoutputfalse").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     numberOfSuccessfullComponentsRun = 0;
     numberOfInactiveComponentsRun = 0;
