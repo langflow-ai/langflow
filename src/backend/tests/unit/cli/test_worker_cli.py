@@ -57,12 +57,19 @@ _WORKER_SCRIPT = dedent(
         backend.stop_event = kwargs["stop_event"]
         await real_loop(backend, runner, **kwargs)
 
+    from langflow.services.deployment_artifacts import activation
+
+    activation.load_activation_extensions = lambda: print("ACTIVATION_EXTENSIONS_LOADED", flush=True)
     cli.initialize_services = initialize_services
-    cli.get_settings_service = lambda: SimpleNamespace(settings=SimpleNamespace(
-        background_backend_is_scaled=True,
-        background_lease_ttl_s=45.0,
-        background_watchdog_interval_s=None,
-    ))
+    def get_settings_service():
+        print("SETTINGS_SERVICE_ASKED", flush=True)
+        return SimpleNamespace(settings=SimpleNamespace(
+            background_backend_is_scaled=True,
+            background_lease_ttl_s=45.0,
+            background_watchdog_interval_s=None,
+        ))
+
+    cli.get_settings_service = get_settings_service
     deps.get_job_service = lambda: None
     worker.build_worker = build_worker
     worker.run_worker_loop = run_worker_loop
@@ -118,3 +125,43 @@ def test_worker_cli_logs_startup_and_failures(
     assert "Worker: runner failed" in output
     assert "Worker: could not decrypt this job's stored request" in output
     assert "Check that every worker shares the API's LANGFLOW_SECRET_KEY." in output
+
+
+def test_worker_loads_the_activation_extensions_before_it_claims_a_job(tmp_path):
+    """A plane's run-time hooks reach a worker only through the activation extension: it must load at startup."""
+    env = {key: value for key, value in os.environ.items() if not key.startswith("LANGFLOW_LOG")}
+    env["LANGFLOW_CONFIG_DIR"] = str(tmp_path)
+    env["LANGFLOW_PRETTY_LOGS"] = "false"
+
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", _WORKER_SCRIPT, "worker", "--idle-block-ms", "1"],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    assert output.index("ACTIVATION_EXTENSIONS_LOADED") < output.index("Worker: claim failed")
+
+
+def test_worker_creates_the_settings_service_before_any_other_service(tmp_path):
+    """Plugin discovery reads lfx.toml from the settings' config directory: settings must exist first."""
+    env = {key: value for key, value in os.environ.items() if not key.startswith("LANGFLOW_LOG")}
+    env["LANGFLOW_CONFIG_DIR"] = str(tmp_path)
+    env["LANGFLOW_PRETTY_LOGS"] = "false"
+
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", _WORKER_SCRIPT, "worker", "--idle-block-ms", "1"],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+
+    output = result.stdout + result.stderr
+    assert result.returncode == 0, output
+    assert output.index("SETTINGS_SERVICE_ASKED") < output.index("worker service initialization info message")

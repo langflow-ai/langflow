@@ -31,7 +31,7 @@ import sys
 import time
 import warnings
 from collections.abc import Iterator
-from contextlib import contextmanager, suppress
+from contextlib import AsyncExitStack, contextmanager, suppress
 from functools import partial
 from ipaddress import ip_address
 from pathlib import Path
@@ -1033,6 +1033,10 @@ def worker(
             run_worker_loop,
         )
 
+        # Settings first: the service manager reads lfx.toml (the plane's service overrides) from the configured
+        # directory only if settings already exist when the first other service is created. Otherwise a worker
+        # looks in its working directory, misses the file and runs on the OSS allow-all authorization service.
+        get_settings_service()
         await initialize_services()
         settings = get_settings_service().settings
         if not settings.background_backend_is_scaled:
@@ -1041,6 +1045,7 @@ def worker(
 
         from uuid import uuid4
 
+        from langflow.services.deployment_artifacts.activation import worker_lifespan
         from langflow.services.deps import get_job_service
 
         # Process-unique owner so this worker's heartbeats are attributable, and
@@ -1053,8 +1058,12 @@ def worker(
         for sig in (signal.SIGTERM, signal.SIGINT):
             with suppress(NotImplementedError):
                 loop.add_signal_handler(sig, stop_event.set)
-        logger.info("Langflow worker started; draining queued jobs off the database.")
+        # A worker runs flows without the API app, so what a plane starts in the app's lifespan never reaches it. The
+        # activation extension is what a plane ships for both processes: run it before the first claim.
+        lifespan_stack = AsyncExitStack()
         try:
+            await lifespan_stack.enter_async_context(worker_lifespan())
+            logger.info("Langflow worker started; draining queued jobs off the database.")
             await run_worker_loop(
                 backend,
                 worker_runner,
@@ -1074,6 +1083,7 @@ def worker(
                 roster_interval_s=settings.background_lease_ttl_s / _ROSTER_BEATS_PER_WINDOW,
             )
         finally:
+            await lifespan_stack.aclose()
             await teardown()
 
     asyncio.run(_run_worker())
