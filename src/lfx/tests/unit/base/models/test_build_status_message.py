@@ -1,7 +1,6 @@
 """Tests for LCModelComponent.build_status_message()."""
 
 from langchain_core.messages import AIMessage
-
 from lfx.base.models.model import LCModelComponent
 
 

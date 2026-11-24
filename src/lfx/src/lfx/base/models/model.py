@@ -182,9 +182,11 @@ class LCModelComponent(Component):
                     }
                 }
 
-            elif all(key in response_metadata for key in anthropic_keys) and isinstance(
-                response_metadata["usage"], dict
-            ) and all(key in response_metadata["usage"] for key in inner_anthropic_keys):
+            elif (
+                all(key in response_metadata for key in anthropic_keys)
+                and isinstance(response_metadata["usage"], dict)
+                and all(key in response_metadata["usage"] for key in inner_anthropic_keys)
+            ):
                 usage = response_metadata["usage"]
                 status_message = {
                     "tokens": {
