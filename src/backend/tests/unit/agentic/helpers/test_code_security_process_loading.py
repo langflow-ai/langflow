@@ -35,6 +35,29 @@ def test_rejects_process_and_code_loader_imports(module: str, statement: str) ->
     assert any(module in violation for violation in result.violations)
 
 
+@pytest.mark.parametrize("member", ["CodeType", "FunctionType", "LambdaType"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from types import {member} as constructor",
+        "import types as helpers\nconstructor = helpers.{member}",
+        "import types as helpers\nconstructor = getattr(helpers, '{member}')",
+        "import types as helpers\nconstructor = vars(helpers)['{member}']",
+        "from types import *\nconstructor = {member}",
+        "import unittest.mock as mocking\nconstructor = mocking.types.{member}",
+    ],
+)
+def test_rejects_dynamic_code_constructor_references(member: str, source: str) -> None:
+    result = scan_code_security(source.format(member=member))
+
+    assert not result.is_safe
+    assert any(member in violation for violation in result.violations)
+
+
+def test_preserves_ordinary_types_helpers() -> None:
+    assert scan_code_security("from types import SimpleNamespace\nresult = SimpleNamespace(value=1)").is_safe
+
+
 @pytest.mark.parametrize(
     "code",
     [

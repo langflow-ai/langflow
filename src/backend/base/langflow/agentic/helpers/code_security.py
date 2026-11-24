@@ -169,6 +169,10 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("unittest.mock", "_dot_lookup", "unittest.mock._dot_lookup is forbidden in components"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
+    # These constructors can create executable functions without the parser seeing their code.
+    ("types", "CodeType", "types.CodeType is forbidden in components (dynamic code construction)"),
+    ("types", "FunctionType", "types.FunctionType is forbidden in components (dynamic code construction)"),
+    ("types", "LambdaType", "types.LambdaType is forbidden in components (dynamic code construction)"),
     ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
     (
         "torch.package.package_importer",
@@ -948,7 +952,7 @@ _RESTRICTED_MODULE_REEXPORTS: dict[str, dict[str, str]] = {
 # dataclasses.inspect and traceback.linecache expose the same runtime and file
 # readers as direct imports. Third-party attributes with these names may be
 # unrelated objects, so canonicalization remains limited to stdlib hosts.
-_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys", "inspect", "linecache", "fileinput"})
+_STDLIB_REEXPORTED_MODULE_NAMES: frozenset[str] = frozenset({"os", "sys", "inspect", "linecache", "fileinput", "types"})
 _STDLIB_MODULE_NAMES: frozenset[str] = frozenset(sys.stdlib_module_names)
 
 
