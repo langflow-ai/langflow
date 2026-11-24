@@ -20,6 +20,7 @@ import type {
 } from "./types";
 
 export * from "./types";
+export * from "./use-upgrade-check";
 
 export const useGetUpgradeReports: useQueryFunctionType<
   { offset: number },
