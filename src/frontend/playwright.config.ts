@@ -16,6 +16,10 @@ const OPENAI_PORT = Number(process.env.LANGFLOW_TEST_OPENAI_PORT ?? 8787);
 // Reuse running servers unless PW_REUSE_SERVER=0.
 const REUSE_SERVER = process.env.PW_REUSE_SERVER !== "0";
 
+// CI builds the frontend once and serves it with `vite preview`. The dev
+// server makes each navigation load thousands of modules.
+const USE_FRONTEND_BUILD = process.env.PW_FRONTEND_BUILD === "1";
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -178,7 +182,9 @@ export default defineConfig({
       timeout: process.platform === "win32" ? 240_000 : 90_000,
     },
     {
-      command: "npm start",
+      command: USE_FRONTEND_BUILD
+        ? `npx vite preview --port ${FRONTEND_PORT} --strictPort`
+        : "npm start",
       port: FRONTEND_PORT,
       env: {
         VITE_PORT: String(FRONTEND_PORT),

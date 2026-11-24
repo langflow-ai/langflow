@@ -24,6 +24,7 @@ from langflow.services.variable.constants import (
 )
 from langflow.services.variable.runtime_policy import (
     RuntimeVariable,
+    env_import_allowed,
     guard_variable_mutation,
     resolve_runtime_variable,
     resolve_runtime_variables,
@@ -136,6 +137,9 @@ class DatabaseVariableService(VariableService, Service):
         """Import allowed environment defaults without replacing user edits or exposing OAuth storage."""
         if not self.settings_service.settings.store_environment_variables:
             await logger.adebug("Skipping environment variable storage.")
+            return
+        if not await env_import_allowed(user_id):
+            await logger.adebug("Skipping environment variable import for account %s.", user_id)
             return
         await guard_variable_mutation(session=session, user_id=user_id)
 

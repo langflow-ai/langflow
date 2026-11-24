@@ -87,6 +87,8 @@ async def test_an_event_is_committed_before_its_envelope_is_acknowledged(
     await supervisor.reconcile()
     [socket] = await slack.wait_for_sockets(1)
     assert slack.authorizations == [f"Bearer {fx.APP_TOKEN}"]
+    # Let the handshake commit before timing event delivery and acknowledgment.
+    await fx.wait_for_socket_app_ids(trigger_id)
 
     await socket.deliver(fx.load("message_channel"), envelope_id="env-1")
 

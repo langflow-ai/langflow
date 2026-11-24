@@ -1286,7 +1286,12 @@ async def resume_workflow(
     if not _caller_owns_job_end_user(job, http_request, current_user):
         raise _not_found()
 
-    from langflow.api.v2.hitl import ensure_resume_execute_permission, is_decision_allowed, mark_card_answered
+    from langflow.api.v2.hitl import (
+        ensure_resume_execute_permission,
+        is_decision_allowed,
+        mark_card_answered,
+        record_resume_decision,
+    )
 
     await ensure_resume_execute_permission(current_user, job.flow_id)
 
@@ -1334,6 +1339,13 @@ async def resume_workflow(
                 "job_id": job_id,
             },
         )
+    await record_resume_decision(
+        parsed_job_id,
+        request_id=request.request_id,
+        decision=request.decision or {},
+        user_id=current_user.id,
+        end_user_id=resolve_serving_end_user_id(http_request=http_request),
+    )
     await mark_card_answered(parsed_job_id, request.request_id, request.decision or {}, card_message_id=card_message_id)
     return WorkflowResumeResponse(job_id=job_id, status="resuming", message="Resume accepted")
 
