@@ -227,6 +227,11 @@ async def test_upload_file(files_client, files_created_api_key, files_flow):
     assert stored == b"test content"
 
 
+async def test_upload_requires_authentication_before_form_validation(files_client, files_flow):
+    response = await files_client.post(f"api/v1/files/upload/{files_flow.id}")
+    assert response.status_code in {status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN}
+
+
 async def test_download_file(files_client, files_created_api_key, files_flow):
     headers = {"x-api-key": files_created_api_key.api_key}
 
@@ -475,7 +480,8 @@ async def test_upload_file_size_limit(files_client, files_created_api_key, files
     )
 
     assert response.status_code == 413, f"Expected 413, got {response.status_code}: {response.json()}"
-    assert "Content size limit exceeded. Maximum allowed is 1MB and got 1.001MB." in response.json()["detail"]
+    # The limiter stops at the first chunk over the limit, so the reported size depends on chunking.
+    assert response.json()["detail"].startswith("Content size limit exceeded. Maximum allowed is 1MB")
 
 
 @pytest.fixture
