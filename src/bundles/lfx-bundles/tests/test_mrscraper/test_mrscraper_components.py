@@ -103,6 +103,18 @@ def recording_client(monkeypatch):
     return client
 
 
+@pytest.fixture
+def recording_client_factory(monkeypatch):
+    """Switch to a recording SDK client part-way through a test."""
+
+    def install() -> RecordingClient:
+        client = RecordingClient()
+        monkeypatch.setattr(mrscraper_common, "build_client", lambda _token: client)
+        return client
+
+    return install
+
+
 def configure(component_class: type[Component], **values: Any) -> Component:
     """Instantiate real Langflow inputs and defaults before executing a component."""
     component = component_class()
@@ -184,7 +196,7 @@ async def test_default_inputs_send_exact_sdk_keywords(
         "status": {},
         "scrape_html": {"url": URL, **loading, **page, "action": None, "screenshot": False},
         "scrape_markdown": {"url": URL, **loading, **page, "action": None},
-        "get_screenshot": {"url": URL, **page},
+        "get_screenshot": {"url": URL, "screenshot": "full", **page},
         "scrape_brand": {"url": URL},
         "scrape_json": {"url": URL, "prompt": DEFAULT_PROMPT, "html": True, **loading, **page, "screenshot": False},
         "web_search": {"query": "running shoes", "country": None, "num_results": 10},
@@ -360,25 +372,18 @@ async def test_scrape_markdown_defaults_options_and_text_output(http_transport):
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize("area", [None, "full", "top", "1280x800", "1920x1080-75"])
 @pytest.mark.asyncio
-async def test_get_screenshot_sends_fixed_full_page_fields(http_transport):
-    """Get Screenshot always sends screenshot=full and browserRendering=true."""
+async def test_get_screenshot_sends_the_area_and_fixed_fields(http_transport, recording_client_factory, area):
+    """Get Screenshot sends the chosen area (full by default) with html=false, markdown=false, and rendering."""
     requests, responses = http_transport
     expected = {"html": "<html>page</html>", "screenshot": "base64-image"}
     responses.append(httpx.Response(200, json=expected))
-    responses.append(httpx.Response(200, json=expected))
-    output = await configure(MrscraperGetScreenshot, url=URL).capture()
-    await configure(
-        MrscraperGetScreenshot,
-        url=URL,
-        timeout=120,
-        wait_for_selector="#results",
-        geo_code="DE",
-        max_retries="2",
-    ).capture()
+    values = {"url": URL} if area is None else {"url": URL, "screenshot": area}
+    output = await configure(MrscraperGetScreenshot, **values).capture()
     assert list(query(requests[0]).items()) == [
         ("url", URL),
-        ("screenshot", "full"),
+        ("screenshot", area or "full"),
         ("html", "false"),
         ("markdown", "false"),
         ("browserRendering", "true"),
@@ -386,20 +391,52 @@ async def test_get_screenshot_sends_fixed_full_page_fields(http_transport):
         ("saveResult", "true"),
         ("maxAge", "0"),
     ]
-    assert query(requests[1]) == {
-        "url": URL,
-        "screenshot": "full",
-        "html": "false",
-        "markdown": "false",
-        "browserRendering": "true",
-        "timeout": "120",
-        "waitForSelector": "#results",
-        "geoCode": "de",
-        "saveResult": "true",
-        "maxAge": "0",
-        "maxRetries": "2",
-    }
     assert output.data == expected
+    client = recording_client_factory()
+    await configure(MrscraperGetScreenshot, **values).capture()
+    assert client.calls == [
+        (
+            "get_screenshot",
+            {
+                "url": URL,
+                "screenshot": area or "full",
+                "timeout": 300,
+                "wait_for_selector": None,
+                "geo_code": None,
+                "max_age": 0,
+                "max_retries": None,
+            },
+        )
+    ]
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+async def test_get_screenshot_maps_the_page_options(http_transport):
+    """Get Screenshot passes its page options in the standard order after the fixed fields."""
+    requests, _responses = http_transport
+    await configure(
+        MrscraperGetScreenshot,
+        url=URL,
+        screenshot="top",
+        timeout=120,
+        wait_for_selector="#results",
+        geo_code="DE",
+        max_retries="2",
+    ).capture()
+    assert list(query(requests[0]).items()) == [
+        ("url", URL),
+        ("screenshot", "top"),
+        ("html", "false"),
+        ("markdown", "false"),
+        ("browserRendering", "true"),
+        ("timeout", "120"),
+        ("waitForSelector", "#results"),
+        ("geoCode", "de"),
+        ("saveResult", "true"),
+        ("maxAge", "0"),
+        ("maxRetries", "2"),
+    ]
 
 
 @pytest.mark.unit
@@ -504,6 +541,8 @@ async def test_web_search_sends_country_only_when_set(http_transport):
         (MrscraperFetchHtml, "fetch", {"url": URL, "browser_rendering": "Sometimes"}, "browser_rendering"),
         (MrscraperScrapeMarkdown, "scrape", {"url": URL, "geo_code": "1a"}, "geo_code"),
         (MrscraperGetScreenshot, "capture", {"url": URL, "timeout": 331}, "timeout"),
+        (MrscraperGetScreenshot, "capture", {"url": URL, "screenshot": "99x800"}, "screenshot"),
+        (MrscraperGetScreenshot, "capture", {"url": URL, "screenshot": "None"}, "screenshot"),
         (MrscraperScrapeBrand, "extract_brand", {"url": "example.com"}, "url"),
         (MrscraperScrapeJson, "extract", {"url": URL, "prompt": " "}, "prompt"),
         (MrscraperWebSearch, "search", {"query": " "}, "query"),

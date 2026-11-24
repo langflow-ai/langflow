@@ -53,7 +53,14 @@ Retrieve a page as clean Markdown. Browser rendering is optional. This component
 
 ## MrScraper Get Screenshot
 
-Capture a base64 PNG screenshot of the full page. Browser rendering is always enabled. This component sends `GET https://api.mrscraper.com` with `screenshot=full`, `html=false`, `markdown=false`, and `browserRendering=true`, the **URL**, and the shared **Timeout**, **Wait for Selector**, **Geo Code**, **Max Age**, and **Max Retries** settings. The output contains the base64 `screenshot` and the page `html`, which the API includes even though `html=false` is sent.
+Capture a base64 PNG screenshot of the full page, the first viewport, or a custom viewport. Browser rendering is always enabled. This component sends `GET https://api.mrscraper.com` with the **URL**, `screenshot` set to the chosen area, `html=false`, `markdown=false`, and `browserRendering=true`, plus the shared **Timeout**, **Wait for Selector**, **Geo Code**, **Max Age**, and **Max Retries** settings.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| URL (`url`) | Required | Absolute HTTP or HTTPS URL of the page to process. Available in Tool Mode. |
+| Screenshot (`screenshot`) | `full` | Screenshot area to capture: `full` for the entire scroll height, `top` for the first viewport, or a `WIDTHxHEIGHT` viewport from 100 to 3840 pixels with an optional `-ZOOM` percent from 25 to 300, such as `1280x800` or `1920x1080-75`. Select `full` or `top`, or type a viewport size. |
+
+The output contains the base64 `screenshot` and the page `html`, which the API includes even though `html=false` is sent.
 
 ## MrScraper Scrape Brand
 
@@ -91,7 +98,7 @@ The output contains `success`, `message`, and a `data` array whose rows include 
 **MrScraper Account** is now displayed as **MrScraper Status**, and **MrScraper Scraper API** as **MrScraper Scrape HTML**. Their classes and saved-flow identifiers remain `MrscraperAccount` and `MrscraperFetchHtml`, **Web Search** keeps `MrscraperWebSearch`, and every output name remains `data`. Review these changes in existing flows:
 
 - **Status** returns the raw account record instead of a calculated summary and no longer has a timeout. Read usage from `data.tokenUsage` and `data.tokenLimit`.
-- **Scrape HTML** always requests HTML. Use **Scrape Markdown** for Markdown and **Get Screenshot** for a full-page screenshot, or set **Screenshot** on **Scrape HTML**. **Visit Home Page First** is now **Warm Start**. The **Super**, **Proxy Country**, **Use Proxy**, **Custom Proxy**, **Bypass Proxy**, **Cookie Jar**, **Target Headers**, **Stream**, and **Discard Token Secret** settings were removed because the API reference no longer lists them. **Geo Code** and **Max Retries** are now blank by default. The **Save Result** and **Token Cap** settings were removed: results are always saved to the dashboard Result tab, and no token cap is sent.
+- **Scrape HTML** always requests HTML. Use **Scrape Markdown** for Markdown and **Get Screenshot** for a screenshot of the full page, the first viewport, or a custom viewport, or set **Screenshot** on **Scrape HTML**. **Visit Home Page First** is now **Warm Start**. The **Super**, **Proxy Country**, **Use Proxy**, **Custom Proxy**, **Bypass Proxy**, **Cookie Jar**, **Target Headers**, **Stream**, and **Discard Token Secret** settings were removed because the API reference no longer lists them. **Geo Code** and **Max Retries** are now blank by default. The **Save Result** and **Token Cap** settings were removed: results are always saved to the dashboard Result tab, and no token cap is sent.
 - **Web Search** takes a **Search Query** with optional **Country** and **Number of Results**. Re-enter the query in existing nodes; Google URL parsing and the **Raw HTML**, **Format**, **Region**, **Language**, **Page**, **Render JavaScript**, and **Timeout** settings were removed.
 
 The AI Agent Scraper, Batch Scrape URLs, Crawl Website, Get Result Detail, Get Results, Run AI Scraper, and Run Manual Scraper components were retired in Langflow 1.13.0 and have no equivalent. Saved nodes of these components still load as retired placeholders with their fields and connections, but running one fails with a message that names **MrScraper Scrape HTML** as the replacement. Use **Scrape JSON** for prompt-driven extraction from a single page.
