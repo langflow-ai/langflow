@@ -24,7 +24,7 @@ from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
+from fastapi import HTTPException, Request
 from langflow.services.authorization.access_ceiling import (
     ExternalAccessContext,
     set_current_external_access_context,
@@ -193,15 +193,17 @@ async def test_files_upload_viewer_denied(owner):
     flow = _make_flow(owner.id)
     storage = MagicMock(save_file=AsyncMock())
     settings_service = SimpleNamespace(settings=SimpleNamespace(max_file_size_upload=100))
-    upload = SimpleNamespace(size=1, filename="x.txt", read=AsyncMock(return_value=b"data"))
+    request = MagicMock(spec=Request)
+    session = SimpleNamespace(commit=AsyncMock())
 
     set_current_external_access_context(_viewer_ceiling())
     try:
         with pytest.raises(HTTPException) as exc_info:
             await files.upload_file(
-                file=upload,
+                request=request,
                 flow=flow,
                 current_user=owner,
+                session=session,
                 storage_service=storage,
                 settings_service=settings_service,
             )
@@ -209,6 +211,8 @@ async def test_files_upload_viewer_denied(owner):
         set_current_external_access_context(None)
 
     assert exc_info.value.status_code == 403
+    session.commit.assert_not_awaited()
+    request.body.assert_not_awaited()
     storage.save_file.assert_not_awaited()
 
 

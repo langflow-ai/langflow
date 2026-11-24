@@ -1,5 +1,6 @@
 import hashlib
 import os
+import re
 from datetime import datetime, timezone
 from http import HTTPStatus
 from io import BytesIO
@@ -8,11 +9,14 @@ from typing import Annotated
 from uuid import UUID
 
 import anyio
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import StreamingResponse
 from lfx.services.settings.service import SettingsService
 from lfx.utils.file_path_security import flow_storage_scope
 from lfx.utils.helpers import build_content_type_from_extension
+from python_multipart.exceptions import MultipartParseError
+from starlette.datastructures import UploadFile
 
 from langflow.api.utils import (
     CurrentActiveUser,
@@ -20,6 +24,7 @@ from langflow.api.utils import (
     ValidatedFileName,
     ValidatedFolderName,
     build_content_disposition,
+    release_db_transaction,
 )
 from langflow.api.v1.schemas import UploadFileResponse
 from langflow.services.authorization import FlowAction, ensure_flow_permission
@@ -142,25 +147,88 @@ async def get_flow_for_image(flow_id: str, current_user: CurrentActiveUser, sess
     return await get_flow(parsed_flow_id, current_user, session)
 
 
-@router.post("/upload/{flow_id}", status_code=HTTPStatus.CREATED)
+async def _validate_upload_boundary(request: Request) -> None:
+    content_type = request.headers.get("content-type", "")
+    if "multipart/form-data" not in content_type or "boundary=" not in content_type:
+        raise HTTPException(
+            status_code=422, detail="Content-Type header must be 'multipart/form-data' with a boundary parameter."
+        )
+
+    boundary = content_type.rsplit("boundary=", 1)[-1].strip()
+    if not re.fullmatch(r"[\w\-]{1,70}", boundary):
+        raise HTTPException(status_code=422, detail="Invalid boundary format")
+
+    body = await request.body()
+    boundary_start = f"--{boundary}".encode()
+    boundary_end = boundary_start + b"--"
+    if not body.startswith(boundary_start) or not body.endswith((boundary_end, boundary_end + b"\r\n")):
+        raise HTTPException(status_code=422, detail="Invalid multipart formatting")
+
+
+@router.post(
+    "/upload/{flow_id}",
+    status_code=HTTPStatus.CREATED,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {
+                "multipart/form-data": {
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "file": {"type": "string", "title": "File", "contentMediaType": "application/octet-stream"}
+                        },
+                        "required": ["file"],
+                    }
+                }
+            },
+        }
+    },
+)
 async def upload_file(
     *,
-    file: UploadFile,
+    request: Request,
     flow: Annotated[Flow, Depends(get_flow)],
     current_user: CurrentActiveUser,
+    session: DbSession,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ) -> UploadFileResponse:
     # Writing a file to a flow's storage is a flow mutation: enforce WRITE so
     # the external access ceiling (e.g. a "viewer") cannot upload via this route.
+    flow_id = flow.id
     await ensure_flow_permission(
         current_user,
         FlowAction.WRITE,
-        flow_id=flow.id,
+        flow_id=flow_id,
         flow_user_id=flow.user_id,
         workspace_id=flow.workspace_id,
         folder_id=flow.folder_id,
     )
+
+    # Return the connection used by the flow lookup to the pool before reading the upload.
+    await release_db_transaction(session)
+
+    # A declared UploadFile parameter makes FastAPI parse the form before running auth dependencies.
+    await _validate_upload_boundary(request)
+    try:
+        async with request.form() as form:
+            file = form.get("file")
+            if not isinstance(file, UploadFile):
+                error = (
+                    {"type": "missing", "msg": "Field required"}
+                    if file is None
+                    else {"type": "value_error", "msg": "Expected an uploaded file"}
+                )
+                raise RequestValidationError([{**error, "loc": ("body", "file")}])
+            return await _store_flow_upload(file, flow_id, storage_service, settings_service)
+    except MultipartParseError as exc:
+        raise HTTPException(status_code=400, detail="There was an error parsing the body") from exc
+
+
+async def _store_flow_upload(
+    file: UploadFile, flow_id: UUID, storage_service: StorageService, settings_service: SettingsService
+) -> UploadFileResponse:
     try:
         max_file_size_upload = settings_service.settings.max_file_size_upload
     except Exception as e:
@@ -171,15 +239,14 @@ async def upload_file(
             status_code=413, detail=f"File size is larger than the maximum file size {max_file_size_upload}MB."
         )
 
-    # Authorization handled by get_flow dependency
     try:
         file_content = await file.read()
         timestamp = datetime.now(tz=timezone.utc).astimezone().strftime("%Y-%m-%d_%H-%M-%S")
         file_name = file.filename or hashlib.sha256(file_content).hexdigest()
         full_file_name = f"{timestamp}_{file_name}"
-        folder = flow_storage_scope(flow.id)
+        folder = flow_storage_scope(flow_id)
         await storage_service.save_file(flow_id=folder, file_name=full_file_name, data=file_content)
-        return UploadFileResponse(flow_id=str(flow.id), file_path=f"{folder}/{full_file_name}")
+        return UploadFileResponse(flow_id=str(flow_id), file_path=f"{folder}/{full_file_name}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
