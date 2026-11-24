@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from lfx.base.data.utils import parse_text_file_to_data
 from lfx.components.files_and_knowledge.directory import DirectoryComponent
 from lfx.schema import Data, DataFrame
 from lfx.services.deps import get_settings_service
@@ -94,6 +95,7 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             mock_retrieve_file_paths.return_value,
             max_concurrency=max_concurrency,
             silent_errors=silent_errors,
+            load_function=parse_text_file_to_data,
         )
 
     def test_directory_blocked_outside_storage_when_restricted(self, tmp_path):
@@ -443,6 +445,62 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
         monkeypatch.chdir(workspace)
         monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [])
         monkeypatch.setattr(get_settings_service().settings, "restrict_local_file_access", True)
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": str(workspace),
+                "recursive": False,
+                "use_multithreading": False,
+                "silent_errors": False,
+                "types": ["txt"],
+            }
+        )
+
+        with pytest.raises(LocalFileAccessError):
+            directory_component.load_directory()
+
+    @pytest.mark.parametrize("use_multithreading", [False, True])
+    def test_directory_loads_bundled_lfx_components_with_s3_storage(self, tmp_path, monkeypatch, use_multithreading):
+        """With S3 storage the bundled sources are still read from the local package.
+
+        Under S3 the storage-aware reader confines every local read to the user's storage
+        scope, so the Directory component reads the bundled sources directly instead.
+        """
+        monkeypatch.chdir(tmp_path)
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "directory_component_allowed_roots", [])
+        monkeypatch.setattr(settings, "restrict_local_file_access", True)
+        monkeypatch.setattr(settings, "storage_type", "s3")
+        components_dir = Path(lfx.__file__).parent / "components"
+
+        directory_component = DirectoryComponent()
+        directory_component.set_attributes(
+            {
+                "path": str(components_dir),
+                "recursive": False,
+                "use_multithreading": use_multithreading,
+                "max_concurrency": 2,
+                "silent_errors": False,
+                "types": ["py"],
+            }
+        )
+
+        results = directory_component.load_directory()
+
+        assert results
+        assert all(Path(result.data["file_path"]).parent == components_dir.resolve() for result in results)
+
+    def test_directory_still_confines_working_root_with_s3_storage(self, tmp_path, monkeypatch):
+        """Reading the bundled sources directly must not lift the restriction for any other path."""
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        (workspace / "secret.txt").write_text("server file", encoding="utf-8")
+        monkeypatch.chdir(workspace)
+        settings = get_settings_service().settings
+        monkeypatch.setattr(settings, "directory_component_allowed_roots", [])
+        monkeypatch.setattr(settings, "restrict_local_file_access", True)
+        monkeypatch.setattr(settings, "storage_type", "s3")
 
         directory_component = DirectoryComponent()
         directory_component.set_attributes(

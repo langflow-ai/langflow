@@ -70,6 +70,12 @@ export interface WorkflowRunOptions {
    * them (visitors must never override the stored flow definition).
    */
   usePublicEndpoint?: boolean;
+  /**
+   * Flow id the chat view keys messages by, when it differs from `flowId`.
+   * The shareable playground reads messages under a per-visitor flow id, so a
+   * run submitted with the real flow id must file its messages under this one.
+   */
+  messageFlowId?: string;
 }
 
 /** The v2 workflows endpoint path. */

@@ -532,3 +532,55 @@ async def test_live_flow_ingestion_is_not_swept_as_orphaned(
     job = await get_job_service().get_job_by_job_id(UUID(run["job_id"]))
     assert job.status == JobStatus.COMPLETED
     assert job.error is None
+
+
+async def _ingest_through_a_flow(client, logged_in_headers, active_user, monkeypatch, tmp_path, name):
+    monkeypatch.setattr(get_settings_service().settings, "knowledge_bases_dir", str(tmp_path))
+    monkeypatch.delenv("PGVECTOR_CONNECTION_STRING", raising=False)
+    monkeypatch.setattr(
+        "lfx.components.files_and_knowledge.knowledge.get_embeddings", lambda **_kwargs: LocalEmbeddings()
+    )
+    response = await client.post(
+        "/api/v1/knowledge_bases",
+        json={"name": name, "embedding_provider": "OpenAI", "embedding_model": "text-embedding-3-small"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 201, response.text
+    component = KnowledgeComponent(
+        knowledge_base=name,
+        column_config=[{"column_name": "text", "vectorize": True, "identifier": False}],
+        allow_duplicates=False,
+        _user_id=active_user.id,
+    )
+    component.set(input_df=DataFrame({"text": ["first document", "second document"]}))
+    async for result in Graph(start=component, end=component).async_start():
+        if not isinstance(result, Finish):
+            assert result.result_dict, result
+    response = await client.get(f"/api/v1/knowledge_bases/{name}/chunks", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    return response.json()["chunks"]
+
+
+async def test_flow_written_chunks_carry_their_runs_job_id(
+    client, logged_in_headers, active_user, monkeypatch, tmp_path
+):
+    name = "flow_chunks_labelled"
+    chunks = await _ingest_through_a_flow(client, logged_in_headers, active_user, monkeypatch, tmp_path, name)
+
+    response = await client.get(f"/api/v1/knowledge_bases/{name}/runs", headers=logged_in_headers)
+    job_id = response.json()["runs"][0]["job_id"]
+    assert job_id
+    assert {chunk["metadata"]["job_id"] for chunk in chunks} == {job_id}
+    assert all(chunk["metadata"]["ingested_at"] for chunk in chunks)
+
+
+async def test_flow_with_no_job_still_ingests_without_a_label(
+    client, logged_in_headers, active_user, monkeypatch, tmp_path
+):
+    monkeypatch.setattr(KnowledgeComponent, "_begin_ingestion_run", AsyncMock(return_value=(None, None, None, None)))
+    chunks = await _ingest_through_a_flow(
+        client, logged_in_headers, active_user, monkeypatch, tmp_path, "flow_chunks_unlabelled"
+    )
+
+    assert len(chunks) == 2
+    assert all("job_id" not in chunk["metadata"] for chunk in chunks)

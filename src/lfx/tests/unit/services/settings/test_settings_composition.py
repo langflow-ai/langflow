@@ -162,6 +162,8 @@ EXPECTED_FIELDS = {
     "audit_enabled",
     "audit_retention_days",
     "audit_exclude_events",
+    "audit_trusted_api_key_ids",
+    "audit_trusted_api_key",
     "max_flow_version_entries_per_flow",
     # EvalsSettings
     "evals_max_items",
@@ -193,6 +195,7 @@ EXPECTED_FIELDS = {
     "load_flows_path",
     "bundle_urls",
     "lazy_load_components",
+    "component_class_cache_enabled",
     "create_starter_projects",
     "update_starter_projects",
     # UiSettings

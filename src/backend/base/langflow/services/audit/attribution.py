@@ -1,9 +1,9 @@
-"""Who an event is attributed to, derived from the credential and never the caller.
+"""Authenticated actor and represented identity are independent audit identities.
 
-A caller cannot supply any of these values. ``user_id`` is the Langflow account the
-request executes under, ``actor_type``/``actor_id`` the credential that
-authenticated it. The on-behalf-of pair is accepted only from a trusted Control
-Plane identity, which nothing in this module establishes, so it stays empty here.
+``user_id`` is the executing account; ``actor_type``/``actor_id`` identify the
+authenticated credential. The acting pair describes that actor's own identity
+when known. The represented pair describes an upstream principal asserted by
+an explicitly trusted credential. Neither pair changes authorization.
 """
 
 from __future__ import annotations
@@ -14,10 +14,13 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from langflow.services.audit.details import AuditContractError
+from langflow.services.audit.represented import current_represented_identity
 from langflow.services.audit.vocabulary import AuditActorType
 from langflow.services.database.models.audit_event.model import (
     ACTING_ISSUER_MAX_LENGTH,
     ACTING_SUBJECT_MAX_LENGTH,
+    REPRESENTED_ISSUER_MAX_LENGTH,
+    REPRESENTED_SUBJECT_MAX_LENGTH,
 )
 
 if TYPE_CHECKING:
@@ -39,17 +42,30 @@ class AuditActor:
     actor_id: UUID | None
     acting_issuer: str | None = None
     acting_subject: str | None = None
+    represented_issuer: str | None = None
+    represented_subject: str | None = None
 
     def __post_init__(self) -> None:
-        if (self.acting_issuer is None) != (self.acting_subject is None):
-            msg = "acting_issuer and acting_subject must be set together"
-            raise AuditContractError(msg)
-        if self.acting_issuer is not None and len(self.acting_issuer) > ACTING_ISSUER_MAX_LENGTH:
-            msg = "acting_issuer is longer than the contract allows"
-            raise AuditContractError(msg)
-        if self.acting_subject is not None and len(self.acting_subject) > ACTING_SUBJECT_MAX_LENGTH:
-            msg = "acting_subject is longer than the contract allows"
-            raise AuditContractError(msg)
+        """Require complete identity pairs and enforce each field's character limit."""
+        for prefix, issuer, subject, issuer_limit, subject_limit in (
+            ("acting", self.acting_issuer, self.acting_subject, ACTING_ISSUER_MAX_LENGTH, ACTING_SUBJECT_MAX_LENGTH),
+            (
+                "represented",
+                self.represented_issuer,
+                self.represented_subject,
+                REPRESENTED_ISSUER_MAX_LENGTH,
+                REPRESENTED_SUBJECT_MAX_LENGTH,
+            ),
+        ):
+            if (issuer is None) != (subject is None):
+                msg = f"{prefix}_issuer and {prefix}_subject must be set together"
+                raise AuditContractError(msg)
+            if issuer is not None and len(issuer) > issuer_limit:
+                msg = f"{prefix}_issuer is longer than the contract allows"
+                raise AuditContractError(msg)
+            if subject is not None and len(subject) > subject_limit:
+                msg = f"{prefix}_subject is longer than the contract allows"
+                raise AuditContractError(msg)
 
 
 SYSTEM_ACTOR = AuditActor(user_id=None, actor_type=AuditActorType.SYSTEM, actor_id=None)
@@ -66,7 +82,14 @@ def resolve_audit_actor(user_id: UUID | None) -> AuditActor:
     from langflow.services.authorization.audit import _resolve_actor
 
     resolved_user_id, actor_type, actor_id = _resolve_actor(user_id)
-    return AuditActor(user_id=resolved_user_id, actor_type=AuditActorType(actor_type), actor_id=actor_id)
+    represented = current_represented_identity.get()
+    return AuditActor(
+        user_id=resolved_user_id,
+        actor_type=AuditActorType(actor_type),
+        actor_id=actor_id,
+        represented_issuer=represented.issuer if represented else None,
+        represented_subject=represented.subject if represented else None,
+    )
 
 
 def audit_request_id() -> UUID | None:
@@ -94,11 +117,14 @@ class AuditRequestContextMiddleware:
         self.app = app
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        """Isolate request attribution and restore the previous context after the response."""
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
         token = _request_id.set(uuid4())
+        represented_token = current_represented_identity.set(None)
         try:
             await self.app(scope, receive, send)
         finally:
+            current_represented_identity.reset(represented_token)
             _request_id.reset(token)

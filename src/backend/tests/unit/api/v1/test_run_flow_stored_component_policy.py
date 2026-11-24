@@ -143,6 +143,46 @@ async def test_stored_graph_builds_from_the_sanitized_copy(run_flow_env, monkeyp
 
 
 @pytest.mark.asyncio
+async def test_a_cold_v1_build_asks_for_the_runs_extra_file_scopes_like_the_warm_one(run_flow_env, monkeypatch):
+    """A restart or cache miss must not turn a permitted file read into a failure."""
+    from langflow.api import warm_graph
+    from langflow.api.utils.flow_utils import register_file_scope_provider
+    from langflow.api.v1.schemas import SimplifiedAPIRequest
+
+    endpoints = run_flow_env
+    user_id = uuid4()
+    flow = _make_flow(user_id, _stored_graph("# stored source"))
+    captured: dict = {}
+
+    async def provider(_flow_id, _user_id):
+        return {"user-owner"}
+
+    def fake_from_payload(payload, **kwargs):  # noqa: ARG001
+        captured.update(kwargs)
+        graph = SimpleNamespace(vertices=[], run_id=None)
+        graph.set_run_id = lambda run_id: setattr(graph, "run_id", str(run_id))
+        return graph
+
+    async def sanitize(data, *, is_superuser):  # noqa: ARG001
+        return data
+
+    monkeypatch.setattr(endpoints, "prepare_flow_build_for_user", sanitize)
+    monkeypatch.setattr(endpoints.Graph, "from_payload", staticmethod(fake_from_payload))
+    monkeypatch.setattr(warm_graph, "warm_deepcopy", AsyncMock(return_value=None))
+    register_file_scope_provider(provider)
+    try:
+        await endpoints.simple_run_flow(
+            flow=flow,
+            input_request=SimplifiedAPIRequest(session_id="s"),
+            api_key_user=SimpleNamespace(id=user_id, is_superuser=False),
+        )
+    finally:
+        register_file_scope_provider(None)
+
+    assert captured["authorized_extra_file_scopes"] == frozenset({"user-owner"})
+
+
+@pytest.mark.asyncio
 async def test_permissive_policy_leaves_the_warm_fast_path_intact(run_flow_env, monkeypatch):
     """With no caller-specific restriction the pre-existing warm fast path still serves."""
     from langflow.api import warm_graph

@@ -9,6 +9,7 @@ from lfx.custom.schema import ComponentUpdateWarning
 from lfx.graph.schema import RunOutputs
 from lfx.services.settings.base import Settings
 from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
+from lfx.upgrade.retired import retirement_lookup
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -468,6 +469,7 @@ class ConfigResponse(BaseConfigResponse):
     """
 
     type: Literal["full"] = "full"
+    retired_components: dict[str, dict] = Field(default_factory=retirement_lookup)
     serialization_max_items_length: int
     serialization_max_text_length: int
     auto_saving: bool

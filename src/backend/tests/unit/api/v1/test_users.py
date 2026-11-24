@@ -3,10 +3,12 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 from uuid import UUID, uuid4
 
+import pytest
 from fastapi import status
 from httpx import AsyncClient
 from langflow.services.database.models.connection import Connection, ConnectionSecret
 from langflow.services.database.models.connection.oauth import ConnectionOAuth
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
 
 from tests.unit.erase_helpers import wait_for_erase
@@ -353,6 +355,45 @@ async def test_patch_user(client: AsyncClient, logged_in_headers_super_user):
     assert "updated_at" in result, "The result must have an 'updated_at' key"
     assert "username" in result, "The result must have an 'username' key"
     assert result["username"] == updated_name, "The username must be updated"
+
+
+async def test_patch_user_combined_activation_and_demotion_updates_both_fields(
+    client: AsyncClient, logged_in_headers_super_user
+):
+    """A single update must admit both policy lifecycle transitions before commit."""
+    target = User(
+        username=f"combined-lifecycle-{uuid4().hex}",
+        password="hashed",  # noqa: S106  # pragma: allowlist secret
+        is_active=False,
+        is_superuser=True,
+    )
+    async with session_scope() as session:
+        session.add(target)
+        await session.commit()
+        await session.refresh(target)
+
+    try:
+        response = await client.patch(
+            f"api/v1/users/{target.id}",
+            json={"is_active": True, "is_superuser": False},
+            headers=logged_in_headers_super_user,
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["is_active"] is True
+        assert response.json()["is_superuser"] is False
+
+        async with session_scope() as session:
+            persisted = await session.get(User, target.id)
+            assert persisted is not None
+            assert persisted.is_active is True
+            assert persisted.is_superuser is False
+    finally:
+        async with session_scope() as session:
+            persisted = await session.get(User, target.id)
+            if persisted is not None:
+                await session.delete(persisted)
+                await session.commit()
 
 
 async def test_patch_user_rejects_a_case_variant_of_an_existing_username(
@@ -847,19 +888,31 @@ async def test_read_all_users_search(client: AsyncClient, logged_in_headers_supe
         await client.delete(f"api/v1/users/{user_id}", headers=logged_in_headers_super_user)
 
 
-async def test_patch_user_deactivate_other_user_allowed(client: AsyncClient, logged_in_headers_super_user):
+@pytest.mark.parametrize("use_api_key", [False, True])
+async def test_patch_user_deactivate_other_user_allowed(
+    client: AsyncClient, logged_in_headers_super_user, active_super_user, use_api_key
+):
     """Test that a superuser can deactivate another user's account."""
     # Create a new user
     basic_case = {"username": "user_to_deactivate", "password": "password123"}
     create_response = await client.post("api/v1/users/", json=basic_case, headers=logged_in_headers_super_user)
     assert create_response.status_code == status.HTTP_201_CREATED
     user_id = create_response.json()["id"]
+    headers = logged_in_headers_super_user
+    if use_api_key:
+        from langflow.services.database.models.api_key.crud import create_api_key
+        from langflow.services.database.models.api_key.model import ApiKeyCreate
+
+        async with session_scope() as session:
+            key = await create_api_key(session, ApiKeyCreate(name="user-admin"), active_super_user.id)
+        headers = {"x-api-key": key.api_key}
+        client.cookies.clear()
 
     # Deactivate the other user
     response = await client.patch(
         f"api/v1/users/{user_id}",
         json={"is_active": False},
-        headers=logged_in_headers_super_user,
+        headers=headers,
     )
     result = response.json()
 

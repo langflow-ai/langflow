@@ -214,7 +214,7 @@ async def test_typed_artifact_rejects_unknown_bound_variable_instead_of_downgrad
     project = Folder(id=uuid4(), name="Unknown variable kind", user_id=owner_id)
     flow = _bound_flow(owner_id, project.id, ["UNKNOWN_NAME_OR_LITERAL_SECRET"])
 
-    with pytest.raises(builder.ProjectArtifactError, match="variable kind") as caught:
+    with pytest.raises(builder.ProjectArtifactVariableBindingError, match="Rebind field") as caught:
         await _typed_export(project, [flow], {})
 
     assert str(flow.id) in str(caught.value)
@@ -231,11 +231,51 @@ async def test_typed_artifact_rejects_missing_bound_variable_matching_literal_mc
     flow.data["nodes"][0]["data"]["node"]["template"]["mcp_server"] = {"type": "mcp", "value": {"name": "demo"}}
     registered = {"demo": {"url": "https://example.com/mcp", "headers": {"Authorization": "literal-credential"}}}
 
-    with pytest.raises(builder.ProjectArtifactError, match="variable kind") as caught:
+    with pytest.raises(builder.ProjectArtifactVariableBindingError, match="Rebind field") as caught:
         await _typed_export(project, [flow], {}, registered_mcp_servers=registered)
 
     assert str(flow.id) in str(caught.value)
     assert alias not in str(caught.value)
+
+
+@pytest.mark.asyncio
+async def test_artifact_identifies_unresolved_table_binding_in_grouped_flow():
+    owner_id = uuid4()
+    project = Folder(id=uuid4(), name="Grouped project", user_id=owner_id)
+    flow = _bound_flow(owner_id, project.id, [])
+    table = {
+        "type": "table",
+        "table_schema": [{"name": "key"}, {"name": "value", "load_from_db": True}],
+        "value": [
+            {"key": "Accept", "value": "application/json"},
+            {"key": "X-Plain", "value": "Literal label", "__load_from_db_fields": {"value": False}},
+            {"key": "X-Private", "value": "EDITOR_LABEL", "__load_from_db_fields": {"value": True}},
+            {"key": "X-Legacy", "value": "OWNER_LABEL"},
+            {"key": "Authorization", "value": "Bearer private"},
+            {"key": "X-Other", "value": "sk-abcdefgh"},  # pragma: allowlist secret
+        ],
+    }
+    nested = {"id": "APIRequest-42", "data": {"node": {"template": {"headers": table}}}}
+    flow.data["nodes"][0]["data"]["node"]["flow"] = {"data": {"nodes": [nested]}}
+    with pytest.raises(
+        builder.ProjectArtifactVariableBindingError,
+        match="Rebind field 'headers' on node 'APIRequest-42', row 3, column 'value'",
+    ) as raised:
+        await _typed_export(project, [flow], {"OWNER_LABEL": "plain"})
+    assert "EDITOR_LABEL" not in str(raised.value)
+    assert "Literal label" not in str(raised.value)
+    assert "X-Private" not in str(raised.value)
+    artifact = await _typed_export(project, [flow], {"EDITOR_LABEL": "plain", "OWNER_LABEL": "plain"})
+    with zipfile.ZipFile(io.BytesIO(artifact.content)) as archive:
+        manifest = json.loads(archive.read("manifest.json"))
+        exported = json.loads(archive.read(f"flows/{flow.id}.json"))
+    assert manifest["required_variables"] == ["EDITOR_LABEL", "OWNER_LABEL"]
+    group = exported["data"]["nodes"][0]["data"]["node"]["flow"]
+    rows = group["data"]["nodes"][0]["data"]["node"]["template"]["headers"]["value"]
+    headers = {row["key"]: row["value"] for row in rows}
+    assert headers["Accept"] == "application/json"
+    assert headers["Authorization"] is None
+    assert headers["X-Other"] is None
 
 
 @pytest.mark.asyncio
