@@ -32,9 +32,9 @@ All seven components return the API payload as [`Data`](/data-types#json). The S
 
 ## MrScraper Status
 
-Return the raw account status API response without summarizing, redacting body fields, or adding calculated fields. This component calls `GET https://api.app.mrscraper.com/api/v1/subscription-accounts` and takes only the **MrScraper API Token**.
+Check account usage, rate limits, and subscription status. This component calls `GET https://api.app.mrscraper.com/api/v1/subscription-accounts` and takes only the **MrScraper API Token**.
 
-The output is the account record as the API sends it, with account details nested under `data`, such as `data.tokenLimit`, `data.tokenUsage`, `data.subscriptionItem`, and `data.scraperAllowance`. The record includes account identity and billing fields, so pass only the fields you need to a language model. For example, connect **Status** to a **Parser** to read `data.tokenUsage` before starting a scraping workflow.
+The output contains selected status fields under `data`, such as `data.tokenLimit`, `data.tokenUsage`, `data.subscriptionItem`, and `data.scraperAllowance`. For example, connect **Status** to a **Parser** to read `data.tokenUsage` before starting a scraping workflow.
 
 ## MrScraper Scrape HTML
 
@@ -95,14 +95,14 @@ The output contains `success`, `message`, and a `data` array whose rows include 
 
 ## Updating existing flows
 
-**MrScraper Account** is now displayed as **MrScraper Status**, and **MrScraper Scraper API** as **MrScraper Scrape HTML**. Their classes and saved-flow identifiers remain `MrscraperAccount` and `MrscraperFetchHtml`, **Web Search** keeps `MrscraperWebSearch`, and every output name remains `data`. Review these changes in existing flows:
+**MrScraper Account** is now displayed as **MrScraper Status**, and **MrScraper Scraper API** as **MrScraper Scrape HTML**. Their classes and saved-flow identifiers remain `MrscraperAccount` and `MrscraperFetchHtml`, **Web Search** keeps `MrscraperWebSearch`, and every output name remains `data`.
 
-- **Status** returns the raw account record instead of a calculated summary and no longer has a timeout. Read usage from `data.tokenUsage` and `data.tokenLimit`.
-- **Scrape HTML** always requests HTML. Use **Scrape Markdown** for Markdown and **Get Screenshot** for a screenshot of the full page, the first viewport, or a custom viewport, or set **Screenshot** on **Scrape HTML**. **Visit Home Page First** is now **Warm Start**. The **Super**, **Proxy Country**, **Use Proxy**, **Custom Proxy**, **Bypass Proxy**, **Cookie Jar**, **Target Headers**, **Stream**, and **Discard Token Secret** settings were removed because the API reference no longer lists them. **Geo Code** and **Max Retries** are now blank by default. The **Save Result** and **Token Cap** settings were removed: results are always saved to the dashboard Result tab, and no token cap is sent.
-- **Web Search** takes a **Search Query** with optional **Country** and **Number of Results**. Re-enter the query in existing nodes; Google URL parsing and the **Raw HTML**, **Format**, **Region**, **Language**, **Page**, **Render JavaScript**, and **Timeout** settings were removed.
+Before running a flow saved with SDK 0.6.x, open it in the flow editor and update each Account, Scraper API, and Web Search node. Review the settings and connected outputs below, then save the flow. If you use the flow with the CLI, export the updated flow again. `lfx upgrade` reports these changes as breaking and requires an editor update.
+
+- **Status** no longer has a timeout. Read usage from `data.tokenUsage` and `data.tokenLimit` and update downstream references to the previous calculated summary.
+- **Scrape HTML** always requests HTML. Use **Scrape Markdown** for Markdown and **Get Screenshot** for a standalone screenshot. The editor update carries over **Max Retries** and **Visit Home Page First** (now **Warm Start**) and converts the former **Screenshot** switch to `full` or `None`. The **Super**, **Proxy Country**, **Use Proxy**, **Custom Proxy**, **Bypass Proxy**, **Cookie Jar**, **Target Headers**, **Stream**, and **Discard Token Secret** settings were removed. **Geo Code** and **Max Retries** default to blank on new nodes. Results are always saved to the dashboard Result tab, and there is no token cap.
+- **Web Search** takes a **Search Query** with optional **Country** and **Number of Results**. Enter the query on the updated node or reconnect the upstream node to the **Search Query** input. If the old node used a Google search URL, use its query text. Review downstream components that expected raw HTML. The **Raw HTML**, **Format**, **Region**, **Language**, **Page**, **Render JavaScript**, and **Timeout** settings were removed.
 
 The AI Agent Scraper, Batch Scrape URLs, Crawl Website, Get Result Detail, Get Results, Run AI Scraper, and Run Manual Scraper components were retired in Langflow 1.13.0 and have no equivalent. Saved nodes of these components still load as retired placeholders with their fields and connections, but running one fails with a message that names **MrScraper Scrape HTML** as the replacement. Use **Scrape JSON** for prompt-driven extraction from a single page.
-
-Flows saved with one of these components still load. `lfx upgrade` reports each such node as retired, and running the flow fails with a message that names **Scraper API** as the replacement.
 
 For more information, see the [MrScraper documentation](https://docs.mrscraper.com).

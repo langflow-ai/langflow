@@ -12,6 +12,8 @@ from urllib.parse import quote, quote_plus
 
 import httpx
 import pytest
+from lfx.custom.utils import create_component_template
+from lfx.template.utils import update_frontend_node_with_template_values
 from lfx_bundles import mrscraper as components
 from lfx_bundles.mrscraper import mrscraper_common
 from lfx_bundles.mrscraper.mrscraper_account import MrscraperAccount
@@ -206,17 +208,90 @@ async def test_default_inputs_send_exact_sdk_keywords(
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_status_returns_the_raw_account_body(http_transport):
-    """Status uses the platform account endpoint and returns the body unchanged."""
+async def test_status_exposes_only_public_account_fields(http_transport):
+    """Status keeps usage and subscription fields and excludes credentials and billing identifiers."""
     requests, responses = http_transport
-    body = {"message": "Account found", "data": {"tokenLimit": 100, "tokenUsage": 25, "user": {"email": "u@x.io"}}}
-    responses.append(httpx.Response(200, json=body))
+    response = {
+        "message": f"Account found for {MOCK_MR_API_TOKEN}",
+        "data": {
+            "tokenLimit": 100,
+            "tokenUsage": 25,
+            "stripeStatus": "active",
+            "stripeCustomerId": "private-billing",
+            "user": {"email": "u@x.io", "latestApiToken": MOCK_MR_API_TOKEN},
+            "subscriptionItem": {
+                "name": f"Plan {MOCK_MR_API_TOKEN}",
+                "tokenLimit": 100,
+                "secret": MOCK_MR_API_TOKEN,
+            },
+            "scraperAllowance": {
+                "remaining": 75,
+                "plans": [{"remaining": 75, "api_key": MOCK_MR_API_TOKEN}],
+            },
+            "rateLimit": {"secret": MOCK_MR_API_TOKEN},
+        },
+    }
+    responses.append(httpx.Response(200, json=response))
     output = await configure(MrscraperAccount).get_account()
     request = requests[0]
     assert request.method == "GET"
     assert str(request.url) == "https://api.app.mrscraper.com/api/v1/subscription-accounts"
     assert request.headers["x-api-token"] == MOCK_MR_API_TOKEN
-    assert output.data == body
+    assert output.data == {
+        "data": {
+            "tokenLimit": 100,
+            "tokenUsage": 25,
+            "stripeStatus": "active",
+            "subscriptionItem": {"name": "Plan [REDACTED]", "tokenLimit": 100},
+            "scraperAllowance": {"remaining": 75, "plans": [{"remaining": 75}]},
+        }
+    }
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("method", "kwargs", "label"),
+    [
+        ("account", {"timeout": 30}, "Account"),
+        ("scraper_api", {"url": URL, "html": True}, "Scraper API"),
+        ("web_search", {"url": "running shoes", "raw": True}, "Web Search"),
+    ],
+)
+async def test_saved_sdk_calls_require_an_editor_update(http_transport, method, kwargs, label):
+    requests, _responses = http_transport
+    with pytest.raises(ValueError, match=f"Update the MrScraper {label} node in the flow editor"):
+        await call_sdk(MOCK_MR_API_TOKEN, method, **kwargs)
+    assert not requests
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+@pytest.mark.parametrize(("retry_limit", "capture"), [(0, False), (5, True)])
+async def test_updating_a_saved_html_node_keeps_its_request_settings(http_transport, retry_limit, capture):
+    requests, _responses = http_transport
+    current, _ = create_component_template(component_extractor=MrscraperFetchHtml())
+    saved = {
+        "display_name": "MrScraper Scraper API",
+        "template": {
+            "code": {"value": "old component source"},
+            "max_retries": {"type": "int", "value": retry_limit},
+            "screenshot": {"type": "bool", "value": capture},
+            "home_page": {"type": "bool", "value": True},
+        },
+    }
+    template = update_frontend_node_with_template_values(current, saved)["template"]
+    await configure(
+        MrscraperFetchHtml,
+        url=URL,
+        max_retries=template["max_retries"]["value"],
+        screenshot=template["screenshot"]["value"],
+        warm_start=template["warm_start"]["value"],
+    ).fetch()
+    params = query(requests[0])
+    assert params["maxRetries"] == str(retry_limit)
+    assert params["screenshot"] == ("full" if capture else "false")
+    assert params["warmStart"] == "true"
 
 
 @pytest.mark.unit

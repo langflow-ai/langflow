@@ -9,11 +9,14 @@ the standard parameter descriptions used by the MrScraper CLI and SDKs.
 from __future__ import annotations
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from urllib.parse import quote, quote_plus
 
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, DropdownInput, IntInput, MultilineInput, SecretStrInput, StrInput
+
+if TYPE_CHECKING:
+    from lfx.custom.custom_component.component import Component
 
 SDK_REQUIREMENT = "mrscraper-sdk>=0.12.0,<0.13.0"
 MISSING_SDK_MSG = f"Could not import mrscraper SDK. Please install it with `pip install '{SDK_REQUIREMENT}'`."
@@ -22,6 +25,16 @@ DEFAULT_JSON_PROMPT = "Extract all data as complete as possible."
 # The dropdown maps to the SDK's tri-state browser_rendering argument.
 BROWSER_RENDERING = {"Auto": None, "Enabled": True, "Disabled": False}
 NO_SCREENSHOT = "None"
+UPGRADE_REQUIRED = (
+    "Update the {component} node in the flow editor and review its settings before running it with MrScraper SDK 0.12."
+)
+
+
+def require_updated_node(component: Component, legacy_input: str) -> None:
+    """Handle servers that substitute current code while keeping the saved node template."""
+    vertex = component.get_vertex()
+    if vertex is not None and legacy_input in vertex.data["node"]["template"]:
+        raise ValueError(UPGRADE_REQUIRED.format(component=component.display_name))
 
 
 def build_client(token: str) -> Any:
@@ -50,6 +63,12 @@ def redact_token(message: str, token: str) -> str:
 
 async def call_sdk(token: str, method: str, **kwargs: Any) -> Any:
     """Call the optional SDK without exposing the configured token in errors."""
+    legacy_component = {"account": "MrScraper Account", "scraper_api": "MrScraper Scraper API"}.get(method)
+    if method == "web_search" and "url" in kwargs:
+        legacy_component = "MrScraper Web Search"
+    if legacy_component:
+        raise ValueError(UPGRADE_REQUIRED.format(component=legacy_component))
+
     client = build_client(token)
     from mrscraper import APIError, MrScraperError
 
@@ -113,8 +132,10 @@ def optional_integer(value: str | int | None, *, name: str) -> int | None:
         raise ValueError(msg) from exc
 
 
-def screenshot_capture(value: str | None) -> str | bool:
+def screenshot_capture(*, value: str | bool | None) -> str | bool:
     """Map the Scrape HTML screenshot choice to False or a capture string."""
+    if isinstance(value, bool):
+        return "full" if value else False
     text = optional_text(value)
     return False if text is None or text == NO_SCREENSHOT else text
 

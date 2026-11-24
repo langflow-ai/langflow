@@ -5,7 +5,13 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import IntInput, MultilineInput, Output, StrInput
 from lfx.schema.data import Data
 
-from lfx_bundles.mrscraper.mrscraper_common import api_token_input, call_sdk, optional_text, payload
+from lfx_bundles.mrscraper.mrscraper_common import (
+    api_token_input,
+    call_sdk,
+    optional_text,
+    payload,
+    require_updated_node,
+)
 
 
 class MrscraperWebSearch(Component):
@@ -48,6 +54,7 @@ class MrscraperWebSearch(Component):
 
     async def search(self) -> Data:
         """Run a web search through the SDK and return its response payload."""
+        require_updated_node(self, "raw")
         result = await call_sdk(
             self.api_token,
             "web_search",

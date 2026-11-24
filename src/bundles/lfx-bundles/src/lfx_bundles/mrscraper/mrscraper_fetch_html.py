@@ -12,6 +12,7 @@ from lfx_bundles.mrscraper.mrscraper_common import (
     page_inputs,
     page_kwargs,
     payload,
+    require_updated_node,
     screenshot_capture,
     url_input,
 )
@@ -49,12 +50,13 @@ class MrscraperFetchHtml(Component):
 
     async def fetch(self) -> Data:
         """Return the page HTML; with a screenshot, the API returns html and screenshot."""
+        require_updated_node(self, "home_page")
         result = await call_sdk(
             self.api_token,
             "scrape_html",
             url=(self.url or "").strip(),
             **page_kwargs(self, loading=True),
             action=optional_text(self.action),
-            screenshot=screenshot_capture(self.screenshot),
+            screenshot=screenshot_capture(value=self.screenshot),
         )
         return Data(data=payload(result, scalar_key="html"))

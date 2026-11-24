@@ -58,7 +58,7 @@ from the generated aggregate extras because Langflow installs them directly.
 
 Install `pip install "lfx-bundles[mrscraper]"` for the MrScraper SDK 0.12.x.
 The bundle exposes seven components that follow the MrScraper Scraper API
-reference: **MrScraper Status** for the account record, **MrScraper Scrape
+reference: **MrScraper Status** for account usage and subscription status, **MrScraper Scrape
 HTML**, **MrScraper Scrape Markdown**, **MrScraper Get Screenshot**,
 **MrScraper Scrape Brand**, **MrScraper Scrape JSON**, and **MrScraper Web
 Search**. Each accepts a secret API token from
@@ -67,7 +67,7 @@ Search**. Each accepts a secret API token from
 Status, Scrape HTML, and Web Search use the `MrscraperAccount`,
 `MrscraperFetchHtml`, and `MrscraperWebSearch` identifiers. See the
 [component reference](../../../docs/docs/Components/bundles-mrscraper.mdx)
-for parameters and output formats.
+for parameters, output formats, and how to update flows saved with SDK 0.6.x.
 
 ### OpenDsStar: manual installation only
 

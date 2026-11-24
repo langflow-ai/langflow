@@ -6,7 +6,7 @@ from platformdirs import user_cache_dir
 
 from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
-from lfx.template.field_migrations import can_migrate_chat_output_input
+from lfx.template.field_migrations import can_migrate_chat_output_input, migrate_mrscraper_html_field
 from lfx.utils.file_path_security import enforce_storage_key_scope
 
 
@@ -98,6 +98,10 @@ def update_template_field(new_template, key, previous_value_dict, scope_ids=None
     template_field = new_template.get(key)
     if not template_field:
         return
+    if component_class_name == "MrscraperFetchHtml":
+        converted_field = migrate_mrscraper_html_field(key, template_field, previous_value_dict)
+        if converted_field is not None:
+            previous_value_dict = converted_field
     if template_field.get("type") != previous_value_dict.get("type") and not can_migrate_chat_output_input(
         component_class_name, key, template_field, previous_value_dict
     ):
@@ -133,8 +137,15 @@ def update_template_values(new_template, previous_template, scope_ids=None, *, c
         if key == "code" or not isinstance(previous_value_dict, dict):
             continue
 
+        target_key = key
+        if (
+            component_class_name == "MrscraperFetchHtml"
+            and key == "home_page"
+            and "warm_start" not in previous_template
+        ):
+            target_key = "warm_start"
         update_template_field(
-            new_template, key, previous_value_dict, scope_ids, component_class_name=component_class_name
+            new_template, target_key, previous_value_dict, scope_ids, component_class_name=component_class_name
         )
 
 
