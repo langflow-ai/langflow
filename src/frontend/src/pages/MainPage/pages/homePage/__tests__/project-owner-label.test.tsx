@@ -74,6 +74,10 @@ jest.mock("@/customization/feature-flags", () => ({
 jest.mock("@/customization/hooks/use-custom-navigate", () => ({
   useCustomNavigate: () => mockNavigate,
 }));
+jest.mock("@/stores/authStore", () => ({
+  __esModule: true,
+  default: (selector) => selector({ userData: null }),
+}));
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
   default: (selector) => selector({ flows: mockFlows }),

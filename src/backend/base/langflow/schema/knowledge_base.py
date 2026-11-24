@@ -45,6 +45,8 @@ class KnowledgeBaseInfo(BaseModel):
     storage_state: str = "ready"
     storage_generation: int = 1
     active_migration_id: str | None = None
+    # True for the caller's own KB, False for one visible through a share or role; None when not resolved.
+    is_owner: bool | None = None
 
 
 class BulkDeleteRequest(BaseModel):

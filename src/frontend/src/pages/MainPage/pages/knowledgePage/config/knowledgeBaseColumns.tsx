@@ -16,6 +16,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
+import CustomResourceAccessLabel from "@/customization/components/custom-resource-access-label";
 import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import enTranslations from "@/locales/en.json";
 import { formatFileSize } from "@/utils/stringManipulation";
@@ -31,6 +32,10 @@ export interface KnowledgeBaseColumnsCallbacks {
   onAddSources?: (knowledgeBase: KnowledgeBaseInfo) => void;
   onStopIngestion?: (knowledgeBase: KnowledgeBaseInfo) => void;
 }
+
+// Older backends omit is_owner; treat that as owned so nothing disappears.
+export const isKnowledgeBaseOwned = (knowledgeBase: KnowledgeBaseInfo) =>
+  knowledgeBase.is_owner !== false;
 
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -207,7 +212,9 @@ export const createKnowledgeBaseColumns = (
       headerName: t("knowledge.column.name"),
       field: "name",
       flex: 2,
-      minWidth: 200,
+      // Fits a one-line access label such as "Shared by priya (Full access)"
+      // under the name; rows are a fixed 45px, so the label cannot wrap.
+      minWidth: 280,
       sortable: true,
       headerCheckboxSelection: true,
       checkboxSelection: true,
@@ -241,8 +248,15 @@ export const createKnowledgeBaseColumns = (
                 className={cn("h-6 w-6 shrink-0", iconColor)}
               />
             </div>
+            {/* The label sits inside the name span so it takes its own line
+                under the name instead of sharing the row's width with it. */}
             <span className="truncate" title={params.value}>
               {params.value}
+              <CustomResourceAccessLabel
+                resourceType="knowledge_base"
+                resourceId={params.data.id}
+                isOwned={isKnowledgeBaseOwned(params.data)}
+              />
             </span>
           </div>
         );

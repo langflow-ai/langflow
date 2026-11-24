@@ -4,7 +4,7 @@ import type {
   NewValueParams,
 } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -14,8 +14,11 @@ import Loading from "@/components/ui/loading";
 import { useGetFilesV2 } from "@/controllers/API/queries/file-management";
 import { useDeleteFilesV2 } from "@/controllers/API/queries/file-management/use-delete-files";
 import { usePostRenameFileV2 } from "@/controllers/API/queries/file-management/use-put-rename-file";
+import CustomResourceAccessLabel from "@/customization/components/custom-resource-access-label";
 import { customPostUploadFileV2 } from "@/customization/hooks/use-custom-post-upload-file";
+import { useCustomResourceListFilter } from "@/customization/hooks/use-custom-resource-list-filter";
 import useUploadFile from "@/hooks/files/use-upload-file";
+import { useIsOwnedByCurrentUser } from "@/hooks/use-is-owned-by-current-user";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import FilesContextMenuComponent from "@/modals/fileManagerModal/components/filesContextMenuComponent";
 import useAlertStore from "@/stores/alertStore";
@@ -61,6 +64,11 @@ const FilesTab = ({
   const { data: files } = useGetFilesV2();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const isOwnedByCurrentUser = useIsOwnedByCurrentUser();
+  const isFileOwned = useCallback(
+    (file: FileType) => isOwnedByCurrentUser(file.user_id),
+    [isOwnedByCurrentUser],
+  );
 
   const { mutate: rename } = usePostRenameFileV2();
   const { mutate: deleteFiles, isPending: isDeleting } = useDeleteFilesV2();
@@ -85,7 +93,7 @@ const FilesTab = ({
   };
 
   const handleOpenRename = (id: string, name: string) => {
-    const rowIndex = files?.findIndex((file) => file.id === id) ?? 0;
+    const rowIndex = visibleFiles.findIndex((file) => file.id === id);
     tableRef.current?.api.startEditingCell({ rowIndex, colKey: "name" });
     // Rename is triggered from a Radix dropdown item; when that menu closes it
     // restores focus to its trigger button once, asynchronously, stealing focus
@@ -184,6 +192,9 @@ const FilesTab = ({
       headerName: t("files.columnName"),
       field: "name",
       flex: 2,
+      // Same floor as the Knowledge bases name column: rows are a fixed 45px,
+      // so the access label under the name must fit on one line.
+      minWidth: 280,
       headerCheckboxSelection: true,
       checkboxSelection: true,
       editable: true,
@@ -212,15 +223,30 @@ const FilesTab = ({
                 />
               </div>
             )}
+            {/* The access label gets its own line under the name; side by
+                side, the name left it almost no room. */}
             <div
-              className={cn(
-                "flex items-center gap-2 text-sm font-medium",
-                params.data.progress !== undefined &&
-                  params.data.progress === -1 &&
-                  "pointer-events-none text-placeholder-foreground",
-              )}
+              className="flex min-w-0 flex-col"
+              data-testid="file-name-stack"
             >
-              {params.value}.{type}
+              <div
+                className={cn(
+                  // 18px (not text-sm's 20px) leaves the 45px row room for a
+                  // full-height access label under the name; a lone name is
+                  // centred beside the 24px icon either way.
+                  "flex items-center gap-2 text-sm font-medium leading-[18px]",
+                  params.data.progress !== undefined &&
+                    params.data.progress === -1 &&
+                    "pointer-events-none text-placeholder-foreground",
+                )}
+              >
+                {params.value}.{type}
+              </div>
+              <CustomResourceAccessLabel
+                resourceType="file"
+                resourceId={params.data.id}
+                isOwned={isFileOwned(params.data)}
+              />
             </div>
             {params.data.progress !== undefined &&
             params.data.progress === -1 ? (
@@ -401,11 +427,16 @@ const FilesTab = ({
           b.updated_at ?? b.created_at,
         );
       });
+  const { items: visibleFiles, tools: listTools } = useCustomResourceListFilter(
+    "file",
+    sortedFiles,
+    isFileOwned,
+  );
 
   return (
     <DataTableTab<FileType>
       columnDefs={colDefs}
-      rowData={sortedFiles}
+      rowData={visibleFiles}
       isLoading={isLoadingFiles}
       loadingState={
         <div className="flex h-full flex-col">
@@ -418,6 +449,7 @@ const FilesTab = ({
       }
       emptyState={
         <div className="flex h-full flex-col">
+          {listTools}
           <div className="flex h-full flex-col py-4">
             <DragWrapComponent onFileDrop={onFileDrop}>
               <div className="flex h-full w-full flex-col items-center justify-center gap-8 pb-8">
@@ -443,7 +475,13 @@ const FilesTab = ({
       quickFilterText={quickFilterText}
       setQuickFilterText={setQuickFilterText}
       toolbarActions={
-        <div className="flex items-center gap-2">
+        // shrink-0: search gives way instead; a shrunk box let Upload Files
+        // spill past the right edge once the ownership switch joined it.
+        <div
+          className="flex shrink-0 items-center gap-2"
+          data-testid="files-toolbar-actions"
+        >
+          {listTools}
           {quantitySelected > 0 ? (
             <DeleteConfirmationModal
               asChild

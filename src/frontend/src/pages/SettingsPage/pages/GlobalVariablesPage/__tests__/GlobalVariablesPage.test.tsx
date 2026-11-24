@@ -39,6 +39,7 @@ jest.mock("@/components/core/dropdownComponent", () => ({
   default: ({ children }: { children?: ReactNode }) => children ?? null,
 }));
 
+let mockLatestColumnDefs: Array<Record<string, unknown>> = [];
 jest.mock("ag-grid-react", () => {
   const React = jest.requireActual("react");
   return {
@@ -56,6 +57,7 @@ jest.mock("ag-grid-react", () => {
         },
         _ref: unknown,
       ) => {
+        mockLatestColumnDefs = columnDefs;
         const actionsColumn = columnDefs.find(
           (column) => column.colId === "actions",
         );
@@ -294,5 +296,20 @@ describe("GlobalVariablesPage - valueFormatter Tests", () => {
       }),
     ).toBe("*****");
     expect(valueFormatter({ value: "test", data: undefined })).toBe("test");
+  });
+});
+
+describe("GlobalVariablesPage - Access column sizing", () => {
+  it("should_grow_rows_for_a_wrapped_label_instead_of_widening_the_access_column", () => {
+    mockPermissionsLoading = false;
+    render(<GlobalVariablesPage />);
+
+    const access = mockLatestColumnDefs.find(
+      (column) => column.colId === "access",
+    );
+    // A wider floor (160px in LE-2566 round 2) pushed Actions off-screen at
+    // 1280px, so the label wraps and the row grows instead.
+    expect(access).toMatchObject({ autoHeight: true, flex: 1 });
+    expect(access).not.toHaveProperty("minWidth");
   });
 });

@@ -15,9 +15,12 @@ import {
   ENABLE_MCP,
 } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useCustomResourceListFilter } from "@/customization/hooks/use-custom-resource-list-filter";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { useIsOwnedByCurrentUser } from "@/hooks/use-is-owned-by-current-user";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
+import type { FlowType } from "@/types/flow";
 import { getProjectDisplayName } from "@/utils/project-display-name";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
@@ -123,6 +126,19 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       pages: folderData?.flows?.pages ?? 0,
     },
   };
+
+  const isOwnedByCurrentUser = useIsOwnedByCurrentUser();
+  const isFlowOwned = useCallback(
+    (flow: FlowType) => isOwnedByCurrentUser(flow.user_id),
+    [isOwnedByCurrentUser],
+  );
+  const { items: visibleFlows, tools: listTools } = useCustomResourceListFilter(
+    "flow",
+    data.flows,
+    isFlowOwned,
+  );
+  // Compared by value so a fresh filtered array does not re-run the prune.
+  const visibleFlowIds = visibleFlows.map((flow) => flow.id).join(",");
 
   // Flow ids to evaluate for the permission gate. Only the flows/components
   // tabs render selectable, gated cards; other tabs send no ids so the query
@@ -262,7 +278,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
       setLastSelectedIndex(index);
       if (isShiftPressed && lastSelectedIndex !== null) {
         // Find the indices of the last selected and current flow
-        const flows = data.flows;
+        const flows = visibleFlows;
 
         // Determine the range to select
         const start = Math.min(lastSelectedIndex, index);
@@ -290,14 +306,15 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         }
       }
     },
-    [selectedFlows, lastSelectedIndex, data.flows, isShiftPressed],
+    [selectedFlows, lastSelectedIndex, visibleFlows, isShiftPressed],
   );
 
+  // A flow hidden by the list filter must not stay selected for bulk actions.
   useEffect(() => {
     setSelectedFlows((old) =>
-      old.filter((id) => data.flows.some((flow) => flow.id === id)),
+      old.filter((id) => visibleFlows.some((flow) => flow.id === id)),
     );
-  }, [folderData?.flows?.items]);
+  }, [visibleFlowIds]);
 
   // Reset key states when navigating away
   useEffect(() => {
@@ -355,6 +372,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     setSearch={onSearch}
                     isEmptyFolder={isEmptyFolder === true}
                     selectedFlows={selectedFlows}
+                    listTools={listTools}
                   />
                   {isEmptyFolder === true ? (
                     <EmptyFolder
@@ -384,10 +402,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                         data.pagination.total > 0 ? (
                         view === "grid" ? (
                           <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                            {data.flows.map((flow, index) => (
+                            {visibleFlows.map((flow, index) => (
                               <ListComponent
                                 key={flow.id}
                                 flowData={flow}
+                                isOwned={isFlowOwned(flow)}
                                 selected={selectedFlows.includes(flow.id)}
                                 setSelected={(selected) =>
                                   setSelectedFlow(selected, flow.id, index)
@@ -398,10 +417,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                           </div>
                         ) : (
                           <div className="mt-4 flex flex-col gap-1">
-                            {data.flows.map((flow, index) => (
+                            {visibleFlows.map((flow, index) => (
                               <ListComponent
                                 key={flow.id}
                                 flowData={flow}
+                                isOwned={isFlowOwned(flow)}
                                 selected={selectedFlows.includes(flow.id)}
                                 setSelected={(selected) =>
                                   setSelectedFlow(selected, flow.id, index)

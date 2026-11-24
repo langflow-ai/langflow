@@ -154,7 +154,17 @@ jest.mock("../../hooks/useOptimisticKnowledgeBase", () => ({
 
 jest.mock("../../config/knowledgeBaseColumns", () => ({
   createKnowledgeBaseColumns: () => [{ headerName: "Name", field: "name" }],
+  isKnowledgeBaseOwned: jest.requireActual("../../config/knowledgeBaseColumns")
+    .isKnowledgeBaseOwned,
 }));
+
+const mockListFilter = jest.fn();
+jest.mock("@/customization/hooks/use-custom-resource-list-filter", () => ({
+  useCustomResourceListFilter: (...args: unknown[]) => mockListFilter(...args),
+}));
+const actualListFilter = jest.requireActual(
+  "@/customization/hooks/use-custom-resource-list-filter",
+).useCustomResourceListFilter;
 
 // ── Utilities ────────────────────────────────────────────────────────────────
 
@@ -195,7 +205,10 @@ const defaultProps = {
   onRowClick: jest.fn(),
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  mockListFilter.mockImplementation(actualListFilter);
+});
 
 // ── Tests ────────────────────────────────────────────────────────────────────
 
@@ -366,6 +379,118 @@ describe("KnowledgeBasesTab", () => {
       expect(mockSetErrorData).toHaveBeenCalledWith(
         expect.objectContaining({ title: "Failed to load knowledge bases" }),
       );
+    });
+  });
+
+  describe("Ownership filter seam", () => {
+    const ownedOnly = <T,>(
+      _type: string,
+      items: T[],
+      isOwned: (item: T) => boolean,
+    ) => ({
+      items: items.filter(isOwned),
+      tools: <button type="button">Owned</button>,
+    });
+    const mine = makeKb({ dir_name: "z_mine", name: "Zeta", is_owner: true });
+    const shared = makeKb({
+      dir_name: "a_shared",
+      name: "Alpha",
+      is_owner: false,
+    });
+    const legacy = makeKb({ dir_name: "m_legacy", name: "Mu" });
+    const nullOwner = makeKb({
+      dir_name: "n_null",
+      name: "Nu",
+      is_owner: null,
+    });
+
+    const renderWith = (data: KnowledgeBaseInfo[]) => {
+      mockGetKnowledgeBases.mockReturnValue({
+        isLoading: false,
+        data,
+        error: null,
+        refetch: jest.fn(),
+      });
+      render(<KnowledgeBasesTab {...defaultProps} />, {
+        wrapper: createWrapper(),
+      });
+    };
+    const rowIds = () =>
+      screen.getAllByTestId(/^row-/).map((row) => row.dataset.testid);
+
+    it("should_render_every_kb_sorted_with_no_tools_when_the_seam_is_the_default", () => {
+      renderWith([mine, shared, legacy]);
+
+      expect(rowIds()).toEqual(["row-a_shared", "row-m_legacy", "row-z_mine"]);
+      expect(
+        screen.queryByRole("button", { name: "Owned" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should_give_the_seam_the_raw_list_and_an_is_owner_rule", () => {
+      const data = [mine, shared, legacy, nullOwner];
+      renderWith(data);
+
+      const [type, items, isOwned] = mockListFilter.mock.calls.at(-1);
+      expect(type).toBe("knowledge_base");
+      expect(items).toBe(data);
+      expect(items.map(isOwned)).toEqual([true, false, true, true]);
+    });
+
+    it("should_sort_only_the_filtered_rows_and_show_the_tools_in_the_toolbar", () => {
+      mockListFilter.mockImplementation(ownedOnly);
+      renderWith([mine, shared, legacy]);
+
+      expect(rowIds()).toEqual(["row-m_legacy", "row-z_mine"]);
+      const toolsBox = screen.getByTestId("kb-list-tools");
+      expect(toolsBox).toContainElement(
+        screen.getByRole("button", { name: "Owned" }),
+      );
+      // 8px from search (matches Files) and never squeezed at 1024px.
+      expect(toolsBox).toHaveClass("ml-2", "shrink-0");
+      expect(toolsBox.nextElementSibling).toBe(
+        screen.getByRole("button", { name: /Add Knowledge/i }),
+      );
+    });
+
+    it("should_not_add_a_tools_box_when_the_seam_has_no_tools", () => {
+      renderWith([mine, shared]);
+
+      expect(screen.queryByTestId("kb-list-tools")).not.toBeInTheDocument();
+    });
+
+    it("should_show_the_existing_empty_state_with_the_tools_when_every_kb_is_shared", () => {
+      mockListFilter.mockImplementation(ownedOnly);
+      renderWith([
+        shared,
+        makeKb({ dir_name: "b", name: "B", is_owner: false }),
+      ]);
+
+      expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+      expect(screen.queryByTestId("mock-table")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Owned" })).toBeInTheDocument();
+    });
+
+    it("should_give_the_seam_an_empty_list_and_show_the_empty_state_when_there_are_no_kbs", () => {
+      mockListFilter.mockImplementation(ownedOnly);
+      renderWith([]);
+
+      expect(mockListFilter.mock.calls.at(-1)?.[1]).toEqual([]);
+      expect(screen.getByTestId("empty-state")).toBeInTheDocument();
+    });
+
+    it("should_render_one_row_per_owned_kb_when_there_are_many", () => {
+      mockListFilter.mockImplementation(ownedOnly);
+      const many = Array.from({ length: 30 }, (_, index) =>
+        makeKb({
+          dir_name: `kb_${String(index).padStart(2, "0")}`,
+          name: `KB ${String(index).padStart(2, "0")}`,
+          is_owner: index % 3 !== 0,
+        }),
+      );
+      renderWith(many);
+
+      expect(screen.getAllByTestId(/^row-/)).toHaveLength(20);
     });
   });
 });

@@ -479,6 +479,7 @@ def _build_kb_info(
     dir_name: str,
     metadata: dict[str, Any],
     size: int | None = None,
+    is_owner: bool | None = None,
 ) -> KnowledgeBaseInfo:
     """Format persisted KB metadata and its storage availability for the API."""
     chunks_count = metadata.get("chunks") or 0
@@ -521,6 +522,7 @@ def _build_kb_info(
         storage_state=metadata.get("storage_state", "ready"),
         storage_generation=metadata.get("storage_generation", 1),
         active_migration_id=metadata.get("active_migration_id"),
+        is_owner=is_owner,
     )
 
 
@@ -873,6 +875,7 @@ async def create_knowledge_base(
             column_config=column_config_dicts,
             backend_type=backend_type_value,
             backend_config=backend_config_value,
+            is_owner=True,
         )
 
     except StorageUnavailableError as exc:
@@ -1367,6 +1370,7 @@ async def list_knowledge_bases(
                     dir_name=row.name,
                     metadata=metadata,
                     size=row.size_bytes,
+                    is_owner=row.user_id == current_user.id,
                 )
             )
 
@@ -1448,6 +1452,7 @@ async def get_knowledge_base(kb_name: str, current_user: CurrentActiveUser) -> K
             dir_name=record.name,
             metadata=knowledge_base_service.record_to_metadata_dict(record),
             size=record.size_bytes,
+            is_owner=record.user_id == current_user.id,
         )
 
     except StorageUnavailableError as exc:

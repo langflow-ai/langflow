@@ -1,5 +1,5 @@
 import { debounce } from "lodash";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -36,6 +36,8 @@ interface HeaderComponentProps {
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
   selectedFlows: string[];
+  /** Extra list controls (e.g. an ownership filter) placed after the view toggle. */
+  listTools?: ReactNode;
 }
 
 const HeaderComponent = ({
@@ -49,6 +51,7 @@ const HeaderComponent = ({
   setSearch,
   isEmptyFolder,
   selectedFlows,
+  listTools,
 }: HeaderComponentProps) => {
   const { t } = useTranslation();
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -251,6 +254,7 @@ const HeaderComponent = ({
                     </Button>
                   ))}
                 </div>
+                {listTools}
               </div>
               <div className="flex items-center">
                 <div

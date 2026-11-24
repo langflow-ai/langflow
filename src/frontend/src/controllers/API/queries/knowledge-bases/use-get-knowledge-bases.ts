@@ -31,6 +31,8 @@ export interface KnowledgeBaseInfo {
   active_migration_id?: string | null;
   backend_type?: string;
   backend_config?: Record<string, unknown>;
+  /** False when the caller sees the KB through a share or role. Older backends omit it. */
+  is_owner?: boolean | null;
 }
 
 export const useGetKnowledgeBases: useQueryFunctionType<

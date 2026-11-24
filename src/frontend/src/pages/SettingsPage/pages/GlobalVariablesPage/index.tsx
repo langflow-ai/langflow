@@ -23,7 +23,9 @@ import {
   useDeleteGlobalVariables,
   useGetGlobalVariables,
 } from "@/controllers/API/queries/variables";
+import CustomResourceAccessLabel from "@/customization/components/custom-resource-access-label";
 import CustomVariableShareAction from "@/customization/components/custom-variable-share-action";
+import { useCustomResourceListFilter } from "@/customization/hooks/use-custom-resource-list-filter";
 import type { GlobalVariable } from "@/types/global_variables";
 import IconComponent from "../../../../components/common/genericIconComponent";
 import { Badge } from "../../../../components/ui/badge";
@@ -44,6 +46,9 @@ function suppressRowActionKeys(params: SuppressKeyboardEventParams) {
 }
 
 type FocusedCell = { rowIndex: number; colId: string };
+
+const isVariableOwned = (variable: GlobalVariable) =>
+  variable.is_owner !== false;
 
 export default function GlobalVariablesPage() {
   // Global Settings intentionally manages only global/unscoped variables.
@@ -154,12 +159,31 @@ function GlobalVariablesPageContent({
       headerName: t("globalVars.columnAccess", "Access"),
       colId: "access",
       cellRenderer: ({ data }: { data?: GlobalVariable }) =>
-        data?.is_owner === false ? (
-          <Badge variant="secondary" size="md" className="font-normal">
-            {t("globalVars.shared", "Shared")}
-          </Badge>
+        data ? (
+          // autoHeight lets the row grow when an access label wraps. AG Grid
+          // sizes the row from this box plus the cell's 2 x 0.675rem padding
+          // (ag-theme-shadcn.css) and 2 x 1px border, so this minimum keeps
+          // every other row at the grid's 45px default.
+          <div
+            className="flex min-h-[calc(45px-1.35rem-2px)] items-center"
+            data-testid="variable-access-cell"
+          >
+            <CustomResourceAccessLabel
+              resourceType="variable"
+              resourceId={data.id}
+              isOwned={isVariableOwned(data)}
+              fallback={
+                isVariableOwned(data) ? null : (
+                  <Badge variant="secondary" size="md" className="font-normal">
+                    {t("globalVars.shared", "Shared")}
+                  </Badge>
+                )
+              }
+            />
+          </div>
         ) : null,
       flex: 1,
+      autoHeight: true,
       suppressKeyboardEvent: suppressRowActionKeys,
     },
     {
@@ -211,6 +235,13 @@ function GlobalVariablesPageContent({
       return true; // Keep all other variables and valid provider credentials
     });
   }, [globalVariables, providerVariableNames]);
+
+  const { items: visibleVariables, tools: listTools } =
+    useCustomResourceListFilter(
+      "variable",
+      validGlobalVariables,
+      isVariableOwned,
+    );
 
   // Show validation errors for invalid provider credentials (only once when detected)
   useEffect(() => {
@@ -418,6 +449,7 @@ function GlobalVariablesPageContent({
         title={t("globalVars.pageTitle")}
         description={t("globalVars.pageDescription")}
       >
+        {listTools}
         <GlobalVariableModal asChild>
           <Button data-testid="api-key-button-store" size="sm">
             <IconComponent name="Plus" className="w-4" />
@@ -464,7 +496,7 @@ function GlobalVariablesPageContent({
             suppressRowClickSelection={true}
             pagination={true}
             columnDefs={colDefs}
-            rowData={validGlobalVariables ?? []}
+            rowData={visibleVariables}
             onDelete={removeVariables}
           />
         )}
