@@ -378,6 +378,8 @@ class LangflowClient(_ClientCommon):
         Each flow is normalized (volatile fields stripped, keys sorted) before
         being written as ``<flow-name>.json``.  *output_dir* is created if it
         does not exist.  Returns a mapping of ``{flow_name: file_path}``.
+        Raises ``ValueError`` if a flow name contains a path separator, colon,
+        or null character. On POSIX systems the files are private to their owner.
 
         .. note::
             If two flows in the project share the same name the second one

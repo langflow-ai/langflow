@@ -5,7 +5,8 @@ from __future__ import annotations
 import io
 import json
 import zipfile
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from tempfile import NamedTemporaryFile, TemporaryDirectory
 from typing import Any, TypeVar
 
 from langflow_sdk._http import _HTTP_201_CREATED, _logger
@@ -191,13 +192,20 @@ class _ClientCommon:
         out = Path(output_dir)
         out.mkdir(parents=True, exist_ok=True)
         written: dict[str, Path] = {}
-        for filename, content in raw_flows.items():
-            data: dict[str, Any] = json.loads(content.decode("utf-8"))
-            normalized = cls._normalize_flow_payload(data)
-            name = str(normalized.get("name") or Path(filename).stem)
-            dest = out / f"{name}.json"
-            dest.write_text(flow_to_json(normalized), encoding="utf-8")
-            written[name] = dest
+        with TemporaryDirectory(dir=out) as staging_dir:
+            for filename, content in raw_flows.items():
+                data: dict[str, Any] = json.loads(content.decode("utf-8"))
+                normalized = cls._normalize_flow_payload(data)
+                name = str(normalized.get("name") or Path(filename).stem)
+                output_name = f"{name}.json"
+                if "\x00" in output_name or ":" in output_name or PureWindowsPath(output_name).name != output_name:
+                    msg = "Project flow names must be valid single filename components"
+                    raise ValueError(msg)
+                dest = out / output_name
+                with NamedTemporaryFile(mode="w", encoding="utf-8", dir=staging_dir, delete=False) as staged:
+                    staged.write(flow_to_json(normalized))
+                Path(staged.name).replace(dest)
+                written[name] = dest
         return written
 
     @staticmethod
