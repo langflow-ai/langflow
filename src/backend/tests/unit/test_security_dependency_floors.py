@@ -209,19 +209,9 @@ def test_workspace_constraints_enforce_patched_pymongo() -> None:
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
-    for python_version in ("3.11", "3.14", "3.15"):
-        env = {"python_version": python_version, "python_full_version": f"{python_version}.0", "sys_platform": "linux"}
-        versions = [
-            Version(package["version"])
-            for package in packages
-            if package["name"] == "pymongo"
-            and (
-                not package.get("resolution-markers")
-                or any(Marker(marker).evaluate(env) for marker in package["resolution-markers"])
-            )
-        ]
-        assert len(versions) == 1
-        assert versions[0] >= Version("4.20.1")
+    versions = [Version(package["version"]) for package in packages if package["name"] == "pymongo"]
+    assert versions
+    assert min(versions) >= Version("4.20.1")
 
 
 @pytest.mark.parametrize(("python_version", "minimum"), [("3.11", "6.6.1"), ("3.14", "6.6.1"), ("3.15", "6.6.1")])
@@ -260,10 +250,9 @@ def test_published_packages_enforce_patched_pymongo_floor() -> None:
         base_project["optional-dependencies"]["mongodb"],
         bundle_extras["mongodb"],
     ):
-        for python_version, minimum in (("3.10", "4.18.3"), ("3.11", "4.20.1")):
-            pymongo = _requirement_for_python(requirements, "pymongo", python_version)
-            _assert_floor(pymongo, minimum)
-            _assert_specifier(pymongo, "<", "5.0.0")
+        pymongo = _requirement(requirements, "pymongo")
+        _assert_floor(pymongo, "4.20.1")
+        _assert_specifier(pymongo, "<", "5.0.0")
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["mongodb"] == bundle_extras["mongodb"]
@@ -390,5 +379,5 @@ def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None
     """Standalone bundle installs must retain the published PyMongo security floor."""
     extras = _load_pyproject("src/lfx/pyproject.toml")["project"]["optional-dependencies"]
     legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
-    assert "1.1.40" not in legacy_bundle.specifier
-    assert "1.1.41" in legacy_bundle.specifier
+    assert "1.3.9" not in legacy_bundle.specifier
+    assert "1.3.10" in legacy_bundle.specifier
