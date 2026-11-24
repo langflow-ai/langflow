@@ -2,9 +2,7 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
-from lfx.components.youdotcom.youdotcom_research import YouDotComResearchComponent
-
-from tests.base import ComponentTestBaseWithoutClient
+from lfx_youdotcom.components.youdotcom.youdotcom_research import YouDotComResearchComponent
 
 MOCK_RESEARCH_RESPONSE = {
     "output": {
@@ -34,7 +32,7 @@ def _mock_httpx_client(mock_client_class, mock_response):
     return mock_client
 
 
-class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
+class TestYouDotComResearchComponent:
     @pytest.fixture
     def component_class(self):
         return YouDotComResearchComponent
@@ -47,10 +45,6 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
             "research_effort": "standard",
         }
 
-    @pytest.fixture
-    def file_names_mapping(self):
-        return []
-
     def test_basic_setup(self, component_class, default_kwargs):
         component = component_class()
         component.set_attributes(default_kwargs)
@@ -60,7 +54,7 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
         assert component.api_key == "test-ydc-key"
         assert component.research_effort == "standard"
 
-    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_research.httpx.Client")
     def test_research_answer_success(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.json.return_value = MOCK_RESEARCH_RESPONSE
@@ -82,7 +76,7 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
         assert payload["research_effort"] == "standard"
         assert "query" not in payload
 
-    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_research.httpx.Client")
     def test_research_combined_success(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.json.return_value = MOCK_RESEARCH_RESPONSE
@@ -99,7 +93,7 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
         assert "https://example.com/quantum" in result.text
         assert "Physics Today" in result.text
 
-    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_research.httpx.Client")
     def test_research_sources_success(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.json.return_value = MOCK_RESEARCH_RESPONSE
@@ -119,7 +113,7 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
         assert df.iloc[0]["title"] == "Quantum Computing Research"
         assert df.iloc[1]["url"] == "https://example.org/physics"
 
-    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_research.httpx.Client")
     def test_api_uses_input_not_query(self, mock_client_class, component_class, default_kwargs):
         """Verify the API request body uses 'input' param, not 'query'."""
         mock_response = MagicMock()
@@ -137,7 +131,7 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
         assert "input" in payload
         assert "query" not in payload
 
-    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_research.httpx.Client")
     def test_research_answer_timeout(self, mock_client_class, component_class, default_kwargs):
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
@@ -151,7 +145,7 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
 
         assert "timed out" in result.text.lower()
 
-    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_research.httpx.Client")
     def test_research_answer_http_error(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.status_code = 500
@@ -167,7 +161,7 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
 
         assert "500" in result.text
 
-    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_research.httpx.Client")
     def test_research_sources_timeout(self, mock_client_class, component_class, default_kwargs):
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
@@ -181,7 +175,7 @@ class TestYouDotComResearchComponent(ComponentTestBaseWithoutClient):
 
         assert df is not None
 
-    @patch("lfx.components.youdotcom.youdotcom_research.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_research.httpx.Client")
     def test_posts_to_correct_url(self, mock_client_class, component_class, default_kwargs):
         """Verify Research API uses api.you.com, not ydc-index.io."""
         mock_response = MagicMock()

@@ -2,12 +2,10 @@ from unittest.mock import MagicMock, patch
 
 import httpx
 import pytest
-from lfx.components.youdotcom.youdotcom_search import YouDotComSearchComponent
-
-from tests.base import ComponentTestBaseWithoutClient
+from lfx_youdotcom.components.youdotcom.youdotcom_search import YouDotComSearchComponent
 
 
-class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
+class TestYouDotComSearchComponent:
     @pytest.fixture
     def component_class(self):
         return YouDotComSearchComponent
@@ -21,14 +19,10 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
             "country": None,
             "safesearch": "moderate",
             "freshness": None,
-            "livecrawl": None,
-            "livecrawl_formats": None,
+            "extraction_mode": None,
+            "extraction_formats": None,
             "language": None,
         }
-
-    @pytest.fixture
-    def file_names_mapping(self):
-        return []
 
     def test_basic_setup(self, component_class, default_kwargs):
         component = component_class()
@@ -40,7 +34,7 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         assert component.query == "test query"
         assert component.max_results == 5
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_fetch_content_success(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -86,7 +80,7 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs[1]["params"]["query"] == "test query"
         assert call_kwargs[1]["params"]["count"] == 5
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_fetch_content_with_news(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -118,7 +112,7 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         assert results[0].data["title"] == "News Item"
         assert results[0].data["page_age"] == "2024-01-01T00:00:00Z"
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_fetch_content_sends_optional_params(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.json.return_value = {"results": {"web": []}}
@@ -132,8 +126,8 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
 
         default_kwargs["country"] = "US"
         default_kwargs["freshness"] = "week"
-        default_kwargs["livecrawl"] = "web"
-        default_kwargs["livecrawl_formats"] = "markdown"
+        default_kwargs["extraction_mode"] = "full_page"
+        default_kwargs["extraction_formats"] = "markdown"
         default_kwargs["language"] = "EN"
 
         component = component_class()
@@ -143,11 +137,96 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         params = mock_client.get.call_args[1]["params"]
         assert params["country"] == "US"
         assert params["freshness"] == "week"
-        assert params["livecrawl"] == "web"
-        assert params["livecrawl_formats"] == "markdown"
+        assert params["extraction"] == {
+            "extraction_mode": "full_page",
+            "full_page": {"extraction_formats": ["markdown"]},
+        }
+        assert "livecrawl" not in params
+        assert "livecrawl_formats" not in params
         assert params["language"] == "EN"
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
+    def test_fetch_content_maps_full_page(self, mock_client_class, component_class, default_kwargs):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "results": {
+                "web": [
+                    {
+                        "title": "Full Page",
+                        "url": "https://example.com",
+                        "description": "Summary",
+                        "contents": {"markdown": "# Complete document", "html": "<h1>Complete document</h1>"},
+                    }
+                ]
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        default_kwargs["extraction_mode"] = "full_page"
+        default_kwargs["extraction_formats"] = "markdown"
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert results[0].text == "# Complete document"
+        assert results[0].data["content"] == "# Complete document"
+        assert results[0].data["contents"]["markdown"] == "# Complete document"
+
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
+    def test_fetch_content_maps_highlights(self, mock_client_class, component_class, default_kwargs):
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "results": {
+                "web": [
+                    {
+                        "title": "Highlight",
+                        "url": "https://example.com",
+                        "description": "Summary",
+                        "contents": {"highlights": ["first passage", "second passage"]},
+                    }
+                ]
+            }
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_client = MagicMock()
+        mock_client.__enter__ = MagicMock(return_value=mock_client)
+        mock_client.__exit__ = MagicMock(return_value=False)
+        mock_client.get.return_value = mock_response
+        mock_client_class.return_value = mock_client
+
+        default_kwargs["extraction_mode"] = "highlights"
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert results[0].text == "first passage\n\nsecond passage"
+        assert results[0].data["content"] == "first passage\n\nsecond passage"
+        assert results[0].data["snippets"] == ["first passage", "second passage"]
+
+    def test_extraction_formats_require_full_page(self, component_class, default_kwargs):
+        default_kwargs["extraction_mode"] = "highlights"
+        default_kwargs["extraction_formats"] = "markdown"
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert "extraction_formats requires extraction_mode=full_page" in results[0].text
+
+    def test_highlights_limit_is_fifty(self, component_class, default_kwargs):
+        default_kwargs["extraction_mode"] = "highlights"
+        default_kwargs["max_results"] = 51
+        component = component_class()
+        component.set_attributes(default_kwargs)
+        results = component.fetch_content()
+
+        assert "max_results must be 50 or fewer" in results[0].text
+
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_fetch_content_timeout(self, mock_client_class, component_class, default_kwargs):
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
@@ -163,7 +242,7 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         assert "timed out" in results[0].text.lower()
         assert "error" in results[0].data
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_fetch_content_http_error(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.status_code = 401
@@ -186,7 +265,7 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         assert "401" in results[0].text
         assert "error" in results[0].data
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_fetch_content_dataframe(self, mock_client_class, component_class, default_kwargs):
         mock_response = MagicMock()
         mock_response.json.return_value = {
@@ -216,7 +295,7 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         assert df is not None
         assert len(df) == 1
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_max_results_boundary_min_valid(self, mock_client_class, component_class, default_kwargs):
         """Test max_results=1 is valid (boundary at lower end)."""
         mock_response = MagicMock()
@@ -237,7 +316,7 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         params = mock_client.get.call_args[1]["params"]
         assert params["count"] == 1
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_max_results_boundary_max_valid(self, mock_client_class, component_class, default_kwargs):
         """Test max_results=100 is valid (boundary at upper end)."""
         mock_response = MagicMock()
@@ -280,7 +359,7 @@ class TestYouDotComSearchComponent(ComponentTestBaseWithoutClient):
         assert "error" in results[0].data
         assert "max_results must be between 1 and 100" in results[0].text
 
-    @patch("lfx.components.youdotcom.youdotcom_search.httpx.Client")
+    @patch("lfx_youdotcom.components.youdotcom.youdotcom_search.httpx.Client")
     def test_fetch_content_dataframe_structure(self, mock_client_class, component_class, default_kwargs):
         """Test DataFrame has correct structure with expected columns."""
         mock_response = MagicMock()

@@ -103,7 +103,6 @@ if TYPE_CHECKING:
         wolframalpha,
         xai,
         yahoosearch,
-        youdotcom,
         youtube,
         zep,
     )
@@ -208,7 +207,6 @@ _dynamic_imports = {
     "wolframalpha": "__module__",
     "xai": "__module__",
     "yahoosearch": "__module__",
-    "youdotcom": "__module__",
     "youtube": "__module__",
     "zep": "__module__",
 }
@@ -350,7 +348,6 @@ __all__ = [
     "wolframalpha",
     "xai",
     "yahoosearch",
-    "youdotcom",
     "youtube",
     "zep",
 ]

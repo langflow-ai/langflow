@@ -1,5 +1,6 @@
-import httpx
+import json
 
+import httpx
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.log.logger import logger
@@ -8,33 +9,19 @@ from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
 
 USER_AGENT = "langflow-youdotcom/1.0"
-MAX_CRAWL_TIMEOUT = 60
+MIN_TIMEOUT = 2
+MAX_TIMEOUT = 100
 
 
 class InputValidationError(ValueError):
     """Raised when input validation fails."""
 
 
-class YouDotComContentsComponent(Component):
-    """You.com Contents component for extracting clean content from URLs.
+class YouDotComExtractComponent(Component):
+    """You.com Extract component for extracting clean content from URLs."""
 
-    This component calls the You.com Contents API to extract clean content
-    from any URL in various formats (markdown, HTML, or metadata).
-    Useful for RAG pipelines and content processing.
-
-    Attributes:
-        display_name: Human-readable name for the component.
-        description: Description of what the component does.
-        icon: Icon identifier for the UI.
-        inputs: List of input parameters (api_key, urls, formats, crawl_timeout).
-        outputs: List of output methods (fetch_content_dataframe).
-    """
-
-    display_name = "You.com Contents"
-    description = (
-        "**You.com Contents** extracts clean HTML, markdown, or metadata from any URL. "
-        "Useful for RAG pipelines and content extraction."
-    )
+    display_name = "You.com Extract"
+    description = "**You.com Extract** extracts clean Markdown or HTML from any webpage or PDF."
     icon = "YouDotCom"
 
     inputs = [
@@ -54,15 +41,15 @@ class YouDotComContentsComponent(Component):
             name="formats",
             display_name="Format",
             info="The output format for extracted content.",
-            options=["markdown", "html", "metadata"],
+            options=["markdown", "html"],
             value="markdown",
             advanced=True,
         ),
         IntInput(
-            name="crawl_timeout",
-            display_name="Crawl Timeout",
-            info="Timeout in seconds for page crawling (1-60).",
-            value=10,
+            name="timeout",
+            display_name="Timeout",
+            info="End-to-end timeout in seconds (2-100).",
+            value=30,
             advanced=True,
         ),
     ]
@@ -72,32 +59,17 @@ class YouDotComContentsComponent(Component):
     ]
 
     def fetch_content(self) -> list[Data]:
-        """Extract content from URLs using You.com API.
-
-        Returns:
-            list[Data]: A list of Data objects containing extracted content,
-                        each with URL, title, and content (markdown/html/metadata).
-        """
+        """Extract content from URLs using the You.com Extract API."""
         try:
-            if self.crawl_timeout is not None and not (1 <= self.crawl_timeout <= MAX_CRAWL_TIMEOUT):
-                msg = f"crawl_timeout must be between 1 and {MAX_CRAWL_TIMEOUT} seconds"
+            if self.timeout is not None and not (MIN_TIMEOUT <= self.timeout <= MAX_TIMEOUT):
+                msg = f"timeout must be between {MIN_TIMEOUT} and {MAX_TIMEOUT} seconds"
                 raise InputValidationError(msg)
-
-            url = "https://ydc-index.io/v1/contents"
-            headers = {
-                "X-API-Key": self.api_key,
-                "User-Agent": USER_AGENT,
-                "Content-Type": "application/json",
-            }
-
             if not isinstance(self.urls, str):
                 msg = "urls must be a string. Please provide valid URLs."
                 raise InputValidationError(msg)
 
             urls_input = self.urls.strip()
             if urls_input.startswith("["):
-                import json
-
                 try:
                     url_list = json.loads(urls_input)
                 except json.JSONDecodeError as e:
@@ -107,47 +79,52 @@ class YouDotComContentsComponent(Component):
                     msg = "JSON input must be a list"
                     raise TypeError(msg)
             else:
-                url_list = [u.strip() for u in urls_input.split("\n") if u.strip()]
+                url_list = urls_input.split("\n")
 
+            if any(not isinstance(url, str) for url in url_list):
+                msg = "urls must contain only strings."
+                raise InputValidationError(msg)
+            url_list = [url.strip() for url in url_list if url.strip()]
             if not url_list:
                 msg = "urls cannot be empty. Please provide at least one valid URL."
                 raise InputValidationError(msg)
 
-            payload: dict = {
-                "urls": url_list,
-                "formats": [self.formats],
+            headers = {
+                "X-API-Key": self.api_key,
+                "User-Agent": USER_AGENT,
+                "Content-Type": "application/json",
             }
-            if self.crawl_timeout is not None:
-                payload["crawl_timeout"] = self.crawl_timeout
-
-            with httpx.Client(timeout=60.0) as client:
-                response = client.post(url, json=payload, headers=headers)
-
-            response.raise_for_status()
-            contents_results = response.json()
-
-            if not isinstance(contents_results, list):
-                msg = "Invalid response format: expected a list of results"
-                raise TypeError(msg)
-
             data_results = []
-            for item in contents_results:
-                if not isinstance(item, dict):
-                    msg = "Invalid response format: each result must be a dictionary"
-                    raise TypeError(msg)
-                content = item.get("markdown") or item.get("html") or ""
-                result_data = {
-                    "url": item.get("url"),
-                    "title": item.get("title"),
-                    "content": content,
-                }
-                if item.get("metadata"):
-                    result_data["metadata"] = item["metadata"]
+            with httpx.Client(timeout=self.timeout or 30) as client:
+                for url in url_list:
+                    payload: dict = {
+                        "url": url,
+                        "full_page": {"extraction_formats": [self.formats]},
+                    }
+                    if self.timeout is not None:
+                        payload["timeout"] = self.timeout
 
-                data_results.append(Data(text=content, data=result_data))
+                    response = client.post("https://ydc-index.io/v1/extract", json=payload, headers=headers)
+                    response.raise_for_status()
+                    item = response.json()
+                    if not isinstance(item, dict):
+                        msg = "Invalid response format: expected an object"
+                        raise TypeError(msg)
+
+                    contents = item.get("contents") or {}
+                    full_page = contents.get("full_page") or {}
+                    content = full_page.get("markdown") or full_page.get("html") or ""
+                    result_data = {
+                        "url": item.get("url"),
+                        "title": item.get("title"),
+                        "content": content,
+                    }
+                    if item.get("metadata"):
+                        result_data["metadata"] = item["metadata"]
+                    data_results.append(Data(text=content, data=result_data))
 
         except httpx.TimeoutException:
-            error_message = "Request timed out (60s). Try reducing the number of URLs or increasing the timeout."
+            error_message = "Request timed out. Try reducing the number of URLs or increasing the timeout."
             logger.error(error_message)
             return [Data(text=error_message, data={"error": error_message})]
         except httpx.HTTPStatusError as exc:
@@ -171,10 +148,6 @@ class YouDotComContentsComponent(Component):
             return data_results
 
     def fetch_content_dataframe(self) -> DataFrame:
-        """Fetch extracted content as a DataFrame.
-
-        Returns:
-            DataFrame: A DataFrame containing the extracted content.
-        """
+        """Fetch extracted content as a DataFrame."""
         data = self.fetch_content()
         return DataFrame(data)

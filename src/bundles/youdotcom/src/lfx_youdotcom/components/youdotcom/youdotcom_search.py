@@ -1,5 +1,4 @@
 import httpx
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.log.logger import logger
@@ -10,6 +9,7 @@ from lfx.template.field.base import Output
 USER_AGENT = "langflow-youdotcom/1.0"
 MAX_RESULTS_MIN = 1
 MAX_RESULTS_MAX = 100
+HIGHLIGHTS_MAX_RESULTS = 50
 
 
 class InputValidationError(ValueError):
@@ -120,18 +120,18 @@ class YouDotComSearchComponent(Component):
             advanced=True,
         ),
         DropdownInput(
-            name="livecrawl",
-            display_name="Live Crawl",
-            info="Which sections to live-crawl for full page content.",
-            options=["web", "news", "all"],
+            name="extraction_mode",
+            display_name="Extraction Mode",
+            info="Attach query-relevant highlights or full-page content to each result.",
+            options=["highlights", "full_page"],
             value=None,
             advanced=True,
         ),
         DropdownInput(
-            name="livecrawl_formats",
-            display_name="Live Crawl Format",
-            info="Format for live-crawled content. Only relevant when Live Crawl is set.",
-            options=["html", "markdown"],
+            name="extraction_formats",
+            display_name="Extraction Format",
+            info="Format for full-page content. Only valid when Extraction Mode is full_page.",
+            options=["markdown", "html"],
             value=None,
             advanced=True,
         ),
@@ -230,10 +230,21 @@ class YouDotComSearchComponent(Component):
                 params["safesearch"] = self.safesearch
             if self.freshness:
                 params["freshness"] = self.freshness
-            if self.livecrawl:
-                params["livecrawl"] = self.livecrawl
-            if self.livecrawl_formats:
-                params["livecrawl_formats"] = self.livecrawl_formats
+            if self.extraction_formats and self.extraction_mode != "full_page":
+                msg = "extraction_formats requires extraction_mode=full_page"
+                raise InputValidationError(msg)
+            if (
+                self.extraction_mode == "highlights"
+                and self.max_results is not None
+                and self.max_results > HIGHLIGHTS_MAX_RESULTS
+            ):
+                msg = "max_results must be 50 or fewer when extraction_mode=highlights"
+                raise InputValidationError(msg)
+            if self.extraction_mode:
+                extraction: dict = {"extraction_mode": self.extraction_mode}
+                if self.extraction_formats:
+                    extraction["full_page"] = {"extraction_formats": [self.extraction_formats]}
+                params["extraction"] = extraction
             if self.language:
                 params["language"] = self.language
 
@@ -246,31 +257,27 @@ class YouDotComSearchComponent(Component):
             data_results = []
             results = search_results.get("results", {})
 
-            for result in results.get("web", []):
-                description = result.get("description", "")
+            for result in [*results.get("web", []), *results.get("news", [])]:
+                contents = result.get("contents") or {}
+                snippets = result.get("snippets") or contents.get("highlights") or []
+                content = (
+                    contents.get("markdown")
+                    or contents.get("html")
+                    or ("\n\n".join(snippets) if contents else result.get("description", ""))
+                )
                 result_data = {
                     "title": result.get("title"),
                     "url": result.get("url"),
-                    "description": description,
-                    "snippets": result.get("snippets", []),
+                    "description": result.get("description", ""),
+                    "snippets": snippets,
+                    "content": content,
                 }
-                if result.get("contents"):
-                    result_data["contents"] = result["contents"]
+                if contents:
+                    result_data["contents"] = contents
+                if result.get("page_age"):
+                    result_data["page_age"] = result["page_age"]
 
-                data_results.append(Data(text=description, data=result_data))
-
-            for result in results.get("news", []):
-                description = result.get("description", "")
-                result_data = {
-                    "title": result.get("title"),
-                    "url": result.get("url"),
-                    "description": description,
-                    "page_age": result.get("page_age"),
-                }
-                if result.get("contents"):
-                    result_data["contents"] = result["contents"]
-
-                data_results.append(Data(text=description, data=result_data))
+                data_results.append(Data(text=content, data=result_data))
 
         except httpx.TimeoutException:
             error_message = "Request timed out (90s). Please try again or adjust parameters."

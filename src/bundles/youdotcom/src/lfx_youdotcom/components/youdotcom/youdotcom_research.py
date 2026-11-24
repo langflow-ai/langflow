@@ -1,5 +1,4 @@
 import httpx
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, MessageTextInput, SecretStrInput
 from lfx.log.logger import logger
