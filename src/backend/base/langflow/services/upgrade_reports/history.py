@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlmodel import col, func, select
 
+from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.upgrade_report import UpgradeReport, UpgradeReportRepair
 from langflow.services.upgrade_reports.schema import (
     ReportHistorySummary,
@@ -55,6 +56,11 @@ def validate_document(content: bytes) -> tuple[str, UpgradeReportDocument]:
 
 
 async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) -> UpgradeReport:
+    row, _ = await _store_report(session, content, actor_id)
+    return row
+
+
+async def _store_report(session: AsyncSession, content: bytes, actor_id: UUID) -> tuple[UpgradeReport, bool]:
     text, document = validate_document(content)
     row = UpgradeReport(
         created_by=actor_id,
@@ -70,7 +76,23 @@ async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) ->
     session.add(row)
     await session.commit()
     await session.refresh(row)
-    return row
+    return row, bool(document.errors) or len(document.flows) < row.flow_count
+
+
+async def import_report_content(session: AsyncSession, content: bytes, actor_id: UUID) -> tuple[UpgradeReport, bool]:
+    """Validate, store and audit one report. Every way in imports through this.
+
+    Raises UnsupportedReportFormatError, ValidationError, ValueError, UnicodeError or RecursionError
+    when the content cannot be imported.
+    """
+    if len(content) > MAX_REPORT_BYTES:
+        msg = "the report is over the size limit"
+        raise ValueError(msg)
+    row, incomplete = await _store_report(session, content, actor_id)
+    await audit_decision(
+        user_id=actor_id, action="upgrade-report:import", obj=f"upgrade-report:{row.id}", result="allow"
+    )
+    return row, incomplete
 
 
 async def list_reports(

@@ -1883,8 +1883,10 @@ _SERVER_SETTING_HELP = "The upgraded server's {} setting."
 def upgrade_check(
     database_url: str = typer.Option(
         ...,
+        envvar="LANGFLOW_UPGRADE_CHECK_DATABASE_URL",
         help="URL of the database the server to upgrade uses, such as sqlite:////app/langflow/langflow.db or "
-        "postgresql://user:password@host:5432/langflow. It is only read.",  # pragma: allowlist secret
+        "postgresql://user:password@host:5432/langflow. It is only read. "  # pragma: allowlist secret
+        "Set the environment variable instead to keep the password out of the process list.",
     ),
     serving_database_url: str | None = typer.Option(
         None,
