@@ -169,10 +169,32 @@ DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
     ("unittest.mock", "_dot_lookup", "unittest.mock._dot_lookup is forbidden in components"),
     ("os.path", "os", "os.path.os is forbidden in components"),
     ("sys", "modules", "sys.modules is forbidden in components"),
-    # These constructors can create executable functions without the parser seeing their code.
-    ("types", "CodeType", "types.CodeType is forbidden in components (dynamic code construction)"),
-    ("types", "FunctionType", "types.FunctionType is forbidden in components (dynamic code construction)"),
-    ("types", "LambdaType", "types.LambdaType is forbidden in components (dynamic code construction)"),
+    # Import state is mutable even if it is passed through an alias first.
+    *[
+        ("sys", name, f"sys.{name} is forbidden in components (interpreter import state)")
+        for name in ("path", "meta_path", "path_hooks", "path_importer_cache")
+    ],
+    # Keep public temporary-file APIs available without exposing process-wide state.
+    *[
+        ("tempfile", name, f"tempfile.{name} is forbidden in components (process-wide state)")
+        for name in ("_os", "_sys", "tempdir")
+    ],
+    # Restrict code constructors and direct re-exports without blocking ordinary type helpers.
+    *[
+        (module, name, f"{module}.{name} is forbidden in components (dynamic code construction)")
+        for module, name in (
+            ("types", "CodeType"),
+            ("types", "FunctionType"),
+            ("types", "LambdaType"),
+            ("dataclasses", "FunctionType"),
+            ("unittest.mock", "CodeType"),
+            ("lfx.custom.annotation_validation", "FunctionType"),
+            ("lfx.custom.custom_component.component", "FunctionType"),
+            ("lfx.custom.validate", "FunctionType"),
+            ("lfx.graph.state.model", "FunctionType"),
+            ("langflow.custom.validate", "FunctionType"),
+        )
+    ],
     ("torch.package", "PackageImporter", "torch.package.PackageImporter is forbidden — external code loading"),
     (
         "torch.package.package_importer",

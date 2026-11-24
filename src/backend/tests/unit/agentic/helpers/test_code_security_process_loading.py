@@ -59,6 +59,63 @@ def test_preserves_ordinary_types_helpers() -> None:
 
 
 @pytest.mark.parametrize(
+    ("module", "member"),
+    [
+        ("dataclasses", "FunctionType"),
+        ("unittest.mock", "CodeType"),
+        ("lfx.custom.validate", "FunctionType"),
+        ("langflow.custom.validate", "FunctionType"),
+    ],
+)
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from {module} import {member} as constructor",
+        "import {module} as helper\nconstructor = helper.{member}",
+        "import {module} as helper\nconstructor = getattr(helper, '{member}')",
+        "import {module} as helper\nconstructor = vars(helper)['{member}']",
+    ],
+)
+def test_rejects_direct_code_constructor_reexports(module: str, member: str, source: str) -> None:
+    result = scan_code_security(source.format(module=module, member=member))
+
+    assert not result.is_safe
+    assert any(member in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize(
+    ("module", "member"),
+    [
+        ("sys", "path"),
+        ("sys", "meta_path"),
+        ("sys", "path_hooks"),
+        ("sys", "path_importer_cache"),
+        ("tempfile", "_os"),
+        ("tempfile", "_sys"),
+        ("tempfile", "tempdir"),
+    ],
+)
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from {module} import {member} as runtime_state",
+        "import {module} as helper\nruntime_state = helper.{member}",
+        "import {module} as helper\nruntime_state = getattr(helper, '{member}')",
+        "import {module} as helper\nruntime_state = vars(helper)['{member}']",
+    ],
+)
+def test_rejects_process_wide_import_and_temp_state(module: str, member: str, source: str) -> None:
+    result = scan_code_security(source.format(module=module, member=member))
+
+    assert not result.is_safe
+    assert any(f"{module}.{member}" in violation for violation in result.violations)
+
+
+def test_preserves_public_temporary_file_helpers() -> None:
+    assert scan_code_security("from tempfile import TemporaryDirectory\nfolder = TemporaryDirectory()").is_safe
+
+
+@pytest.mark.parametrize(
     "code",
     [
         "from unittest.mock import pkgutil as loader",
@@ -173,8 +230,19 @@ def test_preserves_safe_async_threads_and_tensor_operations(code: str) -> None:
     assert scan_code_security(code).is_safe
 
 
-@pytest.mark.parametrize("module", ["runpy", "pkgutil", "_posixsubprocess", "_frozen_importlib_external", "zipimport"])
-async def test_runtime_validation_rejects_loader_before_component_construction(module: str, monkeypatch) -> None:
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import runpy",
+        "import pkgutil",
+        "import _posixsubprocess",
+        "import _frozen_importlib_external",
+        "import zipimport",
+        "from sys import path",
+        "from types import CodeType",
+    ],
+)
+async def test_runtime_validation_rejects_loader_before_component_construction(source: str, monkeypatch) -> None:
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",
         lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=True)),
@@ -182,7 +250,7 @@ async def test_runtime_validation_rejects_loader_before_component_construction(m
     builder = MagicMock(side_effect=AssertionError("unsafe code reached component construction"))
     monkeypatch.setattr("lfx.custom.utils.build_custom_component_template", builder)
 
-    result = await validate_component_runtime(f"import {module}", user_id="test-user")
+    result = await validate_component_runtime(source, user_id="test-user")
 
     assert result is not None
     assert "failed security validation" in result
