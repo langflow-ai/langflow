@@ -164,6 +164,7 @@ def build_recipients(
     required: bool,
     temp_ids: bool = False,
     default_order: bool = True,
+    require_signer: bool = True,
 ) -> list[dict[str, Any]] | None:
     """Build the recipients list from the single signer inputs or the JSON array.
 
@@ -172,6 +173,10 @@ def build_recipients(
     ``fit_recipients_to_template`` then gives a recipient without an order the next free template role.
     Document-based requests also get temporary ids (``temp_1``, ``temp_2``, ...) that fields and anchor
     tags refer to.
+
+    A list without a Signer is refused unless ``require_signer`` is off. Template sends turn it off, because
+    there the template role a recipient fills decides its designation (``fit_recipients_to_template``
+    checks the Signer instead); a list of only CC recipients is refused either way.
     """
     has_simple = bool(text_value(first_name) or text_value(email))
     entries = json_list(recipients_json, "Recipients (JSON)")
@@ -215,10 +220,18 @@ def build_recipients(
             item["id"] = f"temp_{index}"
         recipients.append(item)
 
-    if not any(item["designation"] == "Signer" for item in recipients):
-        msg = "At least one recipient must be a Signer."
+    if require_signer:
+        _require_a_signer(recipients)
+    elif all(item["designation"] == "CC" for item in recipients):
+        msg = "At least one recipient must be a Signer or an Approver; CC recipients only receive a copy."
         raise FirmaAPIError(msg)
     return recipients
+
+
+def _require_a_signer(recipients: list[dict[str, Any]]) -> None:
+    if not any(item.get("designation") == "Signer" for item in recipients):
+        msg = "At least one recipient must be a Signer."
+        raise FirmaAPIError(msg)
 
 
 def derive_status(signing_request: dict[str, Any]) -> str:
@@ -276,7 +289,7 @@ def send_result(response: dict[str, Any], *, include_signing_link: bool = False)
     result.update(
         {
             "first_signer": signer or None,
-            "warnings": response.get("warnings") or [],
+            "warnings": response.get("warnings") if isinstance(response.get("warnings"), list) else [],
             "signing_request": response,
         }
     )
@@ -294,7 +307,8 @@ TEMPLATE_RECIPIENTS_INFO = (
     "with neither takes the next role no other item claimed), and keeps its own designation and order. A list "
     "that misses a role, or a Signer or Approver that matches no role or a role another item already took "
     "(Firma would leave that person out), is refused before anything is created; give extra people the "
-    "designation CC. "
+    "designation CC. The role an item fills decides whether it signs or approves, and an item whose "
+    "template_user_id and id name two different roles is refused. "
     "Empty, with empty signer inputs, uses the template's own recipients."
 )
 SIGNER_FIRST_NAME_INFO = "First name of the single signer. Leave empty when Recipients (JSON) is used."
@@ -453,9 +467,11 @@ def _error_detail(body: Any) -> tuple[str, str | None]:
     if not isinstance(body, dict):
         return "", None
     message = str(body.get("error") or body.get("message") or "")
+    # A malformed "errors" (502 with "errors": 1) must not raise here: the status and code still classify it.
+    errors = body.get("errors") if isinstance(body.get("errors"), list) else []
     extra = [
         str(item.get("message"))
-        for item in body.get("errors") or []
+        for item in errors
         if isinstance(item, dict) and item.get("message") and item.get("message") != message
     ]
     # Some routes answer {"error": "<code>", "message": "<text>"}: keep the text too.
@@ -653,9 +669,15 @@ def _order_number(value: Any) -> float | None:
 
 def template_users(template: dict[str, Any]) -> list[dict[str, Any]]:
     """The template users of ``GET /templates/{id}``: its non-CC recipients, by order."""
+    recipients = template.get("recipients")
+    if recipients is None:
+        recipients = []
+    if not isinstance(recipients, list):
+        msg = "Firma API returned a template whose recipients are not a list, so its roles cannot be checked."
+        raise FirmaAPIError(msg, code=INVALID_RESPONSE)
     users = [
         item
-        for item in template.get("recipients") or []
+        for item in recipients
         if isinstance(item, dict) and item.get("id") and str(item.get("designation") or "").upper() != "CC"
     ]
     return sorted(users, key=lambda item: _order_number(item.get("order")) or 0)
@@ -672,6 +694,11 @@ def _covers(recipient: dict[str, Any], user: dict[str, Any], user_ids: set[str])
         if order is not None and order == _order_number(user.get("order")):
             return not recipient.get("id") or recipient["id"] not in user_ids
     return False
+
+
+def _designation(user: dict[str, Any]) -> str:
+    """A template user's designation, Signer when it has none."""
+    return DESIGNATIONS.get(str(user.get("designation") or "").lower(), "Signer")
 
 
 def _role(user: dict[str, Any]) -> str:
@@ -752,8 +779,7 @@ def _fill_unnamed_roles(users: list[dict[str, Any]], recipients: list[dict[str, 
                 filled.append(entry)
                 continue
             claimed.add(user["id"])
-            designation = DESIGNATIONS.get(str(user.get("designation") or "").lower(), "Signer")
-            filled.append({**entry, "designation": designation, "order": user.get("order")})
+            filled.append({**entry, "designation": _designation(user), "order": user.get("order")})
     return filled
 
 
@@ -765,6 +791,18 @@ def _check_unmatched(name: str, users: list[dict[str, Any]], recipients: list[di
     Approver that matches no template user, or matches one an earlier recipient already took, is dropped.
     """
     user_ids = {user["id"] for user in users}
+    for index, item in enumerate(recipients, start=1):
+        if item.get("designation") == "CC":
+            continue
+        roles = [user for user in users if _covers(item, user, user_ids)]
+        if len(roles) > 1:
+            msg = (
+                f'Recipient {_who(item, index)} matches more than one role of the template "{name}" '
+                f"({'; '.join(_role(user) for user in roles)}): its template_user_id and id name different "
+                "roles, and Firma would put this person into each of them. Give each recipient who signs or "
+                "approves one role."
+            )
+            raise FirmaAPIError(msg)
     taken: dict[str, int] = {}
     for user in users:
         for index, item in enumerate(recipients, start=1):
@@ -808,11 +846,20 @@ def fit_recipients_to_template(
     """
     users = template_users(template)
     if not users:
+        # Without template users Firma keeps each recipient's own designation and needs a Signer among them.
+        _require_a_signer(recipients)
         return [
             item if item.get("order") is not None else {**item, "order": index}
             for index, item in enumerate(recipients, start=1)
         ]
     name = text_value(template.get("name"))
+    if not any(_designation(user) == "Signer" for user in users):
+        # Create-and-send gives each recipient its role's designation, then refuses a request without a Signer.
+        msg = (
+            f'The Firma template "{name}" has no Signer role ({"; ".join(_role(user) for user in users)}), and '
+            "Firma refuses a signing request without a Signer. Add a Signer to the template in Firma."
+        )
+        raise FirmaAPIError(msg)
     if single_signer:
         if len(users) > 1:
             msg = (
@@ -824,7 +871,7 @@ def fit_recipients_to_template(
         user = users[0]
         recipient = dict(recipients[0])
         recipient["template_user_id"] = user["id"]
-        recipient["designation"] = DESIGNATIONS.get(str(user.get("designation") or "").lower(), "Signer")
+        recipient["designation"] = _designation(user)
         recipient["order"] = user.get("order")
         return [recipient]
 
@@ -837,8 +884,7 @@ def fit_recipients_to_template(
             fitted.append(entry)
             continue
         # The handler keeps the template user's designation and order for this recipient.
-        designation = DESIGNATIONS.get(str(user.get("designation") or "").lower(), "Signer")
-        fitted.append({**entry, "designation": designation, "order": user.get("order")})
+        fitted.append({**entry, "designation": _designation(user), "order": user.get("order")})
     recipients = _fill_unnamed_roles(users, fitted)
     providers = [item for item in recipients if item.get("designation") != "CC"]
     _check_duplicate_orders(name, users, recipients)

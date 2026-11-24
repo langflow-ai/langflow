@@ -75,6 +75,7 @@ class FirmaSendTemplateComponent(Component):
                 recipients_json=self.recipients_json,
                 required=False,
                 default_order=False,
+                require_signer=False,
             )
             options = send_options(self)
             name = text_value(self.request_name)

@@ -98,6 +98,11 @@ def _send_calls(request) -> list[Any]:
 UNKNOWN_FAILURES = [
     pytest.param(_response(502, json_body={"error": "Proxy error", "code": "PROXY_ERROR"}), id="502-proxy-error"),
     pytest.param(_response(504, text=""), id="504-no-body"),
+    # CodeRabbit r1: an "errors" field that is not a list must not escape the Firma error path.
+    pytest.param(
+        _response(502, json_body={"error": "Proxy error", "code": "PROXY_ERROR", "errors": 1}),
+        id="502-errors-not-a-list",
+    ),
     pytest.param(_response(502, text="<html>Bad gateway</html>"), id="502-html"),
     pytest.param(_response(546, json_body={"code": "WORKER_LIMIT", "message": "Worker limit"}), id="546-gateway"),
     pytest.param(
@@ -138,6 +143,7 @@ class TestUnknownOutcome:
         ("status", "body"),
         [
             (400, {"error": "Bad", "code": "VALIDATION_ERROR"}),
+            (400, {"error": "Bad", "code": "VALIDATION_ERROR", "errors": 1}),
             (402, {"error": "Insufficient credits", "code": "INSUFFICIENT_CREDITS"}),
             (404, {"error": "Template not found", "code": "NOT_FOUND"}),
             (409, {"error": "Conflict", "code": "CONFLICT"}),
@@ -190,7 +196,7 @@ class TestKeptRequest:
 @pytest.mark.unit
 class TestTemplateRoles:
     def test_single_signer_fills_the_single_template_user(self) -> None:
-        template = _template(_user("tu-2", 2, "Approver"), _user("cc-1", 1, "CC"))
+        template = _template(_user("tu-2", 2), _user("cc-1", 1, "CC"))
         _, request = _send_template([template, _response(201, json_body=SEND_RESPONSE)])
 
         assert request.call_args_list[0].args[:2] == ("GET", f"{API_BASE_URL}/templates/{TEMPLATE_ID}")
@@ -199,7 +205,7 @@ class TestTemplateRoles:
                 "first_name": "Ada",
                 "email": "ada@firma.dev",
                 "template_user_id": "tu-2",
-                "designation": "Approver",
+                "designation": "Signer",
                 "order": 2,
             }
         ]
@@ -346,6 +352,21 @@ class TestRecipientsFirmaWouldDrop:
         assert "already taken by recipient 1 (A, a@firma.dev)" in error
         assert _send_calls(request) == []
 
+    def test_a_recipient_matching_two_roles_is_refused_before_sending(self) -> None:
+        # CodeRabbit r1: template_user_id names tu-1 and id names tu-2, so the handler's match (template_user_id,
+        # then id, then order) puts this one person into both roles.
+        recipients = [{"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-1", "id": "tu-2"}]
+        template = _template(_user("tu-1", 1), _user("tu-2", 2), name="Lease")
+        data, request = _send_template(
+            [template, _response(201, json_body=SEND_RESPONSE)], recipients_json=json.dumps(recipients)
+        )
+
+        error = data.data["error"]
+        assert "Recipient 1 (A, a@firma.dev) matches more than one role" in error
+        assert "Signer at order 1 (template_user_id tu-1)" in error
+        assert "Signer at order 2 (template_user_id tu-2)" in error
+        assert _send_calls(request) == []
+
     def test_a_cc_recipient_is_never_refused_as_unmatched(self) -> None:
         recipients = [
             {"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-1"},
@@ -487,3 +508,114 @@ class TestSigningLinkIsACredential:
         assert data.data["signing_link"] == LINK
         assert "No invitation email was sent" in data.text
         assert LINK in data.text
+
+
+ONE_APPROVER = {"first_name": "A", "email": "a@firma.dev", "designation": "Approver"}
+
+
+@pytest.mark.unit
+class TestTemplateRolesDecideTheDesignation:
+    """The template role, not the JSON designation, decides who signs.
+
+    Create-and-send gives each matched recipient its template user's designation (handler 1046) and then
+    requires a Signer among the resulting recipients (handler 1124-1131). Without template users, each
+    recipient keeps its own designation (handler 976-985) under the same Signer rule.
+    """
+
+    def test_a_json_approver_that_fills_a_signer_role_is_sent_as_the_signer(self) -> None:
+        # CodeRabbit r1: this was refused with "At least one recipient must be a Signer" before the roles were read.
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev", "designation": "Approver", "template_user_id": "tu-1"},
+            {"first_name": "B", "email": "b@firma.dev", "designation": "Approver", "order": 2},
+        ]
+        template = _template(_user("tu-1", 1), _user("tu-2", 2, "Approver"))
+        _, request = _send_template(
+            [template, _response(201, json_body=SEND_RESPONSE)], recipients_json=json.dumps(recipients)
+        )
+
+        assert _send_calls(request)[0].kwargs["json"]["recipients"] == [
+            {
+                "first_name": "A",
+                "email": "a@firma.dev",
+                "designation": "Signer",
+                "template_user_id": "tu-1",
+                "order": 1,
+            },
+            {"first_name": "B", "email": "b@firma.dev", "designation": "Approver", "order": 2},
+        ]
+
+    @pytest.mark.parametrize(
+        "values",
+        [
+            pytest.param({}, id="signer-inputs"),
+            pytest.param(
+                {"recipients_json": json.dumps([ONE_APPROVER])},
+                id="recipients-json",
+            ),
+        ],
+    )
+    def test_a_template_without_a_signer_role_is_refused_before_sending(self, values: dict[str, Any]) -> None:
+        template = _template(_user("tu-2", 2, "Approver"), _user("cc-1", 1, "CC"), name="Review")
+        data, request = _send_template([template, _response(201, json_body=SEND_RESPONSE)], **values)
+
+        error = data.data["error"]
+        assert 'The Firma template "Review" has no Signer role' in error
+        assert "Approver at order 2 (template_user_id tu-2)" in error
+        assert _send_calls(request) == []
+
+    def test_cc_only_recipients_are_refused_before_any_request(self) -> None:
+        recipients = [{"first_name": "C", "email": "c@firma.dev", "designation": "CC"}]
+        data, request = _send_template([], recipients_json=json.dumps(recipients))
+
+        assert "At least one recipient must be a Signer or an Approver" in data.data["error"]
+        request.assert_not_called()
+
+    def test_a_template_without_users_still_needs_a_json_signer(self) -> None:
+        recipients = [ONE_APPROVER]
+        data, request = _send_template([_template()], recipients_json=json.dumps(recipients))
+
+        assert "At least one recipient must be a Signer" in data.data["error"]
+        assert _send_calls(request) == []
+
+    def test_a_document_send_still_needs_a_signer(self) -> None:
+        recipients = [ONE_APPROVER]
+        component = FirmaSendDocumentComponent()
+        component.set(
+            api_key=API_KEY,
+            request_name="NDA",
+            recipients_json=json.dumps(recipients),
+            document_base64=base64.b64encode(b"%PDF-1.4\n%%EOF\n").decode(),
+        )
+        with patch("httpx.Client.request") as request:
+            data = component.send_document()
+
+        assert "At least one recipient must be a Signer." in data.data["error"]
+        request.assert_not_called()
+
+
+@pytest.mark.unit
+class TestMalformedBodies:
+    """A JSON field of the wrong type stays inside the Firma error path (CodeRabbit r1 siblings)."""
+
+    def test_template_recipients_that_are_not_a_list_are_refused_before_sending(self) -> None:
+        template = _response(json_body={"id": TEMPLATE_ID, "name": "Offer", "recipients": 1})
+        data, request = _send_template([template, _response(201, json_body=SEND_RESPONSE)])
+
+        assert "recipients" in data.data["error"]
+        assert "may_have_been_sent" not in data.data
+        assert _send_calls(request) == []
+
+    def test_warnings_that_are_not_a_list_do_not_break_a_successful_send(self) -> None:
+        response = {**SEND_RESPONSE, "warnings": 1}
+        data, request = _send_template([_template(*ONE_SIGNER), _response(201, json_body=response)])
+
+        assert data.data["signing_request_id"] == REQUEST_ID
+        assert data.data["warnings"] == []
+        assert len(_send_calls(request)) == 1
+
+    def test_a_read_error_with_errors_not_a_list_keeps_status_and_code(self) -> None:
+        body = {"error": "Template not found", "code": "NOT_FOUND", "errors": 1}
+        data, request = _send_template([_response(404, json_body=body)])
+
+        assert "NOT_FOUND: Template not found" in data.data["error"]
+        assert _send_calls(request) == []
