@@ -1,7 +1,8 @@
 """MrScraper components retired in Langflow 1.13.0.
 
-The MrScraper bundle now ships Account, Scraper API and Web Search. These classes keep the
-inputs and outputs of the seven components it dropped, so a saved node still loads with its
+The MrScraper bundle now ships Status, Scrape HTML, Scrape Markdown, Get Screenshot, Scrape
+Brand, Scrape JSON, and Web Search. These classes keep the inputs and outputs of the seven
+components it dropped, so a saved node still loads with its
 fields and connections, and each output fails with a message that names the replacement.
 They never import the MrScraper SDK.
 """
@@ -20,7 +21,7 @@ class MrscraperRetiredError(RuntimeError):
     def __init__(self, display_name: str):
         """Name the retired component and its replacement."""
         super().__init__(
-            f"{display_name} was retired in Langflow 1.13.0. Replace this node with MrScraper Scraper API "
+            f"{display_name} was retired in Langflow 1.13.0. Replace this node with MrScraper Scrape HTML "
             "and update the components that read its output."
         )
 
@@ -38,7 +39,7 @@ def _api_token_input() -> SecretStrInput:
 class RetiredMrscraperComponent(Component):
     """Shared attributes of the retired MrScraper components."""
 
-    description: str = "Retired in Langflow 1.13.0. Replace this node with MrScraper Scraper API."
+    description: str = "Retired in Langflow 1.13.0. Replace this node with MrScraper Scrape HTML."
     icon: str = "MrScraper"
     documentation: str = "https://docs.mrscraper.com"
     legacy = True

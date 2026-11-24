@@ -10,82 +10,98 @@ import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-ins
 
 <Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support third-party integrations with Langflow.
 
-The **MrScraper** bundle provides three components: **Account**, **Scraper API**, and **Web Search**. They use `mrscraper-sdk` version `0.6.x`. Install the provider dependencies with `pip install "lfx-bundles[mrscraper]"`, then enter your API token from [the MrScraper app](https://app.mrscraper.com) in each component's **MrScraper API Token** field.
+The **MrScraper** bundle provides seven components that follow the [MrScraper Scraper API reference](https://docs.mrscraper.com/docs/api/scraper-api/scrape-html): **Status**, **Scrape HTML**, **Scrape Markdown**, **Get Screenshot**, **Scrape Brand**, **Scrape JSON**, and **Web Search**. They use `mrscraper-sdk` version `0.12.x`. Install the provider dependencies with `pip install "lfx-bundles[mrscraper]"`, then enter your API token from [the MrScraper app](https://app.mrscraper.com) in each component's **MrScraper API Token** field.
 
-All three components return the API payload as [`Data`](/data-types#json). The SDK's `status_code` and `headers` envelope is removed. Object responses are preserved; text and list responses are wrapped in a field so they remain valid Langflow data. API, authentication, and network errors fail the component.
+All seven components return the API payload as [`Data`](/data-types#json). The SDK's `status_code` and `headers` envelope is removed. Object responses are preserved; text responses are wrapped in a field (`html` for **Scrape HTML** and `markdown` for **Scrape Markdown**) so they remain valid Langflow data. API, authentication, and network errors fail the component. The API token is sent in request headers, never in the URL.
 
-## MrScraper Account
+## Shared page settings
 
-Check account identity, subscription status, token quota, and rate limits. This component calls `GET https://api.app.mrscraper.com/api/v1/subscription-accounts`.
-
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| MrScraper API Token (`api_token`) | Required | Your account's API token, stored as a secret. |
-| Timeout (seconds) (`timeout`) | `30` | Positive HTTP request timeout. |
-
-The output includes `subscription_status`, `enterprise`, `token_usage`, `token_limit`, `token_remaining`, `usage_percent`, `rate_limit`, `rate_ttl`, `auto_renew`, `ends_at`, and `user` with `name`, `email`, and `verified`. Remaining tokens are clamped to zero when usage exceeds the limit. API keys and billing identifiers are excluded.
-
-For example, connect **Account** to a **Parser** to read `token_remaining` before starting a scraping workflow.
-
-## MrScraper Scraper API
-
-Fetch HTML, Markdown, screenshots, or a combination. This component sends `POST https://api.mrscraper.com`. The request body contains `url`, `maxRetries`, and optional `tokenCap`; page options and the API token are query parameters.
+**Scrape HTML**, **Scrape Markdown**, **Get Screenshot**, and **Scrape JSON** share these settings in their advanced options. Blank optional fields are left out of the request. These four components always send `saveResult=true`, so results are saved to the dashboard Result tab, and they never send a token cap.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| MrScraper API Token (`api_token`) | Required | Your API token. |
-| URL (`url`) | Required | Target page URL. Available in Tool Mode. |
-| HTML (`html`) | `true` | Request HTML. |
-| Markdown (`markdown`) | `false` | Request Markdown, independently of HTML. |
-| Screenshot (`screenshot`) | `false` | Capture a screenshot; always enables browser rendering. |
-| Browser Rendering (`browser_rendering`) | `Auto` | `Auto` tries without a browser before falling back. `Enabled` forces rendering; `Disabled` disables it unless Screenshot is enabled. |
-| Super (`super`) | `false` | Enable real device routing independently of browser rendering. |
-| Timeout (seconds) (`timeout`) | `120` | Page timeout from 1 to 300 seconds. The SDK adds 30 seconds for the HTTP deadline. |
-| Geo Code (`geo_code`) | `US` | Geolocation country code. |
-| Proxy Country (`proxy_country`) | Empty | Optional `proxyCountry` value. |
-| Use Proxy (`use_proxy`) | `true` | Allow the API to use a proxy. |
-| Custom Proxy (`proxy`) | Empty | Optional secret proxy in `username:password@host:port` form. |
-| Block Resources (`block_resources`) | `false` | Block images, CSS, and fonts. |
-| Bypass Proxy (`bypass_proxy`) | `false` | Enable the API's proxy bypass behavior. |
-| Wait for Selector (`wait_for_selector`) | Empty | Wait for a CSS selector. |
-| Visit Home Page First (`home_page`) | `false` | Visit the site's root first; sent as `warmStart=true`. |
-| Cookie Jar (`cookie_jar`) | Empty | Optional configuration such as `domain=example.com&country=us&max_used=100&max_age=50m`. |
-| Target Headers (`headers`) | Empty | Target request headers as a JSON object string. |
-| Max Retries (`max_retries`) | `3` | Nonnegative maximum retries; `0` is preserved. |
-| Token Cap (`token_cap`) | Empty | Optional nonnegative integer retry budget; blank leaves it unset and `0` is preserved. |
-| Stream (`stream`) | `Auto` | `Auto` leaves streaming unset; `Enabled` or `Disabled` sends an explicit value. The SDK buffers the response. |
-| Discard Token Secret (`discard_token_secret`) | Empty | Optional secret `x-discard-token-secret` request header. |
+| Browser Rendering (`browser_rendering`) | `Auto` | Whether to load the page in a browser: `Enabled` always does and `Disabled` never does. `Auto` loads the page without a browser first and switches to a browser automatically if the request is blocked. Not shown on **Get Screenshot**, which always renders. |
+| Timeout (seconds) (`timeout`) | `300` | Maximum seconds to wait for the scrape, from 1 to 330. The HTTP request allows 30 additional seconds. |
+| Warm Start (`warm_start`) | `false` | Whether to open the site's home page first to warm the session before loading the target URL. Not shown on **Get Screenshot**. |
+| Block Resources (`block_resources`) | `false` | Whether to block images, fonts, and stylesheets while loading the page. Not shown on **Get Screenshot**. |
+| Wait for Selector (`wait_for_selector`) | Blank | CSS selector or text to wait for on the page before returning the result, up to 500 characters. A selector needs a rendered page, so don't combine it with **Browser Rendering** `Disabled`. |
+| Geo Code (`geo_code`) | Blank | Two-letter country code to load the page from, sent in lowercase. Blank uses the API default (United States). |
+| Max Age (milliseconds) (`max_age`) | `0` | Return a cached result of the same request when it is newer than the selected age. A cached result costs the same tokens as the original scrape. Up to `604800000` (7 days); `0` always scrapes fresh. |
+| Max Retries (`max_retries`) | Blank | Maximum number of retries, as a nonnegative integer; `0` is preserved. Blank means no limit. |
 
-Only the URL and output options are shown initially; open the component's advanced settings for the remaining controls. To retrieve all representations, enter `https://example.com` and enable **HTML**, **Markdown**, and **Screenshot**. Screenshot also enables browser rendering when **Browser Rendering** is `Disabled`.
+## MrScraper Status
 
-JSON object responses pass through unchanged, including combined HTML, Markdown, and screenshot responses. Text responses are returned as `{"html": "..."}`; the `html` field name is retained for existing flows and can contain Markdown when only Markdown is requested. Other non-object payloads also use the `html` field. Inspect the response before assuming it contains an HTML string.
+Check account usage, rate limits, and subscription status. This component calls `GET https://api.app.mrscraper.com/api/v1/subscription-accounts` and takes only the **MrScraper API Token**.
+
+The output contains selected status fields under `data`, such as `data.tokenLimit`, `data.tokenUsage`, `data.subscriptionItem`, and `data.scraperAllowance`. For example, connect **Status** to a **Parser** to read `data.tokenUsage` before starting a scraping workflow.
+
+## MrScraper Scrape HTML
+
+Retrieve the raw HTML of a page. Browser rendering is optional. This component sends `GET https://api.mrscraper.com` with `html=true` and `markdown=false`, the **URL**, and the shared page settings.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| URL (`url`) | Required | Absolute HTTP or HTTPS URL of the page to process. Available in Tool Mode. |
+| Screenshot (`screenshot`) | `None` | Screenshot to capture with the HTML: `None` for no screenshot, `full` for the entire page, `top` for the first viewport, or a `WIDTHxHEIGHT` viewport from 100 to 3840 pixels with an optional `-ZOOM` percent from 25 to 300, such as `1280x800` or `1920x1080-75`. Setting a screenshot also sends `browserRendering=true`, even when **Browser Rendering** is `Disabled`. |
+
+Without a screenshot, the output is `{"html": "..."}`. With a screenshot, the API returns JSON with `html` and a base64 `screenshot`, which passes through unchanged.
+
+## MrScraper Scrape Markdown
+
+Retrieve a page as clean Markdown. Browser rendering is optional. This component sends `GET https://api.mrscraper.com` with `markdown=true`, `html=false`, and `screenshot=false`, the **URL**, and the shared page settings. The output is `{"markdown": "..."}`.
+
+## MrScraper Get Screenshot
+
+Capture a base64 PNG screenshot of the full page, the first viewport, or a custom viewport. Browser rendering is always enabled. This component sends `GET https://api.mrscraper.com` with the **URL**, `screenshot` set to the chosen area, `html=false`, `markdown=false`, and `browserRendering=true`, plus the shared **Timeout**, **Wait for Selector**, **Geo Code**, **Max Age**, and **Max Retries** settings.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| URL (`url`) | Required | Absolute HTTP or HTTPS URL of the page to process. Available in Tool Mode. |
+| Screenshot (`screenshot`) | `full` | Screenshot area to capture: `full` for the entire scroll height, `top` for the first viewport, or a `WIDTHxHEIGHT` viewport from 100 to 3840 pixels with an optional `-ZOOM` percent from 25 to 300, such as `1280x800` or `1920x1080-75`. Select `full` or `top`, or type a viewport size. |
+
+The output contains the base64 `screenshot` and the page `html`, which the API includes even though `html=false` is sent.
+
+## MrScraper Scrape Brand
+
+Extract a website's colors, typography, logos, and social links as JSON. This component takes only the **MrScraper API Token** and the **URL** (available in Tool Mode). It sends `GET https://api.mrscraper.com` with `action=brand-scraping`, the **URL**, and `bundle=none`, and the HTTP request waits up to 120 seconds.
+
+The output contains `message` and a `data` object with `job_id`, `status`, `url`, `final_url`, `brand`, and `error`. Brand fields can be `null` when a site does not declare them.
+
+## MrScraper Scrape JSON
+
+Extract structured JSON from a page using a natural-language prompt. Append `Json Schema:` and a JSON schema to shape the output. This component sends `GET https://api.mrscraper.com` with `agent=general`; when the encoded URL would exceed 8,000 characters, it switches to `POST` with `url`, `prompt`, and `agent` in a JSON body and the other settings in the query.
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| URL (`url`) | Required | Absolute HTTP or HTTPS URL of the page to process. Available in Tool Mode. |
+| Prompt (`prompt`) | `Extract all data as complete as possible.` | Instructions describing the data to extract. Append `Json Schema:` and a JSON schema to shape the output. Available in Tool Mode. |
+| Include HTML (`html`) | `true` | Whether to include the page HTML in the response. Disable it for a smaller response. |
+| Include Screenshot (`screenshot`) | `false` | Whether to include a base64 screenshot in the response. |
+
+**Scrape JSON** also accepts the shared page settings and always sends `saveResult=true`. Extracted fields are in `data`; the output also contains `success`, `token_usage`, `status`, and `error`. A failed run returns `success: false` and is not billed.
 
 ## MrScraper Web Search
 
-Search Google using query text or a full Google search URL. This component sends `POST https://sync.scraper.mrscraper.com/api/google/serp/v2/sync`.
+Search the web and return ranked results with titles, URLs, descriptions, and sources. This component sends `GET https://api.mrscraper.com` with `action=websearch`.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| MrScraper API Token (`api_token`) | Required | Your API token. |
-| Query or Google URL (`url`) | Required | Query text or Google search URL. Available in Tool Mode. |
-| Raw HTML (`raw`) | `true` | Return HTML regardless of Format. Disable this to request structured JSON. |
-| Format (`format`) | `json` | `json` or `html`, used when Raw HTML is disabled. |
-| Region (`region`) | Empty | Optional country code; overrides `gl` from a URL. |
-| Language (`language`) | Empty | Optional language code; overrides `hl` from a URL. |
-| Page (`page`) | Empty | Optional positive integer page; overrides `start` from a URL. |
-| Render JavaScript (`render_js`) | `false` | Render JavaScript-dependent search features. |
-| Timeout (seconds) (`timeout`) | `600` | Positive HTTP request timeout. |
+| Search Query (`query`) | Required | Search query text, trimmed before sending, containing 1 to 1000 characters. Available in Tool Mode. |
+| Country (`country`) | Blank | Two-letter country code to search from, sent in lowercase. Blank uses the API default (United States). |
+| Number of Results (`num_results`) | `10` | Number of search results to request, as an integer from 10 to 100. Fewer results may be returned. |
 
-The SDK extracts `q`, `gl`, `hl`, and `start` from Google URLs. For example, `https://www.google.com/search?q=running+shoes&gl=us&hl=en&start=20` searches for `running shoes` in region `us`, language `en`, on page `3`. Explicit component settings override URL values.
-
-For structured results, enter `python web scraping`, disable **Raw HTML**, and select **Format: json**. JSON objects pass through unchanged; HTML, list, and other scalar responses are wrapped as `{"result": ...}`.
+The output contains `success`, `message`, and a `data` array whose rows include `rank`, `title`, `url`, `description`, and `source`. The HTTP request waits up to 120 seconds.
 
 ## Updating existing flows
 
-**MrScraper Fetch Rendered HTML** is now displayed as **MrScraper Scraper API**. Its class and saved-flow identifier remain `MrscraperFetchHtml`, its output name remains `data`, and plain text output keeps the `html` field. Existing URL, timeout, geolocation, and resource-blocking settings remain available. Browser rendering now defaults to the SDK's automatic fallback; select **Enabled** to always use a browser.
+**MrScraper Account** is now displayed as **MrScraper Status**, and **MrScraper Scraper API** as **MrScraper Scrape HTML**. Their classes and saved-flow identifiers remain `MrscraperAccount` and `MrscraperFetchHtml`, **Web Search** keeps `MrscraperWebSearch`, and every output name remains `data`.
 
-The previous AI Agent Scraper, Batch Scrape URLs, Crawl Website, Get Result Detail, Get Results, Run AI Scraper, and Run Manual Scraper components have been removed. Their historical migration entries remain for old flow identification, but those operations have no equivalent in this three-component bundle. Replace affected nodes with **Scraper API** for page retrieval or **Web Search** for discovery, and update downstream parsing. A prompt-driven extraction workflow can connect page content to a language model; it requires rebuilding the workflow rather than an automatic node conversion.
+Before running a flow saved with SDK 0.6.x, open it in the flow editor and update each Account, Scraper API, and Web Search node. Review the settings and connected outputs below, then save the flow. If you use the flow with the CLI, export the updated flow again. `lfx upgrade` reports these changes as breaking and requires an editor update.
 
-Flows saved with one of these components still load. `lfx upgrade` reports each such node as retired, and running the flow fails with a message that names **Scraper API** as the replacement.
+- **Status** no longer has a timeout. Read usage from `data.tokenUsage` and `data.tokenLimit` and update downstream references to the previous calculated summary.
+- **Scrape HTML** always requests HTML. Use **Scrape Markdown** for Markdown and **Get Screenshot** for a standalone screenshot. The editor update carries over **Max Retries** and **Visit Home Page First** (now **Warm Start**) and converts the former **Screenshot** switch to `full` or `None`. The **Super**, **Proxy Country**, **Use Proxy**, **Custom Proxy**, **Bypass Proxy**, **Cookie Jar**, **Target Headers**, **Stream**, and **Discard Token Secret** settings were removed. **Geo Code** and **Max Retries** default to blank on new nodes. Results are always saved to the dashboard Result tab, and there is no token cap.
+- **Web Search** takes a **Search Query** with optional **Country** and **Number of Results**. Enter the query on the updated node or reconnect the upstream node to the **Search Query** input. If the old node used a Google search URL, use its query text. Review downstream components that expected raw HTML. The **Raw HTML**, **Format**, **Region**, **Language**, **Page**, **Render JavaScript**, and **Timeout** settings were removed.
+
+The AI Agent Scraper, Batch Scrape URLs, Crawl Website, Get Result Detail, Get Results, Run AI Scraper, and Run Manual Scraper components were retired in Langflow 1.13.0 and have no equivalent. Saved nodes of these components still load as retired placeholders with their fields and connections, but running one fails with a message that names **MrScraper Scrape HTML** as the replacement. Use **Scrape JSON** for prompt-driven extraction from a single page.
 
 For more information, see the [MrScraper documentation](https://docs.mrscraper.com).

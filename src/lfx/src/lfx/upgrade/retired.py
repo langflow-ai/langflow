@@ -64,5 +64,5 @@ def replacement_label(reference: str) -> str:
     return {
         "files_and_knowledge.Knowledge": "Knowledge",
         "models_and_agents.Agent": "Agent",
-        "mrscraper.MrscraperFetchHtml": "MrScraper Scraper API",
+        "mrscraper.MrscraperFetchHtml": "MrScraper Scrape HTML",
     }.get(reference, reference)
