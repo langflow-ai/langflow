@@ -31,7 +31,7 @@ import sys
 import time
 import warnings
 from collections.abc import Iterator
-from contextlib import AsyncExitStack, contextmanager, suppress
+from contextlib import contextmanager, suppress
 from functools import partial
 from ipaddress import ip_address
 from pathlib import Path
@@ -1055,35 +1055,45 @@ def worker(
         backend, worker_runner, teardown = await build_worker(owner=owner)
         stop_event = asyncio.Event()
         loop = asyncio.get_running_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            with suppress(NotImplementedError):
-                loop.add_signal_handler(sig, stop_event.set)
+        startup_task = asyncio.current_task()
+        cancelled_startup = False
+
+        def request_stop() -> None:
+            nonlocal startup_task, cancelled_startup
+            stop_event.set()
+            # Startup hooks can be waiting on I/O before the claim loop can observe the stop event.
+            if startup_task is not None:
+                cancelled_startup = startup_task.cancel()
+                startup_task = None
+
         # A worker runs flows without the API app, so what a plane starts in the app's lifespan never reaches it. The
         # activation extension is what a plane ships for both processes: run it before the first claim.
-        lifespan_stack = AsyncExitStack()
         try:
-            await lifespan_stack.enter_async_context(worker_lifespan())
-            logger.info("Langflow worker started; draining queued jobs off the database.")
-            await run_worker_loop(
-                backend,
-                worker_runner,
-                stop_event=stop_event,
-                idle_block_ms=idle_block_ms,
-                job_service=get_job_service(),
-                owner=owner,
-                lease_ttl_s=settings.background_lease_ttl_s,
-                watchdog_interval_s=settings.background_watchdog_interval_s,
-                roster_enabled=True,
-                # Derived from the SAME knob the collector uses as the online
-                # window, not from the watchdog interval: those are independent
-                # settings, so reusing the watchdog's meant an operator raising
-                # it to cut orphan-scan load would silently make every idle
-                # worker read offline. A third of the window leaves room for
-                # the beat's own jitter and two missed beats.
-                roster_interval_s=settings.background_lease_ttl_s / _ROSTER_BEATS_PER_WINDOW,
-            )
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                with suppress(NotImplementedError):
+                    loop.add_signal_handler(sig, request_stop)
+            async with worker_lifespan():
+                startup_task = None
+                if stop_event.is_set():
+                    return
+                logger.info("Langflow worker started; draining queued jobs off the database.")
+                await run_worker_loop(
+                    backend,
+                    worker_runner,
+                    stop_event=stop_event,
+                    idle_block_ms=idle_block_ms,
+                    job_service=get_job_service(),
+                    owner=owner,
+                    lease_ttl_s=settings.background_lease_ttl_s,
+                    watchdog_interval_s=settings.background_watchdog_interval_s,
+                    roster_enabled=True,
+                    # A third of the online window leaves room for jitter and two missed beats.
+                    roster_interval_s=settings.background_lease_ttl_s / _ROSTER_BEATS_PER_WINDOW,
+                )
+        except asyncio.CancelledError:
+            if not cancelled_startup:
+                raise
         finally:
-            await lifespan_stack.aclose()
             await teardown()
 
     asyncio.run(_run_worker())

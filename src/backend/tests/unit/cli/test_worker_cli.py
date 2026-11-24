@@ -11,7 +11,11 @@ import pytest
 
 _WORKER_SCRIPT = dedent(
     """
+    import asyncio
+    import os
+    import signal
     import sys
+    from contextlib import asynccontextmanager
     from types import SimpleNamespace
 
     import langflow.__main__ as cli
@@ -46,7 +50,7 @@ _WORKER_SCRIPT = dedent(
         await logger.ainfo("worker service initialization info message")
 
     async def teardown():
-        pass
+        print("WORKER_TEARDOWN", flush=True)
 
     async def build_worker(**kwargs):
         return Backend(), Runner(), teardown
@@ -54,11 +58,38 @@ _WORKER_SCRIPT = dedent(
     real_loop = worker.run_worker_loop
 
     async def run_worker_loop(backend, runner, **kwargs):
+        print("WORKER_LOOP_ENTERED", flush=True)
+        if mode == "loop_failure":
+            raise RuntimeError("worker loop failed")
         backend.stop_event = kwargs["stop_event"]
         await real_loop(backend, runner, **kwargs)
 
     from langflow.services.deployment_artifacts import activation
 
+    @asynccontextmanager
+    async def first_extension():
+        try:
+            yield
+        finally:
+            print("FIRST_EXTENSION_CLOSED", flush=True)
+
+    @asynccontextmanager
+    async def extension():
+        if mode == "signal_on_start":
+            os.kill(os.getpid(), signal.SIGTERM)
+            await asyncio.Event().wait()
+        try:
+            yield
+        except RuntimeError:
+            print("EXTENSION_SAW_WORKER_ERROR", flush=True)
+            raise
+        if mode == "exit_failure":
+            raise RuntimeError("extension shutdown failed")
+
+    mode = os.environ.get("WORKER_TEST_MODE")
+    if mode:
+        activation.register_worker_lifespan(first_extension)
+        activation.register_worker_lifespan(extension)
     activation.load_activation_extensions = lambda: print("ACTIVATION_EXTENSIONS_LOADED", flush=True)
     cli.initialize_services = initialize_services
     def get_settings_service():
@@ -165,3 +196,40 @@ def test_worker_creates_the_settings_service_before_any_other_service(tmp_path):
     output = result.stdout + result.stderr
     assert result.returncode == 0, output
     assert output.index("SETTINGS_SERVICE_ASKED") < output.index("worker service initialization info message")
+
+
+@pytest.mark.parametrize(
+    ("mode", "error", "loop_entered"),
+    [
+        pytest.param(
+            "signal_on_start",
+            None,
+            False,
+            marks=pytest.mark.skipif(sys.platform == "win32", reason="Unix signals"),
+        ),
+        ("exit_failure", "extension shutdown failed", True),
+        ("loop_failure", "worker loop failed", True),
+    ],
+)
+def test_worker_unwinds_lifespans_and_tears_down(tmp_path, mode, error, loop_entered):
+    env = {key: value for key, value in os.environ.items() if not key.startswith("LANGFLOW_LOG")}
+    env["LANGFLOW_CONFIG_DIR"] = str(tmp_path)
+    env["LANGFLOW_PRETTY_LOGS"] = "false"
+    env["WORKER_TEST_MODE"] = mode
+
+    result = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", _WORKER_SCRIPT, "worker", "--idle-block-ms", "1"],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=60,
+    )
+
+    output = result.stdout + result.stderr
+    assert (result.returncode == 0) is (error is None), output
+    assert ("WORKER_LOOP_ENTERED" in output) is loop_entered
+    assert output.index("FIRST_EXTENSION_CLOSED") < output.index("WORKER_TEARDOWN")
+    assert ("EXTENSION_SAW_WORKER_ERROR" in output) is (mode == "loop_failure")
+    if error is not None:
+        assert error in output
