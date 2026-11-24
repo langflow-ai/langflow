@@ -165,6 +165,23 @@ def test_graph_copy_and_pickle_preserve_authorized_legacy_flow_ids():
     assert pickle.loads(pickle.dumps(graph)).authorized_legacy_flow_ids == frozenset({flow_id})  # noqa: S301
 
 
+def test_graph_carries_authorized_extra_file_scopes_but_a_run_copy_never_inherits_them():
+    graph = Graph.from_payload(
+        {"nodes": [], "edges": []},
+        flow_id="flow",
+        authorized_extra_file_scopes={"user-owner"},
+    )
+
+    assert graph.authorized_extra_file_scopes == frozenset({"user-owner"})
+    assert copy.deepcopy(graph).authorized_extra_file_scopes == frozenset({"user-owner"})
+    assert pickle.loads(pickle.dumps(graph)).authorized_extra_file_scopes == frozenset({"user-owner"})  # noqa: S301
+    # A run copy belongs to one run user: the template's stamp must not leak into it.
+    assert graph.copy_for_run(user_id="caller").authorized_extra_file_scopes == frozenset()
+    stamped = graph.copy_for_run(user_id="caller", authorized_extra_file_scopes={"user-other"})
+    assert stamped.authorized_extra_file_scopes == frozenset({"user-other"})
+    assert Graph.from_payload({"nodes": [], "edges": []}, flow_id="flow").authorized_extra_file_scopes == frozenset()
+
+
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
     monkeypatch.setattr(
         "lfx.services.deps.get_settings_service",

@@ -276,7 +276,26 @@ def test_upload_named_like_secret_in_flow_subdir_allowed(tmp_path):
         assert enforce_local_file_access(str(upload), scope_ids=["flow-id"]) == Path(str(upload))
 
 
-def _component(user_id=None, flow_id=None, source_flow_id=None, authorized_legacy_flow_ids=()):
+def test_stamped_extra_scope_admits_the_deployers_local_folder(tmp_path):
+    """The stamped ``user-<owner>`` scope opens the owner's raw folder for a run by another user, and only that."""
+    report = tmp_path / "owner-id" / "report.csv"
+    report.parent.mkdir(parents=True)
+    report.write_text("x")
+    other = tmp_path / "someone-else" / "report.csv"
+    other.parent.mkdir(parents=True)
+    other.write_text("x")
+    component = _component(user_id="runner-id", authorized_extra_file_scopes={"user-owner-id"})
+    with mock_settings(restricted=True, config_dir=str(tmp_path)):
+        scopes = component_file_access_scopes(component)
+        assert "user-owner-id" in scopes
+        assert enforce_local_file_access(str(report), scope_ids=scopes) == report.resolve()
+        with pytest.raises(LocalFileAccessError):
+            enforce_local_file_access(str(other), scope_ids=scopes)
+
+
+def _component(
+    user_id=None, flow_id=None, source_flow_id=None, authorized_legacy_flow_ids=(), authorized_extra_file_scopes=()
+):
     """Build a component stub whose graph carries the given storage scopes."""
     component = MagicMock()
     component._user_id = user_id
@@ -284,6 +303,7 @@ def _component(user_id=None, flow_id=None, source_flow_id=None, authorized_legac
     component._vertex.graph.flow_id = flow_id
     component._vertex.graph.source_flow_id = source_flow_id
     component._vertex.graph.authorized_legacy_flow_ids = frozenset(authorized_legacy_flow_ids)
+    component._vertex.graph.authorized_extra_file_scopes = frozenset(authorized_extra_file_scopes)
     return component
 
 
@@ -315,6 +335,29 @@ class TestValidateStorageKey:
             authorized_legacy_flow_ids={"legacy-flow-id"},
         )
         assert validate_storage_key(component, "legacy-flow-id/report.csv") == ("legacy-flow-id", "report.csv")
+
+    def test_server_stamped_extra_scope_namespace_allowed(self):
+        """A run user may address a namespace the server stamped on its graph (a deployer's folder)."""
+        component = _component(user_id="runner-id", authorized_extra_file_scopes={"user-owner-id"})
+        assert validate_storage_key(component, "owner-id/report.csv") == ("owner-id", "report.csv")
+        assert validate_storage_key(component, "user-owner-id/report.csv") == ("user-owner-id", "report.csv")
+
+    def test_unstamped_run_cannot_address_another_users_namespace(self):
+        component = _component(user_id="runner-id")
+        with pytest.raises(StorageNamespaceError):
+            validate_storage_key(component, "owner-id/report.csv")
+
+    def test_extra_scope_does_not_open_a_third_namespace(self):
+        component = _component(user_id="runner-id", authorized_extra_file_scopes={"user-owner-id"})
+        with pytest.raises(StorageNamespaceError):
+            validate_storage_key(component, "someone-else/report.csv")
+
+    def test_non_frozenset_extra_scope_is_ignored(self):
+        """Only a server-built frozenset counts; a stray mock or list never widens access."""
+        component = _component(user_id="runner-id")
+        component._vertex.graph.authorized_extra_file_scopes = ["user-owner-id"]
+        with pytest.raises(StorageNamespaceError):
+            validate_storage_key(component, "owner-id/report.csv")
 
     def test_public_source_flow_namespace_allowed(self):
         component = _component(user_id="owner-id", flow_id="virtual-id", source_flow_id="public-flow-id")
