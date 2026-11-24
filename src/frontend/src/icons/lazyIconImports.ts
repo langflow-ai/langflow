@@ -555,6 +555,10 @@ export const lazyIconsMapping = {
     import("@/icons/Windsurf").then((mod) => ({ default: mod.WindsurfIcon })),
   Wolfram: () =>
     import("@/icons/Wolfram/Wolfram").then((mod) => ({ default: mod.default })),
+  WorldRouter: () =>
+    import("@/icons/WorldRouter").then((mod) => ({
+      default: mod.WorldRouterIcon,
+    })),
   xAI: () => import("@/icons/xAI").then((mod) => ({ default: mod.XAIIcon })),
   YouTube: () =>
     import("@/icons/Youtube").then((mod) => ({ default: mod.YoutubeIcon })),

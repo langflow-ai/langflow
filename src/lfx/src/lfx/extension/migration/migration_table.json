@@ -1522,6 +1522,11 @@
       "added_in": "1.14.0"
     },
     {
+      "bare_class_name": "WorldRouterComponent",
+      "target": "ext:worldrouter:WorldRouterComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "VllmComponent",
       "target": "ext:vllm:VllmComponent@official",
       "added_in": "1.11.0"

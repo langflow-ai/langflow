@@ -558,6 +558,7 @@ export const SIDEBAR_BUNDLES = [
     name: "wolframalpha",
     icon: "WolframAlphaAPI",
   },
+  { display_name: "WorldRouter", name: "worldrouter", icon: "WorldRouter" },
   { display_name: "xAI", name: "xai", icon: "xAI" },
   { display_name: "Yahoo! Finance", name: "yahoosearch", icon: "trending-up" },
   { display_name: "YouTube", name: "youtube", icon: "YouTube" },
