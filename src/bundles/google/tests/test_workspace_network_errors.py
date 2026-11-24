@@ -54,9 +54,12 @@ async def test_network_failures_are_actionable_without_replaying_the_action(fail
     assert message in str(error)
     assert "Check this server's outbound network access" in str(error)
     assert "temporarily unavailable" not in str(error)
-    # Python 3.11 can recreate TimeoutError when transferring it from a worker thread.
-    assert type(error.__cause__) is type(failure)
-    assert error.__cause__.args == failure.args
+    if isinstance(failure, TimeoutError):
+        # Python 3.11/3.12 can recreate TimeoutError across asyncio.to_thread.
+        assert type(error.__cause__) is type(failure)
+        assert error.__cause__.args == failure.args
+    else:
+        assert error.__cause__ is failure
     assert http.request.call_count == (2 if after_refresh else 1)
     assert lease.get_token_after_auth_error.await_count == int(after_refresh)
     assert http.close_count == (2 if after_refresh else 1)

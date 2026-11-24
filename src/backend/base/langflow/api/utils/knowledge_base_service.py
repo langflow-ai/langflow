@@ -24,7 +24,7 @@ import asyncio
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
@@ -34,6 +34,9 @@ from sqlmodel import select
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
 from langflow.services.deps import session_scope
 from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 
 class _UnsetType:
@@ -197,6 +200,53 @@ async def list_by_name(name: str) -> list[KnowledgeBaseRecord]:
         stmt = select(KnowledgeBaseRecord).where(KnowledgeBaseRecord.name == name)
         result = await session.exec(stmt)
         return list(result.all())
+
+
+_shared_kb_for_run_enabled: Callable[[], bool] | None = None
+
+
+def register_shared_kb_for_run(enabled: Callable[[], bool]) -> None:
+    """Let a flow run use a KB it does not own, when authorization shares it to the running identity.
+
+    OSS never registers this, so a run sees only the KBs of the user it runs as. A downstream plane registers it for
+    the runs where the running identity is not the owner (a deployment runs as a service account and the KBs are the
+    deployer's). ``enabled`` is asked on every lookup.
+    """
+    global _shared_kb_for_run_enabled  # noqa: PLW0603 - process-wide extension registration
+    _shared_kb_for_run_enabled = enabled
+
+
+async def get_shared_for_run(user_id: UUID, name: str, action: str) -> KnowledgeBaseRecord | None:
+    """Find the KB called ``name`` that ``user_id`` does not own but may ``action`` through a share.
+
+    Call it after the owner lookup missed. ``None`` when nothing is registered, authorization is off, or no candidate
+    allows ``action`` (so a read share does not open ingestion). Two allowed candidates are refused as ambiguous
+    rather than picking one.
+    """
+    if _shared_kb_for_run_enabled is None or not _shared_kb_for_run_enabled():
+        return None
+    from langflow.services.auth.context import current_auth_context_for_authz
+    from langflow.services.deps import get_authorization_service
+
+    authz = get_authorization_service()
+    if not (await authz.is_enabled() and await authz.supports_cross_user_fetch()):
+        return None
+    allowed = [
+        candidate
+        for candidate in await list_by_name(name)
+        if candidate.user_id != user_id
+        and await authz.enforce(
+            user_id=user_id,
+            domain="*",
+            obj=f"knowledge_base:{candidate.id}",
+            act=action,
+            context={**current_auth_context_for_authz(), "is_superuser": False},
+        )
+    ]
+    if len(allowed) > 1:
+        msg = f"Several knowledge bases named '{name}' are shared with this identity; use an owned one with that name."
+        raise ValueError(msg)
+    return allowed[0] if allowed else None
 
 
 async def get_backends_for_names(names: list[str]) -> dict[str, tuple[str, dict]]:

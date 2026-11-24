@@ -1,7 +1,7 @@
 import { PermissionsProvider } from "@/contexts/permissionsContext";
+import CustomDeployButton from "@/customization/components/custom-deploy-button";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import DeployButton from "./deploy-button";
 import PublishDropdown from "./deploy-dropdown";
 import EvaluateButton from "./evaluate-button";
 import PlaygroundButton from "./playground-button";
@@ -37,7 +37,7 @@ const FlowToolbarOptions = ({
           openApiModal={openApiModal}
           setOpenApiModal={setOpenApiModal}
         />
-        <DeployButton />
+        <CustomDeployButton />
       </div>
     </PermissionsProvider>
   );

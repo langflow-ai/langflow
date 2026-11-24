@@ -9,7 +9,10 @@ import { EventDeliveryType } from "@/constants/enums";
 import { recomputeComponentsToUpdateIfNeeded } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-import type { useQueryFunctionType } from "../../../../types/api";
+import type {
+  ComponentRetirement,
+  useQueryFunctionType,
+} from "../../../../types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
@@ -51,6 +54,7 @@ export interface ConfigResponse extends BaseConfig {
   hide_new_flow_button: boolean;
   hide_starter_projects: boolean;
   mcp_servers_locked: boolean;
+  retired_components?: Record<string, ComponentRetirement>;
   custom_component_admin_only: boolean;
   a2a_enabled: boolean;
   agentic_experience: boolean;
@@ -180,6 +184,11 @@ export const useGetConfig: useQueryFunctionType<
       setCatalogGovernanceEnabled(Boolean(data.catalog_governance_enabled));
       setMcpBaseUrl(data.mcp_base_url ?? "");
       setEnableExtensionReload(Boolean(data.enable_extension_reload));
+      useUtilityStore.setState({
+        retiredComponents: isFullConfig(data)
+          ? (data.retired_components ?? {})
+          : {},
+      });
       recomputeComponentsToUpdateIfNeeded();
 
       // Set authenticated-only fields if present (full config)

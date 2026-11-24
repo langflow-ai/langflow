@@ -184,6 +184,26 @@ async def test_expired_receipt_warns_when_project_and_audit_history_are_gone(
     assert warnings[0].args[1:] == (project_id, operation_id)
 
 
+async def test_committed_hook_failure_on_replay_keeps_the_original_audit_outcome(
+    client, active_user, logged_in_headers, monkeypatch
+):
+    from langflow.services import replacement_hooks
+
+    project_id = uuid4()
+    await _seed_project(active_user, project_id)
+    url = _url(project_id)
+    body = {"description": "saved", "flows": []}
+    assert (await client.put(url, json=body, headers=logged_in_headers)).status_code == 200
+
+    async def unavailable(_context):
+        raise HTTPException(status_code=503, detail="policy unavailable")
+
+    monkeypatch.setattr(replacement_hooks, "_replacement_committed_hooks", [unavailable])
+    assert (await client.put(url, json=body, headers=logged_in_headers)).status_code == 503
+    [event] = await events_for(project_id, resource_type="project")
+    assert event.result == "succeeded"
+
+
 @pytest.mark.parametrize("create", [True, False])
 async def test_replacement_records_one_project_event_and_replays_without_more_events(
     client, active_user, logged_in_headers, create

@@ -69,6 +69,16 @@ def owner_scoped_collection_name(owner_id: UUID, kb_name: str) -> str:
     return f"lf_{hashlib.sha256(payload.encode()).hexdigest()[:24]}"
 
 
+def staging_storage_name(owner_id: UUID, kb_name: str, token: str) -> str:
+    """Name of the hidden store one deploy stages ``owner_id``'s ``kb_name`` chunks in.
+
+    Owner-scoped like the live name, and derived from it whatever ``backend_config``
+    overrides, so staging never lands in a live index. The NUL keeps it from equalling
+    any real knowledge base's name.
+    """
+    return owner_scoped_collection_name(owner_id, f"{kb_name}\0staging\0{token}")
+
+
 def resolve_storage_name(
     *,
     kb_name: str,
