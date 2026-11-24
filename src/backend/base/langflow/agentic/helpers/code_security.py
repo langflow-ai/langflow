@@ -97,6 +97,7 @@ _FORMAT_FIELD_DUNDER_RE = re.compile(r"\{[^{}]*__")
 # code uses constantly for logging and error messages.
 _INERT_DUNDER_ATTRS: frozenset[str] = frozenset({"__name__", "__qualname__", "__module__", "__doc__"})
 _RUNTIME_LOADER_NAMES: frozenset[str] = frozenset({"__loader__", "__spec__"})
+_PLATFORM_SERVICE_PACKAGES: tuple[str, ...] = ("langflow", "lfx")
 
 
 def _is_blocked_attribute(attr: str | None, *, include_expression_methods: bool = True) -> bool:
@@ -123,6 +124,11 @@ def _is_blocked_attribute(attr: str | None, *, include_expression_methods: bool 
 # Secret/env exfiltration is the concrete threat — components must use
 # Langflow's variable/secret service, never raw process env.
 DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
+    # Generated components must use the component APIs for access to application data.
+    *[
+        (package, "services", f"{package}.services is forbidden in components")
+        for package in _PLATFORM_SERVICE_PACKAGES
+    ],
     # These shipped modules expose the real inspect module, including legacy
     # wildcard re-exports. Restrict the member, not safe classes or functions
     # from the same module. This also protects aliases and opaque transfers.
@@ -464,6 +470,7 @@ DANGEROUS_IMPORTS: set[str] = {
 # ``urllib.request`` additionally supports ``file://`` / ``ftp://`` schemes, so
 # it is a local-file-read and SSRF bypass beyond what plain HTTP allows.
 DANGEROUS_SUBMODULES: tuple[str, ...] = (
+    *(f"{package}.services" for package in _PLATFORM_SERVICE_PACKAGES),
     "concurrent.futures.process",
     "urllib.request",
     "urllib.error",
