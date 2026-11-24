@@ -234,7 +234,11 @@ class FirmaSendDocumentComponent(Component):
         return placement
 
     def send_document(self) -> Data:
-        """Return the created request as one ``Data`` with its id, status and signing link."""
+        """Return the created request as one ``Data`` with its id and status.
+
+        The first signer's signing link is included only with ``include_signing_link`` on, or when Firma
+        emailed nobody.
+        """
         timeout = float(self.timeout or DEFAULT_TIMEOUT_SECONDS)
         try:
             recipients = build_recipients(
@@ -286,7 +290,7 @@ class FirmaSendDocumentComponent(Component):
             self.status = str(exc)
             return error_data(exc)
 
-        result = send_result(response)
+        result = send_result(response, include_signing_link=bool(self.include_signing_link))
         request = Data(text=send_summary(result), data=result)
         self.status = request
         return request

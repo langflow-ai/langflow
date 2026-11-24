@@ -28,7 +28,12 @@ For more information, see the [Firma documentation](https://docs.firma.dev).
 
 This component creates a signing request from a Firma template and sends it to the recipients in one call.
 
-It outputs a [`Data`](/data-types#json) object with the `signing_request_id`, `status`, the first signer's `signing_link`, and the full API response as `signing_request`.
+It outputs a [`Data`](/data-types#json) object with the `signing_request_id`, `status`, the first signer, and the full API response as `signing_request`.
+
+The first signer's `signing_link` is not in the output by default.
+The link is a credential: anyone who has it can sign as that signer unless the request requires a one-time code, and once it is in the output it reaches the flow, any model in the flow and its provider's logs.
+Turn on **Return Signing Link** only when the flow hands the link to the signer itself, for example for embedded signing.
+When Firma emails nobody because the request's `send_signing_email` setting is off, the output always includes `signing_link`, and the text says so, because the link is then the only way to reach the signer.
 
 Give one signer with the **Signer First Name**, **Signer Last Name** and **Signer Email** fields, or several recipients with **Recipients (JSON)**.
 Every role of the template (each user who signs or approves) needs a recipient, matched by `template_user_id`, then by order, and each role keeps its own designation and order.
@@ -55,6 +60,7 @@ A `409` that names a `signing_request_id` reports that request instead of creati
 | Message to Recipients (`message`) | String | Input parameter. The signing request description, shown to recipients. |
 | Expiration (hours) (`expiration_hours`) | Integer | Input parameter. Hours until the request expires. Default: `0`, which keeps the workspace or template default. |
 | Language (`language`) | String | Input parameter. The language of the signing page and emails, one of 15 language codes. Default: the workspace language. |
+| Return Signing Link (`include_signing_link`) | Boolean | Input parameter. Also return the first signer's `signing_link`, a credential that lets anyone who has it sign as that signer. The link is always returned when Firma emails nobody. Default: `false`. |
 | Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for Firma to answer. Default: `60`. |
 
 ## Firma Send Document for Signature
@@ -81,7 +87,7 @@ The component outputs the same `Data` object as **Firma Send Template for Signat
 | Document (Base64) (`document_base64`) | String | Input parameter. The document as base64 text, used when no file is attached. |
 | Document File Name (`document_file_name`) | String | Input parameter. The file name of a base64 document, such as `contract.pdf`. |
 | Request Name (`request_name`) | String | Input parameter. The signing request name shown to recipients. Default: the file name. |
-| Signer First Name, Signer Last Name, Signer Email, Recipients (JSON), Message to Recipients, Expiration (hours), Language, Timeout (seconds) | | Input parameters. The same as in **Firma Send Template for Signature**. |
+| Signer First Name, Signer Last Name, Signer Email, Recipients (JSON), Message to Recipients, Expiration (hours), Language, Return Signing Link, Timeout (seconds) | | Input parameters. The same as in **Firma Send Template for Signature**. |
 | Signature Anchor Text (`signature_anchor`) | String | Input parameter. Text in the document where each signer's signature goes. |
 | Signature Page (`signature_page`) | Integer | Input parameter. The page that gets the default signature boxes. Default: `1`. |
 | Fields (JSON) (`fields_json`) | String | Input parameter. A JSON array of fields, with positions in percent of the page. |

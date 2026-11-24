@@ -15,7 +15,7 @@ from typing import Any
 from urllib.parse import quote
 
 import httpx
-from lfx.io import DropdownInput, FloatInput, IntInput, MessageTextInput, MultilineInput
+from lfx.io import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, MultilineInput
 from lfx.schema.data import Data
 
 API_BASE_URL = "https://api.firma.dev/functions/v1/signing-request-api"
@@ -238,18 +238,49 @@ def derive_status(signing_request: dict[str, Any]) -> str:
     return "unknown"
 
 
-def send_result(response: dict[str, Any]) -> dict[str, Any]:
-    """Flatten a create-and-send response into the fields a flow usually needs."""
+LINK_WARNING = "The link is a credential: anyone who has it can sign as that person, so share it only with them."
+INCLUDE_SIGNING_LINK_INFO = (
+    "Also return the first signer's signing link (signing_link). Off by default because the link is a credential: "
+    "anyone who has it can sign as that signer unless the request requires a one-time code, and once returned it "
+    "reaches the flow, the model and its provider's logs. Turn it on only when the flow hands the link to the "
+    "signer itself. When Firma emails nobody (the send_signing_email setting is off), the link is always returned."
+)
+
+
+def emails_were_sent(response: dict[str, Any]) -> bool:
+    """Return False only when the request's ``send_signing_email`` setting is off."""
+    settings = response.get("settings") if isinstance(response.get("settings"), dict) else {}
+    return settings.get("send_signing_email") is not False
+
+
+def send_result(response: dict[str, Any], *, include_signing_link: bool = False) -> dict[str, Any]:
+    """Flatten a create-and-send response into the fields a flow usually needs.
+
+    The first signer's signing link lets anyone who holds it sign as that signer (unless the request
+    requires a one-time code), so it is left out of every field unless the user opted in, or unless
+    Firma emailed nobody and the link is the only way to reach the signer.
+    """
     signer = response.get("first_signer") if isinstance(response.get("first_signer"), dict) else {}
-    return {
+    with_link = include_signing_link or not emails_were_sent(response)
+    if not with_link:
+        signer = {key: value for key, value in signer.items() if key != "signing_link"}
+        if response.get("first_signer"):
+            response = {**response, "first_signer": signer}
+    result: dict[str, Any] = {
         "signing_request_id": response.get("id"),
         "name": response.get("name"),
         "status": response.get("status"),
-        "signing_link": signer.get("signing_link"),
-        "first_signer": signer or None,
-        "warnings": response.get("warnings") or [],
-        "signing_request": response,
     }
+    if with_link:
+        result["signing_link"] = signer.get("signing_link")
+    result.update(
+        {
+            "first_signer": signer or None,
+            "warnings": response.get("warnings") or [],
+            "signing_request": response,
+        }
+    )
+    return result
 
 
 RECIPIENTS_INFO = (
@@ -278,21 +309,21 @@ def send_summary(result: dict[str, Any]) -> str:
     """Describe a created signing request in a few sentences.
 
     The first signer is said to be notified only when the request's ``send_signing_email`` setting is on.
+    The signing link appears only when ``send_result`` returned it.
     """
     parts = [f"Signing request {result['signing_request_id']} was created with status {result['status']}."]
     signer = result.get("first_signer") or {}
-    settings = (result.get("signing_request") or {}).get("settings") or {}
-    if signer.get("email"):
-        who = f"{signer.get('name') or signer['email']} ({signer['email']})"
-        if settings.get("send_signing_email") is False:
-            parts.append(
-                "No invitation email was sent (the request's send_signing_email setting is off); "
-                f"the first signer, {who}, signs through the signing link."
-            )
-        else:
-            parts.append(f"The first signer, {who}, was notified.")
+    who = f"{signer.get('name') or signer['email']} ({signer['email']})" if signer.get("email") else "the first signer"
+    if not emails_were_sent(result.get("signing_request") or {}):
+        parts.append(
+            "No invitation email was sent (the request's send_signing_email setting is off), so nobody was emailed "
+            f"and the signing link for the first signer, {who}, is returned in signing_link."
+        )
+    elif signer.get("email"):
+        parts.append(f"The first signer, {who}, was notified.")
     if result.get("signing_link"):
         parts.append(f"First signer's signing link: {result['signing_link']}")
+        parts.append(LINK_WARNING)
     if result.get("warnings"):
         parts.append("Warnings: " + "; ".join(str(warning) for warning in result["warnings"]))
     return " ".join(parts)
@@ -351,6 +382,13 @@ def common_send_inputs(*, template: bool = False) -> list:
             info="The language of the signing page and emails.",
             options=LANGUAGE_OPTIONS,
             value=DEFAULT_LANGUAGE,
+            advanced=True,
+        ),
+        BoolInput(
+            name="include_signing_link",
+            display_name="Return Signing Link",
+            info=INCLUDE_SIGNING_LINK_INFO,
+            value=False,
             advanced=True,
         ),
         FloatInput(

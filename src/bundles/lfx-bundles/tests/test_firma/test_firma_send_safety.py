@@ -297,6 +297,8 @@ class TestSendSummary:
         assert "was notified" not in data.text
         assert "No invitation email was sent" in data.text
         assert "https://app.firma.dev/signing/u-1" in data.text
+        assert data.data["signing_link"] == "https://app.firma.dev/signing/u-1"
+        assert "nobody was emailed" in data.text
 
     def test_notified_when_signing_email_is_on(self) -> None:
         response = {**SEND_RESPONSE, "settings": {"send_signing_email": True}}
@@ -412,3 +414,76 @@ class TestUnnamedRecipientsTakeTheNextRole:
         assert "Recipient 2 (B, b@firma.dev) matches no role" in error
         assert "Multiple recipients have order" not in error
         assert _send_calls(request) == []
+
+
+LINK = "https://app.firma.dev/signing/u-1"
+
+
+def _send_document(responses: list[Any], **values) -> tuple[Any, Any]:
+    component = FirmaSendDocumentComponent()
+    component.set(
+        api_key=API_KEY,
+        request_name="NDA",
+        signer_first_name="Ada",
+        signer_email="ada@firma.dev",
+        document_base64=base64.b64encode(b"%PDF-1.4\n%%EOF\n").decode(),
+        **values,
+    )
+    with patch("httpx.Client.request", side_effect=responses) as request:
+        data = component.send_document()
+    return data, request
+
+
+def _assert_no_link(data: Any) -> None:
+    dumped = json.dumps(data.data)
+    assert LINK not in dumped
+    assert "signing_link" not in dumped
+    assert LINK not in data.text
+
+
+@pytest.mark.unit
+class TestSigningLinkIsACredential:
+    @pytest.mark.parametrize("component_class", [FirmaSendTemplateComponent, FirmaSendDocumentComponent])
+    def test_the_opt_in_is_an_advanced_bool_input_agents_cannot_set(self, component_class) -> None:
+        opt_in = next(inp for inp in component_class.inputs if inp.name == "include_signing_link")
+        assert type(opt_in).__name__ == "BoolInput"
+        assert opt_in.value is False
+        assert opt_in.advanced is True
+        assert not opt_in.tool_mode
+        assert "credential" in opt_in.info
+
+    def test_template_send_leaves_the_link_out_by_default(self) -> None:
+        response = {**SEND_RESPONSE, "settings": {"send_signing_email": True}}
+        data, _ = _send_template([_template(*ONE_SIGNER), _response(201, json_body=response)])
+
+        _assert_no_link(data)
+        assert data.data["first_signer"]["email"] == "ada@firma.dev"
+
+    def test_document_send_leaves_the_link_out_by_default(self) -> None:
+        data, _ = _send_document([_response(201, json_body=SEND_RESPONSE)])
+
+        _assert_no_link(data)
+
+    def test_template_send_returns_the_link_when_opted_in(self) -> None:
+        data, _ = _send_template(
+            [_template(*ONE_SIGNER), _response(201, json_body=SEND_RESPONSE)], include_signing_link=True
+        )
+
+        assert data.data["signing_link"] == LINK
+        assert data.data["first_signer"]["signing_link"] == LINK
+        assert LINK in data.text
+        assert "anyone who has it can sign" in data.text
+
+    def test_document_send_returns_the_link_when_opted_in(self) -> None:
+        data, _ = _send_document([_response(201, json_body=SEND_RESPONSE)], include_signing_link=True)
+
+        assert data.data["signing_link"] == LINK
+        assert LINK in data.text
+
+    def test_the_link_is_returned_when_nobody_was_emailed_even_without_opt_in(self) -> None:
+        response = {**SEND_RESPONSE, "settings": {"send_signing_email": False}}
+        data, _ = _send_document([_response(201, json_body=response)])
+
+        assert data.data["signing_link"] == LINK
+        assert "No invitation email was sent" in data.text
+        assert LINK in data.text

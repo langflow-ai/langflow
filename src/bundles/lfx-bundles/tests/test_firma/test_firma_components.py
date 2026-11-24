@@ -155,7 +155,7 @@ class TestFirmaSendTemplate:
         }
         assert data.data["signing_request_id"] == REQUEST_ID
         assert data.data["status"] == "sent"
-        assert data.data["signing_link"] == "https://app.firma.dev/signing/u-1"
+        assert "signing_link" not in data.data
         assert REQUEST_ID in data.text
 
     def test_empty_name_uses_the_template_name(self) -> None:
@@ -282,7 +282,7 @@ class TestFirmaSendDocument:
             }
         ]
         assert "anchor_tags" not in body
-        assert data.data["signing_link"] == "https://app.firma.dev/signing/u-1"
+        assert "signing_link" not in data.data
 
     def test_data_url_prefix_is_accepted(self) -> None:
         encoded = "data:application/pdf;base64," + base64.b64encode(PDF_BYTES).decode()
