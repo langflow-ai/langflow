@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import json
+import shutil
+from contextlib import aclosing
 from datetime import datetime, timezone
 from typing import Annotated
 from uuid import UUID
 
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, JsonValue, ValidationError
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
-from langflow.api.utils.migration_pause import changes_the_instance
+from langflow.api.utils.migration_pause import changes_the_instance, write_admission
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.upgrade_report import UpgradeReport
@@ -22,6 +26,18 @@ from langflow.services.upgrade_reports.history import (
     list_repairs,
     list_reports,
     store_report,
+)
+from langflow.services.upgrade_reports.run import (
+    CHECKS_PATH,
+    InvalidTargetVersionError,
+    check_lock,
+    fetch_pypi,
+    installed_package,
+    ndjson,
+    parse_releases,
+    parse_target_version,
+    run_check,
+    running_version,
 )
 from langflow.services.upgrade_reports.schema import ReportHistorySummary, UpgradeReportMetadata
 
@@ -84,6 +100,56 @@ async def import_report(
     )
     response.headers["Cache-Control"] = "no-store"
     return ReportDetail(**entry(row).model_dump(), document=json.loads(row.document_json))
+
+
+class ReleaseChoices(BaseModel):
+    current: str
+    package: str
+    releases: list[str]
+
+
+@router.get("/checks/releases")
+async def releases(_admin: Superuser) -> ReleaseChoices:
+    current, package = running_version(), installed_package()
+    try:
+        found = parse_releases(await fetch_pypi(package), current=current)
+    except (httpx.HTTPError, ValueError):
+        raise HTTPException(status_code=502, detail={"code": "releases_unavailable"}) from None
+    return ReleaseChoices(current=str(current), package=package, releases=found)
+
+
+class CheckRequest(BaseModel):
+    target_version: str
+
+
+@router.post("/checks")
+async def run_upgrade_check(body: CheckRequest, admin: Superuser) -> StreamingResponse:
+    current = running_version()
+    try:
+        target = parse_target_version(body.target_version, current=current)
+    except InvalidTargetVersionError:
+        raise HTTPException(status_code=422, detail={"code": "invalid_target_version"}) from None
+    if check_lock.locked():
+        raise HTTPException(status_code=409, detail={"code": "check_running"})
+    if target != current and shutil.which("uvx") is None:
+        raise HTTPException(status_code=503, detail={"code": "uvx_unavailable"})
+    # Only a look at the pause: a place held for the whole run would make a pause wait for the check.
+    async with write_admission("request", method="POST", path=CHECKS_PATH, caller_id=admin.id) as refusal:
+        if refusal is not None:
+            raise HTTPException(status_code=503, detail=refusal)
+    events = run_check(target, current=current, package=installed_package(), admin_id=admin.id)
+
+    async def stream():
+        # Closing the response closes the run, which stops its child.
+        async with aclosing(events):
+            async for event in events:
+                yield ndjson(event)
+
+    return StreamingResponse(
+        stream(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-store", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.get("")

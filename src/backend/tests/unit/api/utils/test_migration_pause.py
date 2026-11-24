@@ -254,6 +254,8 @@ READS = frozenset(
         # These return stored reports/results; export only emits the allowed
         # authorization audit record and never executes the imported report.
         "/api/v1/upgrade-reports",
+        # Lists the releases that PyPI offers. It reads nothing of the instance and writes nothing.
+        "/api/v1/upgrade-reports/checks/releases",
         "/api/v1/upgrade-reports/{report_id}",
         "/api/v1/upgrade-reports/{report_id}/export",
         "/api/v1/upgrade-reports/{report_id}/repairs",
@@ -691,6 +693,17 @@ async def test_an_upgrade_report_export_is_refused_without_an_audit_write_while_
     assert exported.status_code == 200, exported.text
     assert exported.content == document
     assert await exports_recorded() == 1
+
+
+async def test_an_upgrade_check_is_refused_while_paused(client, logged_in_headers_super_user, config_dir):
+    from langflow.services.upgrade_reports.run import running_version
+
+    body = {"target_version": str(running_version())}
+    _write_record(config_dir, PAUSED)
+    refused = await client.post("api/v1/upgrade-reports/checks", json=body, headers=logged_in_headers_super_user)
+    assert refused.status_code == 503, refused.text
+    assert refused.json() == REFUSAL
+    assert migration_pause.under_way() == {"changes": [], "elsewhere": False}
 
 
 async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):
