@@ -11,6 +11,7 @@ import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { reportAssessment, reportTime } from "./format";
 import ReportView from "./ReportView";
+import RunCheck from "./RunCheck";
 
 export default function UpgradeReportsPage() {
   const { t } = useTranslation();
@@ -83,6 +84,12 @@ function UpgradeReports() {
           </code>
         </pre>
       </details>
+      <RunCheck
+        onImported={(reportId) => {
+          setOffset(0);
+          setParams({ report: reportId });
+        }}
+      />
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <section
           aria-labelledby="upgrade-import-title"

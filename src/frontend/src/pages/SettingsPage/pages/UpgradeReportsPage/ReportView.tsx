@@ -45,7 +45,7 @@ export default function ReportView({ report }: { report: ReportDetail }) {
       className="min-w-0 space-y-5 rounded-lg border p-3 sm:p-5"
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h3 id="upgrade-report-title" className="font-medium">
+        <h3 id="upgrade-report-title" tabIndex={-1} className="font-medium">
           {t("settings.upgrade.report")}
         </h3>
         <Button

@@ -115,3 +115,30 @@ export type RepairOutcome = {
   target_sha256: string;
   result: RepairResult;
 };
+
+export type UpgradeReleases = {
+  current: string;
+  package: string;
+  releases: string[];
+};
+export type UpgradeCheckEvent =
+  | {
+      event: "started";
+      target_version: string;
+      download: boolean;
+      total?: number;
+    }
+  | { event: "flow"; status: "ok" | "warn" | "fail" }
+  | { event: "heartbeat" }
+  | {
+      event: "imported";
+      report_id: string;
+      flows?: { ok: number; warn: number; fail: number };
+    }
+  | { event: "error"; code: string; message?: string };
+/** The server refused to start the check, before any event. */
+export type UpgradeCheckRefusal = {
+  status: number;
+  code?: string;
+  message?: string;
+};

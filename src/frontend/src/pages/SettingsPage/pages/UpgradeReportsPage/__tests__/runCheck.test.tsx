@@ -1,0 +1,340 @@
+import { TextEncoder } from "node:util";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { api } from "@/controllers/API/api";
+import type { UpgradeCheckEvent } from "@/controllers/API/queries/upgrade-reports";
+import RunCheck from "../RunCheck";
+
+// Only the network is faked: a fetch whose body the test feeds event by event,
+// so the real streaming request and parser run.
+type Chunk = { value?: Uint8Array; done: boolean };
+let signal: AbortSignal;
+let requestBody: string;
+let feed: (chunk: Chunk) => void;
+const encode = (text: string) => new TextEncoder().encode(text);
+
+function fakeStream(init: RequestInit, status = 200) {
+  signal = init.signal as AbortSignal;
+  requestBody = String(init.body);
+  const queued: Chunk[] = [];
+  let waiting: { ok: (chunk: Chunk) => void; fail: (e: Error) => void } | null =
+    null;
+  feed = (chunk) => {
+    const reader = waiting;
+    waiting = null;
+    if (reader) reader.ok(chunk);
+    else queued.push(chunk);
+  };
+  signal.addEventListener("abort", () =>
+    waiting?.fail(new DOMException("aborted", "AbortError")),
+  );
+  return {
+    ok: status < 400,
+    status,
+    body: {
+      getReader: () => ({
+        read: () =>
+          queued.length
+            ? Promise.resolve(queued.shift() as Chunk)
+            : new Promise<Chunk>((ok, fail) => {
+                waiting = { ok, fail };
+              }),
+      }),
+    },
+  };
+}
+
+function emit(...events: UpgradeCheckEvent[]) {
+  for (const event of events)
+    feed({ value: encode(`${JSON.stringify(event)}\n\n`), done: false });
+}
+const finish = () => feed({ done: true });
+function refuse(body: object) {
+  feed({ value: encode(JSON.stringify(body)), done: false });
+  finish();
+}
+
+function open() {
+  const onImported = jest.fn();
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const invalidate = jest.spyOn(client, "invalidateQueries");
+  const view = render(
+    <QueryClientProvider client={client}>
+      <RunCheck onImported={onImported} />
+    </QueryClientProvider>,
+  );
+  return { onImported, invalidate, view };
+}
+
+let status = 200;
+async function start(version = "1.15.0") {
+  await userEvent.type(screen.getByLabelText("Target release"), version);
+  await userEvent.click(screen.getByRole("button", { name: "Check upgrade" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalled());
+}
+
+beforeEach(() => {
+  status = 200;
+  jest.spyOn(api, "get").mockResolvedValue({
+    data: { current: "1.14.0", package: "langflow", releases: ["1.15.0"] },
+  });
+  jest
+    .spyOn(global, "fetch")
+    .mockImplementation(
+      async (_url, init) => fakeStream(init!, status) as never,
+    );
+});
+afterEach(() => jest.restoreAllMocks());
+
+it("starts idle with the check button off until a release is typed", async () => {
+  open();
+  const button = screen.getByRole("button", { name: "Check upgrade" });
+  expect(button).toBeDisabled();
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  await userEvent.type(screen.getByLabelText("Target release"), "1.15.0");
+  expect(button).toBeEnabled();
+});
+
+it("offers fetched releases as suggestions", async () => {
+  const { container } = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RunCheck onImported={jest.fn()} />
+    </QueryClientProvider>,
+  );
+  await waitFor(() =>
+    expect(
+      container.querySelector('datalist option[value="1.15.0"]'),
+    ).not.toBeNull(),
+  );
+});
+
+it("still lets the admin type a release when the releases query fails", async () => {
+  jest.spyOn(api, "get").mockRejectedValue(new Error("502"));
+  open();
+  await start("1.16.0");
+  expect(JSON.parse(requestBody)).toEqual({ target_version: "1.16.0" });
+});
+
+it("says what is happening, then counts checked flows", async () => {
+  open();
+  await start();
+  expect(JSON.parse(requestBody)).toEqual({ target_version: "1.15.0" });
+  emit({ event: "started", target_version: "1.15.0", download: true });
+  expect(
+    await screen.findByText(/Downloading Langflow 1.15.0 and checking flows/),
+  ).toBeInTheDocument();
+  emit({ event: "flow", status: "ok" }, { event: "flow", status: "warn" });
+  expect(await screen.findByText(/Checked 2 flows\./)).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Checked 2 flows.");
+  expect(screen.getByRole("button", { name: "Check upgrade" })).toBeDisabled();
+});
+
+it("moves the progress bar toward the total once flows are checked", async () => {
+  open();
+  await start();
+  emit({
+    event: "started",
+    target_version: "1.15.0",
+    download: true,
+    total: 4,
+  });
+  const bar = await screen.findByRole("progressbar", {
+    name: "Upgrade check progress",
+  });
+  // Downloading gives no count, so the bar has no value yet.
+  expect(bar).not.toHaveAttribute("aria-valuenow");
+  emit({ event: "flow", status: "ok" });
+  expect(await screen.findByText("Checked 1 of 4 flows.")).toBeInTheDocument();
+  expect(bar).toHaveAttribute("aria-valuenow", "1");
+  expect(bar).toHaveAttribute("aria-valuemax", "4");
+});
+
+it("stops counting toward the total when saved versions go past it", async () => {
+  open();
+  await start();
+  emit(
+    { event: "started", target_version: "1.15.0", download: true, total: 1 },
+    { event: "flow", status: "ok" },
+    { event: "flow", status: "ok" },
+  );
+  expect(await screen.findByText("Checked 2 flows.")).toBeInTheDocument();
+  expect(screen.getByRole("progressbar")).not.toHaveAttribute("aria-valuenow");
+});
+
+it("does not say it downloads when the target is the running release", async () => {
+  open();
+  await start("1.14.0");
+  emit({ event: "started", target_version: "1.14.0", download: false });
+  expect(
+    await screen.findByText(/Checking flows with Langflow 1.14.0/),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(/Downloading/)).not.toBeInTheDocument();
+});
+
+it("cancel aborts the request and returns to idle", async () => {
+  open();
+  await start();
+  emit({ event: "started", target_version: "1.15.0", download: true });
+  await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
+  expect(signal.aborted).toBe(true);
+  finish();
+  await waitFor(() =>
+    expect(screen.queryByRole("status")).not.toBeInTheDocument(),
+  );
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Check upgrade" })).toBeEnabled();
+});
+
+it("aborts the request when the page is left", async () => {
+  const view = render(
+    <QueryClientProvider client={new QueryClient()}>
+      <RunCheck onImported={jest.fn()} />
+    </QueryClientProvider>,
+  );
+  await userEvent.type(screen.getByLabelText("Target release"), "1.15.0");
+  await userEvent.click(screen.getByRole("button", { name: "Check upgrade" }));
+  await waitFor(() => expect(fetch).toHaveBeenCalled());
+  view.unmount();
+  expect(signal.aborted).toBe(true);
+});
+
+it("says the report is ready, what it found and what comes next", async () => {
+  const { onImported, invalidate } = open();
+  await start();
+  emit(
+    { event: "started", target_version: "1.15.0", download: true, total: 3 },
+    { event: "flow", status: "ok" },
+    {
+      event: "imported",
+      report_id: "r-1",
+      flows: { ok: 1, warn: 1, fail: 1 },
+    },
+  );
+  finish();
+  await waitFor(() => expect(onImported).toHaveBeenCalledWith("r-1"));
+  expect(invalidate).toHaveBeenCalledWith({
+    queryKey: ["useGetUpgradeReports"],
+  });
+  const status = screen.getByRole("status");
+  expect(status).toHaveTextContent("The report for Langflow 1.15.0 is ready.");
+  expect(status).toHaveTextContent("OK: 1 · Needs review: 1 · Needs repair: 1");
+  expect(status).toHaveTextContent(
+    "upgrade it to Langflow 1.15.0, and update those flows from the same report.",
+  );
+  expect(screen.getByRole("button", { name: "Check upgrade" })).toBeEnabled();
+});
+
+it("says no flow needs changes when the running release finds nothing", async () => {
+  open();
+  await start("1.14.0");
+  emit(
+    { event: "started", target_version: "1.14.0", download: false, total: 1 },
+    { event: "flow", status: "ok" },
+    {
+      event: "imported",
+      report_id: "r-2",
+      flows: { ok: 1, warn: 0, fail: 0 },
+    },
+  );
+  finish();
+  expect(await screen.findByText("No flow needs changes.")).toBeInTheDocument();
+});
+
+it("view report moves to the report details", async () => {
+  open();
+  const heading = document.createElement("h3");
+  heading.id = "upgrade-report-title";
+  heading.tabIndex = -1;
+  heading.scrollIntoView = jest.fn();
+  document.body.appendChild(heading);
+  await start();
+  emit({ event: "imported", report_id: "r-1" });
+  finish();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "View report" }),
+  );
+  expect(heading.scrollIntoView).toHaveBeenCalled();
+  expect(heading).toHaveFocus();
+  heading.remove();
+});
+
+it("clears the finished message when the admin types another release", async () => {
+  open();
+  await start();
+  emit({ event: "imported", report_id: "r-1" });
+  finish();
+  await screen.findByRole("button", { name: "View report" });
+  await userEvent.type(screen.getByLabelText("Target release"), "1");
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+});
+
+it.each([
+  ["check_running", /already running on this server/],
+  ["uvx_unavailable", /uvx is not installed/],
+  ["invalid_target_version", /1\.14\.0 or newer/],
+  ["install_failed", /could not be installed or started/],
+  ["timeout", /ran for 60 minutes/],
+  ["import_refused", /imports are paused/],
+  ["invalid_upgrade_report", /report was rejected/],
+  ["check_failed", /could not finish/],
+])("shows the %s error from the stream", async (code, text) => {
+  open();
+  await start();
+  emit({ event: "error", code, message: "server said" });
+  finish();
+  expect(await screen.findByRole("alert")).toHaveTextContent(text);
+  expect(screen.getByRole("button", { name: "Check upgrade" })).toBeEnabled();
+});
+
+it("adds the server message under check_failed and install_failed", async () => {
+  open();
+  await start();
+  emit({ event: "error", code: "check_failed", message: "boom in node 3" });
+  finish();
+  expect(await screen.findByText("boom in node 3")).toBeInTheDocument();
+});
+
+it.each([
+  [409, { detail: { code: "check_running" } }, /already running/],
+  [503, { detail: { code: "uvx_unavailable" } }, /uvx is not installed/],
+  [422, { detail: { code: "invalid_target_version" } }, /1\.14\.0 or newer/],
+])("shows the %s refusal before streaming", async (code, body, text) => {
+  status = code;
+  open();
+  await start();
+  refuse(body);
+  expect(await screen.findByRole("alert")).toHaveTextContent(text);
+});
+
+it("falls back to the server message for an unknown refusal", async () => {
+  status = 503;
+  open();
+  await start();
+  refuse({ detail: { code: "paused", message: "Migration in progress." } });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Migration in progress.",
+  );
+});
+
+it("reports a lost connection when the stream ends without a result", async () => {
+  open();
+  await start();
+  emit({ event: "flow", status: "ok" });
+  finish();
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    /connection closed/,
+  );
+});
+
+it("clears the error when the admin edits the release", async () => {
+  open();
+  await start();
+  emit({ event: "error", code: "timeout" });
+  finish();
+  await screen.findByRole("alert");
+  await userEvent.type(screen.getByLabelText("Target release"), "1");
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});

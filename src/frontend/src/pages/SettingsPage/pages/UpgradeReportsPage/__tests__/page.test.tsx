@@ -302,7 +302,7 @@ it("explains the first action and keeps incomplete checks distinct from success"
   await screen.findByRole("heading", { name: "Assessment incomplete" });
   await userEvent.click(screen.getByText("Start an upgrade review"));
   expect(
-    screen.getByText(/Importing a report does not change any flows/),
+    screen.getByText(/Pick a target release under "Check an upgrade"/),
   ).toBeVisible();
   expect(
     await screen.findByRole("heading", { name: "Assessment incomplete" }),
