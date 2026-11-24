@@ -594,6 +594,79 @@ it("explains maintenance against the live database and links its instructions", 
   ).toHaveAttribute("href", "https://docs.langflow.org/maintenance-mode");
 });
 
+it("changes maintenance only after confirmation and refreshes the shared status", async () => {
+  let active = false;
+  const status = () => ({
+    maintenance: active,
+    migration: false,
+    paused: active,
+    running_jobs: 0,
+    reason: active ? "Repair review" : null,
+    set_at: active ? "2026-11-24T12:00:00Z" : null,
+  });
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? status()
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : url.endsWith(report.id)
+          ? report
+          : history,
+  }));
+  const post = jest.spyOn(api, "post").mockImplementation(async (url) => {
+    active = url.endsWith("/on");
+    return { data: status() };
+  });
+  open();
+  const start = await screen.findByRole("button", {
+    name: "Turn maintenance on",
+  });
+  await userEvent.click(start);
+  let dialog = screen.getByRole("dialog");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(post).not.toHaveBeenCalled();
+  await userEvent.click(start);
+  dialog = screen.getByRole("dialog");
+  await userEvent.type(
+    within(dialog).getByLabelText("Reason (optional)"),
+    "Repair review",
+  );
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Turn maintenance on" }),
+  );
+  expect(post).toHaveBeenCalledWith(expect.stringMatching(/maintenance\/on$/), {
+    reason: "Repair review",
+  });
+  expect(await screen.findByText("Repair review")).toBeVisible();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Turn maintenance off" }),
+  );
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Turn maintenance off",
+    }),
+  );
+  expect(await screen.findByText("Maintenance is off.")).toBeVisible();
+});
+
+it("shows a failed maintenance change and leaves the admin able to retry", async () => {
+  jest.spyOn(api, "post").mockRejectedValue(new Error("offline"));
+  open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Turn maintenance on" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.click(
+    dialog.getByRole("button", { name: "Turn maintenance on" }),
+  );
+  expect(await dialog.findByRole("alert")).toHaveTextContent(
+    "Could not change maintenance mode",
+  );
+  expect(
+    dialog.getByRole("button", { name: "Turn maintenance on" }),
+  ).toBeEnabled();
+});
+
 it.each([
   [report.document.flows, "Customer support"],
   [

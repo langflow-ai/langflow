@@ -33,6 +33,8 @@ export type MaintenancePauseStatus = {
   maintenance?: boolean;
   migration?: boolean;
   running_jobs?: number;
+  reason?: string | null;
+  set_at?: string | null;
   externalAuthenticationPaused?: boolean;
 };
 
