@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import os
+import stat
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -362,6 +364,49 @@ def test_pull_project_creates_output_dir(tmp_path: Path) -> None:
     client.close()
 
     assert out_dir.exists()
+
+
+def _project_client(flow: dict[str, Any]) -> Client:
+    import io
+    import zipfile
+
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as archive:
+        archive.writestr("flow.json", json.dumps(flow))
+    zip_bytes = buf.getvalue()
+    transport = httpx.MockTransport(lambda request: httpx.Response(200, content=zip_bytes, request=request))
+    http = httpx.Client(base_url=_BASE_URL, transport=transport)
+    return Client(_BASE_URL, httpx_client=http)
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize("name", ["Group/Flow", "Group\\Flow"])
+def test_project_flow_names_must_be_single_filename_components(tmp_path: Path, name: str) -> None:
+    with (
+        _project_client({**_FLOW_RESPONSE, "name": name}) as client,
+        pytest.raises(ValueError, match="single filename"),
+    ):
+        client.pull_project("proj-id", output_dir=tmp_path)
+
+    assert not list(tmp_path.iterdir())
+
+
+@pytest.mark.unit
+def test_project_flow_writes_replace_the_destination_entry(tmp_path: Path) -> None:
+    private_mode = stat.S_IRUSR | stat.S_IWUSR
+    existing = tmp_path / "existing.json"
+    existing.write_text("{}", encoding="utf-8")
+    existing.chmod(private_mode)
+    destination = tmp_path / "My Flow.json"
+    destination.hardlink_to(existing)
+    with _project_client(_FLOW_RESPONSE) as client:
+        written = client.pull_project("proj-id", output_dir=tmp_path)
+
+    assert written == {"My Flow": destination}
+    assert json.loads(destination.read_text(encoding="utf-8"))["name"] == "My Flow"
+    assert existing.read_text(encoding="utf-8") == "{}"
+    if os.name == "posix":
+        assert stat.S_IMODE(destination.stat().st_mode) == private_mode
 
 
 # ---------------------------------------------------------------------------
