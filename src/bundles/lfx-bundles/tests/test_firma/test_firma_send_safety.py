@@ -304,3 +304,111 @@ class TestSendSummary:
 
         assert "The first signer, Ada Lovelace (ada@firma.dev), was notified." in data.text
         assert "No invitation email" not in data.text
+
+
+@pytest.mark.unit
+class TestRecipientsFirmaWouldDrop:
+    """Create-and-send builds its list from the template users and appends only CC rows (handler 1002-1076).
+
+    A Signer or Approver that matches no role, or a role an earlier recipient took, is dropped while the call
+    succeeds, so the component refuses it before the POST.
+    """
+
+    def test_a_recipient_matching_no_role_is_refused_before_sending(self) -> None:
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-1"},
+            {"first_name": "B", "email": "b@firma.dev", "template_user_id": "tu-2"},
+            {"first_name": "Dee", "email": "dee@firma.dev", "order": 3},
+        ]
+        template = _template(_user("tu-1", 1), _user("tu-2", 2, "Approver"), name="Lease")
+        data, request = _send_template(
+            [template, _response(201, json_body=SEND_RESPONSE)], recipients_json=json.dumps(recipients)
+        )
+
+        assert "Recipient 3 (Dee, dee@firma.dev) matches no role" in data.data["error"]
+        assert "CC" in data.data["error"]
+        assert _send_calls(request) == []
+
+    def test_two_recipients_matching_one_role_are_refused_before_sending(self) -> None:
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-1"},
+            {"first_name": "Bo", "email": "bo@firma.dev", "template_user_id": "tu-1"},
+        ]
+        template = _template(_user("tu-1", 1), name="Lease")
+        data, request = _send_template(
+            [template, _response(201, json_body=SEND_RESPONSE)], recipients_json=json.dumps(recipients)
+        )
+
+        error = data.data["error"]
+        assert "Recipient 2 (Bo, bo@firma.dev) matches Signer at order 1 (template_user_id tu-1)" in error
+        assert "already taken by recipient 1 (A, a@firma.dev)" in error
+        assert _send_calls(request) == []
+
+    def test_a_cc_recipient_is_never_refused_as_unmatched(self) -> None:
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-1"},
+            {"first_name": "C", "email": "c@firma.dev", "designation": "CC", "order": 7},
+        ]
+        _, request = _send_template(
+            [_template(_user("tu-1", 1)), _response(201, json_body=SEND_RESPONSE)],
+            recipients_json=json.dumps(recipients),
+        )
+
+        assert len(_send_calls(request)) == 1
+
+
+@pytest.mark.unit
+class TestUnnamedRecipientsTakeTheNextRole:
+    def test_a_recipient_without_role_or_order_takes_the_next_unclaimed_role(self) -> None:
+        # langflow-review-r2 LOW: B used to get its list position (2), collide with tu-2's order and be
+        # refused with "Multiple recipients have order 2", an order the user never set.
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-2"},
+            {"first_name": "B", "email": "b@firma.dev"},
+        ]
+        template = _template(_user("tu-1", 1), _user("tu-2", 2, "Approver"))
+        data, request = _send_template(
+            [template, _response(201, json_body=SEND_RESPONSE)], recipients_json=json.dumps(recipients)
+        )
+
+        assert "error" not in data.data
+        assert _send_calls(request)[0].kwargs["json"]["recipients"] == [
+            {
+                "first_name": "A",
+                "email": "a@firma.dev",
+                "template_user_id": "tu-2",
+                "designation": "Approver",
+                "order": 2,
+            },
+            {"first_name": "B", "email": "b@firma.dev", "designation": "Signer", "order": 1},
+        ]
+
+    def test_roles_claimed_by_order_are_skipped(self) -> None:
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev"},
+            {"first_name": "B", "email": "b@firma.dev", "order": 1},
+            {"first_name": "C", "email": "c@firma.dev"},
+            {"first_name": "Dee", "email": "dee@firma.dev", "designation": "CC"},
+        ]
+        template = _template(_user("tu-1", 1), _user("tu-2", 2), _user("tu-3", 3, "Approver"))
+        _, request = _send_template(
+            [template, _response(201, json_body=SEND_RESPONSE)], recipients_json=json.dumps(recipients)
+        )
+
+        sent = _send_calls(request)[0].kwargs["json"]["recipients"]
+        assert [(item["first_name"], item["order"]) for item in sent] == [("A", 2), ("B", 1), ("C", 3), ("Dee", 4)]
+
+    def test_an_unnamed_recipient_with_no_role_left_is_refused_without_blaming_orders(self) -> None:
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-1"},
+            {"first_name": "B", "email": "b@firma.dev"},
+        ]
+        template = _template(_user("tu-1", 1), name="Lease")
+        data, request = _send_template(
+            [template, _response(201, json_body=SEND_RESPONSE)], recipients_json=json.dumps(recipients)
+        )
+
+        error = data.data["error"]
+        assert "Recipient 2 (B, b@firma.dev) matches no role" in error
+        assert "Multiple recipients have order" not in error
+        assert _send_calls(request) == []
