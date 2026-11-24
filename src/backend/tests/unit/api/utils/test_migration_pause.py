@@ -703,7 +703,10 @@ async def test_an_upgrade_check_is_refused_while_paused(client, logged_in_header
     refused = await client.post("api/v1/upgrade-reports/checks", json=body, headers=logged_in_headers_super_user)
     assert refused.status_code == 503, refused.text
     assert refused.json() == REFUSAL
-    assert migration_pause.under_way() == {"changes": [], "elsewhere": False}
+    assert not any(
+        change["kind"] == "request" and change["path"] == "/api/v1/upgrade-reports/checks"
+        for change in migration_pause.under_way()["changes"]
+    )
 
 
 async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):

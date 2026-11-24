@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import { migrationKeys } from "@/controllers/API/queries/migration";
+import * as checkApi from "@/controllers/API/queries/upgrade-reports/use-upgrade-check";
 import useAuthStore from "@/stores/authStore";
 import type { Users } from "@/types/api";
 import { axe } from "@/utils/a11y-test";
@@ -114,6 +115,68 @@ it("distinguishes repeated imports of the same report even in the same minute", 
   expect(labels[1]).toContain("qa_prod · Assessment incomplete");
   expect(new Set(labels).size).toBe(3);
   expect(labels.every((label) => label?.includes("Imported"))).toBe(true);
+});
+
+it("uses the database name when an imported locator has a numeric path", async () => {
+  const source = {
+    ...report.document.source,
+    identity: {
+      kind: "database",
+      sha256: "a".repeat(64),
+      locator: { path: 3, database: "qa_reports" },
+    },
+  };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith(report.id)
+      ? { ...report, document: { ...report.document, source } }
+      : history,
+  }));
+  open();
+  expect(await screen.findByText("sqlite · qa_reports")).toBeInTheDocument();
+});
+
+it("opens and focuses the completed check after another history entry was selected", async () => {
+  const other = { ...report, id: "older-report" };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith(report.id)
+      ? report
+      : url.endsWith(other.id)
+        ? other
+        : url.endsWith("/releases")
+          ? { current: "1.14.0", package: "langflow", releases: [] }
+          : url.endsWith("/repairs")
+            ? { items: [], total: 0 }
+            : { items: [report, other], total: 2 },
+  }));
+  jest.spyOn(checkApi, "runUpgradeCheck").mockResolvedValue({
+    kind: "imported",
+    reportId: report.id,
+    flows: null,
+    incomplete: null,
+  });
+  const scroll = jest.fn();
+  open();
+  await userEvent.type(
+    await screen.findByLabelText("Target release"),
+    "1.14.0",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Check upgrade" }));
+  const view = await screen.findByRole("button", { name: "View report" });
+  const historySelect = await screen.findByLabelText("Choose a report");
+  await userEvent.selectOptions(historySelect, other.id);
+  await waitFor(() => expect(historySelect).toHaveValue(other.id));
+  const oldHeading = await screen.findByRole("heading", {
+    name: "Report details",
+  });
+  Element.prototype.scrollIntoView ??= jest.fn();
+  jest.spyOn(Element.prototype, "scrollIntoView").mockImplementation(scroll);
+  await userEvent.click(view);
+  await waitFor(() => expect(historySelect).toHaveValue(report.id));
+  await waitFor(() =>
+    expect(document.getElementById("upgrade-report-title")).toHaveFocus(),
+  );
+  expect(oldHeading).not.toHaveFocus();
+  expect(scroll).toHaveBeenCalled();
 });
 
 it("explains flow-level counts on running versions without claiming they are unavailable", async () => {

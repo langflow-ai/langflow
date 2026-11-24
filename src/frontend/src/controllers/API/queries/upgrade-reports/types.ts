@@ -133,6 +133,7 @@ export type UpgradeCheckEvent =
   | {
       event: "imported";
       report_id: string;
+      incomplete?: boolean;
       flows?: { ok: number; warn: number; fail: number };
     }
   | { event: "error"; code: string; message?: string };
@@ -145,6 +146,7 @@ export type UpgradeCheckOutcome =
   | {
       kind: "imported";
       reportId: string;
+      incomplete: boolean | null;
       flows: { ok: number; warn: number; fail: number } | null;
     }
   | { kind: "failed"; code?: string; message: string }

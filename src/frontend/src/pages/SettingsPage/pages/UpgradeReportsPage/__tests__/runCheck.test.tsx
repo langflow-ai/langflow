@@ -63,7 +63,7 @@ function open() {
   const invalidate = jest.spyOn(client, "invalidateQueries");
   const view = render(
     <QueryClientProvider client={client}>
-      <RunCheck onImported={onImported} />
+      <RunCheck onSelectReport={onImported} />
     </QueryClientProvider>,
   );
   return { onImported, invalidate, view };
@@ -101,7 +101,7 @@ it("starts idle with the check button off until a release is typed", async () =>
 it("offers fetched releases as suggestions", async () => {
   const { container } = render(
     <QueryClientProvider client={new QueryClient()}>
-      <RunCheck onImported={jest.fn()} />
+      <RunCheck onSelectReport={jest.fn()} />
     </QueryClientProvider>,
   );
   await waitFor(() =>
@@ -191,7 +191,7 @@ it("cancel aborts the request and returns to idle", async () => {
 it("aborts the request when the page is left", async () => {
   const view = render(
     <QueryClientProvider client={new QueryClient()}>
-      <RunCheck onImported={jest.fn()} />
+      <RunCheck onSelectReport={jest.fn()} />
     </QueryClientProvider>,
   );
   await userEvent.type(screen.getByLabelText("Target release"), "1.15.0");
@@ -236,6 +236,7 @@ it("says no flow needs changes when the running release finds nothing", async ()
     {
       event: "imported",
       report_id: "r-2",
+      incomplete: false,
       flows: { ok: 1, warn: 0, fail: 0 },
     },
   );
@@ -243,23 +244,37 @@ it("says no flow needs changes when the running release finds nothing", async ()
   expect(await screen.findByText("No flow needs changes.")).toBeInTheDocument();
 });
 
-it("view report moves to the report details", async () => {
-  open();
-  const heading = document.createElement("h3");
-  heading.id = "upgrade-report-title";
-  heading.tabIndex = -1;
-  heading.scrollIntoView = jest.fn();
-  document.body.appendChild(heading);
+it("view report selects the completed check's report and requests focus", async () => {
+  const { onImported } = open();
   await start();
   emit({ event: "imported", report_id: "r-1" });
   finish();
   await userEvent.click(
     await screen.findByRole("button", { name: "View report" }),
   );
-  expect(heading.scrollIntoView).toHaveBeenCalled();
-  expect(heading).toHaveFocus();
-  heading.remove();
+  expect(onImported).toHaveBeenLastCalledWith("r-1", true);
 });
+
+it.each([true, undefined])(
+  "does not recommend an upgrade when completeness is %s",
+  async (incomplete) => {
+    open();
+    await start();
+    emit({
+      event: "imported",
+      report_id: "r-3",
+      incomplete,
+      flows: { ok: 2, warn: 0, fail: 0 },
+    });
+    finish();
+    await screen.findByRole("button", { name: "View report" });
+    const status = screen.getByRole("status");
+    expect(status).not.toHaveTextContent(
+      /you can upgrade|no flow needs changes/i,
+    );
+    if (incomplete) expect(status).toHaveTextContent("Assessment incomplete");
+  },
+);
 
 it("clears the finished message when the admin types another release", async () => {
   open();

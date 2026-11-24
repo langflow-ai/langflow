@@ -251,16 +251,30 @@ def _redact(text: str, database_url: str) -> str:
 async def _stop(process: asyncio.subprocess.Process) -> None:
     if process.returncode is not None:
         return
-    # ponytail: on Windows terminate() reaches only this process, so a grandchild can outlive the run.
-    # The check's own signal handling stops its child on POSIX.
-    posix = os.name == "posix"
+    if os.name == "nt":
+        # uvx, the CLI and its worker must all release the temporary directory.
+        taskkill = Path(os.environ["SYSTEMROOT"]) / "System32" / "taskkill.exe"
+        killer = await asyncio.create_subprocess_exec(
+            str(taskkill),
+            "/PID",
+            str(process.pid),
+            "/T",
+            "/F",
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        if await killer.wait() and process.returncode is None:
+            with contextlib.suppress(ProcessLookupError):
+                process.kill()
+        await process.wait()
+        return
     with contextlib.suppress(ProcessLookupError):
-        os.killpg(process.pid, signal.SIGTERM) if posix else process.terminate()
+        os.killpg(process.pid, signal.SIGTERM)
     try:
         await asyncio.wait_for(process.wait(), STOP_GRACE_SECONDS)
     except asyncio.TimeoutError:
         with contextlib.suppress(ProcessLookupError):
-            os.killpg(process.pid, signal.SIGKILL) if posix else process.kill()
+            os.killpg(process.pid, signal.SIGKILL)
         await process.wait()
 
 
@@ -380,8 +394,9 @@ async def run_check(
         yield _error("check_running", "An upgrade check is already running on this server.")
         return
     await check_lock.acquire()
-    folder = Path(tempfile.mkdtemp(prefix="langflow-upgrade-check-run-"))
+    folder = None
     try:
+        folder = Path(tempfile.mkdtemp(prefix="langflow-upgrade-check-run-"))
         download = target != current
         async with session_scope() as session:
             total = await count_checked_flows(session)
@@ -425,7 +440,7 @@ async def run_check(
             else:
                 try:
                     async with session_scope() as session:
-                        row = await import_report_content(session, content, admin_id)
+                        row, incomplete = await import_report_content(session, content, admin_id)
                 except UnsupportedReportFormatError:
                     final = _error(
                         "unsupported_upgrade_report_format",
@@ -440,16 +455,19 @@ async def run_check(
                         "warn": row.warning_count,
                         "fail": row.failing_count,
                     }
-                    final = {"event": "imported", "report_id": str(row.id), "flows": flows}
+                    final = {"event": "imported", "report_id": str(row.id), "flows": flows, "incomplete": incomplete}
         yield final
     except Exception:  # noqa: BLE001
         await logger.aexception("The upgrade check stopped unexpectedly")
         yield _error("check_failed", "The check stopped unexpectedly. The server log has the details.")
     finally:
         # The cache of a download is large: remove it off the event loop, and also when the request is cancelled.
-        with anyio.CancelScope(shield=True):
-            await anyio.to_thread.run_sync(partial(shutil.rmtree, folder, ignore_errors=True))
-        check_lock.release()
+        try:
+            if folder is not None:
+                with anyio.CancelScope(shield=True):
+                    await anyio.to_thread.run_sync(partial(shutil.rmtree, folder, ignore_errors=True))
+        finally:
+            check_lock.release()
 
 
 def ndjson(event: Mapping[str, Any]) -> str:

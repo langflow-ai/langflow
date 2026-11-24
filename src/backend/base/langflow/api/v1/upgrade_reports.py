@@ -84,7 +84,7 @@ async def import_report(
             raise HTTPException(status_code=413, detail="Upgrade report exceeds 20 MiB")
         content.extend(chunk)
     try:
-        row = await import_report_content(session, bytes(content), admin.id)
+        row, _ = await import_report_content(session, bytes(content), admin.id)
     except UnsupportedReportFormatError:
         raise HTTPException(
             status_code=422, detail={"code": "unsupported_upgrade_report_format", "supported": [1]}

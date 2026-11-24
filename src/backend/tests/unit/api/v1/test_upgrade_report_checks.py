@@ -1,5 +1,6 @@
 """An admin runs the upgrade check from the running server and the report lands in the history."""
 
+import asyncio
 import json
 import os
 import sys
@@ -21,12 +22,14 @@ from langflow.services.upgrade_reports.run import (
     InvalidTargetVersionError,
     _child_events,
     _redact,
+    _stop,
     check_command,
     check_environment,
     check_lock,
     install_cutoff,
     parse_releases,
     parse_target_version,
+    run_check,
     running_version,
 )
 from lfx.constants import BASE_COMPONENTS_PATH
@@ -306,6 +309,33 @@ async def test_an_over_long_stdout_line_is_skipped_and_the_run_finishes():
     assert await run_child(source) == [{"event": "flow", "status": "ok"}]
 
 
+async def test_stopping_the_checker_also_closes_its_workers_output_pipe():
+    # The worker inherits stdout. Killing its parent alone leaves that pipe open.
+    source = (
+        "import subprocess, sys; "
+        "worker = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(15)']); "
+        "print('ready', flush=True); worker.wait()"
+    )
+    process = await asyncio.create_subprocess_exec(
+        *python_child(source), stdout=asyncio.subprocess.PIPE, start_new_session=os.name == "posix"
+    )
+    ready = await asyncio.wait_for(process.stdout.readline(), timeout=10)
+    assert ready.rstrip() == b"ready"
+    await asyncio.wait_for(_stop(process), timeout=10)
+    assert await asyncio.wait_for(process.stdout.read(), timeout=2) == b""
+
+
+async def test_a_full_temp_directory_releases_the_check_lock(monkeypatch):
+    def no_space(**_kwargs):
+        msg = "no space left"
+        raise OSError(msg)
+
+    monkeypatch.setattr("langflow.services.upgrade_reports.run.tempfile.mkdtemp", no_space)
+    events = [event async for event in run_check(RUNNING, current=RUNNING, package="langflow", admin_id=uuid4())]
+    assert [event["code"] for event in events] == ["check_failed"]
+    assert not check_lock.locked()
+
+
 async def test_a_child_that_cannot_be_started_ends_with_one_error():
     events = [
         event
@@ -326,12 +356,25 @@ async def test_the_shared_import_refuses_a_newer_format_and_an_oversize_report()
             await import_report_content(session, b" " * (MAX_REPORT_BYTES + 1), uuid4())
 
 
-async def test_the_shared_import_stores_a_valid_report(client, admin_headers):
+@pytest.mark.parametrize(
+    ("missing_flows", "errors", "expected"),
+    [
+        (True, [], True),
+        (False, [], False),
+        (False, [{"kind": "scan", "status": "fail", "message": "scan stopped"}], True),
+    ],
+)
+async def test_the_shared_import_stores_a_valid_report(client, admin_headers, missing_flows, errors, expected):
+    document = json.loads(FIXTURE.read_bytes())
+    if not missing_flows:
+        document["summary"]["flows"] = {"ok": 0, "warn": 1, "fail": 0}
+    document["errors"] = errors
     async with session_scope() as session:
         user = (await session.exec(select(User).where(User.username == "check-admin"))).one()
-        row = await import_report_content(session, FIXTURE.read_bytes(), user.id)
+        row, incomplete = await import_report_content(session, json.dumps(document).encode(), user.id)
     history = (await client.get(URL, headers=admin_headers)).json()
     assert [item["id"] for item in history["items"]] == [str(row.id)]
+    assert history["items"][0]["incomplete"] is incomplete is expected
 
 
 async def test_releases_and_checks_require_admin(client, logged_in_headers):
@@ -376,6 +419,7 @@ async def test_check_of_the_running_release_imports_a_report(client, admin_heade
     assert [e for e in events if e["event"] == "flow"] == [{"event": "flow", "status": "ok"}] * 2
     assert events[-1]["event"] == "imported", events[-1]
     assert events[-1]["flows"] == {"ok": 2, "warn": 0, "fail": 0}
+    assert events[-1]["incomplete"] is False
     assert [e["event"] for e in events].count("imported") + [e["event"] for e in events].count("error") == 1
     report_id = events[-1]["report_id"]
     history = (await client.get(URL, headers=admin_headers)).json()

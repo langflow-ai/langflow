@@ -34,11 +34,10 @@ export default function ReportView({ report }: { report: ReportDetail }) {
   const source = document.source.identity?.locator;
   // The summary names the database only. The full path or host stays in the
   // collapsed identity details, since a summary is what ends up in screenshots.
-  const sourceName = !source
-    ? unknown
-    : "path" in source
-      ? (source.path.split(/[\\/]/).pop() ?? source.path)
-      : source.database;
+  const sourceName =
+    (typeof source?.path === "string" && source.path.split(/[\\/]/).pop()) ||
+    (typeof source?.database === "string" && source.database) ||
+    unknown;
   const sourceLabel = source
     ? Object.entries(source)
         .filter(([key]) => key !== "search_path_sha256")

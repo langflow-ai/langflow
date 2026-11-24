@@ -63,6 +63,7 @@ export async function runUpgradeCheck({
         outcome = {
           kind: "imported",
           reportId: event.report_id,
+          incomplete: event.incomplete ?? null,
           flows: event.flows ?? null,
         };
       } else if (event.event === "error") {

@@ -7,9 +7,13 @@ Open **Settings > Upgrade reports** as an administrator and import the JSON file
 
 You can also run the check from this page. Enter a release under **Check an upgrade** and choose **Check upgrade**. Langflow runs `langflow upgrade-check` from that release against the database this server uses, with the server's component settings, and imports the report when the check finishes. The page shows how many flows were checked so far. **Cancel**, or leaving the page, stops the check. One check runs at a time on each server process.
 
-For a release other than the one the server runs, the server downloads that release with `uvx`. This needs network access to PyPI or to the index set in `UV_INDEX_URL`, `uvx` on the server's `PATH` (the Langflow Docker images include it), and about 3 GB of free temporary disk while the check runs. The download is deleted when the check ends. The check loads every component in a separate process, so it also uses the server's memory and CPU while it runs.
+Keep the instance migration pause off until the report appears in history. If a migration pause blocks the import, Langflow discards the generated report. Resume normal operations and run the check again.
 
-The downloaded release is the published package, not your deployment image. A package you installed separately for custom components is not in it, so flows that use those components can fail in the report. In that case, or when the server cannot reach PyPI, run `langflow upgrade-check` from the upgraded image and import its report.
+The release list comes from public PyPI (`pypi.org`), even when the server uses a private package index. If the list is unavailable, enter a target version manually. Enter the exact running version to check an offline server, or import a report generated elsewhere.
+
+For a newer release, the server downloads the package with `uvx` from PyPI or the index configured in `UV_INDEX_URL`. The server needs `uvx` on its `PATH` (the Langflow Docker images include it) and about 3 GB of free temporary disk while the check runs. The download is deleted when the check ends. The check loads every component in a separate process, so it also uses the server's memory and CPU while it runs.
+
+The downloaded release is the published package, not your deployment image. A package you installed separately for custom components is not in it, so flows that use those components can fail in the report. In that case, or when the server cannot reach the package index, run `langflow upgrade-check` from the upgraded image and import its report.
 
 The page shows the source, target, report age, saved versions, deployments, findings, and retained execution history. Missing metadata stays unknown. Older reports may omit flows whose components were already current. The page identifies that incomplete coverage. An absent job record does not prove that a flow never ran. Editor and Serving history remain separate, with their observed periods and retention limits.
 

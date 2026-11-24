@@ -19,6 +19,8 @@ type Run =
     }
   | {
       kind: "done";
+      reportId: string;
+      incomplete: boolean | null;
       target: string;
       download: boolean;
       flows: { ok: number; warn: number; fail: number } | null;
@@ -67,7 +69,13 @@ function Progress({ run }: { run: Extract<Run, { kind: "running" }> }) {
 }
 
 // The report opens further down the page, so this says it is ready, what it found, and what comes next.
-function Done({ run }: { run: Extract<Run, { kind: "done" }> }) {
+function Done({
+  run,
+  onView,
+}: {
+  run: Extract<Run, { kind: "done" }>;
+  onView: () => void;
+}) {
   const { t, i18n } = useTranslation();
   const { flows } = run;
   const clean = flows !== null && flows.warn + flows.fail === 0;
@@ -79,11 +87,6 @@ function Done({ run }: { run: Extract<Run, { kind: "done" }> }) {
       ? "nextCurrentClean"
       : "nextCurrentFlagged";
   const count = (value: number) => value.toLocaleString(i18n.language);
-  const view = () => {
-    const heading = document.getElementById("upgrade-report-title");
-    heading?.scrollIntoView({ behavior: "smooth", block: "start" });
-    heading?.focus({ preventScroll: true });
-  };
   return (
     <div className="space-y-3 rounded-md border bg-muted/40 p-3">
       <div role="status" className="space-y-1">
@@ -99,11 +102,17 @@ function Done({ run }: { run: Extract<Run, { kind: "done" }> }) {
             ].join(" · ")}
           </p>
         )}
-        <p className="text-sm">
-          {t(`settings.upgrade.check.done.${next}`, { version: run.target })}
-        </p>
+        {run.incomplete ? (
+          <p className="text-sm">
+            {t("settings.upgrade.assessment.incomplete")}
+          </p>
+        ) : flows && (!clean || run.incomplete === false) ? (
+          <p className="text-sm">
+            {t(`settings.upgrade.check.done.${next}`, { version: run.target })}
+          </p>
+        ) : null}
       </div>
-      <Button variant="outline" size="sm" onClick={view} ignoreTitleCase>
+      <Button variant="outline" size="sm" onClick={onView} ignoreTitleCase>
         {t("settings.upgrade.check.done.view")}
       </Button>
     </div>
@@ -135,9 +144,9 @@ export function Failure({ run }: { run: Extract<Run, { kind: "failed" }> }) {
 }
 
 export default function RunCheck({
-  onImported,
+  onSelectReport,
 }: {
-  onImported: (reportId: string) => void;
+  onSelectReport: (reportId: string, focus?: boolean) => void;
 }) {
   const { t } = useTranslation();
   const client = useQueryClient();
@@ -192,11 +201,13 @@ export default function RunCheck({
         client.invalidateQueries({ queryKey: ["useGetUpgradeReports"] });
         setRun((now) => ({
           kind: "done",
+          reportId: outcome.reportId,
+          incomplete: outcome.incomplete,
           target: now.kind === "running" ? now.target : version,
           download: now.kind === "running" ? now.download : true,
           flows: outcome.flows,
         }));
-        onImported(outcome.reportId);
+        onSelectReport(outcome.reportId);
         break;
       case "failed":
         setRun({
@@ -269,7 +280,9 @@ export default function RunCheck({
       </div>
       <div id="upgrade-check-feedback">
         {run.kind === "running" && <Progress run={run} />}
-        {run.kind === "done" && <Done run={run} />}
+        {run.kind === "done" && (
+          <Done run={run} onView={() => onSelectReport(run.reportId, true)} />
+        )}
         {run.kind === "failed" && <Failure run={run} />}
       </div>
     </section>
