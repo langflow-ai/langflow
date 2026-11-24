@@ -168,20 +168,6 @@ def timeout_input() -> IntInput:
     )
 
 
-def optional_timeout_input() -> StrInput:
-    """Scrape Brand's timeout, which the request omits when blank."""
-    return StrInput(
-        name="timeout",
-        display_name="Timeout (seconds)",
-        value="",
-        advanced=True,
-        info=(
-            "Maximum seconds to wait for the scrape, from 1 to 330. The HTTP request allows 30 additional "
-            "seconds. Leave blank to omit it; the HTTP request then allows 330 seconds."
-        ),
-    )
-
-
 def warm_start_input() -> BoolInput:
     return BoolInput(
         name="warm_start",

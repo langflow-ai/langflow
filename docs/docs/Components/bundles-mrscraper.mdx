@@ -16,12 +16,12 @@ All seven components return the API payload as [`Data`](/data-types#json). The S
 
 ## Shared page settings
 
-**Scrape HTML**, **Scrape Markdown**, **Get Screenshot**, and **Scrape JSON** share these settings in their advanced options. **Scrape Brand** accepts **Timeout**, **Warm Start**, and **Geo Code**. Blank optional fields are left out of the request. These four components always send `saveResult=true`, so results are saved to the dashboard Result tab, and they never send a token cap.
+**Scrape HTML**, **Scrape Markdown**, **Get Screenshot**, and **Scrape JSON** share these settings in their advanced options. Blank optional fields are left out of the request. These four components always send `saveResult=true`, so results are saved to the dashboard Result tab, and they never send a token cap.
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | Browser Rendering (`browser_rendering`) | `Auto` | Whether to load the page in a browser: `Enabled` always does and `Disabled` never does. `Auto` loads the page without a browser first and switches to a browser automatically if the request is blocked. Not shown on **Get Screenshot**, which always renders. |
-| Timeout (seconds) (`timeout`) | `300` | Maximum seconds to wait for the scrape, from 1 to 330. The HTTP request allows 30 additional seconds. On **Scrape Brand**, it is blank by default and sent only when set. |
+| Timeout (seconds) (`timeout`) | `300` | Maximum seconds to wait for the scrape, from 1 to 330. The HTTP request allows 30 additional seconds. |
 | Warm Start (`warm_start`) | `false` | Whether to open the site's home page first to warm the session before loading the target URL. Not shown on **Get Screenshot**. |
 | Block Resources (`block_resources`) | `false` | Whether to block images, fonts, and stylesheets while loading the page. Not shown on **Get Screenshot**. |
 | Wait for Selector (`wait_for_selector`) | Blank | CSS selector or text to wait for on the page before returning the result, up to 500 characters. A selector needs a rendered page, so don't combine it with **Browser Rendering** `Disabled`. |
@@ -57,7 +57,7 @@ Capture a base64 PNG screenshot of the full page. Browser rendering is always en
 
 ## MrScraper Scrape Brand
 
-Extract a website's colors, typography, logos, and social links as JSON. This component sends `GET https://api.mrscraper.com` with `action=brand-scraping`, `bundle=none`, the **URL**, and **Warm Start** (default `false`). **Timeout** (1 to 330 seconds) and **Geo Code** are blank by default and sent only when set. The HTTP request allows the timeout plus 30 seconds, or 330 seconds when **Timeout** is blank.
+Extract a website's colors, typography, logos, and social links as JSON. This component takes only the **MrScraper API Token** and the **URL** (available in Tool Mode). It sends `GET https://api.mrscraper.com` with `action=brand-scraping`, the **URL**, and `bundle=none`, and the HTTP request waits up to 120 seconds.
 
 The output contains `message` and a `data` object with `job_id`, `status`, `url`, `final_url`, `brand`, and `error`. Brand fields can be `null` when a site does not declare them.
 

@@ -185,7 +185,7 @@ async def test_default_inputs_send_exact_sdk_keywords(
         "scrape_html": {"url": URL, **loading, **page, "action": None, "screenshot": False},
         "scrape_markdown": {"url": URL, **loading, **page, "action": None},
         "get_screenshot": {"url": URL, **page},
-        "scrape_brand": {"url": URL, "timeout": None, "warm_start": False, "geo_code": None},
+        "scrape_brand": {"url": URL},
         "scrape_json": {"url": URL, "prompt": DEFAULT_PROMPT, "html": True, **loading, **page, "screenshot": False},
         "web_search": {"query": "running shoes", "country": None, "num_results": 10},
     }[sdk_method]
@@ -404,30 +404,15 @@ async def test_get_screenshot_sends_fixed_full_page_fields(http_transport):
 
 @pytest.mark.unit
 @pytest.mark.asyncio
-async def test_scrape_brand_sends_fixed_fields_and_page_options(http_transport):
-    """Scrape Brand sends warm start, and timeout and geo code only when set."""
+async def test_scrape_brand_sends_only_the_url_and_fixed_fields(http_transport):
+    """Scrape Brand takes only the URL; the SDK adds action and bundle and waits 120 seconds."""
     requests, responses = http_transport
     brand = {"data": {"job_id": "job-1", "status": "succeeded", "brand": {"colors": {}}}, "message": "ok"}
     responses.append(httpx.Response(200, json=brand))
-    responses.append(httpx.Response(200, json=brand))
-    output = await configure(MrscraperScrapeBrand, url=URL).extract_brand()
-    await configure(MrscraperScrapeBrand, url=URL, timeout="120", warm_start=True, geo_code="GB").extract_brand()
-    assert list(query(requests[0]).items()) == [
-        ("action", "brand-scraping"),
-        ("url", URL),
-        ("bundle", "none"),
-        ("warmStart", "false"),
-    ]
-    assert requests[0].extensions["timeout"]["read"] == 330
-    assert list(query(requests[1]).items()) == [
-        ("action", "brand-scraping"),
-        ("url", URL),
-        ("bundle", "none"),
-        ("timeout", "120"),
-        ("warmStart", "true"),
-        ("geoCode", "gb"),
-    ]
-    assert requests[1].extensions["timeout"]["read"] == 150
+    output = await configure(MrscraperScrapeBrand, url=f" {URL}\n").extract_brand()
+    assert {i.name for i in MrscraperScrapeBrand.inputs} == {"api_token", "url"}
+    assert list(query(requests[0]).items()) == [("action", "brand-scraping"), ("url", URL), ("bundle", "none")]
+    assert requests[0].extensions["timeout"]["read"] == 120
     assert output.data == brand
 
 
@@ -519,10 +504,7 @@ async def test_web_search_sends_country_only_when_set(http_transport):
         (MrscraperFetchHtml, "fetch", {"url": URL, "browser_rendering": "Sometimes"}, "browser_rendering"),
         (MrscraperScrapeMarkdown, "scrape", {"url": URL, "geo_code": "1a"}, "geo_code"),
         (MrscraperGetScreenshot, "capture", {"url": URL, "timeout": 331}, "timeout"),
-        (MrscraperScrapeBrand, "extract_brand", {"url": URL, "timeout": "0"}, "timeout"),
-        (MrscraperScrapeBrand, "extract_brand", {"url": URL, "timeout": "331"}, "timeout"),
-        (MrscraperScrapeBrand, "extract_brand", {"url": URL, "timeout": "1.5"}, "timeout"),
-        (MrscraperScrapeBrand, "extract_brand", {"url": URL, "geo_code": "gbr"}, "geo_code"),
+        (MrscraperScrapeBrand, "extract_brand", {"url": "example.com"}, "url"),
         (MrscraperScrapeJson, "extract", {"url": URL, "prompt": " "}, "prompt"),
         (MrscraperWebSearch, "search", {"query": " "}, "query"),
         (MrscraperWebSearch, "search", {"query": "test", "num_results": 9}, "num_results"),
