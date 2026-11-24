@@ -10,6 +10,7 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlmodel import col, func, select
 
+from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.upgrade_report import UpgradeReport, UpgradeReportRepair
 from langflow.services.upgrade_reports.schema import (
     ReportHistorySummary,
@@ -70,6 +71,22 @@ async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) ->
     session.add(row)
     await session.commit()
     await session.refresh(row)
+    return row
+
+
+async def import_report_content(session: AsyncSession, content: bytes, actor_id: UUID) -> UpgradeReport:
+    """Validate, store and audit one report. Every way in imports through this.
+
+    Raises UnsupportedReportFormatError, ValidationError, ValueError, UnicodeError or RecursionError
+    when the content cannot be imported.
+    """
+    if len(content) > MAX_REPORT_BYTES:
+        msg = "the report is over the size limit"
+        raise ValueError(msg)
+    row = await store_report(session, content, actor_id)
+    await audit_decision(
+        user_id=actor_id, action="upgrade-report:import", obj=f"upgrade-report:{row.id}", result="allow"
+    )
     return row
 
 

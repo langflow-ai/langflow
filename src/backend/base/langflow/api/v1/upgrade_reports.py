@@ -15,7 +15,7 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, JsonValue, ValidationError
 
 from langflow.api.utils import DbSession, DbSessionReadOnly
-from langflow.api.utils.migration_pause import changes_the_instance, write_admission
+from langflow.api.utils.migration_pause import changes_the_instance, write_refusal
 from langflow.services.auth.utils import get_current_active_superuser
 from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.upgrade_report import UpgradeReport
@@ -23,12 +23,11 @@ from langflow.services.database.models.user.model import User
 from langflow.services.upgrade_reports.history import (
     MAX_REPORT_BYTES,
     UnsupportedReportFormatError,
+    import_report_content,
     list_repairs,
     list_reports,
-    store_report,
 )
 from langflow.services.upgrade_reports.run import (
-    CHECKS_PATH,
     InvalidTargetVersionError,
     check_lock,
     fetch_pypi,
@@ -85,7 +84,7 @@ async def import_report(
             raise HTTPException(status_code=413, detail="Upgrade report exceeds 20 MiB")
         content.extend(chunk)
     try:
-        row = await store_report(session, bytes(content), admin.id)
+        row = await import_report_content(session, bytes(content), admin.id)
     except UnsupportedReportFormatError:
         raise HTTPException(
             status_code=422, detail={"code": "unsupported_upgrade_report_format", "supported": [1]}
@@ -95,9 +94,6 @@ async def import_report(
         raise HTTPException(status_code=422, detail={"code": "invalid_upgrade_report", "errors": errors}) from None
     except (ValueError, UnicodeError, RecursionError):
         raise HTTPException(status_code=422, detail={"code": "invalid_upgrade_report"}) from None
-    await audit_decision(
-        user_id=admin.id, action="upgrade-report:import", obj=f"upgrade-report:{row.id}", result="allow"
-    )
     response.headers["Cache-Control"] = "no-store"
     return ReportDetail(**entry(row).model_dump(), document=json.loads(row.document_json))
 
@@ -134,9 +130,8 @@ async def run_upgrade_check(body: CheckRequest, admin: Superuser) -> StreamingRe
     if target != current and shutil.which("uvx") is None:
         raise HTTPException(status_code=503, detail={"code": "uvx_unavailable"})
     # Only a look at the pause: a place held for the whole run would make a pause wait for the check.
-    async with write_admission("request", method="POST", path=CHECKS_PATH, caller_id=admin.id) as refusal:
-        if refusal is not None:
-            raise HTTPException(status_code=503, detail=refusal)
+    if refusal := await write_refusal(admin.id):
+        raise HTTPException(status_code=503, detail=refusal)
     events = run_check(target, current=current, package=installed_package(), admin_id=admin.id)
 
     async def stream():
