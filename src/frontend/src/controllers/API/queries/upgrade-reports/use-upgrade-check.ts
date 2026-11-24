@@ -4,7 +4,8 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 import type {
   UpgradeCheckEvent,
-  UpgradeCheckRefusal,
+  UpgradeCheckOutcome,
+  UpgradeCheckProgress,
   UpgradeReleases,
 } from "./types";
 
@@ -23,7 +24,13 @@ export const useGetUpgradeReleases: useQueryFunctionType<
   );
 };
 
-/** One streaming POST owns one run. Aborting the controller stops it on the server. */
+/** What the server sends when it refuses to start: a code, or the text of a pause. */
+type RefusalBody = { detail: { code: string } | string };
+
+/**
+ * One streaming POST owns one run. Aborting the controller stops it on the server.
+ * Progress events go to `onEvent`. How the run ended is the outcome.
+ */
 export async function runUpgradeCheck({
   targetVersion,
   controller,
@@ -31,39 +38,55 @@ export async function runUpgradeCheck({
 }: {
   targetVersion: string;
   controller: AbortController;
-  onEvent: (event: UpgradeCheckEvent) => void;
-}): Promise<UpgradeCheckRefusal | undefined> {
-  let refused: UpgradeCheckRefusal | undefined;
+  onEvent: (event: UpgradeCheckProgress) => void;
+}): Promise<UpgradeCheckOutcome> {
+  let outcome: UpgradeCheckOutcome | undefined;
+  let refusal: { status: number; code?: string; message?: string } | undefined;
   await performStreamingRequest({
     method: "POST",
     url: checksURL(),
     body: { target_version: targetVersion.trim() },
     buildController: controller,
     onError: (status) => {
-      refused = { status };
+      refusal = { status };
     },
     onData: async (data) => {
       // A refusal answers with one JSON error body instead of a stream.
-      if (refused) {
-        const body = data as {
-          code?: string;
-          message?: string;
-          detail?: { code?: string; message?: string } | string;
-        };
-        const detail =
-          typeof body.detail === "object" && body.detail ? body.detail : body;
-        refused.code = detail.code;
-        refused.message =
-          detail.message ??
-          (typeof body.detail === "string" ? body.detail : undefined);
+      if (refusal) {
+        const { detail } = data as RefusalBody;
+        if (typeof detail === "string") refusal.message = detail;
+        else refusal.code = detail.code;
         return false;
       }
-      onEvent(data as UpgradeCheckEvent);
+      const event = data as UpgradeCheckEvent;
+      if (event.event === "imported") {
+        outcome = {
+          kind: "imported",
+          reportId: event.report_id,
+          flows: event.flows ?? null,
+        };
+      } else if (event.event === "error") {
+        outcome = {
+          kind: "failed",
+          code: event.code,
+          message: event.message ?? "",
+        };
+      } else if (event.event !== "heartbeat") {
+        onEvent(event);
+      }
       return true;
     },
-    onNetworkError: () => {
-      if (!controller.signal.aborted) refused ??= { status: 0 };
-    },
+    onNetworkError: () => {},
   });
-  return refused;
+  if (outcome) return outcome;
+  // A refusal also ends in an abort, so a cancel is an abort that no refusal explains.
+  if (refusal) {
+    return {
+      kind: "failed",
+      code: refusal.code,
+      message: refusal.message ?? "",
+    };
+  }
+  if (controller.signal.aborted) return { kind: "cancelled" };
+  return { kind: "failed", code: "connection_lost", message: "" };
 }

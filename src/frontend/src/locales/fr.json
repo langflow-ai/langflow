@@ -4121,6 +4121,8 @@
   "settings.upgrade.check.error.timeout": "La vérification a duré 60 minutes et a été arrêtée. Réessayez, ou exécutez langflow upgrade-check à la main.",
   "settings.upgrade.check.error.import_refused": "La vérification est terminée, mais les importations sont en pause. Réessayez à la fin de la pause.",
   "settings.upgrade.check.error.invalid_upgrade_report": "La vérification est terminée, mais son rapport a été refusé. Relancez-la.",
+  "settings.upgrade.check.error.unsupported_upgrade_report_format": "La vérification est terminée, mais la version cible a écrit un format de rapport que ce serveur ne peut pas importer. Exécutez langflow upgrade-check à la main pour obtenir le fichier du rapport.",
+  "settings.upgrade.check.error.subprocess_unavailable": "Ce serveur ne peut pas lancer la vérification depuis cette page. Exécutez langflow upgrade-check dans un terminal et importez le rapport.",
   "settings.upgrade.check.error.connection_lost": "La connexion s’est fermée avant la fin de la vérification. Relancez-la.",
   "settings.upgrade.check.error.refused": "Le serveur n’a pas démarré la vérification. Réessayez plus tard."
 }

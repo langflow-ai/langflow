@@ -136,9 +136,16 @@ export type UpgradeCheckEvent =
       flows?: { ok: number; warn: number; fail: number };
     }
   | { event: "error"; code: string; message?: string };
-/** The server refused to start the check, before any event. */
-export type UpgradeCheckRefusal = {
-  status: number;
-  code?: string;
-  message?: string;
-};
+/** The events that tell how far a check has come. The hook turns the others into an outcome. */
+export type UpgradeCheckProgress = Extract<
+  UpgradeCheckEvent,
+  { event: "started" | "flow" }
+>;
+export type UpgradeCheckOutcome =
+  | {
+      kind: "imported";
+      reportId: string;
+      flows: { ok: number; warn: number; fail: number } | null;
+    }
+  | { kind: "failed"; code?: string; message: string }
+  | { kind: "cancelled" };

@@ -279,6 +279,11 @@ it.each([
   ["timeout", /ran for 60 minutes/],
   ["import_refused", /imports are paused/],
   ["invalid_upgrade_report", /report was rejected/],
+  [
+    "unsupported_upgrade_report_format",
+    /report format this server cannot import/,
+  ],
+  ["subprocess_unavailable", /cannot start the check from this page/],
   ["check_failed", /could not finish/],
 ])("shows the %s error from the stream", async (code, text) => {
   open();
@@ -309,13 +314,24 @@ it.each([
   expect(await screen.findByRole("alert")).toHaveTextContent(text);
 });
 
-it("falls back to the server message for an unknown refusal", async () => {
+it("shows the server text of a refusal that has no code", async () => {
   status = 503;
   open();
   await start();
-  refuse({ detail: { code: "paused", message: "Migration in progress." } });
+  // What the pause answers with: a string, not an object.
+  refuse({ detail: "This instance is being migrated." });
   expect(await screen.findByRole("alert")).toHaveTextContent(
-    "Migration in progress.",
+    "This instance is being migrated.",
+  );
+});
+
+it("says the server did not start the check when a refusal has no text", async () => {
+  status = 502;
+  open();
+  await start();
+  finish();
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "The server did not start the check.",
   );
 });
 

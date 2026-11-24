@@ -4120,6 +4120,8 @@
   "settings.upgrade.check.error.timeout": "The check ran for 60 minutes and was stopped. Try again, or run langflow upgrade-check by hand.",
   "settings.upgrade.check.error.import_refused": "The check finished, but imports are paused. Try again when the pause ends.",
   "settings.upgrade.check.error.invalid_upgrade_report": "The check finished, but its report was rejected. Run it again.",
+  "settings.upgrade.check.error.unsupported_upgrade_report_format": "The check finished, but the target release wrote a report format this server cannot import. Run langflow upgrade-check by hand to get the report file.",
+  "settings.upgrade.check.error.subprocess_unavailable": "This server cannot start the check from this page. Run langflow upgrade-check from a terminal and import the report.",
   "settings.upgrade.check.error.connection_lost": "The connection closed before the check finished. Run it again.",
   "settings.upgrade.check.error.refused": "The server did not start the check. Try again later."
 }

@@ -4121,6 +4121,8 @@
   "settings.upgrade.check.error.timeout": "La comprobación tardó 60 minutos y se detuvo. Inténtalo de nuevo o ejecuta langflow upgrade-check a mano.",
   "settings.upgrade.check.error.import_refused": "La comprobación terminó, pero las importaciones están en pausa. Inténtalo de nuevo cuando termine la pausa.",
   "settings.upgrade.check.error.invalid_upgrade_report": "La comprobación terminó, pero se rechazó su informe. Ejecútala de nuevo.",
+  "settings.upgrade.check.error.unsupported_upgrade_report_format": "La comprobación terminó, pero la versión de destino escribió un formato de informe que este servidor no puede importar. Ejecuta langflow upgrade-check a mano para obtener el archivo del informe.",
+  "settings.upgrade.check.error.subprocess_unavailable": "Este servidor no puede iniciar la comprobación desde esta página. Ejecuta langflow upgrade-check en una terminal e importa el informe.",
   "settings.upgrade.check.error.connection_lost": "La conexión se cerró antes de que terminara la comprobación. Ejecútala de nuevo.",
   "settings.upgrade.check.error.refused": "El servidor no inició la comprobación. Inténtalo más tarde."
 }

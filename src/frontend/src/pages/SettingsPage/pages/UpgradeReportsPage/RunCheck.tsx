@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   runUpgradeCheck,
-  type UpgradeCheckEvent,
+  type UpgradeCheckProgress,
   useGetUpgradeReleases,
 } from "@/controllers/API/queries/upgrade-reports";
 
@@ -23,19 +23,7 @@ type Run =
       download: boolean;
       flows: { ok: number; warn: number; fail: number } | null;
     }
-  | { kind: "failed"; code: string; message: string };
-
-const KNOWN_CODES = [
-  "invalid_target_version",
-  "check_running",
-  "uvx_unavailable",
-  "check_failed",
-  "install_failed",
-  "timeout",
-  "import_refused",
-  "invalid_upgrade_report",
-  "connection_lost",
-];
+  | { kind: "failed"; code?: string; message: string };
 
 // Downloading and loading components give no count, so the bar only moves once flows are checked.
 // Saved versions that still run come on top of the total, so past it the bar stops counting.
@@ -122,6 +110,30 @@ function Done({ run }: { run: Extract<Run, { kind: "done" }> }) {
   );
 }
 
+// A code the page has copy for reads in the admin's language. Any other says what the server said.
+export function Failure({ run }: { run: Extract<Run, { kind: "failed" }> }) {
+  const { t } = useTranslation();
+  const generic = t("settings.upgrade.check.error.refused");
+  const text = run.code
+    ? t(`settings.upgrade.check.error.${run.code}`, {
+        defaultValue: run.message || generic,
+      })
+    : run.message || generic;
+  const detail =
+    (run.code === "check_failed" || run.code === "install_failed") &&
+    run.message;
+  return (
+    <p role="alert">
+      {text}
+      {detail && (
+        <code className="mt-1 block whitespace-pre-wrap break-words text-xs">
+          {run.message}
+        </code>
+      )}
+    </p>
+  );
+}
+
 export default function RunCheck({
   onImported,
 }: {
@@ -153,11 +165,10 @@ export default function RunCheck({
       total: null,
       download: true,
     });
-    let finished = false;
-    const refused = await runUpgradeCheck({
+    const outcome = await runUpgradeCheck({
       targetVersion: version,
       controller: abort,
-      onEvent: (event: UpgradeCheckEvent) => {
+      onEvent: (event: UpgradeCheckProgress) => {
         if (event.event === "started") {
           setRun({
             kind: "running",
@@ -166,42 +177,38 @@ export default function RunCheck({
             total: event.total ?? null,
             download: event.download,
           });
-        } else if (event.event === "flow") {
+        } else {
           setRun((now) =>
             now.kind === "running" ? { ...now, checked: now.checked + 1 } : now,
           );
-        } else if (event.event === "imported") {
-          finished = true;
-          client.invalidateQueries({ queryKey: ["useGetUpgradeReports"] });
-          setRun((now) => ({
-            kind: "done",
-            target: now.kind === "running" ? now.target : version,
-            download: now.kind === "running" ? now.download : true,
-            flows: event.flows ?? null,
-          }));
-          onImported(event.report_id);
-        } else if (event.event === "error") {
-          finished = true;
-          setRun({
-            kind: "failed",
-            code: event.code,
-            message: event.message ?? "",
-          });
         }
       },
     });
-    const cancelled = controller.current !== abort;
-    if (!cancelled) controller.current = null;
-    if (finished || cancelled) return;
-    setRun(
-      refused && refused.status !== 0
-        ? {
-            kind: "failed",
-            code: refused.code ?? "refused",
-            message: refused.message ?? "",
-          }
-        : { kind: "failed", code: "connection_lost", message: "" },
-    );
+    // A cancel or leaving the page replaced the ref, and the run no longer owns the page.
+    if (controller.current !== abort) return;
+    controller.current = null;
+    switch (outcome.kind) {
+      case "imported":
+        client.invalidateQueries({ queryKey: ["useGetUpgradeReports"] });
+        setRun((now) => ({
+          kind: "done",
+          target: now.kind === "running" ? now.target : version,
+          download: now.kind === "running" ? now.download : true,
+          flows: outcome.flows,
+        }));
+        onImported(outcome.reportId);
+        break;
+      case "failed":
+        setRun({
+          kind: "failed",
+          code: outcome.code,
+          message: outcome.message,
+        });
+        break;
+      case "cancelled":
+        setRun({ kind: "idle" });
+        break;
+    }
   };
 
   const running = run.kind === "running";
@@ -263,20 +270,7 @@ export default function RunCheck({
       <div id="upgrade-check-feedback">
         {run.kind === "running" && <Progress run={run} />}
         {run.kind === "done" && <Done run={run} />}
-        {run.kind === "failed" && (
-          <p role="alert">
-            {KNOWN_CODES.includes(run.code)
-              ? t(`settings.upgrade.check.error.${run.code}`)
-              : run.message || t("settings.upgrade.check.error.refused")}
-            {KNOWN_CODES.includes(run.code) &&
-              ["check_failed", "install_failed"].includes(run.code) &&
-              run.message && (
-                <code className="mt-1 block whitespace-pre-wrap break-words text-xs">
-                  {run.message}
-                </code>
-              )}
-          </p>
-        )}
+        {run.kind === "failed" && <Failure run={run} />}
       </div>
     </section>
   );

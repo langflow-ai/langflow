@@ -4120,6 +4120,8 @@
   "settings.upgrade.check.error.timeout": "检查运行了 60 分钟后已停止。请重试，或手动运行 langflow upgrade-check。",
   "settings.upgrade.check.error.import_refused": "检查已完成，但导入已暂停。请在暂停结束后重试。",
   "settings.upgrade.check.error.invalid_upgrade_report": "检查已完成，但报告被拒绝。请重新运行。",
+  "settings.upgrade.check.error.unsupported_upgrade_report_format": "检查已完成，但目标版本写出的报告格式此服务器无法导入。请手动运行 langflow upgrade-check 以获取报告文件。",
+  "settings.upgrade.check.error.subprocess_unavailable": "此服务器无法从本页面启动检查。请在终端中运行 langflow upgrade-check 并导入报告。",
   "settings.upgrade.check.error.connection_lost": "检查结束前连接已关闭。请重新运行。",
   "settings.upgrade.check.error.refused": "服务器没有启动检查。请稍后重试。"
 }

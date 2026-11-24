@@ -4120,6 +4120,8 @@
   "settings.upgrade.check.error.timeout": "확인이 60분 동안 실행되어 중지되었습니다. 다시 시도하거나 langflow upgrade-check를 직접 실행하세요.",
   "settings.upgrade.check.error.import_refused": "확인은 끝났지만 가져오기가 일시 중지되어 있습니다. 일시 중지가 끝난 뒤 다시 시도하세요.",
   "settings.upgrade.check.error.invalid_upgrade_report": "확인은 끝났지만 보고서가 거부되었습니다. 다시 실행하세요.",
+  "settings.upgrade.check.error.unsupported_upgrade_report_format": "확인은 끝났지만 대상 릴리스가 작성한 보고서 형식을 이 서버에서 가져올 수 없습니다. langflow upgrade-check를 직접 실행하여 보고서 파일을 받으세요.",
+  "settings.upgrade.check.error.subprocess_unavailable": "이 서버는 이 페이지에서 확인을 시작할 수 없습니다. 터미널에서 langflow upgrade-check를 실행한 뒤 보고서를 가져오세요.",
   "settings.upgrade.check.error.connection_lost": "확인이 끝나기 전에 연결이 닫혔습니다. 다시 실행하세요.",
   "settings.upgrade.check.error.refused": "서버가 확인을 시작하지 않았습니다. 나중에 다시 시도하세요."
 }
