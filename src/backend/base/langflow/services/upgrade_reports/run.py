@@ -14,6 +14,7 @@ import shutil
 import signal
 import sys
 import tempfile
+from datetime import datetime, timedelta, timezone
 from functools import partial
 from importlib import metadata
 from pathlib import Path
@@ -125,14 +126,25 @@ async def fetch_pypi(package: str, version: Version | None = None) -> dict[str, 
         return response.json()
 
 
+def install_cutoff(upload_times: list[str]) -> str | None:
+    """The `--exclude-newer` value for a release whose files were uploaded at `upload_times`.
+
+    uv keeps only uploads strictly before the cutoff, and a release's packages go up over a few
+    minutes, so the cutoff is a day after its last file. Anything published later is still left out.
+    """
+    if not upload_times:
+        return None
+    last = max(datetime.fromisoformat(time.replace("Z", "+00:00")) for time in upload_times)
+    return (last + timedelta(days=1)).astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 async def fetch_upload_time(package: str, version: Version) -> str | None:
-    """When the last file of a release was uploaded, or None when the index does not say."""
+    """The install cutoff for a release, or None when the index does not say when it was uploaded."""
     try:
         answer = await fetch_pypi(package, version)
-        times = [file["upload_time_iso_8601"] for file in answer["urls"]]
+        return install_cutoff([file["upload_time_iso_8601"] for file in answer["urls"]])
     except (httpx.HTTPError, ValueError, LookupError, TypeError):
         return None
-    return max(times) if times else None
 
 
 # The running release's own packages. Their components folders belong to this release; the target ships its own.

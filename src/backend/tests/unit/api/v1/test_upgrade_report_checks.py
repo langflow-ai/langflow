@@ -24,6 +24,7 @@ from langflow.services.upgrade_reports.run import (
     check_command,
     check_environment,
     check_lock,
+    install_cutoff,
     parse_releases,
     parse_target_version,
     running_version,
@@ -172,6 +173,13 @@ def test_command_pins_the_installs_dependencies_to_the_releases_upload_time():
     assert command.index("--exclude-newer") < command.index("--from")
     assert "--exclude-newer" not in command_for("1.16.0", Settings())
     assert "--exclude-newer" not in command_for("1.15.0", Settings(), exclude_newer="2026-11-01T10:00:00Z")
+
+
+def test_install_cutoff_keeps_every_file_of_the_release():
+    # uv keeps only uploads strictly before the cutoff; the release's own files must stay installable.
+    uploads = ["2026-11-24T07:51:59.770791Z", "2026-11-24T07:52:52.650647Z"]
+    assert install_cutoff(uploads) == "2026-11-25T07:52:52Z"
+    assert install_cutoff([]) is None
 
 
 def test_command_leaves_the_database_url_out_of_the_argument_list():
