@@ -81,6 +81,29 @@ def test_rejects_internal_platform_service_access(package: str, source: str) -> 
     assert any(f"{package}.services" in violation for violation in result.violations)
 
 
+@pytest.mark.parametrize("module", ["lfx.utils.util", "lfx.base.data.utils"])
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from {module} import get_settings_service as settings",
+        "import {module} as helper\naccessor = helper.get_settings_service",
+        "import {module} as helper\naccessor = getattr(helper, 'get_settings_service')",
+        "import {module} as helper\naccessor = vars(helper)['get_settings_service']",
+        "import {module} as helper\naccessor = vars(helper).get('get_settings_service')",
+        "from {module} import *\naccessor = get_settings_service",
+    ],
+)
+def test_rejects_platform_service_accessor_reexports(module: str, source: str) -> None:
+    result = scan_code_security(source.format(module=module))
+
+    assert not result.is_safe
+    assert any("get_settings_service" in violation for violation in result.violations)
+
+
+def test_preserves_public_utility_from_service_accessor_host() -> None:
+    assert scan_code_security("from lfx.utils.util import escape_json_dump").is_safe
+
+
 @pytest.mark.parametrize("package", ["langflow", "lfx"])
 def test_preserves_public_component_imports(package: str) -> None:
     source = f"from {package}.custom import Component\nfrom {package}.io import Output"
