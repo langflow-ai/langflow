@@ -55,6 +55,16 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
 Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
+### Breaking changes
+
+- Python 3.10 support is discontinued
+
+    Python 3.10 is end of life, and Langflow 1.14 no longer supports it.
+    Install Langflow with Python 3.11 through 3.14.
+    Python 3.15 support remains in preview.
+
+    For installation requirements, see [Install Langflow](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+
 ### Deployment variables
 
 Set `LANGFLOW_DEPLOYMENT_TYPED_VARIABLES_ENABLED=true` to include secret and plain variable declarations in version 7 deployment artifacts.
@@ -75,6 +85,12 @@ Restarting an instance also preserves existing empty assistant variables instead
 
     The Langflow CLI command `langflow secrets audit` reads stored encrypted values, and `langflow secrets rotate` rewraps the secret values under a new root key.
     For more information, see [langflow secrets audit](./configuration-cli#langflow-secrets-audit) and [langflow secrets rotate](./configuration-cli#langflow-secrets-rotate).
+
+- Evaluations
+
+    Langflow 1.14 can run a flow against a dataset of test cases and return a score for every answer.
+    The feature is off until you set `LANGFLOW_FEATURE_EVALS=true`.
+    For more information, see [Evaluate flows](./evaluations).
 
 ## 1.13.x
 
