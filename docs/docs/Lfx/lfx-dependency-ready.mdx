@@ -1,37 +1,62 @@
 ---
-title: Dependency-ready Python graphs
+title: Start components when their inputs are ready
 slug: /lfx-dependency-ready
 ---
 
-# Dependency-ready Python graphs
+LFX normally runs a graph one layer at a time. Every component in a layer finishes before any component in the next layer starts. A fast branch waits for a slow branch that shares its layer.
 
-`Graph.arun()` and `Graph.process()` accept an optional `dag_max_concurrency` positive integer. When every component in a static graph explicitly supports dependency-ready scheduling, a completed branch can release its next component without waiting for an unrelated slow branch. The number of admitted component build tasks never exceeds the bound. `None`, the default, keeps the existing scheduler.
+Pass `dag_max_concurrency` when you want a component to start as soon as its own inputs are ready, while an unrelated branch is still running. The value is the maximum number of components that run at the same time.
 
-This is a Python component-author API, not a speedup automatically applied to saved UI flows. It does not add a frontend, HTTP, environment-variable, `async_start()`, or `astep()` option.
+Use this when you build a `Graph` in Python and call `Graph.arun()` or `Graph.process()`. [`lfx run`](./lfx-run) and [`lfx serve`](./lfx-serve) do _not_ accept `dag_max_concurrency`. Omit the argument, or pass `None`, and those Python calls keep the layer-by-layer scheduler too.
 
-## Promise made by each component author
+## Run a graph
 
-Declare `supports_dependency_ready_scheduling = True` directly on every concrete component class. Inheriting the declaration or adding it to an instance or exported template does not opt in a class.
+Every component class in the graph must opt in, as described in the next section. Call either method with a positive integer:
 
-An opted-in component promises:
+```python
+await graph.arun(inputs=[{}], outputs=["out"], dag_max_concurrency=2)
+```
 
-- Static dependencies, materialized outputs, and no graph activation, stopping, checkpointing, or scheduling-state changes.
-- No mutation of objects shared between independent branches that relies on their execution order.
-- Ownership of all its work: await requests, callbacks, and framework thread work; do not detach background work or cancel the component task itself.
+```python
+await graph.process(fallback_to_env_vars=False, dag_max_concurrency=2)
+```
 
-The declaration is an author contract, not an automatic proof of thread, client, or provider safety. In particular, modern Chat Input, Chat Output, and Language Model components are not opted in. Arbitrary provider clients, streaming callbacks, memory, and live output objects need their own ownership review.
+Any other value raises `ValueError`. LFX decides whether the graph is eligible before the first component starts. If an eligible run fails after that, LFX does not run the graph again with the layer-by-layer scheduler.
 
-The graph uses the existing scheduler if any vertex lacks the declaration or an existing instance, or if it contains cycles, state/loop/tool-mode nodes, frozen or streaming nodes, checkpoint/resume/pause state, or dynamic branch state. A graph with a previously built vertex or populated output cache also falls back. Deferred component instances are not constructed just to inspect eligibility. Custom Graph subclasses and custom coordinators keep their original execution path.
+Create a new `Graph` for each run you want to compare. After a graph has run, cached outputs make the next call use the layer-by-layer scheduler.
 
-The selection is checked before any build starts. An unsupported graph runs once on the existing path; a graph that fails after dependency-ready execution begins is never retried on that path.
+## Opt in each component
 
-## Runnable local HTTP example
+To opt in, set `supports_dependency_ready_scheduling = True` in the component class.
+A value inherited from a base class, assigned on an instance, or stored in an exported template does not opt that class in.
 
-The following example makes real asynchronous HTTP requests to a controlled loopback service. It demonstrates adapter ownership and asymmetric branches, not the performance or safety of a commercial inference provider. Install `lfx` and `aiohttp`, save the code as `example.py`, then run `python example.py`.
+```python
+from lfx.custom.custom_component.component import Component
+
+class LocalInference(Component):
+    supports_dependency_ready_scheduling = True
+```
+
+Setting the attribute means all of the following are true:
+
+- Dependencies are fixed before the run, and each output is a finished value. A component configured to stream is not eligible. If an opted-in component returns a stream, an iterator, or an awaitable anyway, the run fails.
+- The component does not activate, stop, checkpoint, pause, or otherwise change how the graph is scheduled.
+- The component does not change an object shared with another branch in a way that requires one branch to run first.
+- The component finishes its own work before it returns. Await HTTP requests, callbacks, and thread work the framework hands you. Do not leave a task running after the method returns, and do not cancel the component's own task.
+
+LFX does not check that your clients or provider libraries are safe to run at the same time. Chat Input, Chat Output, and Language Model are not opted in. A graph that includes one of them keeps the layer-by-layer scheduler.
+
+## Run a graph with a local HTTP service
+
+This graph splits into two branches. Branch A is slow, and then fast. Branch B is fast, and then slow. With `dag_max_concurrency=2`, the fast step on each branch runs while the slow step on the other branch is still in progress, so the two slow steps overlap.
+
+Install `lfx` and `aiohttp`. Save the code as `example.py`, then run `python example.py`. The process prints one line, the text from the final component.
 
 ```python
 import asyncio
+
 from aiohttp import ClientSession, web
+
 from lfx.custom.custom_component.component import Component
 from lfx.graph import Graph
 from lfx.io import FloatInput, HandleInput, Output, StrInput
@@ -48,7 +73,7 @@ class LocalInference(Component):
     outputs = [Output(name="message", method="infer")]
 
     async def infer(self) -> Message:
-        text = " ".join(m.text for m in (self.messages or [])) or "Document"
+        text = " ".join(message.text for message in (self.messages or [])) or "Document"
         async with ClientSession() as session:
             async with session.post(
                 self.endpoint,
@@ -56,7 +81,7 @@ class LocalInference(Component):
             ) as response:
                 response.raise_for_status()
                 data = await response.json()
-        # Response body consumed; response and session closed before returning.
+        # The response body is consumed, and the response and session are closed.
         return Message(text=data["text"])
 
 
@@ -74,15 +99,33 @@ async def main():
     await site.start()
     port = site._server.sockets[0].getsockname()[1]
     endpoint = f"http://127.0.0.1:{port}/infer"
+
     try:
-        delays = {"input": 0, "a1": .25, "a2": .01,
-                  "b1": .01, "b2": .25, "join": 0, "out": 0}
-        nodes = {key: LocalInference(_id=key, endpoint=endpoint, latency=delay)
-                 for key, delay in delays.items()}
-        dependencies = {"a1": ["input"], "a2": ["a1"], "b1": ["input"],
-                        "b2": ["b1"], "join": ["a2", "b2"], "out": ["join"]}
+        # Branch A is slow, then fast. Branch B is fast, then slow.
+        delays = {
+            "input": 0,
+            "a1": 0.25,
+            "a2": 0.01,
+            "b1": 0.01,
+            "b2": 0.25,
+            "join": 0,
+            "out": 0,
+        }
+        nodes = {
+            key: LocalInference(_id=key, endpoint=endpoint, latency=delay)
+            for key, delay in delays.items()
+        }
+        dependencies = {
+            "a1": ["input"],
+            "a2": ["a1"],
+            "b1": ["input"],
+            "b2": ["b1"],
+            "join": ["a2", "b2"],
+            "out": ["join"],
+        }
         for key, parents in dependencies.items():
             nodes[key].set(messages=[nodes[parent].infer for parent in parents])
+
         graph = Graph(nodes["input"], nodes["out"])
         await graph.arun(inputs=[{}], outputs=["out"], dag_max_concurrency=2)
         print(graph.get_vertex("out").built_object["message"].text)
@@ -93,46 +136,34 @@ async def main():
 asyncio.run(main())
 ```
 
-Create a new graph to compare scheduling policies. Reusing a built graph can reuse cached output through the existing execution path and is not a valid performance comparison.
+`infer` closes the HTTP session before it returns. Follow that pattern in your own components. The delays show the branches overlapping on your machine.
 
-## Completion events and ordering
+LFX uses the existing layer-by-layer scheduler for any of these cases:
 
-Results are recorded using the existing persistence gates. For each completed vertex, result handling and the attempt to emit its complete vertex event finish before a descendant is admitted. Event-handler errors retain the existing behavior: ordinary errors are logged and swallowed, and missing backend imports are ignored. Awaiting the helper means the emission attempt ended, not that a client received it.
+- A component class is missing `supports_dependency_ready_scheduling = True`, or the vertex does not already hold a component instance. LFX does not construct a deferred component just to check.
+- The graph contains a cycle, or a component that uses state, a loop, tool mode, or a frozen node.
+- The run checkpoints, resumes, or pauses, or a conditional branch has already activated, stopped, or excluded vertices.
+- A vertex was already built, or a component output is already cached.
+- The graph is a subclass of `Graph`, or the run uses a custom coordinator. `Graph.arun()` logs a warning that `dag_max_concurrency` was ignored.
 
-Under this option, `next_vertices_ids` means newly dependency-ready successors. These vertices can wait in the queue when capacity is full. Independent completion events can arrive in a different order from layer execution. Final output collection still follows graph vertex order.
+## Stop a run or handle a failure
 
-## Cancellation and failures
+:::warning Cancellation waits for components that already started
 
-:::warning Natural drainage can wait indefinitely
-
-Cancellation or a component failure stops new admission. It does **not** cancel already admitted build tasks. The invocation waits for all admitted tasks, including framework-awaited synchronous thread work, to finish naturally before it returns or raises. An uncooperative component can therefore make cancellation wait indefinitely. There is no timeout that abandons its workers.
+Cancelling the run, or a component raising an error, stops LFX from starting more components. Components that have already started keep running, including synchronous work on a worker thread. The call returns after those components finish. If one of them never finishes, the call waits. There is no timeout.
 
 :::
 
-The first observed outer cancellation or selected component failure wins. Failures in the same observed completion group use graph order. If a group contains a failure, successful siblings in that group are drained but their graph-level results are not persisted or emitted. Later cancellation cannot replace an earlier failure, and all admitted outcomes are retrieved. Unadmitted descendants do not run after an aborted invocation.
+When several components finish together and one of them failed, the reported error is the error that comes first in graph order. The other components in that group finish, and LFX discards their results. Components that had not started do not run. Cancelling after a component has already failed still reports that failure.
 
-For an eligible run, direct `process()` owns trace finalization. `arun()` owns it through output collection. The non-subgraph owner attempts and awaits run-level trace finalization once, including the native tracer's flush, while preserving a primary error over cleanup errors. Subgraphs retain parent-owned traces. Requested-but-unsupported graphs keep their existing cleanup behavior.
+A request that a remote service has already accepted keeps running on that service.
 
-Self-cancellation and detached component work violate the capability promise. Siblings are still drained and run-level finalization is attempted, but this is not a guarantee that every arbitrary provider resource or component span closes. A remote request already accepted by a service is not remotely cancelled by this option.
+If a component cancels its own task, or leaves work running after it returns, components that already started still finish. Connections and tracing spans from the detached work can stay open. For a top-level graph, LFX finishes run-level tracing before the call returns. A subgraph keeps the trace owned by its parent. If that cleanup fails, you still see the original component error.
 
-## Measuring usefulness
+## Read results and completion events
 
-From a source checkout with the lfx development environment installed:
+LFX saves each result the same way it does for a layer-by-layer run. It finishes saving a component, and it attempts that component's completion event, before it starts a component that depends on the result.
 
-```bash
-python scripts/benchmark/dag_scheduler.py --pairs 7 --output /tmp/dag-scheduler.json
-```
+On this path, `next_vertices_ids` lists successors that just became ready. Those successors can wait when `dag_max_concurrency` components are already running. Independent branches can finish in a different order than in a layer-by-layer run. The outputs you requested are still collected in graph vertex order.
 
-The harness creates fresh graphs, warms up both policies, then alternates seven baseline/opt-in pairs for asymmetric, reversed, balanced, tiny, and wide workflows. It records raw component and HTTP timelines, end-to-end latency, first component completion, admitted concurrency, HTTP requests, traced peak memory, and output digests. All requests use a deterministic local HTTP service with controlled latency. This is scheduling evidence, not an inference quality or provider throughput benchmark. `tracemalloc` affects timing.
-
-One Python 3.13.16 Linux run of the implementation above, with seven pairs per workflow, measured these medians in milliseconds:
-
-| Workflow | Existing scheduler | Dependency-ready |
-| --- | ---: | ---: |
-| Asymmetric | 521.73 | 277.74 (bound 2) |
-| Reversed | 521.62 | 277.73 (bound 2) |
-| Balanced | 279.86 | 277.98 (bound 2) |
-| Tiny | 14.31 | 14.29 (bound 2) |
-| Wide | 40.46 | 51.23 (bound 8) |
-
-Each pair produced equal output digests, with no active HTTP or component work at return. The wide baseline admitted 16 branches versus the opt-in bound of 8, so that row measures a concurrency/memory tradeoff rather than an equal-concurrency speed comparison. The seven balanced opt-in observations ranged from 276.90 to 282.99 ms. These results show why this is opt-in: asymmetric dependency chains can benefit, but uniform workloads need not become faster.
+An error in an event handler is logged, and the run continues, as in a layer-by-layer run. Waiting for the handler means LFX finished the attempt. It does not mean a client received the event.

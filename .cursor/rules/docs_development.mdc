@@ -21,6 +21,8 @@ Developer and agent notes for a change go in `docs/features/`. One markdown file
 
 Published user docs are the pages in `docs/docs/` and `docs/versioned_docs/`, plus `sidebars.js`. Edit those only when the task is a user-facing documentation change that the docs writer should review. The style guide below applies to that published work.
 
+Never use a `/next` path in a link, redirect, or published URL. Unreleased pages are served under `/next` only while the previous release is still the default version. Link with the page slug, such as `/upgrade-check`, or a relative path, such as `./upgrade-check.mdx`. Add a redirect only when its destination exists on the default version.
+
 `docs/static/llms.txt`, `docs/static/llms-full.txt`, and `docs/static/llms/` are generated when a docs version is cut. Leave them unchanged.
 
 A pull request that touches `docs/` flags the docs team. That notice is optional and does not block merge.

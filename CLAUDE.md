@@ -11,4 +11,6 @@ Write feature notes in `docs/features/`. That folder is not published. Follow th
 
 User-facing pages live in `docs/docs/` and `docs/versioned_docs/`, with navigation in `docs/sidebars.js`. Edit those only when the task is a user-facing docs change the docs writer should review. A pull request that touches `docs/` flags the docs team. That notice is optional and does not block merge.
 
+Never use a `/next` path in a link, redirect, or published URL. Link with the page slug or a relative path. Add a redirect only when its destination exists on the default version.
+
 Released model docs are generated at version cut and committed under `docs/static/llms.txt` and `docs/static/llms/<version>/`. Leave those files unchanged.
