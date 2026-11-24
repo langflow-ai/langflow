@@ -39,6 +39,7 @@ from lfx.utils.file_path_security import (
     component_authenticated_user_scope,
     component_file_access_scopes,
     enforce_local_file_access,
+    is_mcp_credential_file,
     storage_scope_id,
     validate_storage_key,
 )
@@ -1089,7 +1090,7 @@ class BaseFileComponent(Component, ABC):
                             cleanup_local_file=file.cleanup_local_file,
                         )
                         for sub_path in path.rglob("*")
-                        if sub_path.is_file() and not sub_path.is_symlink()
+                        if sub_path.is_file() and not sub_path.is_symlink() and not is_mcp_credential_file(sub_path)
                     ]
                 )
             elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:

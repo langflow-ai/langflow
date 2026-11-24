@@ -133,6 +133,20 @@ class TestDirectoryComponent(ComponentTestBaseWithoutClient):
             with pytest.raises(ValueError, match="outside the authenticated user's storage scope"):
                 blocked.load_directory()
 
+    def test_directory_skips_mcp_credential_files(self, tmp_path, monkeypatch):
+        owner = tmp_path / "user-owner"
+        owner.mkdir()
+        (owner / "document.json").write_text('{"document": true}', encoding="utf-8")
+        credential_file = owner / "_mcp_servers.json"
+        credential_file.write_text("{}", encoding="utf-8")
+        (owner / "alias.json").symlink_to(credential_file)
+        monkeypatch.setattr(get_settings_service().settings, "directory_component_allowed_roots", [str(tmp_path)])
+
+        component = DirectoryComponent()
+        component.set_attributes({"path": str(owner), "types": ["json"]})
+
+        assert [Path(data.data["file_path"]).name for data in component.load_directory()] == ["document.json"]
+
     def test_directory_without_mocks(self, monkeypatch):
         directory_component = DirectoryComponent()
 
