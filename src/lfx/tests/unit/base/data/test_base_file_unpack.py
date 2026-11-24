@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING
 
 import pytest
 from lfx.base.data.base_file import BaseFileComponent
+from lfx.schema.data import Data
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -177,6 +178,20 @@ def test_zip_with_only_regular_files_extracts(tmp_path, component):
 
     assert (extract_dir / "a.txt").read_bytes() == b"alpha"
     assert (extract_dir / "nested" / "b.txt").read_bytes() == b"beta"
+
+
+def test_collect_files_skips_mcp_credential_files_in_directories(tmp_path, component):
+    directory = tmp_path / "documents"
+    directory.mkdir()
+    ordinary = directory / "report.txt"
+    ordinary.write_text("report", encoding="utf-8")
+    (directory / "_mcp_servers.json").write_text("{}", encoding="utf-8")
+
+    collected = component._unpack_and_collect_files(
+        [BaseFileComponent.BaseFile(Data(), directory, delete_after_processing=False)]
+    )
+
+    assert [file.path for file in collected] == [ordinary]
 
 
 def test_collect_files_skips_symlinks_in_extracted_dir(tmp_path, component):
