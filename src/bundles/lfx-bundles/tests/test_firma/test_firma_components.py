@@ -15,7 +15,7 @@ import pytest
 from lfx.custom.custom_component.component import Component
 from lfx.schema.dataframe import DataFrame
 from lfx.utils.file_path_security import LocalFileAccessError
-from lfx_bundles.firma.firma_common import API_BASE_URL, INLINE_DOCUMENT_MAX_BYTES, LANGUAGES
+from lfx_bundles.firma.firma_common import API_BASE_URL, INLINE_DOCUMENT_MAX_BYTES, LANGUAGES, UPLOAD_MAX_BYTES
 from lfx_bundles.firma.firma_download_document import FirmaDownloadSignedDocumentComponent
 from lfx_bundles.firma.firma_get_signing_request import FirmaGetSigningRequestComponent
 from lfx_bundles.firma.firma_list_signing_requests import FirmaListSigningRequestsComponent
@@ -419,6 +419,7 @@ class TestFirmaSendDocument:
         )
         reader = AsyncMock(return_value=PDF_BYTES)
         with (
+            patch("lfx_bundles.firma.firma_send_document.get_file_size", return_value=len(PDF_BYTES)),
             patch("lfx_bundles.firma.firma_send_document.read_file_bytes", reader),
             patch("httpx.Client.request", return_value=_response(201, json_body=SEND_RESPONSE)) as request,
         ):
@@ -436,15 +437,36 @@ class TestFirmaSendDocument:
             signer_email="ada@firma.dev",
             document_file="/etc/x.pdf",
         )
-        reader = AsyncMock(side_effect=LocalFileAccessError("Access to local file paths is disabled"))
+        refused = LocalFileAccessError("Access to local file paths is disabled")
         with (
-            patch("lfx_bundles.firma.firma_send_document.read_file_bytes", reader),
+            patch("lfx_bundles.firma.firma_send_document.get_file_size", side_effect=refused),
+            patch("lfx_bundles.firma.firma_send_document.read_file_bytes", AsyncMock(side_effect=refused)),
             patch("httpx.Client.request") as request,
         ):
             data = component.send_document()
 
         request.assert_not_called()
         assert "Could not read the document file" in data.data["error"]
+
+    def test_file_over_the_limit_is_refused_without_reading_it(self) -> None:
+        component = _component(
+            FirmaSendDocumentComponent,
+            signer_first_name="Ada",
+            signer_email="ada@firma.dev",
+            document_file="flow-1/huge.pdf",
+        )
+        reader = AsyncMock(return_value=PDF_BYTES)
+        with (
+            patch("lfx_bundles.firma.firma_send_document.get_file_size", return_value=UPLOAD_MAX_BYTES + 1) as size,
+            patch("lfx_bundles.firma.firma_send_document.read_file_bytes", reader),
+            patch("httpx.Client.request") as request,
+        ):
+            data = component.send_document()
+
+        assert size.call_args.args[0] == "flow-1/huge.pdf"
+        reader.assert_not_awaited()
+        request.assert_not_called()
+        assert "larger than the 50 MB limit" in data.data["error"]
 
     def test_local_paths_are_confined_to_the_component_scope(self) -> None:
         component = _component(FirmaSendDocumentComponent)
@@ -649,14 +671,15 @@ class TestFirmaDownloadSignedDocument:
         assert data.data["download_url"] == body["download_url"]
         assert data.data["signing_request_id"] == REQUEST_ID
 
-    def test_conflict_explains_the_retry(self) -> None:
-        body = {"error": "No document available yet", "code": "DOCUMENT_NOT_READY"}
+    def test_conflict_keeps_firmas_message_and_explains_the_retry(self) -> None:
+        # The body Firma's download route answers for a request that has no document yet.
+        body = {"error": "no_document_available", "message": "Signing request has not been sent yet"}
         component = _component(FirmaDownloadSignedDocumentComponent, signing_request_id=REQUEST_ID)
         with patch("httpx.Client.request", return_value=_response(409, json_body=body)):
             data = component.get_download()
 
         error = data.data["error"]
-        assert error.startswith("Firma API error (409) DOCUMENT_NOT_READY: No document available yet")
+        assert error.startswith("Firma API error (409): no_document_available; Signing request has not been sent yet")
         assert "retry in a minute" in error
 
     def test_missing_id_makes_no_request(self) -> None:

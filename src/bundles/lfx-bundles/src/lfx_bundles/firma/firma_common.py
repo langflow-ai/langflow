@@ -412,6 +412,9 @@ def _error_detail(body: Any) -> tuple[str, str | None]:
         for item in body.get("errors") or []
         if isinstance(item, dict) and item.get("message") and item.get("message") != message
     ]
+    # Some routes answer {"error": "<code>", "message": "<text>"}: keep the text too.
+    if body.get("error") and body.get("message") and str(body["message"]) != message:
+        extra.insert(0, str(body["message"]))
     if extra:
         message = "; ".join(part for part in [message, *extra] if part)
     code = body.get("code")
@@ -631,6 +634,37 @@ def _role(user: dict[str, Any]) -> str:
     return f"{user.get('designation') or 'Signer'} at order {shown} (template_user_id {user['id']})"
 
 
+def _check_duplicate_orders(name: str, users: list[dict[str, Any]], recipients: list[dict[str, Any]]) -> None:
+    """Refuse the two duplicate-order cases create-and-send refuses (after creating nothing).
+
+    A template with two users at one order needs ``template_user_id`` on every recipient who signs or
+    approves; two such recipients at one order each need a ``template_user_id``.
+    """
+    template_orders = [_order_number(user.get("order")) or 1 for user in users]
+    if len(set(template_orders)) < len(template_orders):
+        for index, item in enumerate(recipients, start=1):
+            if item.get("designation") != "CC" and not item.get("template_user_id"):
+                msg = (
+                    f'The Firma template "{name}" has more than one role at the same order, so every recipient '
+                    f"who signs or approves needs a template_user_id. Recipient {index} has none."
+                )
+                raise FirmaAPIError(msg)
+    shared: dict[float, list[dict[str, Any]]] = {}
+    for index, item in enumerate(recipients, start=1):
+        if item.get("designation") == "CC":
+            continue
+        order = _order_number(item.get("order")) or float(index)
+        shared.setdefault(order, []).append(item)
+    for order, items in shared.items():
+        if len(items) > 1 and not all(item.get("template_user_id") for item in items):
+            shown = int(order) if order.is_integer() else order
+            msg = (
+                f"Multiple recipients have order {shown}. With a template, recipients who share an order "
+                "must each have a template_user_id."
+            )
+            raise FirmaAPIError(msg)
+
+
 def fit_recipients_to_template(
     template: dict[str, Any], recipients: list[dict[str, Any]], *, single_signer: bool
 ) -> list[dict[str, Any]]:
@@ -661,7 +695,19 @@ def fit_recipients_to_template(
         return [recipient]
 
     user_ids = {user["id"] for user in users}
+    by_id = {user["id"]: user for user in users}
+    fitted: list[dict[str, Any]] = []
+    for entry in recipients:
+        user = by_id.get(entry.get("template_user_id")) if entry.get("designation") != "CC" else None
+        if user is None:
+            fitted.append(entry)
+            continue
+        # The handler keeps the template user's designation and order for this recipient.
+        designation = DESIGNATIONS.get(str(user.get("designation") or "").lower(), "Signer")
+        fitted.append({**entry, "designation": designation, "order": user.get("order")})
+    recipients = fitted
     providers = [item for item in recipients if item.get("designation") != "CC"]
+    _check_duplicate_orders(name, users, recipients)
     missing = [user for user in users if not any(_covers(item, user, user_ids) for item in providers)]
     if missing:
         msg = (

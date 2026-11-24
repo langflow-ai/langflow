@@ -236,8 +236,8 @@ class TestTemplateRoles:
                 "first_name": "A",
                 "email": "a@firma.dev",
                 "template_user_id": "tu-2",
-                "designation": "Signer",
-                "order": 1,
+                "designation": "Approver",
+                "order": 2,
             },
             {"first_name": "B", "email": "b@firma.dev", "order": 1, "designation": "Signer"},
             {"first_name": "C", "email": "c@firma.dev", "designation": "CC", "order": 3},
@@ -252,6 +252,31 @@ class TestTemplateRoles:
         data, request = _send_template([template], recipients_json=json.dumps(recipients))
 
         assert "Approver at order 2 (template_user_id tu-2)" in data.data["error"]
+        assert _send_calls(request) == []
+
+    def test_a_shared_order_without_template_user_id_is_refused_before_sending(self) -> None:
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-1"},
+            {"first_name": "B", "email": "b@firma.dev", "order": 1},
+            {"first_name": "C", "email": "c@firma.dev", "template_user_id": "tu-2"},
+        ]
+        template = _template(_user("tu-1", 1), _user("tu-2", 2, "Approver"))
+        data, request = _send_template([template], recipients_json=json.dumps(recipients))
+
+        assert "Multiple recipients have order 1" in data.data["error"]
+        assert "template_user_id" in data.data["error"]
+        assert _send_calls(request) == []
+
+    def test_a_template_with_duplicate_orders_needs_template_user_id_on_every_recipient(self) -> None:
+        recipients = [
+            {"first_name": "A", "email": "a@firma.dev", "template_user_id": "tu-1"},
+            {"first_name": "B", "email": "b@firma.dev", "order": 1},
+        ]
+        template = _template(_user("tu-1", 1), _user("tu-2", 1, "Approver"), name="Lease")
+        data, request = _send_template([template], recipients_json=json.dumps(recipients))
+
+        assert 'template "Lease" has more than one role at the same order' in data.data["error"]
+        assert "Recipient 2" in data.data["error"]
         assert _send_calls(request) == []
 
     def test_a_template_user_id_turns_off_the_order_match(self) -> None:

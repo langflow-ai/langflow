@@ -7,7 +7,7 @@ import binascii
 from pathlib import PurePath
 from typing import Any
 
-from lfx.base.data.storage_utils import read_file_bytes
+from lfx.base.data.storage_utils import get_file_size, read_file_bytes
 from lfx.custom.custom_component.component import Component
 from lfx.io import FileInput, IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput
 from lfx.log.logger import logger
@@ -190,10 +190,16 @@ class FirmaSendDocumentComponent(Component):
         file_path = text_value(self.document_file)
         if file_path:
             try:
-                data = run_until_complete(read_file_bytes(file_path, resolve_path=self._confine_local_path))
-            except (OSError, ValueError) as exc:
+                # Check the size first, so a file over the limit is never read into memory.
+                too_large = get_file_size(file_path) > UPLOAD_MAX_BYTES
+                if not too_large:
+                    data = run_until_complete(read_file_bytes(file_path, resolve_path=self._confine_local_path))
+            except (OSError, ValueError, RuntimeError) as exc:
                 msg = f"Could not read the document file: {exc}"
                 raise FirmaAPIError(msg) from exc
+            if too_large:
+                msg = "The document is larger than the 50 MB limit."
+                raise FirmaAPIError(msg)
             return data, PurePath(file_path).name
 
         encoded = text_value(self.document_base64)
