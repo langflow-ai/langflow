@@ -92,6 +92,7 @@ def test_contract_required_files_exist_in_sources() -> None:
         "lfx-slack": REPO_ROOT / "src" / "bundles" / "slack" / "src",
         "lfx-toolguard": REPO_ROOT / "src" / "bundles" / "toolguard" / "src",
         "lfx-bundles": REPO_ROOT / "src" / "bundles" / "lfx-bundles" / "src",
+        "lfx-youdotcom": REPO_ROOT / "src" / "bundles" / "youdotcom" / "src",
     }
 
     for profile_name in ("python-base", "python-default", "python-full"):

@@ -171,6 +171,16 @@
       "requested": ">=0.2.0,<1.0.0",
       "requirement": "lfx-vllm==0.2.0",
       "resolved_version": "0.2.0"
+    },
+    {
+      "distribution": "lfx-youdotcom",
+      "extras": [],
+      "providers": [
+        "lfx-youdotcom"
+      ],
+      "requested": ">=0.1.0,<1.0.0",
+      "requirement": "lfx-youdotcom==0.1.0",
+      "resolved_version": "0.1.0"
     }
   ],
   "image_families": [
@@ -180,7 +190,7 @@
     "https://pypi.org/simple"
   ],
   "profile": "enterprise-hardened",
-  "profile_digest": "sha256:57d0bbd4f2cfbe53",
+  "profile_digest": "sha256:a390fba87602c756",
   "providers": [
     "lfx-amazon",
     "lfx-anthropic",
@@ -197,7 +207,8 @@
     "lfx-oracle",
     "lfx-slack",
     "lfx-toolguard",
-    "lfx-vllm"
+    "lfx-vllm",
+    "lfx-youdotcom"
   ],
   "python": ">=3.10,<3.15",
   "schema_version": 1

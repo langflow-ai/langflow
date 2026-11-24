@@ -45,7 +45,7 @@ dependencies = [
     "lfx-google>=0.3.6,<1.0.0",
     "lfx-microsoft>=0.1.4,<1.0.0",
     "lfx-slack>=0.2.2,<1.0.0",
-    "lfx-youdotcom>=0.1.0",
+    "lfx-youdotcom>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 

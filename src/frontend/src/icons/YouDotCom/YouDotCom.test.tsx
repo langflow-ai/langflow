@@ -16,8 +16,8 @@ jest.mock("./index", () => ({
   YouDotComIcon: mockSvg,
 }));
 
-import YouDotCom from "./YouDotCom";
 import { YouDotComIcon } from "./index";
+import YouDotCom from "./YouDotCom";
 
 describe("YouDotCom", () => {
   beforeEach(() => {
