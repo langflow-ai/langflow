@@ -35,7 +35,8 @@ dependencies = [
     "langchain-community~=0.4.1",
     "langchain-mongodb>=0.11.0",
     # langchain-mongodb always installs pymongo; publish the patched floor on this unconditional path.
-    "pymongo>=4.18.3,<5.0.0",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
+    "pymongo>=4.18.3,<5.0.0; python_version < '3.11'",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
+    "pymongo>=4.20.1,<5.0.0; python_version >= '3.11'",  # CVE-2026-129926, CVE-2026-129927
     # Publish transitive DNS and JOSE floors for fresh base wheel installs.
     "dnspython>=2.9.2,<3.0.0; python_version >= '3.11'",
     "joserfc>=1.7.6,<2.0.0",
@@ -51,9 +52,7 @@ dependencies = [
     "rich>=13.7.0,<14.0.0",
     "langchain-experimental~=0.4.1",
     "sqlmodel~=0.0.46",
-    # pydantic-core ships cp315 wheels from 2.48 on, which only pydantic 2.14 pins.
-    "pydantic>=2.13.0,<2.14; python_version < '3.15'",
-    "pydantic>=2.14.1,<2.15; python_version >= '3.15'",
+    "pydantic>=2.14.2,<2.15",
     "pydantic-settings>=2.2.0,<3.0.0",
     "email-validator>=2.0.0",
     "typer>=0.19.0,<1.0.0",
@@ -112,7 +111,7 @@ dependencies = [
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
     "defusedxml>=0.7.1,<1.0.0",
-    "pypdf>=6.21.2,<7.0.0",
+    "pypdf>=7.0.0,<8.0.0",
     "validators>=0.34.0,<1.0.0",
     "networkx>=3.4.2,<4.0.0",
     "json-repair>=0.30.3,<1.0.0",
@@ -250,7 +249,10 @@ cassandra = ["lfx[cassandra]==1.14.0"]  # Compatibility spelling for the lfx-dat
 clickhouse = ["clickhouse-connect==0.7.19"]
 
 
-mongodb = ["pymongo>=4.18.3,<5.0.0"]
+mongodb = [
+    "pymongo>=4.18.3,<5.0.0; python_version < '3.11'",
+    "pymongo>=4.20.1,<5.0.0; python_version >= '3.11'",
+]
 supabase = ["supabase>=2.6.0,<3.0.0"]
 redis = ["redis>=7.4.0,<8.0.0"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
@@ -291,18 +293,18 @@ sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
 # Individual monitoring providers
-# pydantic>=2.13 is required because langfuse v3 imports pydantic.v1.BaseModel,
-# which only supports Python 3.14 from pydantic 2.13 onward. Without this guard
+# pydantic>=2.14.2 is required because langfuse v3 imports pydantic.v1.BaseModel,
+# which only supports Python 3.14 from pydantic 2.14 onward. Without this guard
 # the langfuse SDK raises pydantic.v1.errors.ConfigError on import in Python
 # 3.14 environments (e.g. the official Docker image), causing tracing to
 # silently no-op. See https://github.com/langflow-ai/langflow/issues/13317.
-langfuse = ["langfuse~=3.8", "pydantic>=2.13.0"]
+langfuse = ["langfuse~=3.8", "pydantic>=2.14.2"]
 langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
 langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
 
 # Individual document loaders
-pypdf = ["pypdf>=6.21.2,<7.0.0"]
+pypdf = ["pypdf>=7.0.0,<8.0.0"]
 docx = ["python-docx>=1.1.0"]
 pytube = ["pytube==15.0.0"]
 

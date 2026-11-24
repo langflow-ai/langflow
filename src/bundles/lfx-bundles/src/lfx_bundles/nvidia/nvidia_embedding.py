@@ -1,13 +1,13 @@
 from typing import Any
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.field_typing import Embeddings
 from lfx.inputs.inputs import DropdownInput, SecretStrInput
 from lfx.io import FloatInput, MessageTextInput
 from lfx.schema.dotdict import dotdict
 
-DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+from lfx_bundles.nvidia._client import DEFAULT_NVIDIA_BASE_URL, nvidia_client_policy
 
 
 class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
@@ -62,22 +62,27 @@ class NVIDIAEmbeddingsComponent(LCEmbeddingsModel):
         return build_config
 
     def build_embeddings(self) -> Embeddings:
+        api_key = self.nvidia_api_key or None
+        ensure_credential_endpoint_allowed(
+            api_key,
+            self.base_url,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
+            sdk_env_fallback="NVIDIA_API_KEY",
+        )
         try:
             from langchain_nvidia_ai_endpoints import NVIDIAEmbeddings
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the Nvidia model."
             raise ImportError(msg) from e
-        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
-        # host it names. Block internal/cloud-metadata destinations before connecting.
-        validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
-        try:
-            output = NVIDIAEmbeddings(
-                model=self.model,
-                base_url=self.base_url,
-                temperature=self.temperature,
-                nvidia_api_key=self.nvidia_api_key,
-            )
-        except Exception as e:
-            msg = f"Could not connect to NVIDIA API. Error: {e}"
-            raise ValueError(msg) from e
-        return output
+        with nvidia_client_policy(self.base_url):
+            try:
+                output = NVIDIAEmbeddings(
+                    model=self.model,
+                    base_url=self.base_url,
+                    temperature=self.temperature,
+                    nvidia_api_key=api_key,
+                )
+            except Exception as e:
+                msg = f"Could not connect to NVIDIA API. Error: {e}"
+                raise ValueError(msg) from e
+            return output
