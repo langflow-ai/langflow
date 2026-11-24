@@ -35,10 +35,14 @@ def test_real_read_and_retention_parity(db_url, monkeypatch, limit, ties):  # no
     settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=limit))
     monkeypatch.setattr(crud, "get_settings_service", lambda: settings)
 
-    async def not_paused():
+    async def not_paused(*_args, **_kwargs):
         return False
 
-    monkeypatch.setattr(writer_module, "writes_paused", not_paused)
+    # The writer gates retention on two checks, and both must report "not paused"
+    # before it prunes: the file-level migration pause and the maintenance flag
+    # read from the writer's own engine.
+    monkeypatch.setattr(writer_module, "is_paused", lambda: False)
+    monkeypatch.setattr(writer_module, "maintenance_pauses_writes", not_paused)
 
     # This comparison isolates the route's actual SQL, COUNT, pagination and
     # transformer. Native monitor auth/ownership/shared suites test the guard.
