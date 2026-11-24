@@ -145,6 +145,10 @@ class RunFlowBaseComponent(Component):
         )
         return flow or Data(data={})
 
+    def _parent_extra_file_scopes(self) -> frozenset[str]:
+        parent_graph = getattr(getattr(self, "_vertex", None), "graph", None)
+        return frozenset(getattr(parent_graph, "authorized_extra_file_scopes", None) or ())
+
     async def get_graph(
         self,
         flow_name_selected: str | None = None,
@@ -159,7 +163,7 @@ class RunFlowBaseComponent(Component):
             user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
-        ):
+        ) as target_flow:
             # The stored child payload is caller-controlled: a regular user can persist
             # component source through the flow-write API and this trusted component then
             # hands it to Graph.from_payload. Apply the same caller-aware policy the
@@ -174,7 +178,15 @@ class RunFlowBaseComponent(Component):
             else:
                 is_superuser = await get_user_is_superuser(self.user_id)
                 admin_only = admin_only_build_required(is_superuser=is_superuser)
-            if not admin_only and flow_id_selected and (flow := self._flow_cache_call("get", flow_id=flow_id_selected)):
+            # A child of this run reads files with the run's own extra storage scopes (a plane may stamp them on the
+            # parent graph). A graph built with them is for this run's user only, so it never enters the shared cache.
+            extra_scopes = self._parent_extra_file_scopes()
+            uncacheable = admin_only or bool(extra_scopes)
+            if (
+                not uncacheable
+                and flow_id_selected
+                and (flow := self._flow_cache_call("get", flow_id=flow_id_selected))
+            ):
                 if str(getattr(flow, "flow_id", "")) != str(flow_id_selected):
                     self._flow_cache_call("delete", flow_id=flow_id_selected)
                 elif self._is_cached_flow_up_to_date(flow, updated_at):
@@ -182,11 +194,7 @@ class RunFlowBaseComponent(Component):
                 else:
                     self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
 
-            # TODO: use flow id only
-            flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
-            if not flow:
-                msg = "Flow not found"
-                raise ValueError(msg)
+            flow = target_flow.to_data()
 
             payload = flow.data.get("data", {})
             sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
@@ -195,6 +203,7 @@ class RunFlowBaseComponent(Component):
                 flow_id=flow_id_selected or flow.data.get("id"),
                 flow_name=flow_name_selected,
                 user_id=self.user_id,
+                authorized_extra_file_scopes=extra_scopes,
             )
             graph.description = flow.data.get("description", None)
             graph.updated_at = flow.data.get("updated_at", None)
@@ -202,7 +211,7 @@ class RunFlowBaseComponent(Component):
             # A cached graph carries no policy generation: under admin-only mode it may
             # have been compiled from unchecked caller source, so it is neither served
             # nor stored while the policy applies to this caller.
-            if not admin_only:
+            if not uncacheable:
                 self._flow_cache_call("set", flow=graph)
 
             return graph
