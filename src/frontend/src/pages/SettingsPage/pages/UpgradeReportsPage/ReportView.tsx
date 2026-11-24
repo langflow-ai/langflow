@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,13 @@ export default function ReportView({ report }: { report: ReportDetail }) {
   );
   const age = reportAge(document.generated_at, i18n.language, unknown);
   const source = document.source.identity?.locator;
+  // The summary names the database only. The full path or host stays in the
+  // collapsed identity details, since a summary is what ends up in screenshots.
+  const sourceName = !source
+    ? unknown
+    : "path" in source
+      ? (source.path.split(/[\\/]/).pop() ?? source.path)
+      : source.database;
   const sourceLabel = source
     ? Object.entries(source)
         .filter(([key]) => key !== "search_path_sha256")
@@ -99,7 +106,7 @@ export default function ReportView({ report }: { report: ReportDetail }) {
             {t("settings.upgrade.source")}
           </dt>
           <dd>
-            {document.source.dialect} · {sourceLabel}
+            {document.source.dialect} · {sourceName}
           </dd>
         </div>
         <div>
@@ -142,14 +149,18 @@ export default function ReportView({ report }: { report: ReportDetail }) {
         <summary className="cursor-pointer">
           {t("settings.upgrade.resultHelp")}
         </summary>
-        <dl className="mt-2 space-y-2 text-sm">
+        <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] items-baseline gap-x-4 gap-y-3 text-sm">
           {["ok", "warn", "fail", "could_not_verify"].map((status) => (
-            <div key={status}>
-              <dt className="font-medium">
-                {t(`settings.upgrade.status.${status}`)}
+            <Fragment key={status}>
+              <dt>
+                <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
+                  {t(`settings.upgrade.status.${status}`)}
+                </span>
               </dt>
-              <dd>{t(`settings.upgrade.resultMeaning.${status}`)}</dd>
-            </div>
+              <dd className="text-muted-foreground">
+                {t(`settings.upgrade.resultMeaning.${status}`)}
+              </dd>
+            </Fragment>
           ))}
         </dl>
       </details>
@@ -170,6 +181,9 @@ export default function ReportView({ report }: { report: ReportDetail }) {
           {t("settings.upgrade.targetDetails")}
         </summary>
         <div className="space-y-2 break-all text-sm">
+          <p>
+            {t("settings.upgrade.sourceLocation", { location: sourceLabel })}
+          </p>
           <p>
             {t("settings.upgrade.sourceFingerprint", {
               fingerprint: document.source.identity?.sha256 ?? unknown,

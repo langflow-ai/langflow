@@ -794,3 +794,37 @@ it("shows the row range when moving to a partial last page", async () => {
   await userEvent.click(screen.getByRole("button", { name: "Next" }));
   expect(screen.getByText("Rows 21–25 of 25")).toBeVisible();
 });
+
+it("names only the database in the summary and keeps its full location in the identity details", async () => {
+  const located = {
+    ...report,
+    document: {
+      ...report.document,
+      source: {
+        ...report.document.source,
+        identity: {
+          kind: "sqlite",
+          locator: { path: "/srv/langflow/data/langflow.db" },
+          sha256: "a".repeat(64),
+        },
+      },
+    },
+  };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : url.endsWith(report.id)
+          ? located
+          : history,
+  }));
+  open();
+  expect(await screen.findByText("sqlite · langflow.db")).toBeVisible();
+  const location = screen.getByText(
+    "Source location /srv/langflow/data/langflow.db",
+  );
+  expect(location).not.toBeVisible();
+  await userEvent.click(screen.getByText("Source and target identity"));
+  expect(location).toBeVisible();
+});
