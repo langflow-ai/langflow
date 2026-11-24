@@ -20,6 +20,7 @@ from pydantic import (
 
 from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
+from langflow.schema.project_auth import ProjectAuthType
 from langflow.schema.schema import InputType, OutputType, OutputValue
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
@@ -596,7 +597,7 @@ class CancelFlowResponse(BaseModel):
 class AuthSettings(BaseModel):
     """Model representing authentication settings for MCP."""
 
-    auth_type: Literal["none", "apikey", "oauth"] = "none"
+    auth_type: ProjectAuthType
     oauth_host: str | None = None
     oauth_port: str | None = None
     oauth_server_url: str | None = None

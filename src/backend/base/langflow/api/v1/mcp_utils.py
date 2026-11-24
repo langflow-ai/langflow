@@ -10,7 +10,7 @@ from contextvars import ContextVar
 from functools import wraps
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, ParamSpec, TypeVar
+from typing import TYPE_CHECKING, Any, ParamSpec, TypeVar
 from urllib.parse import quote, unquote, urlparse
 from uuid import UUID, uuid4
 
@@ -51,6 +51,9 @@ from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from langflow.utils.flow_secrets import restore_request_variable_references
 
+if TYPE_CHECKING:
+    from sqlalchemy.ext.asyncio import AsyncSession
+
 T = TypeVar("T")
 P = ParamSpec("P")
 
@@ -60,6 +63,9 @@ MCP_SERVERS_FILE = "_mcp_servers"
 current_user_ctx: ContextVar[User] = ContextVar("current_user_ctx")
 
 authenticated_caller_ctx: ContextVar[UUID | None] = ContextVar("authenticated_caller_ctx", default=None)
+composer_authenticated_project_ctx: ContextVar[UUID | None] = ContextVar(
+    "composer_authenticated_project_ctx", default=None
+)
 
 
 def caller_owns_resource(owner_id: UUID | None) -> bool:
@@ -73,6 +79,14 @@ def caller_owns_resource(owner_id: UUID | None) -> bool:
     """
     caller_id = authenticated_caller_ctx.get()
     return caller_id is not None and owner_id is not None and caller_id == owner_id
+
+
+def _has_project_resource_credential(project_id: UUID | str) -> bool:
+    """Check the caller credential or a verified OAuth Composer hop for this project."""
+    composer_project_id = composer_authenticated_project_ctx.get()
+    return authenticated_caller_ctx.get() is not None or (
+        composer_project_id is not None and str(composer_project_id) == str(project_id)
+    )
 
 
 def _public_mcp_session_namespace(server: Any, project_id: UUID, flow_id: UUID) -> str:
@@ -135,6 +149,12 @@ async def with_db_session(operation: Callable[[Any], Awaitable[T]]) -> T:
         return await operation(session)
 
 
+async def get_active_project_owner(session: "AsyncSession", owner_id: UUID) -> User | None:
+    """Resolve the owning principal against current account state."""
+    owner = await session.get(User, owner_id)
+    return owner if owner is not None and owner.is_active else None
+
+
 class MCPConfig:
     _instance = None
 
@@ -161,6 +181,9 @@ async def handle_list_resources(project_id=None):
     Args:
         project_id: Optional project ID to filter resources by project
     """
+    if project_id is not None and not _has_project_resource_credential(project_id):
+        return []
+
     resources = []
     try:
         storage_service = get_storage_service()
@@ -266,6 +289,10 @@ async def handle_read_resource(uri: str, project_id: UUID | str | None = None) -
         project_id: When invoked from a project-scoped server, restricts the lookup so a
             caller cannot read resources that live outside the project.
     """
+    if project_id is not None and not _has_project_resource_credential(project_id):
+        msg = "Resource not found or access denied"
+        raise ValueError(msg)
+
     try:
         # Parse the URI properly
         parsed_uri = urlparse(str(uri))
@@ -388,6 +415,11 @@ async def handle_call_tool(
     exec_context = {"request_variables": request_variables} if request_variables else None
 
     async def execute_tool(session):
+        # The transport's user can outlive the account state read during admission.
+        if project_id is not None and await get_active_project_owner(session, current_user.id) is None:
+            msg = "Project owner not found"
+            raise ValueError(msg)
+
         # Scoping in the query, not after it: post-filtering let an unexposed flow run by
         # name and let one project win a name shared with another, silencing the second.
         flow = await get_flow_snake_case(

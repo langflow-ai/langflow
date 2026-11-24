@@ -18,6 +18,7 @@ from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.helpers.flow import json_schema_from_flow
+from langflow.schema.project_auth import stored_project_auth_type
 from langflow.services.database.models import Folder
 from langflow.services.database.models.flow.model import Flow
 from langflow.utils.version import get_version_info
@@ -148,7 +149,8 @@ async def folder_auth_type(flow: Flow, session: AsyncSession) -> str:
         return "none"
     # Query the folder explicitly; lazy-loading flow.folder would raise in async.
     folder = (await session.exec(select(Folder).where(Folder.id == flow.folder_id))).first()
-    return (folder.auth_settings or {}).get("auth_type", "none") if folder else "none"
+    auth_type = stored_project_auth_type(folder.auth_settings) if folder else None
+    return "none" if auth_type is None else auth_type
 
 
 async def resolve_card_security(

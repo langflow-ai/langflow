@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.13.3",
+  "version": "1.13.4",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
@@ -64,7 +64,10 @@
     "qs": "^6.17.1",
     "follow-redirects": "^1.16.3",
     "modern-tar": "^0.8.6",
-    "open": "^11.0.4"
+    "open": "^11.0.4",
+    "hast-util-raw": "^9.2.1",
+    "jsdom": "27.2.0",
+    "parse5": "^8.1.1"
   },
   "dependencies": {
     "@ag-ui/client": "1.0.4",
