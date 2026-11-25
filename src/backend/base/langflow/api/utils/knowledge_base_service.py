@@ -22,9 +22,10 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
@@ -32,8 +33,23 @@ from lfx.services.authorization.base import ResourceVisibilityScope
 from sqlmodel import select
 
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord, KnowledgeBaseStatus
+from langflow.services.deletion_hooks import (
+    RESOURCE_KNOWLEDGE_BASE,
+    VIA_CASCADE,
+    VIA_REQUEST,
+    DeletionContext,
+    run_post_deletion_hooks,
+    run_pre_deletion_hooks,
+)
 from langflow.services.deps import session_scope
 from langflow.services.memory_base.embedding_helpers import infer_embedding_provider
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from sqlmodel.ext.asyncio.session import AsyncSession
+
+    from langflow.services.jobs.service import JobService
 
 
 class _UnsetType:
@@ -197,6 +213,53 @@ async def list_by_name(name: str) -> list[KnowledgeBaseRecord]:
         stmt = select(KnowledgeBaseRecord).where(KnowledgeBaseRecord.name == name)
         result = await session.exec(stmt)
         return list(result.all())
+
+
+_shared_kb_for_run_enabled: Callable[[], bool] | None = None
+
+
+def register_shared_kb_for_run(enabled: Callable[[], bool]) -> None:
+    """Let a flow run use a KB it does not own, when authorization shares it to the running identity.
+
+    OSS never registers this, so a run sees only the KBs of the user it runs as. A downstream plane registers it for
+    the runs where the running identity is not the owner (a deployment runs as a service account and the KBs are the
+    deployer's). ``enabled`` is asked on every lookup.
+    """
+    global _shared_kb_for_run_enabled  # noqa: PLW0603 - process-wide extension registration
+    _shared_kb_for_run_enabled = enabled
+
+
+async def get_shared_for_run(user_id: UUID, name: str, action: str) -> KnowledgeBaseRecord | None:
+    """Find the KB called ``name`` that ``user_id`` does not own but may ``action`` through a share.
+
+    Call it after the owner lookup missed. ``None`` when nothing is registered, authorization is off, or no candidate
+    allows ``action`` (so a read share does not open ingestion). Two allowed candidates are refused as ambiguous
+    rather than picking one.
+    """
+    if _shared_kb_for_run_enabled is None or not _shared_kb_for_run_enabled():
+        return None
+    from langflow.services.auth.context import current_auth_context_for_authz
+    from langflow.services.deps import get_authorization_service
+
+    authz = get_authorization_service()
+    if not (await authz.is_enabled() and await authz.supports_cross_user_fetch()):
+        return None
+    allowed = [
+        candidate
+        for candidate in await list_by_name(name)
+        if candidate.user_id != user_id
+        and await authz.enforce(
+            user_id=user_id,
+            domain="*",
+            obj=f"knowledge_base:{candidate.id}",
+            act=action,
+            context={**current_auth_context_for_authz(), "is_superuser": False},
+        )
+    ]
+    if len(allowed) > 1:
+        msg = f"Several knowledge bases named '{name}' are shared with this identity; use an owned one with that name."
+        raise ValueError(msg)
+    return allowed[0] if allowed else None
 
 
 async def get_backends_for_names(names: list[str]) -> dict[str, tuple[str, dict]]:
@@ -473,19 +536,102 @@ async def update_column_config(
         await session.commit()
 
 
-async def delete_record(record_id: UUID) -> None:
-    """Drain writers and tombstone storage before removing authoritative routing."""
-    from langflow.services.knowledge_base_storage.runtime import delete_storage_for_record, operation
+async def _cancel_inflight_ingestion_for_kb(
+    *,
+    kb_name: str,
+    asset_id: UUID,
+    job_service: JobService,
+) -> None:
+    """Cancel queued / in-progress ingestion jobs for the named KB.
 
+    Transitions every job with ``asset_type='knowledge_base'`` and
+    ``status in (QUEUED, IN_PROGRESS)`` to ``CANCELLED``. The ingestion polls
+    :func:`KBIngestionHelper.is_job_cancelled` between batches and bails out via
+    :class:`IngestionCancelledError` to stop unnecessary work promptly.
+
+    Cancellation is best-effort. The deletion path independently fences the KB,
+    drains guarded storage operations, and persists a SQLite tombstone or drops
+    the remote collection before removing routing. Cancellation failure cannot
+    allow an old writer to recreate deleted SQLite storage.
+
+    Not filtered by user: ``asset_id`` is the KB row the caller is already
+    authorized to delete, and a collaborator's run on a shared KB must stop
+    too, or it keeps writing into the deleted KB's storage.
+    """
+    try:
+        cancelled = await job_service.cancel_in_flight_jobs_by_asset(
+            asset_id=asset_id,
+            asset_type="knowledge_base",
+        )
+    except Exception as exc:  # noqa: BLE001
+        await logger.awarning("Cancel-on-delete failed for KB %s: %s", kb_name, exc)
+        return
+
+    if cancelled:
+        await logger.ainfo(
+            "Cancelled %d in-flight ingestion job(s) before deleting KB '%s'",
+            len(cancelled),
+            kb_name,
+        )
+
+
+def _record_deletion_context(
+    record: KnowledgeBaseRecord, *, via: str, session: AsyncSession | None = None
+) -> DeletionContext:
+    return DeletionContext(
+        resource=RESOURCE_KNOWLEDGE_BASE,
+        resource_id=record.id,
+        owner_id=record.user_id,
+        name=record.name,
+        via=via,
+        session=session,
+    )
+
+
+async def prepare_record_deletion(
+    record: KnowledgeBaseRecord, *, via: str = VIA_REQUEST, session: AsyncSession | None = None
+) -> DeletionContext:
+    """Run the guard before a caller cancels ingestion, fences storage, or removes the row."""
+    context = _record_deletion_context(record, via=via, session=session)
+    await run_pre_deletion_hooks(context)
+    return replace(context, session=None)
+
+
+async def discard_provisioned_record(record_id: UUID) -> None:
+    """Compensate a failed create for the exact KB UUID allocated by that attempt."""
+    record = await get_by_id(record_id)
+    if record is not None:
+        await delete_prepared_record(record, _record_deletion_context(record, via=VIA_CASCADE))
+
+
+async def delete_record(record_id: UUID, *, via: str = VIA_REQUEST, job_service: JobService | None = None) -> None:
+    """Guard the delete, drain writers, and tombstone storage before removing authoritative routing."""
     record = await get_by_id(record_id)
     if record is None:
         return
+    context = await prepare_record_deletion(record, via=via)
+    await delete_prepared_record(record, context, job_service=job_service)
+
+
+async def delete_prepared_record(
+    record: KnowledgeBaseRecord, context: DeletionContext, *, job_service: JobService | None = None
+) -> None:
+    """Delete a record whose guard already ran and notify the plugin once its routing row commits."""
+    from langflow.services.knowledge_base_storage.runtime import delete_storage_for_record, operation
+
+    record_id = record.id
+    if job_service is not None:
+        await _cancel_inflight_ingestion_for_kb(kb_name=record.name, asset_id=record_id, job_service=job_service)
     await delete_storage_for_record(record)
+    removed = False
     async with operation(record_id, allowed_states=("deleted",)), session_scope() as session:
         row = await session.get(KnowledgeBaseRecord, record_id)
         if row is not None:
             await session.delete(row)
             await session.commit()
+            removed = True
+    if removed:
+        await run_post_deletion_hooks(context)
 
 
 async def delete_by_user_and_name(user_id: UUID, name: str) -> None:

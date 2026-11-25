@@ -21,7 +21,7 @@ export function ChangesPausedNotice() {
   return (
     <section
       aria-label={t("settings.maintenance.statusLabel")}
-      className="pointer-events-none fixed bottom-4 left-1/2 z-50 w-max max-w-[min(36rem,calc(100%-2rem))] -translate-x-1/2"
+      className="pointer-events-none fixed bottom-[calc(theme(spacing.4)+env(safe-area-inset-bottom))] left-1/2 z-50 w-max max-w-[min(36rem,calc(100%-2rem))] -translate-x-1/2"
     >
       {/* Keep the empty status mounted so screen readers announce later changes. */}
       <div role="status" data-testid="changes-paused-notice">

@@ -55,6 +55,8 @@ from langflow.initial_setup.setup import (
 from langflow.middleware import ContentSizeLimitMiddleware
 from langflow.plugin_routes import load_plugin_routes
 from langflow.services.audit.attribution import AuditRequestContextMiddleware
+from langflow.services.audit.represented import AuditIdentityError, UntrustedAuditIdentityError
+from langflow.services.creation_hooks import ERROR_CODE_HEADER
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
@@ -68,6 +70,7 @@ from langflow.services.deps import (
 )
 from langflow.services.schema import ServiceType
 from langflow.services.telemetry.opentelemetry import instrument_db_pool
+from langflow.services.upgrade_reports.workspace import sweep_run_folders_periodically
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.frontend import render_frontend_index
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
@@ -181,10 +184,10 @@ class JavaScriptMIMETypeMiddleware(BaseHTTPMiddleware):
         return response
 
 
-async def load_bundles_with_error_handling():
+async def load_bundles_with_error_handling(*, components_only: bool = False):
     """Load configured bundles and fall back to an empty result on network errors."""
     try:
-        return await load_bundles_from_urls()
+        return await load_bundles_from_urls(components_only=components_only)
     except (httpx.TimeoutException, httpx.HTTPError, httpx.RequestError) as exc:
         await logger.aerror(f"Error loading bundles from URLs: {exc}")
         return [], []
@@ -242,6 +245,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        upgrade_check_sweep_task = None
         # Same reason as ``temp_dirs`` below: the shutdown path stops this, so it must exist
         # even when startup fails before it is created.
         lag_monitor = None
@@ -300,6 +304,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # so each worker rebuilds its own connection pool (idempotent otherwise).
             await initialize_services(fix_migration=fix_migration)
             await initialize_environment_variables()
+            upgrade_check_sweep_task = asyncio.create_task(sweep_run_folders_periodically())
             from langflow.services.knowledge_base_storage.coordinator import fence_legacy_records, schedule_upgrade
 
             await fence_legacy_records()
@@ -804,6 +809,21 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             await stop_metrics_collector(_app)
 
+            # Stop the last producer of deletion events before draining them. The hooks
+            # can still use the extension's services and the database at this point.
+            try:
+                from langflow.services.data_subjects.worker import data_subject_erase_worker
+
+                await data_subject_erase_worker.stop()
+            except Exception as exc:  # noqa: BLE001
+                await logger.aerror(f"Failed to stop the data subject erase worker: {exc}")
+            try:
+                from langflow.services.deletion_hooks import wait_for_post_deletion_runs
+
+                await asyncio.wait_for(wait_for_post_deletion_runs(), timeout=5.0)
+            except asyncio.TimeoutError:
+                await logger.awarning("Post-deletion hook drain timed out after 5 seconds.")
+
             # Enterprise shutdown hooks run before service teardown so they can
             # still flush through live services. Also reached when startup
             # failed before the hooks ran — enterprise stop() paths must (and
@@ -888,12 +908,6 @@ def get_lifespan(*, fix_migration=False, version=None):
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop audit event cleanup worker: {e}")
                     try:
-                        from langflow.services.data_subjects.worker import data_subject_erase_worker
-
-                        await data_subject_erase_worker.stop()
-                    except Exception as e:  # noqa: BLE001
-                        await logger.aerror(f"Failed to stop the data subject erase worker: {e}")
-                    try:
                         from langflow.services.task.model_provider_policy_refresh import (
                             model_provider_policy_refresh_worker,
                         )
@@ -910,6 +924,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
+                    if upgrade_check_sweep_task and not upgrade_check_sweep_task.done():
+                        upgrade_check_sweep_task.cancel()
+                        tasks_to_cancel.append(upgrade_check_sweep_task)
                     if models_dev_refresh_task and not models_dev_refresh_task.done():
                         models_dev_refresh_task.cancel()
                         tasks_to_cancel.append(models_dev_refresh_task)
@@ -1214,6 +1231,16 @@ def create_app():
     # Replaces FastAPI's default 422 handler, which echoes each submitted value
     # (credentials included) back in the error body.
     app.add_exception_handler(RequestValidationError, request_validation_exception_handler)
+
+    @app.exception_handler(AuditIdentityError)
+    async def audit_identity_exception_handler(_request: Request, exc: AuditIdentityError):
+        """Translate audit identity domain errors at the HTTP boundary."""
+        untrusted = isinstance(exc, UntrustedAuditIdentityError)
+        return JSONResponse(
+            status_code=HTTPStatus.FORBIDDEN if untrusted else HTTPStatus.BAD_REQUEST,
+            content={"detail": str(exc)},
+            headers={ERROR_CODE_HEADER: "REPRESENTED_IDENTITY_NOT_ALLOWED" if untrusted else "INVALID_AUDIT_CONTEXT"},
+        )
 
     @app.exception_handler(DeploymentGuardError)
     async def deployment_guard_exception_handler(_request: Request, exc: DeploymentGuardError):

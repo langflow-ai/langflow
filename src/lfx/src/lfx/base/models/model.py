@@ -2,9 +2,9 @@ import importlib
 import json
 import warnings
 from abc import abstractmethod
+from collections.abc import Mapping
 from typing import Any
 
-from langchain_core.language_models import BaseChatModel
 from langchain_core.language_models.llms import LLM
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_core.output_parsers import BaseOutputParser
@@ -91,17 +91,21 @@ class LCModelComponent(Component):
         return str(e)
 
     def supports_tool_calling(self, model: LanguageModel) -> bool:
+        # Binding a tool succeeds for every model of a provider class, so the
+        # per-model profile decides when it knows; new models fall back to the probe.
+        profile = getattr(model, "profile", None)
+        if isinstance(profile, dict) and isinstance(profile.get("tool_calling"), bool):
+            return profile["tool_calling"]
         try:
-            # Check if the bind_tools method is the same as the base class's method
-            if model.bind_tools is BaseChatModel.bind_tools:
-                return False
 
             def test_tool(x: int) -> int:
                 return x
 
             model_with_tool = model.bind_tools([test_tool])
-            return hasattr(model_with_tool, "tools") and len(model_with_tool.tools) > 0
-        except (AttributeError, TypeError, ValueError):
+            # Most providers return a RunnableBinding, which keeps the tools in its kwargs.
+            tools = getattr(model_with_tool, "tools", None) or getattr(model_with_tool, "kwargs", {}).get("tools")
+            return bool(tools)
+        except (AttributeError, TypeError, ValueError, NotImplementedError):
             return False
 
     def _validate_outputs(self) -> None:
@@ -162,14 +166,17 @@ class LCModelComponent(Component):
             # Build a well formatted status message
             content = message.content
             response_metadata = message.response_metadata
-            openai_keys = ["token_usage", "model_name", "finish_reason"]
+            token_usage = response_metadata.get("token_usage")
+            usage = response_metadata.get("usage")
+            openai_keys = ["model_name", "finish_reason"]
             inner_openai_keys = ["completion_tokens", "prompt_tokens", "total_tokens"]
-            anthropic_keys = ["model", "usage", "stop_reason"]
+            anthropic_keys = ["model", "stop_reason"]
             inner_anthropic_keys = ["input_tokens", "output_tokens"]
-            if all(key in response_metadata for key in openai_keys) and all(
-                key in response_metadata["token_usage"] for key in inner_openai_keys
+            if (
+                isinstance(token_usage, Mapping)
+                and all(key in response_metadata for key in openai_keys)
+                and all(key in token_usage for key in inner_openai_keys)
             ):
-                token_usage = response_metadata["token_usage"]
                 status_message = {
                     "tokens": {
                         "input": token_usage["prompt_tokens"],
@@ -180,10 +187,11 @@ class LCModelComponent(Component):
                     }
                 }
 
-            elif all(key in response_metadata for key in anthropic_keys) and all(
-                key in response_metadata["usage"] for key in inner_anthropic_keys
+            elif (
+                isinstance(usage, Mapping)
+                and all(key in response_metadata for key in anthropic_keys)
+                and all(key in usage for key in inner_anthropic_keys)
             ):
-                usage = response_metadata["usage"]
                 status_message = {
                     "tokens": {
                         "input": usage["input_tokens"],
@@ -311,8 +319,6 @@ class LCModelComponent(Component):
                     self.status = status_message
                     # Extract usage for the response
                     usage_data = self.extract_usage(message)
-                    if usage_data:
-                        self._token_usage = usage_data
                 elif isinstance(result, dict):
                     result = json.dumps(message, indent=4)
                     self.status = result
@@ -326,16 +332,12 @@ class LCModelComponent(Component):
                 raise
             break
 
-        if lf_message:
-            if lf_message.properties and lf_message.properties.usage:
-                self._token_usage = lf_message.properties.usage
-            return lf_message
-
-        # Create message with usage data if available
-        msg = Message(text=result)
-        if usage_data:
-            msg.properties.usage = usage_data
-        return msg
+        if lf_message is None:
+            lf_message = Message(text=result)
+            if usage_data is not None:
+                lf_message.properties.usage = usage_data
+        self._token_usage = lf_message.properties.usage if lf_message.properties else None
+        return lf_message
 
     def _remediate_model_error(self, error: Exception, runnable: Any, applied: set[str]) -> bool:
         """Try to work around a model constraint the provider only reports at call time.

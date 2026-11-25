@@ -572,9 +572,10 @@ test.describe("API keys route accessibility", () => {
       await page.setViewportSize({ width: 390, height: 844 });
       await openApiKeysRoute(page);
       await expect(page.getByText("A11y Primary Key")).toBeVisible();
-      await expect(
-        page.getByTestId("sidebar-nav-Langflow API Keys"),
-      ).toBeVisible();
+      const navigation = page.getByTestId("settings-mobile-navigation");
+      await expect(navigation).toBeVisible();
+      await expect(navigation).toHaveAccessibleName("Settings navigation");
+      await expect(navigation).toHaveValue("/settings/api-keys");
 
       await page.runA11yScan("settings-api-keys-mobile-data-rich");
     },

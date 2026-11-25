@@ -204,20 +204,14 @@ async def list_runs_for_kb(
     *,
     kb_name: str,
     user_id: UUID,
+    authorized_kb_id: UUID | None = None,
     page: int = 1,
     limit: int = 50,
 ) -> tuple[list[RunRow], int]:
-    """Return a page of KB ingestion runs for ``kb_name`` scoped to ``user_id``.
+    """List ingestion jobs for the exact KB the caller authorized, newest first.
 
-    Prefers the indexed ``Job.asset_id`` filter (resolved via
-    ``KnowledgeBaseRecord.id``) over a JSON-extract on
-    ``Job.job_metadata.kb_name``. The asset_id path is a btree index
-    lookup, free of dialect-specific JSON gymnastics; the JSON-extract
-    fallback only fires for legacy KBs that exist on disk but haven't
-    been backfilled into the ``knowledge_base`` table yet.
-
-    Ordered newest-first by ``Job.created_timestamp`` — the drill-down
-    UI reads the most recent run the vast majority of the time.
+    Without an authorized KB ID, look up the owner's record and keep results scoped to that user.
+    Legacy disk-only KBs use the owner and the name stored in job metadata.
     """
     # Lazy import: ``ingestion_run_service`` lives in the langflow API
     # surface but the KB record lookup is also there; avoid a circular
@@ -225,16 +219,18 @@ async def list_runs_for_kb(
     from langflow.api.utils import knowledge_base_service
 
     offset = max(page - 1, 0) * limit
-    kb_record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+    kb_id = authorized_kb_id
+    if kb_id is None:
+        kb_record = await knowledge_base_service.get_by_user_and_name(user_id, kb_name)
+        kb_id = kb_record.id if kb_record is not None else None
 
     async with session_scope() as session:
-        if kb_record is not None:
+        if kb_id is not None:
             base_filter = (
-                (Job.user_id == user_id)
-                & (Job.type == JobType.INGESTION)
-                & (Job.asset_type == "knowledge_base")
-                & (Job.asset_id == kb_record.id)
+                (Job.type == JobType.INGESTION) & (Job.asset_type == "knowledge_base") & (Job.asset_id == kb_id)
             )
+            if authorized_kb_id is None:
+                base_filter &= Job.user_id == user_id
         else:
             # Legacy fallback for KBs not yet reconciled into the DB.
             kb_name_expr = Job.job_metadata["kb_name"].as_string()
@@ -255,20 +251,20 @@ async def list_runs_for_kb(
     return [_job_to_run_row(j) for j in rows], int(total)
 
 
-async def get_run(run_id: UUID, *, user_id: UUID) -> RunRow | None:
-    """Fetch a single run, scoped to ``user_id`` for authz.
+async def get_run(run_id: UUID, *, user_id: UUID, authorized_kb_id: UUID | None = None) -> RunRow | None:
+    """Read an ingestion job linked to the exact KB the caller authorized.
 
-    ``run_id`` is the parent ``job_id``. Returns ``None`` when the row
-    is missing OR belongs to someone else — the caller maps both to
-    404 so a user can't enumerate other users' run ids.
-
-    Also returns ``None`` for jobs of the wrong type (e.g. a workflow
-    job_id submitted to a KB runs endpoint), since the response shape
-    is KB-specific.
+    Without an authorized KB ID or on legacy jobs with no asset ID, require the job owner's ID.
+    The route also checks the historical KB name before returning the detail.
     """
     async with session_scope() as session:
         job = await session.get(Job, run_id)
-    if job is None or job.user_id != user_id or job.type != JobType.INGESTION:
+    if job is None or job.type != JobType.INGESTION:
+        return None
+    if authorized_kb_id is not None and job.asset_id is not None:
+        if job.asset_type != "knowledge_base" or job.asset_id != authorized_kb_id:
+            return None
+    elif job.user_id != user_id:
         return None
     return _job_to_run_row(job)
 

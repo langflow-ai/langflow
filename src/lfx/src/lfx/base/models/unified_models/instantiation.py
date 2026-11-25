@@ -7,7 +7,13 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.embeddings.embeddings_class import EmbeddingsWithModels
-from lfx.base.models.model_utils import _to_str, inject_custom_enabled_models, replace_with_live_models
+from lfx.base.models.model_utils import (
+    _to_str,
+    ensure_foundry_credential_endpoint_allowed,
+    ensure_watsonx_credential_endpoint_allowed,
+    inject_custom_enabled_models,
+    replace_with_live_models,
+)
 from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.log.logger import logger
 from lfx.services.variable.request_scope import is_env_fallback_disabled
@@ -509,6 +515,19 @@ def get_llm(
             default_url=model_provider_metadata.get(provider, {}).get("base_url") or "https://api.openai.com/v1",
             sdk_env_fallback="OPENAI_API_KEY",
         )
+    elif model_class_name == "AzureAIOpenAIApiChatModel":
+        endpoint = kwargs.get("endpoint")
+        if not endpoint or kwargs.get("project_endpoint"):
+            msg = "Azure AI Foundry requires a direct model endpoint"
+            raise ValueError(msg)
+        if any(kwargs.get(alias) not in (None, endpoint) for alias in ("base_url", "openai_api_base")):
+            msg = "Azure AI Foundry endpoint and base URL must agree"
+            raise ValueError(msg)
+        ensure_foundry_credential_endpoint_allowed(
+            kwargs.get("credential") or kwargs.get("api_key", kwargs.get("openai_api_key")), endpoint
+        )
+    elif model_class_name == "ChatWatsonx" and kwargs.get("url"):
+        ensure_watsonx_credential_endpoint_allowed(kwargs.get("api_key", kwargs.get("apikey")), kwargs["url"])
 
     _protect_model_connection(
         kwargs,
@@ -860,6 +879,11 @@ def _compose_embedding_kwargs(
         connection_url_param = param_mapping["api_base"]
         kwargs[connection_url_param] = normalize_azure_ai_foundry_endpoint(endpoint_value)
 
+    if provider == "Azure AI Foundry":
+        ensure_foundry_credential_endpoint_allowed(kwargs.get("api_key"), kwargs["base_url"])
+    elif embedding_class_name == "WatsonxEmbeddings" and kwargs.get("url"):
+        ensure_watsonx_credential_endpoint_allowed(kwargs.get("api_key", kwargs.get("apikey")), kwargs["url"])
+
     _protect_model_connection(
         kwargs,
         model_class_name=embedding_class_name,
@@ -905,32 +929,32 @@ def _build_available_embedding_models(
             if not provider_policy.allows_model(provider, model_name, model_type="embeddings"):
                 continue
 
-            composed = _compose_embedding_kwargs(
-                provider,
-                model_name,
-                user_id,
-                unified_models_module,
-                selected_provider=selected_provider,
-                metadata=provider_metadata,
-                component_api_key=component_api_key,
-                api_base=api_base,
-                dimensions=dimensions,
-                chunk_size=chunk_size,
-                request_timeout=request_timeout,
-                max_retries=max_retries,
-                show_progress_bar=show_progress_bar,
-                model_kwargs=model_kwargs,
-                watsonx_url=watsonx_url,
-                watsonx_project_id=watsonx_project_id,
-                watsonx_truncate_input_tokens=watsonx_truncate_input_tokens,
-                watsonx_input_text=watsonx_input_text,
-                ollama_base_url=ollama_base_url,
-            )
-            if composed is None:
-                continue
-
-            embedding_class, model_kwargs_dict = composed
             try:
+                composed = _compose_embedding_kwargs(
+                    provider,
+                    model_name,
+                    user_id,
+                    unified_models_module,
+                    selected_provider=selected_provider,
+                    metadata=provider_metadata,
+                    component_api_key=component_api_key,
+                    api_base=api_base,
+                    dimensions=dimensions,
+                    chunk_size=chunk_size,
+                    request_timeout=request_timeout,
+                    max_retries=max_retries,
+                    show_progress_bar=show_progress_bar,
+                    model_kwargs=model_kwargs,
+                    watsonx_url=watsonx_url,
+                    watsonx_project_id=watsonx_project_id,
+                    watsonx_truncate_input_tokens=watsonx_truncate_input_tokens,
+                    watsonx_input_text=watsonx_input_text,
+                    ollama_base_url=ollama_base_url,
+                )
+                if composed is None:
+                    continue
+
+                embedding_class, model_kwargs_dict = composed
                 available_models[model_name] = embedding_class(**model_kwargs_dict)
             except Exception:  # noqa: BLE001
                 logger.debug(

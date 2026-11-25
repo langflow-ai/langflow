@@ -6,6 +6,7 @@ import asyncio
 import os
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -81,23 +82,17 @@ async def test_heartbeat_cannot_replace_a_newer_claim(lease_database):
     assert await service.begin_live_job(job_id, owner="worker:a") is False
 
 
-async def test_heartbeat_loses_when_the_owner_changes_after_its_read(lease_database, monkeypatch):
+async def test_heartbeat_loses_to_a_concurrent_reclaim(lease_database):
     service = lease_database
     job_id = await _job(service)
-    real_exec = AsyncSession.exec
-    change_owner = True
+    async with jobs_module.session_scope() as session:
+        job = await session.get(Job, job_id)
+        job.job_metadata = {**job.job_metadata, "owner": "worker:b"}
+        await session.flush()
+        heartbeat = asyncio.create_task(service.heartbeat(job_id, owner="worker:a"))
+        await asyncio.sleep(0)
 
-    async def exec_after_reclaim(session, statement, *args, **kwargs):
-        nonlocal change_owner
-        if change_owner and statement.is_update:
-            change_owner = False
-            await service.update_job_metadata(job_id, {"owner": "worker:b"})
-        return await real_exec(session, statement, *args, **kwargs)
-
-    monkeypatch.setattr(AsyncSession, "exec", exec_after_reclaim)
-
-    assert await service.heartbeat(job_id, owner="worker:a") is False
-
+    assert await asyncio.wait_for(heartbeat, timeout=5) is False
     current = await service.get_job_by_job_id(job_id)
     assert current.job_metadata["owner"] == "worker:b"
 
@@ -133,6 +128,8 @@ async def test_heartbeat_can_initialize_and_renew_an_unowned_local_job(lease_dat
 async def test_watchdog_must_not_mutate_a_refreshed_or_reclaimed_lease(
     lease_database, monkeypatch, retry_safe, new_owner
 ):
+    # The isolated lease database has no installation maintenance state.
+    monkeypatch.setattr("langflow.api.utils.migration_pause._database_pause_status", AsyncMock(return_value=False))
     service = lease_database
     job_id = await _job(service, retry_safe=retry_safe, attempt=1, max_attempts=2)
     method_name = "retry_requeue_claim" if retry_safe else "fail_in_progress_job"
@@ -187,28 +184,21 @@ async def test_pause_requires_the_current_owner_and_writes_no_losing_event(lease
     assert await service.read_events(job_id) == []
 
 
-async def test_pause_loses_when_the_job_finishes_after_its_read(lease_database, monkeypatch):
+async def test_pause_loses_to_a_concurrent_completion(lease_database):
     service = lease_database
     job_id = await _job(service)
-    real_exec = AsyncSession.exec
-    finish = True
-
-    async def exec_after_completion(session, statement, *args, **kwargs):
-        nonlocal finish
-        if finish and statement.is_update:
-            finish = False
-            await service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
-        return await real_exec(session, statement, *args, **kwargs)
-
-    monkeypatch.setattr(AsyncSession, "exec", exec_after_completion)
-
-    assert (
-        await service.suspend_job(
-            job_id, {"pending_request_id": "late"}, owner="worker:a", event_payload={"request_id": "late"}
+    async with jobs_module.session_scope() as session:
+        job = await session.get(Job, job_id)
+        job.status = JobStatus.COMPLETED
+        await session.flush()
+        pause = asyncio.create_task(
+            service.suspend_job(
+                job_id, {"pending_request_id": "late"}, owner="worker:a", event_payload={"request_id": "late"}
+            )
         )
-        is None
-    )
+        await asyncio.sleep(0)
 
+    assert await asyncio.wait_for(pause, timeout=5) is None
     current = await service.get_job_by_job_id(job_id)
     assert current.status == JobStatus.COMPLETED
     assert "pending_request_id" not in current.job_metadata

@@ -22,6 +22,7 @@ __all__ = [
     "list_pending_human_requests",
     "mark_card_answered",
     "persist_human_input_card",
+    "record_resume_decision",
     "reroute_decision_on_timeout",
 ]
 
@@ -240,6 +241,35 @@ async def mark_card_superseded(job_id: UUID) -> None:
                 session.add(message)
     except Exception as _e:  # noqa: BLE001
         await logger.awarning("Failed to mark human-input card superseded for job %s: %r", job_id, _e)
+
+
+async def record_resume_decision(
+    job_id: UUID, *, request_id: str, decision: dict, user_id: UUID, end_user_id: str | None
+) -> None:
+    """Keep who answered a human-input request: the end user, the credential and the time.
+
+    A deployment's callers share one service account, so the job's user cannot say who approved. The record is
+    appended to ``job_metadata['resume_decisions']`` after the resume is accepted. It is best effort: a failure
+    is logged and never turns an accepted resume into an error.
+    """
+    from datetime import datetime, timezone
+
+    from langflow.services.auth.context import get_current_auth_context
+
+    try:
+        auth = get_current_auth_context()
+        job_service = get_job_service()
+        record = {
+            "request_id": request_id,
+            "action_id": decision.get("action_id"),
+            "user_id": str(user_id),
+            "end_user_id": end_user_id,
+            "api_key_id": str(auth.api_key_id) if auth is not None and auth.api_key_id is not None else None,
+            "at": datetime.now(timezone.utc).isoformat(),
+        }
+        await job_service.append_job_metadata_item(job_id, "resume_decisions", record)
+    except Exception as _e:  # noqa: BLE001
+        await logger.awarning("Failed to record the resume decision for job %s: %r", job_id, _e)
 
 
 async def mark_card_answered(job_id: UUID, request_id: str, decision: dict, *, card_message_id=None) -> None:

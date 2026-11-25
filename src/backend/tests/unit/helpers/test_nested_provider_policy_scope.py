@@ -285,6 +285,38 @@ async def test_internal_a2a_builds_and_runs_under_target_scope(nested_flow_rows,
 
 
 @pytest.mark.asyncio
+async def test_project_execute_grant_builds_the_shared_child_and_is_rechecked_on_cache_hits(
+    nested_flow_rows, user_two, monkeypatch
+):
+    from langflow.helpers.flow import get_flow_by_id_or_name
+    from langflow.services.deps import get_settings_service
+
+    from tests.unit.services.authorization._policy_double import install_policy_authz
+
+    component = RunFlowBaseComponent()
+    component._user_id = str(user_two.id)
+    component.cache_flow = True
+    flow_id = str(nested_flow_rows.target_flow)
+    project = f"project:{nested_flow_rows.target_project}"
+    with install_policy_authz(get_settings_service()) as policy:
+
+        async def project_grant(*, user_id, domain, obj, act, **_kwargs):
+            return (user_id, domain, obj, act) == (user_two.id, project, f"flow:{flow_id}", "execute")
+
+        monkeypatch.setattr(policy, "enforce", project_grant)
+        graph = await component.get_graph(flow_id_selected=flow_id)
+        assert str(graph.flow_id) == flow_id
+        assert await get_flow_by_id_or_name(user_id=str(user_two.id), flow_id=flow_id) is None
+
+        monkeypatch.setattr(policy, "enforce", AsyncMock(return_value=False))
+        cached = MagicMock(return_value=graph)
+        monkeypatch.setattr(component, "_flow_cache_call", cached)
+        with pytest.raises(ValueError, match="not found"):
+            await component.get_graph(flow_id_selected=flow_id, updated_at=graph.updated_at)
+        cached.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_cached_run_flow_reconstruction_uses_fresh_target_scope(nested_flow_rows, project_policy, monkeypatch):
     """Shared Run Flow cache hydration must not build under the caller's domain."""
     probe = MagicMock()

@@ -1117,7 +1117,7 @@ async def detect_github_url(url: str) -> str:
     return url
 
 
-async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]:
+async def load_bundles_from_urls(*, components_only: bool = False) -> tuple[list[TemporaryDirectory], list[str]]:
     component_paths: set[str] = set()
     temp_dirs = []
     settings_service = get_settings_service()
@@ -1126,8 +1126,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
         return [], []
 
     async with session_scope() as session:
-        user = await _get_flow_import_superuser(session)
-        user_id = user.id
+        user_id = None if components_only else (await _get_flow_import_superuser(session)).id
 
         for url in bundle_urls:
             url_ = await detect_github_url(url)
@@ -1142,7 +1141,7 @@ async def load_bundles_from_urls() -> tuple[list[TemporaryDirectory], list[str]]
                 for filename in zfile.namelist():
                     path = Path(filename)
                     for dir_name in dir_names:
-                        if path.is_relative_to(f"{dir_name}flows/") and path.suffix == ".json":
+                        if user_id is not None and path.is_relative_to(f"{dir_name}flows/") and path.suffix == ".json":
                             file_content = zfile.read(filename)
                             await upsert_flow_from_file(file_content, path.stem, session, user_id)
                         elif path.is_relative_to(f"{dir_name}components/"):
