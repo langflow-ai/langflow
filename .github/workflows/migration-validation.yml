@@ -72,7 +72,8 @@ jobs:
           uv run pytest \
             src/backend/tests/unit/alembic/test_migration_revision_discovery.py \
             src/backend/tests/unit/alembic/test_migration_execution.py \
-            src/backend/tests/unit/alembic/test_message_history_index_migration.py -x -v
+            src/backend/tests/unit/alembic/test_message_history_index_migration.py \
+            src/backend/tests/unit/alembic/test_flow_description_index_migration.py -x -v
 
       - name: Check transaction flow indexes and retention on PostgreSQL
         env:

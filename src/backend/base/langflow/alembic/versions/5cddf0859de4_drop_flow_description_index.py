@@ -18,7 +18,6 @@ release cannot store them either.
 
 from collections.abc import Sequence
 
-import sqlalchemy as sa
 from alembic import op
 
 # revision identifiers, used by Alembic.
@@ -35,6 +34,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    indexes = sa.inspect(op.get_bind()).get_indexes("flow")
-    if all(index["name"] != _INDEX_NAME for index in indexes):
-        op.create_index(_INDEX_NAME, "flow", ["description"], unique=False)
+    op.create_index(_INDEX_NAME, "flow", ["description"], unique=False, if_not_exists=True)
