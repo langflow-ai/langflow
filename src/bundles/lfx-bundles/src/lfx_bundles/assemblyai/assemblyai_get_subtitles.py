@@ -48,7 +48,7 @@ class AssemblyAIGetSubtitles(Component):
         aai.settings.api_key = self.api_key
 
         # check if it's an error message from the previous step
-        if self.transcription_result.data.get("error"):
+        if self.transcription_result and self.transcription_result.data.get("error"):
             self.status = self.transcription_result.data["error"]
             return self.transcription_result
 
@@ -62,12 +62,17 @@ class AssemblyAIGetSubtitles(Component):
             return Data(data={"error": error})
 
         if transcript.status == aai.TranscriptStatus.completed:
-            subtitles = None
             chars_per_caption = self.chars_per_caption if self.chars_per_caption > 0 else None
-            if self.subtitle_format == "srt":
-                subtitles = transcript.export_subtitles_srt(chars_per_caption)
-            else:
-                subtitles = transcript.export_subtitles_vtt(chars_per_caption)
+            try:
+                if self.subtitle_format == "srt":
+                    subtitles = transcript.export_subtitles_srt(chars_per_caption)
+                else:
+                    subtitles = transcript.export_subtitles_vtt(chars_per_caption)
+            except Exception as e:  # noqa: BLE001
+                error = f"Exporting subtitles failed: {e}"
+                logger.debug(error, exc_info=True)
+                self.status = error
+                return Data(data={"error": error})
 
             result = Data(
                 subtitles=subtitles,
@@ -78,5 +83,6 @@ class AssemblyAIGetSubtitles(Component):
 
             self.status = result
             return result
-        self.status = transcript.error
-        return Data(data={"error": transcript.error})
+        error = transcript.error or f"Transcription ended with status: {transcript.status}"
+        self.status = error
+        return Data(data={"error": error})

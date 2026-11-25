@@ -53,17 +53,23 @@ class AssemblyAIListTranscripts(Component):
     def list_transcripts(self) -> list[Data]:
         aai.settings.api_key = self.api_key
 
-        params = aai.ListTranscriptParameters()
-        if self.limit:
-            params.limit = self.limit
-        if self.status_filter != "all":
-            params.status = self.status_filter
-        if self.created_on and self.created_on.text:
-            params.created_on = self.created_on.text
-        if self.throttled_only:
-            params.throttled_only = True
-
         try:
+            params = aai.ListTranscriptParameters()
+            if self.limit is not None and self.limit < 0:
+                msg = "Limit must be 0 or greater"
+                raise ValueError(msg)
+            if self.limit:
+                params.limit = self.limit
+            if self.status_filter != "all":
+                params.status = self.status_filter
+            created_on = self.created_on.text if hasattr(self.created_on, "text") else self.created_on
+            if isinstance(created_on, str):
+                created_on = created_on.strip()
+            if created_on:
+                params.created_on = created_on
+            if self.throttled_only:
+                params.throttled_only = True
+
             transcriber = aai.Transcriber()
 
             def convert_page_to_data_list(page):
