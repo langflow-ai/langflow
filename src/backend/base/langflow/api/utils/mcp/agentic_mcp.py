@@ -32,13 +32,9 @@ async def _missing_variable_names(
     existing = await variable_service.list_variables(user_id, session)
     if not set(names).difference(existing):
         return set()
-    user_id = UUID(str(user_id))
-    if session.get_bind().dialect.name == "sqlite":
-        # SQLite ignores FOR UPDATE; a no-op write takes its database write lock instead.
-        await session.exec(update(User).where(col(User.id) == user_id).values(id=User.id))
-    else:
-        # NO KEY UPDATE serializes seeders without blocking inserts that reference the user.
-        await session.get(User, user_id, with_for_update={"key_share": True})
+    # A no-op write of a non-key column locks the user row on both dialects: FOR NO KEY UPDATE on
+    # PostgreSQL (inserts that reference the user still go through), the database write lock on SQLite.
+    await session.exec(update(User).where(col(User.id) == UUID(str(user_id))).values(is_active=User.is_active))
     return set(names).difference(await variable_service.list_variables(user_id, session))
 
 
@@ -63,8 +59,8 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
 
     try:
         # Get all users in the system
-        # A stable order keeps per-user locks deadlock-free between concurrent workers.
-        users = (await session.exec(select(User).order_by(col(User.id)))).all()
+        # Plain columns: a per-user rollback expires loaded ORM objects, and a lazy refresh fails in async.
+        users = (await session.exec(select(User.id, User.username))).all()
         await logger.adebug(f"Found {len(users)} users for agentic variables initialization")
 
         if not users:
@@ -126,6 +122,8 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
                         )
                         continue
 
+                # One transaction per user, so the row lock is released before the next user.
+                await session.commit()
             except (
                 HTTPException,
                 sqlalchemy_exc.SQLAlchemyError,
@@ -136,6 +134,7 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
                 ValueError,
                 AttributeError,
             ) as e:
+                await session.rollback()
                 await logger.aexception(f"Failed to initialize agentic variables for user {user.username}: {e}")
                 continue
 

@@ -6,7 +6,6 @@ and ``variable`` grows without bound on a serving plane that never cleans it up.
 """
 
 import asyncio
-import contextlib
 import os
 from collections import Counter
 from uuid import UUID, uuid4
@@ -251,18 +250,21 @@ async def test_should_create_one_row_per_name_when_two_workers_initialize_at_onc
     user_ids = await _seed_users(agentic_engine, 3)
     variable_service = get_variable_service()
     list_variables = variable_service.list_variables
-    both_checking = asyncio.Event()
-    arrivals = 0
+    first_reads: dict[UUID, int] = {}
+    both_read: dict[UUID, asyncio.Event] = {}
 
     async def list_variables_after_rendezvous(user_id, session):
-        nonlocal arrivals
-        arrivals += 1
-        if arrivals >= 2:
-            both_checking.set()
-        # A worker serialized behind the other never arrives; the timeout lets the first one proceed.
-        with contextlib.suppress(TimeoutError):
-            await asyncio.wait_for(both_checking.wait(), timeout=1)
-        return await list_variables(user_id, session)
+        key = UUID(str(user_id))
+        arrival = first_reads[key] = first_reads.get(key, 0) + 1
+        result = await list_variables(user_id, session)
+        # Only each worker's first, unlocked read joins the rendezvous; locked rechecks pass straight through.
+        if arrival <= 2:
+            both_read.setdefault(key, asyncio.Event())
+            if arrival == 2:
+                both_read[key].set()
+            # Never proceeds alone: a missed rendezvous surfaces as a swallowed error and fails the test.
+            await asyncio.wait_for(both_read[key].wait(), timeout=30)
+        return result
 
     monkeypatch.setattr(variable_service, "list_variables", list_variables_after_rendezvous)
     # The initializer logs and swallows per-user errors, so a worker that failed would otherwise look fine.
@@ -283,18 +285,33 @@ async def test_should_create_one_row_per_name_when_two_workers_initialize_at_onc
 
 
 @pytest.mark.asyncio
-async def test_should_leave_no_rows_when_initialization_rolls_back(agentic_engine):
-    (user_id,) = await _seed_users(agentic_engine, 1)
+async def test_should_roll_back_only_the_failing_user_and_seed_the_rest(agentic_engine, monkeypatch):
+    """Each user is seeded in its own transaction, so one user's database error cannot undo or block another."""
+    failing, healthy = await _seed_users(agentic_engine, 2)
+    variable_service = get_variable_service()
+    create_variable = variable_service.create_variable
 
-    async with AsyncSession(agentic_engine, expire_on_commit=False) as session:
-        await initialize_agentic_global_variables(session)
-        await session.rollback()
-    assert await _rows(agentic_engine) == []
+    async def create_variable_then_fail_flush(user_id, name, value, **kwargs):
+        variable = await create_variable(user_id, name, value, **kwargs)
+        if user_id == failing and name == "FLOW_ID":
+            session = kwargs["session"]
+            session.expunge(variable)
+            session.add(Variable(id=variable.id, user_id=failing, name="DUPLICATE_KEY", value="", type=GENERIC_TYPE))
+            await session.flush()
+        return variable
 
+    monkeypatch.setattr(variable_service, "create_variable", create_variable_then_fail_flush)
     await _boot(agentic_engine)
+
+    counts = _counts(await _rows(agentic_engine))
+    assert counts == Counter({(healthy, "FLOW_ID"): 1, (healthy, "COMPONENT_ID"): 1, (healthy, "FIELD_NAME"): 1})
+
+    monkeypatch.setattr(variable_service, "create_variable", create_variable)
     await _boot(agentic_engine)
     counts = _counts(await _rows(agentic_engine))
-    assert counts == Counter({(user_id, "FLOW_ID"): 1, (user_id, "COMPONENT_ID"): 1, (user_id, "FIELD_NAME"): 1})
+    assert set(counts.values()) == {1}
+    assert {user_id for user_id, _ in counts} == {failing, healthy}
+    assert len(counts) == 6
 
 
 @pytest.mark.asyncio
