@@ -4131,7 +4131,7 @@
   "settings.upgrade.check.error.check_running": "此服务器上已有检查在运行。请等它结束后再试。",
   "settings.upgrade.check.error.uvx_unavailable": "未安装 uvx，此服务器无法下载其他版本。请安装 uv，或手动运行 langflow upgrade-check 并导入报告。",
   "settings.upgrade.check.error.check_failed": "检查未能完成。请先解决下面的问题，然后重新运行。",
-  "settings.upgrade.check.error.install_failed": "无法安装或启动目标版本。请确认服务器能访问 PyPI，然后重试。",
+  "settings.upgrade.check.error.install_failed": "无法安装或启动目标版本。",
   "settings.upgrade.check.error.timeout": "检查运行了 60 分钟后已停止。请重试，或手动运行 langflow upgrade-check。",
   "settings.upgrade.check.error.import_refused": "检查已完成，但导入已暂停。请在暂停结束后重试。",
   "settings.upgrade.check.error.invalid_upgrade_report": "检查已完成，但报告被拒绝。请重新运行。",
