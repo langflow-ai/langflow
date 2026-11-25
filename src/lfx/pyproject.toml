@@ -96,7 +96,7 @@ sandbox = [
 # install degrades to a clear "pip install ..." error, not an import-time crash).
 # Relocated out of langflow-base[complete], where they were the de-facto provider
 # for these components after the bundle split.
-cassandra = ["lfx-datastax>=0.1.3,<1.0.0"]  # Compatibility alias for the Cassandra extension
+cassandra = ["lfx-datastax>=0.2.3,<1.0.0"]  # First 1.13-compatible bundle with Dotenv retired
 toolguard = ["lfx-toolguard>=0.2.2,<1.0.0"]  # Compatibility alias for the Policies extension
 # Application observability: OTLP export of traces, metrics and logs for ``lfx serve`` / ``lfx
 # run``. lfx.observability guards every import, so a bare ``pip install lfx`` skips these and
