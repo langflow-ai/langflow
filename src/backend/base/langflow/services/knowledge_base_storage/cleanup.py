@@ -9,6 +9,12 @@ from sqlmodel import col, select
 from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
 from langflow.services.database.models.knowledge_base_storage_migration import KnowledgeBaseStorageMigration
 from langflow.services.database.models.memory_base.model import MemoryBase
+from langflow.services.deletion_hooks import (
+    RESOURCE_KNOWLEDGE_BASE,
+    VIA_CASCADE,
+    DeletionContext,
+    run_post_deletion_hooks,
+)
 from langflow.services.deps import session_scope
 from langflow.services.knowledge_base_storage.runtime import (
     StorageUnavailableError,
@@ -105,6 +111,16 @@ async def retry_pending_cleanup(kb_id: UUID, *, expected_generation: int) -> boo
                     msg = "Storage identity or Memory linkage changed during cleanup. Refresh pending cleanup."
                     raise StorageUnavailableError(msg)
                 await session.commit()
+            # The row is gone: this is the other place a KB's deletion ends (a pending deletion finished by retry).
+            await run_post_deletion_hooks(
+                DeletionContext(
+                    resource=RESOURCE_KNOWLEDGE_BASE,
+                    resource_id=current.id,
+                    owner_id=current.user_id,
+                    name=current.name,
+                    via=VIA_CASCADE,
+                )
+            )
             return True
     except StorageUnavailableError:
         # A concurrent successful retry can remove the row while this request

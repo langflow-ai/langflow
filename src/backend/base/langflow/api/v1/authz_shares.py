@@ -703,6 +703,19 @@ async def delete_share(
         backing_resource_type=row.resource_type,
         backing_resource_id=row.resource_id,
     )
+    try:
+        await _validate_share_write(
+            actor=current_user,
+            owner_id=owner_id,
+            resource_type=row.resource_type,
+            resource_id=row.resource_id,
+            scope=row.scope,
+            target_id=row.target_id,
+            permission_level=row.permission_level,
+            operation="delete",
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Share not found") from exc
 
     snapshot = ShareRuleSnapshot(
         share_id=row.id,

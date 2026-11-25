@@ -35,10 +35,11 @@ def memory_base_items(handles: list[FlowMemoryBaseCleanup]) -> list[dict[str, An
 async def _drop_remote_collection(item: dict[str, Any]) -> None:
     # The KB service drains writers and raises when the store is unreachable, so the item is retried.
     from langflow.api.utils import knowledge_base_service
+    from langflow.services.deletion_hooks import VIA_ERASE
 
     record = await knowledge_base_service.get_by_user_and_name(UUID(str(item["user_id"])), str(item["value"]))
     if record is not None:
-        await knowledge_base_service.delete_record(record.id)
+        await knowledge_base_service.delete_record(record.id, via=VIA_ERASE)
 
 
 class MemoryBaseDirectoryNotDeletedError(RuntimeError):

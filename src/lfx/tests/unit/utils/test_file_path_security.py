@@ -293,6 +293,33 @@ def test_stamped_extra_scope_admits_the_deployers_local_folder(tmp_path):
             enforce_local_file_access(str(other), scope_ids=scopes)
 
 
+@pytest.mark.parametrize("restricted", [True, False])
+def test_stamped_extra_scope_denies_mcp_credential_files(tmp_path, restricted):
+    credential_file = tmp_path / "owner-id" / "_mcp_servers.json"
+    credential_file.parent.mkdir()
+    credential_file.write_text("{}")
+    component = _component(user_id="runner-id", authorized_extra_file_scopes={"user-owner-id"})
+    scopes = component_file_access_scopes(component)
+    with (
+        mock_settings(restricted=restricted, config_dir=str(tmp_path)),
+        pytest.raises(LocalFileAccessError, match="MCP credential files"),
+    ):
+        enforce_local_file_access(credential_file, scope_ids=scopes)
+
+
+def test_scope_denies_symlink_to_mcp_credential_file(tmp_path):
+    credential_file = tmp_path / "owner-id" / "_mcp_servers_owner-id.json"
+    credential_file.parent.mkdir()
+    credential_file.write_text("{}")
+    alias = credential_file.with_name("ordinary.json")
+    alias.symlink_to(credential_file)
+    with (
+        mock_settings(restricted=True, config_dir=str(tmp_path)),
+        pytest.raises(LocalFileAccessError, match="MCP credential files"),
+    ):
+        enforce_local_file_access(alias, scope_ids=["user-owner-id"])
+
+
 def _component(
     user_id=None, flow_id=None, source_flow_id=None, authorized_legacy_flow_ids=(), authorized_extra_file_scopes=()
 ):
@@ -341,6 +368,12 @@ class TestValidateStorageKey:
         component = _component(user_id="runner-id", authorized_extra_file_scopes={"user-owner-id"})
         assert validate_storage_key(component, "owner-id/report.csv") == ("owner-id", "report.csv")
         assert validate_storage_key(component, "user-owner-id/report.csv") == ("user-owner-id", "report.csv")
+
+    @pytest.mark.parametrize("namespace", ["owner-id", "user-owner-id"])
+    def test_server_stamped_extra_scope_denies_mcp_credential_keys(self, namespace):
+        component = _component(user_id="runner-id", authorized_extra_file_scopes={"user-owner-id"})
+        with pytest.raises(StorageNamespaceError, match="MCP credential files"):
+            validate_storage_key(component, f"{namespace}/_MCP_SERVERS_owner-id.json")
 
     def test_unstamped_run_cannot_address_another_users_namespace(self):
         component = _component(user_id="runner-id")

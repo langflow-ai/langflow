@@ -15,9 +15,8 @@ dependencies = [
     # Previously satisfied only transitively via docling-slim; declared here so the
     # xlsx path survives torch/docling becoming opt-in.
     "openpyxl>=3.1.5,<4.0.0",
-    # pydantic-core ships cp315 wheels from 2.48 on, which only pydantic 2.14 pins.
-    "pydantic>=2.0.0,<2.14; python_version < '3.15'",
-    "pydantic>=2.14.1,<2.15; python_version >= '3.15'",
+    # CVE-2026-133276 family is fixed from pydantic 2.14.2 onward.
+    "pydantic>=2.14.2,<2.15",
     # Pillow 13 dropped Python 3.10 support.
     "pillow>=12.3.0,<13.0.0; python_version < '3.11'",
     "pillow>=13.0.0,<14.0.0; python_version >= '3.11'",
@@ -63,7 +62,7 @@ dependencies = [
     "validators>=0.34.0,<1.0.0",
     "filelock>=4.1.0,<4.2.0; python_version < '3.11'",
     "filelock>=4.2.1,<5.0.0; python_version >= '3.11'",
-    "pypdf>=6.21.2,<7.0.0",
+    "pypdf>=7.0.0,<8.0.0",
     "cryptography>=50.0.0",
     "pyjwt>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "ag-ui-protocol>=0.1.10",
@@ -128,7 +127,7 @@ otel = [
 #
 # Documented as a headless/serverless deployment footnote, not a
 # getting-started headline.  There is intentionally NO ``lfx[all]``.
-bundles = ["lfx-bundles[all]>=1.1.41,<2.0"]
+bundles = ["lfx-bundles[all]>=1.3.10,<2.0"]
 
 [project.scripts]
 lfx = "lfx.__main__:main"

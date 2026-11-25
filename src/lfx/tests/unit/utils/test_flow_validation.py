@@ -396,7 +396,10 @@ async def test_prepare_flow_build_for_user_keeps_code_interpreter_policy_cumulat
         await fv.prepare_flow_build_for_user(_code_interpreter_raw_graph(), is_superuser=False)
 
 
-@pytest.mark.parametrize("component_type", ["PythonREPLComponent", "PythonFunction", "PythonREPLTool"])
+@pytest.mark.parametrize(
+    "component_type",
+    ["PythonREPLComponent", "PythonFunction", "PythonREPLTool", "ext:toolguard:PoliciesComponent@official"],
+)
 @pytest.mark.parametrize("shape", ["direct", "grouped", "relabelled"])
 @pytest.mark.parametrize("from_cache", [False, True])
 async def test_admin_only_blocks_trusted_code_execution_components(monkeypatch, component_type, shape, from_cache):
