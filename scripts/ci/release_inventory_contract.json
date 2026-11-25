@@ -90,6 +90,7 @@
         "lfx-whatsapp"
       ],
       "forbidden_distributions_add": [
+        "lfx-acedatacloud",
         "lfx-arxiv",
         "lfx-confluent",
         "lfx-duckduckgo",
@@ -239,6 +240,7 @@
     "python-full": {
       "extends": "python-default",
       "required_distributions_add": [
+        "lfx-acedatacloud",
         "lfx-arxiv",
         "lfx-bundles",
         "lfx-confluent",
@@ -253,6 +255,7 @@
         "lfx-valkey"
       ],
       "forbidden_distributions_remove": [
+        "lfx-acedatacloud",
         "lfx-arxiv",
         "lfx-bundles",
         "lfx-confluent",
@@ -268,6 +271,7 @@
       ],
       "entry_points": {
         "langflow.extensions": [
+          "lfx-acedatacloud",
           "lfx-amazon",
           "lfx-anthropic",
           "lfx-arxiv",
