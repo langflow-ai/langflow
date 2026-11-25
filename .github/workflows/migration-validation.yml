@@ -23,6 +23,7 @@ on:
       - 'src/backend/base/langflow/services/utils.py'
       - 'src/backend/base/langflow/services/telemetry_writer/service.py'
       - 'src/backend/tests/unit/services/database/test_startup_retention.py'
+      - 'src/backend/tests/unit/services/telemetry_writer/test_service.py'
 
 permissions:
   contents: read

@@ -604,7 +604,8 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         beyond = _beyond_newest_per_partition(
             TransactionTable.id, max_entries, partition_by=(TransactionTable.flow_id,), newest_first=newest_first
         )
-        await session.exec(delete(TransactionTable).where(col(TransactionTable.id).in_(beyond)))
+        stmt = delete(TransactionTable).where(col(TransactionTable.id).in_(beyond))
+        await session.exec(stmt.execution_options(synchronize_session=False))
         logger.debug("Successfully cleaned up old transactions")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up transactions: {exc!s}")
@@ -677,12 +678,14 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
                 partition_by=(VertexBuildTable.flow_id, VertexBuildTable.id),
                 newest_first=newest_first,
             )
-            await session.exec(delete(VertexBuildTable).where(col(VertexBuildTable.build_id).in_(beyond_vertex)))
+            stmt = delete(VertexBuildTable).where(col(VertexBuildTable.build_id).in_(beyond_vertex))
+            await session.exec(stmt.execution_options(synchronize_session=False))
         if settings.max_vertex_builds_to_keep >= 0:
             beyond_global = (
                 select(VertexBuildTable.build_id).order_by(*newest_first).offset(settings.max_vertex_builds_to_keep)
             )
-            await session.exec(delete(VertexBuildTable).where(col(VertexBuildTable.build_id).in_(beyond_global)))
+            stmt = delete(VertexBuildTable).where(col(VertexBuildTable.build_id).in_(beyond_global))
+            await session.exec(stmt.execution_options(synchronize_session=False))
         logger.debug("Successfully cleaned up old vertex builds")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up vertex builds: {exc!s}")
