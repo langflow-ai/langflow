@@ -16,6 +16,8 @@ jobs:
     continue-on-error: true
     strategy:
       fail-fast: false
+      # Cap each PR at two ARM runners so concurrent PRs share the pool.
+      max-parallel: 2
       matrix:
         image: [full, backend, base, frontend]
     # Each leg sets only its own key, so all four values survive the matrix.
@@ -52,6 +54,7 @@ jobs:
     runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
     strategy:
       fail-fast: false
+      max-parallel: 2
       matrix:
         image: [full, backend, base, frontend]
         # Skip the images that passed on the first attempt.
