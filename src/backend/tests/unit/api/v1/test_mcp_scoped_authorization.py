@@ -16,6 +16,7 @@ from langflow.services.auth.context import (
 from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.api_key.model import ApiKey
 from langflow.services.database.models.file.model import File
+from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_settings_service, session_scope
 from lfx.utils.file_path_security import flow_storage_scope
 
@@ -196,6 +197,7 @@ async def test_mcp_metadata_releases_single_connection_before_authorization(
     async with engine.begin() as connection:
         await connection.run_sync(SQLModel.metadata.create_all)
     async with AsyncSession(engine, expire_on_commit=False) as session:
+        session.add(User(id=active_user.id, username=active_user.username, password="", is_active=True))
         project = Folder(name="Pool project", user_id=active_user.id)
         session.add(project)
         await session.flush()

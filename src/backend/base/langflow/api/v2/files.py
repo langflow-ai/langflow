@@ -38,6 +38,7 @@ from langflow.services.creation_hooks import (
     run_post_creation_hooks,
 )
 from langflow.services.database.models.file.model import File as UserFile
+from langflow.services.deletion_hooks import DeletionContext, run_post_deletion_after_commit, run_pre_deletion_hooks
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.settings.service import SettingsService
 from langflow.services.storage.s3 import S3StorageService
@@ -667,6 +668,29 @@ async def list_files(
         raise HTTPException(status_code=500, detail=f"Error listing files: {e}") from e
 
 
+def _file_deletion_context(file: UserFile, session: DbSession) -> DeletionContext:
+    return DeletionContext(
+        resource=RESOURCE_FILE,
+        resource_id=file.id,
+        owner_id=file.user_id,
+        name=file.name,
+        session=session,
+        extra={"path": file.path},
+    )
+
+
+async def _guard_file_deletion(file: UserFile, session: DbSession) -> None:
+    """Pre-deletion hooks: they run before anything of the file is touched, so a refusal leaves it whole."""
+    await run_pre_deletion_hooks(_file_deletion_context(file, session))
+
+
+async def _delete_file_row(file: UserFile, session: DbSession) -> None:
+    """The one place a tracked file's row is deleted; post-deletion hooks run once the session commits."""
+    context = _file_deletion_context(file, session)
+    await session.delete(file)
+    run_post_deletion_after_commit(session, context)
+
+
 @router.delete("/batch/", status_code=HTTPStatus.OK)
 async def delete_files_batch(
     file_ids: list[uuid.UUID],
@@ -708,6 +732,7 @@ async def delete_files_batch(
                 file_id=file.id,
                 file_user_id=file.user_id,
             )
+            await _guard_file_deletion(file, session)
 
         # Track storage deletion failures
         storage_failures = []
@@ -748,7 +773,7 @@ async def delete_files_batch(
             # Only delete from database if storage deletion succeeded OR it was a permanent failure
             if storage_deleted:
                 try:
-                    await session.delete(file)
+                    await _delete_file_row(file, session)
                 except OSError as db_error:
                     # Log database deletion failure but continue processing remaining files
                     db_failures.append(f"{file_name}: {db_error}")
@@ -1056,6 +1081,7 @@ async def delete_file(
             )
         except HTTPException as exc:
             raise deny_to_404(exc, detail="File not found") from exc
+        await _guard_file_deletion(file_to_delete, session)
 
         # Extract the filename and resolve the owner's typed or legacy namespace
         # from the recorded path when a shared file is deleted by a non-owner.
@@ -1093,7 +1119,7 @@ async def delete_file(
         # Only delete from database if storage deletion succeeded OR it was a permanent failure
         if storage_deleted:
             try:
-                await session.delete(file_to_delete)
+                await _delete_file_row(file_to_delete, session)
             except Exception as db_error:
                 await logger.aerror(
                     "Failed to delete file %s from database: %s",
@@ -1139,6 +1165,8 @@ async def delete_all_files(
             names=(name for file in files for name in (file.name, file.path)),
             session=session,
         )
+        for file in files:
+            await _guard_file_deletion(file, session)
         storage_failures = []
         db_failures = []
 
@@ -1176,7 +1204,7 @@ async def delete_all_files(
             # Only delete from database if storage deletion succeeded OR it was a permanent failure
             if storage_deleted:
                 try:
-                    await session.delete(file)
+                    await _delete_file_row(file, session)
                 except OSError as db_error:
                     # Log database deletion failure but continue processing remaining files
                     db_failures.append(f"{file_name}: {db_error}")

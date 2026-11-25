@@ -8,14 +8,16 @@ authorized by the API and unreachable in the UI. The response now reports the
 same decision the authorization layer just made.
 """
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.authorization.public_access import PublicGrantSource, PublicResourceAction, _resolve_grant
 from langflow.services.database.models.auth import AuthzShare, SharePermissionLevel, ShareScope
 from langflow.services.database.models.flow.model import Flow
 from lfx.services.deps import session_scope
+from sqlmodel import select
 
 
 def _flow_payload(name: str) -> dict:
@@ -114,6 +116,77 @@ async def test_read_share_bounds_a_still_public_legacy_flag(client: AsyncClient,
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json()["public_access"] == {"can_read": True, "can_execute": False}
+
+
+@pytest.mark.parametrize("method", ["PATCH", "PUT"])
+async def test_unpublish_suppresses_public_access_without_editing_grants(
+    client: AsyncClient, logged_in_headers, method
+):
+    name = f"unpublish-{method.lower()}"
+    flow_id = await _create_flow(client, logged_in_headers, name)
+    url = f"api/v1/flows/{flow_id}"
+    response = await client.patch(url, json={"access_type": "PUBLIC"}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    await _add_public_share(flow_id, SharePermissionLevel.EXECUTE.value)
+    target_id = uuid4()
+    async with session_scope() as session:
+        session.add(
+            AuthzShare(
+                resource_type="flow",
+                resource_id=flow_id,
+                scope=ShareScope.USER.value,
+                target_id=target_id,
+                permission_level=SharePermissionLevel.READ.value,
+            )
+        )
+
+    payload = {"access_type": "PRIVATE"}
+    if method == "PUT":
+        payload["name"] = name
+    response = await client.request(method, url, json=payload, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["access_type"] == "PRIVATE"
+    statement = select(AuthzShare).where(AuthzShare.resource_type == "flow", AuthzShare.resource_id == flow_id)
+    async with session_scope() as session:
+        shares = (await session.exec(statement)).all()
+        assert {(share.scope, share.target_id) for share in shares} == {
+            (ShareScope.PUBLIC.value, None),
+            (ShareScope.USER.value, target_id),
+        }
+        public_share_id = next(share.id for share in shares if share.scope == ShareScope.PUBLIC.value)
+        flow = await session.get(Flow, flow_id)
+        assert flow is not None
+        assert flow.anonymous_access_revoked
+        assert flow.revoked_public_share_id == public_share_id
+
+    async def current_grant():
+        return await _resolve_grant(
+            flow=flow,
+            action=PublicResourceAction.READ,
+            session=None,
+            compatibility_grant=PublicGrantSource.A2A_AUTH_NONE,
+        )
+
+    assert await current_grant() is None
+    shares_url = "api/v1/authz/shares"
+    response = await client.delete(f"{shares_url}/{public_share_id}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    response = await client.post(
+        shares_url,
+        json={"resource_type": "flow", "resource_id": str(flow_id), "scope": "public", "permission_level": "execute"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    assert await current_grant() is PublicGrantSource.AUTHZ_SHARE
+
+    response = await client.delete(f"{shares_url}/{response.json()['id']}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    assert await current_grant() is None
+
+    response = await client.patch(url, json={"access_type": "PUBLIC"}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert await current_grant() is PublicGrantSource.LEGACY_ACCESS_TYPE
 
 
 async def test_unshared_private_flow_is_still_not_found(client: AsyncClient, logged_in_headers):

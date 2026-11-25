@@ -32,6 +32,7 @@ from langflow.api.v1.flow_conflict import claim_version_token
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.operations import stage_flow_succeeded
 from langflow.services.authorization.fetch import authorized_or_owner_scoped
+from langflow.services.database.models.auth import AuthzShare, ShareScope
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
 from langflow.services.database.models.flow.guards import (
@@ -40,6 +41,7 @@ from langflow.services.database.models.flow.guards import (
     lock_flow_for_update,
 )
 from langflow.services.database.models.flow.model import (
+    AccessTypeEnum,
     Flow,
     FlowCreate,
     FlowRead,
@@ -160,6 +162,28 @@ def _apply_update_data(target: Flow, update_data: dict[str, Any]) -> None:
     for key, value in update_data.items():
         if key in _UPDATABLE_FLOW_FIELDS:
             setattr(target, key, value)
+
+
+async def _update_anonymous_access(session: AsyncSession, flow: Flow, update_data: Mapping[str, Any]) -> None:
+    """Apply a publication decision in the same transaction as the flow update."""
+    access_type = update_data.get("access_type")
+    if access_type == AccessTypeEnum.PUBLIC and flow.access_type != AccessTypeEnum.PUBLIC:
+        flow.anonymous_access_revoked = False
+        flow.revoked_public_share_id = None
+    if access_type != AccessTypeEnum.PRIVATE or flow.access_type != AccessTypeEnum.PUBLIC:
+        return
+    # Suppress the existing share without changing a grant managed separately
+    # by authorization. An independently issued new share has a different ID.
+    flow.anonymous_access_revoked = True
+    flow.revoked_public_share_id = (
+        await session.exec(
+            select(AuthzShare.id).where(
+                AuthzShare.resource_type == "flow",
+                AuthzShare.resource_id == flow.id,
+                AuthzShare.scope == ShareScope.PUBLIC.value,
+            )
+        )
+    ).first()
 
 
 def _endpoint_name_was_explicitly_cleared(flow: FlowCreate | FlowUpdate) -> bool:
@@ -801,6 +825,7 @@ async def _update_existing_flow(
 
     graph_changed = "data" in update_data and update_data["data"] != existing_flow.data
 
+    await _update_anonymous_access(session, existing_flow, update_data)
     _apply_update_data(existing_flow, update_data)
 
     if graph_changed:
@@ -939,6 +964,7 @@ async def _patch_flow(
     # the token alone on purpose — see the scope note in ``flow_conflict``.
     graph_changed = "data" in update_data and update_data["data"] != db_flow.data
 
+    await _update_anonymous_access(session, db_flow, update_data)
     _apply_update_data(db_flow, update_data)
 
     if graph_changed:

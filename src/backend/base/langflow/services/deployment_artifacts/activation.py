@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+from contextlib import AsyncExitStack, asynccontextmanager
 from contextvars import ContextVar
 from importlib.metadata import entry_points
 from typing import TYPE_CHECKING, Any
@@ -10,11 +10,13 @@ from typing import TYPE_CHECKING, Any
 from fastapi import HTTPException
 
 if TYPE_CHECKING:
-    from collections.abc import Awaitable, Callable
+    from collections.abc import AsyncIterator, Awaitable, Callable
+    from contextlib import AbstractAsyncContextManager
 
 _activation_guard: Callable[..., Awaitable[None]] | None = None
 _prepares_memory_bases = False
 _extensions_loaded = False
+_worker_lifespans: list[Callable[[], AbstractAsyncContextManager[None]]] = []
 _rollback_cleanups: ContextVar[list | None] = ContextVar("activation_rollback_cleanups", default=None)
 
 
@@ -75,6 +77,26 @@ def load_activation_extensions() -> None:
         extension.load()()
     # A broken extension remains retryable and never silently becomes OSS behavior.
     _extensions_loaded = True
+
+
+def register_worker_lifespan(lifespan: Callable[[], AbstractAsyncContextManager[None]]) -> None:
+    """Have a ``langflow worker`` run ``lifespan()`` for as long as it runs (idempotent).
+
+    A worker never builds the app, so what a plane starts in the app's lifespan (a policy snapshot, a refresh task)
+    does not exist there. An extension registers the part a run needs here instead.
+    """
+    if lifespan not in _worker_lifespans:
+        _worker_lifespans.append(lifespan)
+
+
+@asynccontextmanager
+async def worker_lifespan() -> AsyncIterator[None]:
+    """Load the extensions, then run what they registered for a worker. A failure stops the worker before it claims."""
+    load_activation_extensions()
+    async with AsyncExitStack() as stack:
+        for lifespan in _worker_lifespans:
+            await stack.enter_async_context(lifespan())
+        yield
 
 
 def register_activation_guard(

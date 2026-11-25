@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import delete
 from sqlmodel import col, select
 
-from langflow.api.utils.flow_utils import cascade_delete_flow
+from langflow.api.utils.flow_utils import cascade_delete_flow, prepare_flow_deletion
 from langflow.services.data_subjects.batching import (
     BATCH_SIZE,
     delete_batch,
@@ -21,6 +21,7 @@ from langflow.services.database.models.message.model import MessageTable
 from langflow.services.database.models.traces.model import TraceTable
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.deletion_hooks import VIA_ERASE
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -72,8 +73,11 @@ async def erase_owned_flows(session: AsyncSession, ctx: EraseContext) -> int:
     flow_id = await _next_owned_flow(session, ctx.subject_user_id)
     if flow_id is None:
         return 0
+    context = await prepare_flow_deletion(session, flow_id, via=VIA_ERASE)
     drained = await _drain_flow_history(session, flow_id)
     if drained:
         return drained
-    await cascade_delete_flow(session, flow_id, memory_base_cleanups=ctx.memory_base_cleanups)
+    await cascade_delete_flow(
+        session, flow_id, memory_base_cleanups=ctx.memory_base_cleanups, via=VIA_ERASE, prepared=context
+    )
     return 1

@@ -1,14 +1,14 @@
 from typing import Any
 
 from lfx.base.compressors.model import LCCompressorComponent
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed
 from lfx.field_typing import BaseDocumentCompressor
 from lfx.inputs.inputs import SecretStrInput
 from lfx.io import DropdownInput, StrInput
 from lfx.schema.dotdict import dotdict
 from lfx.template.field.base import Output
 
-DEFAULT_NVIDIA_BASE_URL = "https://integrate.api.nvidia.com/v1"
+from lfx_bundles.nvidia._client import DEFAULT_NVIDIA_BASE_URL, nvidia_client_policy
 
 
 class NvidiaRerankComponent(LCCompressorComponent):
@@ -58,12 +58,17 @@ class NvidiaRerankComponent(LCCompressorComponent):
         return build_config
 
     def build_compressor(self) -> BaseDocumentCompressor:
+        api_key = self.api_key or None
+        ensure_credential_endpoint_allowed(
+            api_key,
+            self.base_url,
+            default_url=DEFAULT_NVIDIA_BASE_URL,
+            sdk_env_fallback="NVIDIA_API_KEY",
+        )
         try:
             from langchain_nvidia_ai_endpoints import NVIDIARerank
         except ImportError as e:
             msg = "Please install langchain-nvidia-ai-endpoints to use the NVIDIA model."
             raise ImportError(msg) from e
-        # base_url is tenant-editable and the SDK sends the operator's API key to whatever
-        # host it names. Block internal/cloud-metadata destinations before connecting.
-        validate_provider_base_url(self.base_url, default_url=DEFAULT_NVIDIA_BASE_URL)
-        return NVIDIARerank(api_key=self.api_key, model=self.model, base_url=self.base_url, top_n=self.top_n)
+        with nvidia_client_policy(self.base_url):
+            return NVIDIARerank(api_key=api_key, model=self.model, base_url=self.base_url, top_n=self.top_n)

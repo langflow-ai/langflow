@@ -14,7 +14,7 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.services.deps import get_settings_service
 from lfx.template.field.base import Output
-from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
+from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access, is_mcp_credential_file
 
 
 class DirectoryComponent(Component):
@@ -152,6 +152,12 @@ class DirectoryComponent(Component):
         file_paths = retrieve_file_paths(
             resolved_path, load_hidden=load_hidden, recursive=recursive, depth=depth, types=valid_types
         )
+        if not bundled_sources:
+            file_paths = [
+                file_path
+                for file_path in file_paths
+                if not is_mcp_credential_file(file_path) and not is_mcp_credential_file(Path(file_path).resolve())
+            ]
 
         # The bundled sources are package files on the local disk, so read them directly whatever
         # the storage backend. Under S3 the storage-aware reader confines every local read to the

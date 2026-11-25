@@ -78,6 +78,7 @@ _SECRET_COMPOUND_NAMES = frozenset(
         "database_uri",
         "database_url",
         "dsn",
+        "ocp_apim_subscription_key",
         "private_key",
         "proxy_authorization",
         "set_cookie",
@@ -451,8 +452,10 @@ def _normalized_secret_name(value: object) -> str:
 
 
 def _is_secret_name(value: object) -> bool:
+    # HTTP header casing is arbitrary; do not split an acronym into camel-case parts.
+    header_style = str(value or "").strip().lower().replace("-", "_")
     normalized = _normalized_secret_name(value)
-    if normalized in _SECRET_COMPOUND_NAMES:
+    if header_style in _SECRET_COMPOUND_NAMES or normalized in _SECRET_COMPOUND_NAMES:
         return True
     parts = set(normalized.split("_"))
     is_token_value = normalized == "token" or normalized.endswith("_token")
