@@ -806,6 +806,21 @@ def get_lifespan(*, fix_migration=False, version=None):
 
             await stop_metrics_collector(_app)
 
+            # Stop the last producer of deletion events before draining them. The hooks
+            # can still use the extension's services and the database at this point.
+            try:
+                from langflow.services.data_subjects.worker import data_subject_erase_worker
+
+                await data_subject_erase_worker.stop()
+            except Exception as exc:  # noqa: BLE001
+                await logger.aerror(f"Failed to stop the data subject erase worker: {exc}")
+            try:
+                from langflow.services.deletion_hooks import wait_for_post_deletion_runs
+
+                await asyncio.wait_for(wait_for_post_deletion_runs(), timeout=5.0)
+            except asyncio.TimeoutError:
+                await logger.awarning("Post-deletion hook drain timed out after 5 seconds.")
+
             # Enterprise shutdown hooks run before service teardown so they can
             # still flush through live services. Also reached when startup
             # failed before the hooks ran — enterprise stop() paths must (and
@@ -889,12 +904,6 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await audit_event_cleanup_worker.stop()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop audit event cleanup worker: {e}")
-                    try:
-                        from langflow.services.data_subjects.worker import data_subject_erase_worker
-
-                        await data_subject_erase_worker.stop()
-                    except Exception as e:  # noqa: BLE001
-                        await logger.aerror(f"Failed to stop the data subject erase worker: {e}")
                     try:
                         from langflow.services.task.model_provider_policy_refresh import (
                             model_provider_policy_refresh_worker,

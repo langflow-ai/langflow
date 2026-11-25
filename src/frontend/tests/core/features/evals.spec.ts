@@ -5,8 +5,8 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.skip(
-  process.env.LANGFLOW_FEATURE_EVALS !== "true",
-  "Requires LANGFLOW_FEATURE_EVALS=true",
+  process.env.LANGFLOW_FEATURE_EVALS === "false",
+  "Evals is disabled by LANGFLOW_FEATURE_EVALS=false",
 );
 
 // A no-LLM echo flow: each row's answer is its own input, so the run is free and deterministic.

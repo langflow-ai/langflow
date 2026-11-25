@@ -115,3 +115,39 @@ export type RepairOutcome = {
   target_sha256: string;
   result: RepairResult;
 };
+
+export type UpgradeReleases = {
+  current: string;
+  package: string;
+  releases: string[];
+};
+export type UpgradeCheckEvent =
+  | {
+      event: "started";
+      target_version: string;
+      download: boolean;
+      total?: number;
+    }
+  | { event: "flow"; status: "ok" | "warn" | "fail" }
+  | { event: "heartbeat" }
+  | {
+      event: "imported";
+      report_id: string;
+      incomplete?: boolean;
+      flows?: { ok: number; warn: number; fail: number };
+    }
+  | { event: "error"; code: string; message?: string };
+/** The events that tell how far a check has come. The hook turns the others into an outcome. */
+export type UpgradeCheckProgress = Extract<
+  UpgradeCheckEvent,
+  { event: "started" | "flow" }
+>;
+export type UpgradeCheckOutcome =
+  | {
+      kind: "imported";
+      reportId: string;
+      incomplete: boolean | null;
+      flows: { ok: number; warn: number; fail: number } | null;
+    }
+  | { kind: "failed"; code?: string; message: string }
+  | { kind: "cancelled" };
