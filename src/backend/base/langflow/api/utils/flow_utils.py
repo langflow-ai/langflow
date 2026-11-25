@@ -191,14 +191,12 @@ async def cascade_delete_flow(
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
         await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
-        # span.trace_id lacks ON DELETE CASCADE, so remove spans first.
+        # SQLite does not enforce cascades without PRAGMA foreign_keys, so remove spans first.
         trace_ids = select(TraceTable.id).where(TraceTable.flow_id == flow_id)
         await session.exec(
             delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)).execution_options(synchronize_session=False)
         )
-        await session.exec(
-            delete(TraceTable).where(col(TraceTable.id).in_(trace_ids)).execution_options(synchronize_session=False)
-        )
+        await session.exec(delete(TraceTable).where(TraceTable.flow_id == flow_id))
         # authz_share is polymorphic over resource_type/resource_id with no
         # FK, so DB cascades cannot remove stale share rows when the flow is
         # deleted. Clean them up here so a deleted flow's grants do not

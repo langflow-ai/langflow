@@ -80,6 +80,12 @@ jobs:
         run: |
           uv run pytest -c pyproject.toml src/backend/tests/unit/services/database/models/flow_version/test_delete_attachment_concurrency.py -x -v
 
+      - name: Check flow trace deletion on PostgreSQL
+        env:
+          LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+        run: |
+          uv run pytest -m real_services src/backend/tests/unit/services/database/models/flow_version/test_delete_trace_history.py -x -v
+
       - name: Check idempotent job creation concurrency
         env:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
