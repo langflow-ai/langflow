@@ -4131,7 +4131,7 @@
   "settings.upgrade.check.error.check_running": "이 서버에서 이미 확인이 실행 중입니다. 끝날 때까지 기다린 뒤 다시 시도하세요.",
   "settings.upgrade.check.error.uvx_unavailable": "uvx가 설치되어 있지 않아 이 서버는 다른 릴리스를 다운로드할 수 없습니다. uv를 설치하거나 langflow upgrade-check를 직접 실행한 뒤 보고서를 가져오세요.",
   "settings.upgrade.check.error.check_failed": "확인을 완료하지 못했습니다. 아래 문제를 해결한 뒤 다시 실행하세요.",
-  "settings.upgrade.check.error.install_failed": "대상 릴리스를 설치하거나 시작하지 못했습니다. 서버가 PyPI에 접근할 수 있는지 확인한 뒤 다시 시도하세요.",
+  "settings.upgrade.check.error.install_failed": "대상 릴리스를 설치하거나 시작하지 못했습니다.",
   "settings.upgrade.check.error.timeout": "확인이 60분 동안 실행되어 중지되었습니다. 다시 시도하거나 langflow upgrade-check를 직접 실행하세요.",
   "settings.upgrade.check.error.import_refused": "확인은 끝났지만 가져오기가 일시 중지되어 있습니다. 일시 중지가 끝난 뒤 다시 시도하세요.",
   "settings.upgrade.check.error.invalid_upgrade_report": "확인은 끝났지만 보고서가 거부되었습니다. 다시 실행하세요.",

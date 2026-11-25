@@ -4131,7 +4131,7 @@
   "settings.upgrade.check.error.check_running": "A check is already running on this server. Wait for it to finish, then try again.",
   "settings.upgrade.check.error.uvx_unavailable": "This server cannot download another release because uvx is not installed. Install uv, or run langflow upgrade-check by hand and import the report.",
   "settings.upgrade.check.error.check_failed": "The check could not finish. Fix the problem below, then run it again.",
-  "settings.upgrade.check.error.install_failed": "The target release could not be installed or started. Check that the server can reach PyPI, then try again.",
+  "settings.upgrade.check.error.install_failed": "The target release could not be installed or started.",
   "settings.upgrade.check.error.timeout": "The check ran for 60 minutes and was stopped. Try again, or run langflow upgrade-check by hand.",
   "settings.upgrade.check.error.import_refused": "The check finished, but imports are paused. Try again when the pause ends.",
   "settings.upgrade.check.error.invalid_upgrade_report": "The check finished, but its report was rejected. Run it again.",
