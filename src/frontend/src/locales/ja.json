@@ -4127,7 +4127,7 @@
   "settings.upgrade.check.error.check_running": "このサーバーでは既に確認が実行中です。終了を待ってからもう一度お試しください。",
   "settings.upgrade.check.error.uvx_unavailable": "uvxがインストールされていないため、このサーバーは別のリリースをダウンロードできません。uvをインストールするか、langflow upgrade-checkを手動で実行してレポートをインポートしてください。",
   "settings.upgrade.check.error.check_failed": "確認を完了できませんでした。下の問題を解決してから、もう一度実行してください。",
-  "settings.upgrade.check.error.install_failed": "対象リリースをインストールまたは起動できませんでした。サーバーがPyPIに接続できることを確認して、もう一度お試しください。",
+  "settings.upgrade.check.error.install_failed": "対象リリースをインストールまたは起動できませんでした。",
   "settings.upgrade.check.error.timeout": "確認が60分続いたため停止しました。もう一度お試しいただくか、langflow upgrade-checkを手動で実行してください。",
   "settings.upgrade.check.error.import_refused": "確認は完了しましたが、インポートが一時停止されています。一時停止が終わってからもう一度お試しください。",
   "settings.upgrade.check.error.invalid_upgrade_report": "確認は完了しましたが、レポートが拒否されました。もう一度実行してください。",

@@ -4127,7 +4127,7 @@
   "settings.upgrade.check.error.check_running": "Ya hay una comprobación en curso en este servidor. Espera a que termine e inténtalo de nuevo.",
   "settings.upgrade.check.error.uvx_unavailable": "Este servidor no puede descargar otra versión porque uvx no está instalado. Instala uv, o ejecuta langflow upgrade-check a mano e importa el informe.",
   "settings.upgrade.check.error.check_failed": "La comprobación no pudo terminar. Corrige el problema de abajo y ejecútala de nuevo.",
-  "settings.upgrade.check.error.install_failed": "No se pudo instalar o iniciar la versión de destino. Comprueba que el servidor llegue a PyPI e inténtalo de nuevo.",
+  "settings.upgrade.check.error.install_failed": "No se pudo instalar o iniciar la versión de destino.",
   "settings.upgrade.check.error.timeout": "La comprobación tardó 60 minutos y se detuvo. Inténtalo de nuevo o ejecuta langflow upgrade-check a mano.",
   "settings.upgrade.check.error.import_refused": "La comprobación terminó, pero las importaciones están en pausa. Inténtalo de nuevo cuando termine la pausa.",
   "settings.upgrade.check.error.invalid_upgrade_report": "La comprobación terminó, pero se rechazó su informe. Ejecútala de nuevo.",
