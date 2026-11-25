@@ -615,14 +615,18 @@ _EXPECTED_CODE_FIELDS_BY_TYPE: dict[str, set[str]] = {
     "PythonCodeStructuredTool": {"tool_code"},
 }
 
-# Code-execution components with no tweakable code/sandbox field. They are still
-# blocked on unauthenticated public builds by CODE_EXECUTION_COMPONENT_TYPES.
+# Code-execution components with no extra field names to register. ToolGuard
+# generates CodeInput fields, which apply_tweaks() already blocks by type.
 _CODE_EXECUTION_TYPES_WITHOUT_TWEAK_CODE_FIELDS = {
     "CodeAct Agent (Smolagents)",
     "CodeActAgentSmolagents",
     "Cuga",
     "OpenDsStar Agent",
     "OpenDsStarAgent",
+    "Policies",
+    "PoliciesComponent",
+    "ext:toolguard:PoliciesComponent@official",
+    "policies",
 }
 
 # Field name globally blocked by apply_tweaks() regardless of component type.

@@ -7,15 +7,19 @@ This test suite validates the caching behavior of the MCP component:
 - Edge cases: empty cache, invalid servers, error handling
 """
 
+import asyncio
+from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
 from lfx.base.agents.utils import safe_cache_get, safe_cache_set
+from lfx.base.mcp.util import MCPStreamableHttpClient
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from lfx.schema.dataframe import DataFrame
 from lfx.services.shared_component_cache.service import SharedComponentCacheService
+from mcp.types import CallToolResult, TextContent, Tool
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -89,6 +93,7 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
     async def component_setup(self, component_class: type[Any], default_kwargs: dict[str, Any]) -> MCPToolsComponent:
         component_instance = await super().component_setup(component_class, default_kwargs)
         component_instance._user_id = str(uuid4())  # Required for server fetching
+        component_instance._vertex = SimpleNamespace(graph=SimpleNamespace(session_id="test-session"))
         return component_instance
 
     # ========================================
@@ -540,6 +545,129 @@ class TestMCPComponentCache(ComponentTestBaseWithoutClient):
     # ========================================
     # Integration Tests
     # ========================================
+
+    @pytest.mark.parametrize(
+        ("session_ids", "callers"),
+        [
+            (("chat-a", "chat-b"), ("caller-a", "caller-a")),
+            (("flow-id", "flow-id"), ("caller-a", "caller-b")),
+            (("", ""), ("caller-a", "caller-a")),
+        ],
+        ids=["different-sessions", "different-callers-with-default-session", "no-session"],
+    )
+    async def test_shared_cache_scopes_discovery_and_tool_calls(self, monkeypatch, session_ids, callers):
+        server_config = {
+            "url": "https://mcp.example.invalid/mcp",
+            "headers": {"Authorization": "Bearer {{TOKEN}}"},
+        }
+        bindings = {}
+
+        async def connect(client, _url, headers, **_kwargs):
+            caller = headers["authorization"].removeprefix("Bearer ")
+            tool_name = f"echo_{len(bindings)}"
+            bindings[client] = caller
+            client._connected = True
+            return [Tool(name=tool_name, inputSchema={"type": "object", "properties": {}})]
+
+        async def run_tool(client, _name, *, arguments):
+            assert arguments == {}
+            return CallToolResult(content=[TextContent(type="text", text=bindings[client])])
+
+        monkeypatch.setattr(MCPStreamableHttpClient, "connect_to_server", connect)
+        monkeypatch.setattr(MCPStreamableHttpClient, "run_tool", run_tool)
+        monkeypatch.setattr("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", MagicMock())
+        monkeypatch.setattr("langflow.api.v2.mcp.get_server", AsyncMock(return_value=server_config))
+        monkeypatch.setattr(
+            "langflow.services.database.models.user.crud.get_user_by_id",
+            AsyncMock(return_value=SimpleNamespace(id="owner")),
+        )
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.session_scope", MagicMock())
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.get_storage_service", MagicMock())
+        monkeypatch.setattr("lfx.services.deps.get_variable_service", lambda: None)
+
+        def component_for(session_id, caller):
+            graph = SimpleNamespace(
+                user_id="owner",
+                flow_id="flow-id",
+                session_id=session_id,
+                context={"request_variables": {"TOKEN": caller}},
+            )
+            component = MCPToolsComponent(mcp_server="srv", use_cache=True)
+            component.set_vertex(SimpleNamespace(graph=graph))
+            component.TOOL_TTL_SECS = 0  # Exercise the shared cache across fresh components.
+            return component
+
+        a, b = (component_for(session, caller) for session, caller in zip(session_ids, callers, strict=True))
+        tools_a, tools_b = await asyncio.gather(a._get_tools(), b._get_tools())
+        assert tools_a[0].name != tools_b[0].name
+        assert len(bindings) == 2
+
+        for session_id, caller, tools in zip(session_ids, callers, (tools_a, tools_b), strict=True):
+            # Fresh components model later requests in the same Langflow session.
+            repeat_tools = await component_for(session_id, caller)._get_tools()
+            assert (repeat_tools[0].name == tools[0].name) == bool(session_id)
+            assert (await repeat_tools[0].coroutine()).content[0].text == caller
+
+        assert len(bindings) == (2 if all(session_ids) else 4)
+
+        # Rediscovery on the same component must leave previously returned tools bound
+        # to the client that discovered them.
+        new_caller = "caller-c"
+        a.graph.context["request_variables"]["TOKEN"] = new_caller
+        new_tools = await a._get_tools()
+        assert (await new_tools[0].coroutine()).content[0].text == new_caller
+        assert (await tools_a[0].coroutine()).content[0].text == callers[0]
+
+    async def test_agents_sharing_a_server_keep_their_own_tool_selection(self, monkeypatch):
+        """Agents on one server share its discovery, and each keeps the tools it enabled."""
+        server_tools = ("search", "read", "create", "update")
+        discoveries = []
+
+        async def connect(client, _url, headers, **_kwargs):
+            discoveries.append(headers.get("x-agent"))
+            client._connected = True
+            return [Tool(name=name, inputSchema={"type": "object", "properties": {}}) for name in server_tools]
+
+        monkeypatch.setattr(MCPStreamableHttpClient, "connect_to_server", connect)
+        monkeypatch.setattr("lfx.base.mcp.util.validate_strict_url_for_ssrf_or_raise", MagicMock())
+        monkeypatch.setattr(
+            "langflow.api.v2.mcp.get_server",
+            AsyncMock(return_value={"url": "https://mcp.example.invalid/mcp"}),
+        )
+        monkeypatch.setattr(
+            "langflow.services.database.models.user.crud.get_user_by_id",
+            AsyncMock(return_value=SimpleNamespace(id="owner")),
+        )
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.session_scope", MagicMock())
+        monkeypatch.setattr("lfx.components.models_and_agents.mcp_component.get_storage_service", MagicMock())
+        monkeypatch.setattr(MCPToolsComponent, "require_integration_policy", MagicMock())
+        graph = SimpleNamespace(user_id="owner", flow_id="flow-id", session_id="chat", context={})
+
+        async def agent_tool_names(enabled, renamed=None, headers=None):
+            component = MCPToolsComponent(mcp_server="srv", use_cache=True, headers=headers or [])
+            component.set_vertex(SimpleNamespace(graph=graph))
+            component.tools_metadata = DataFrame(
+                [
+                    {
+                        "name": (renamed or {}).get(name, name),
+                        "description": "",
+                        "tags": [name],
+                        "status": name in enabled,
+                    }
+                    for name in server_tools
+                ]
+            )
+            return [tool.name for tool in await component.to_toolkit()]
+
+        assert await agent_tool_names({"search", "read"}, renamed={"search": "find"}) == ["find", "read"]
+        assert await agent_tool_names({"create", "update"}) == ["create", "update"]
+        assert await agent_tool_names({"search"}) == ["search"]
+        assert discoveries == [None]
+
+        # A header that identifies the agent to the server gets its own discovery.
+        agent_header = [{"key": "X-Agent", "value": "writer"}]
+        assert await agent_tool_names({"create"}, headers=agent_header) == ["create"]
+        assert discoveries == [None, "writer"]
 
     @pytest.mark.asyncio
     async def test_build_output_with_cached_tools(self, component_class, default_kwargs, mock_tools_list):

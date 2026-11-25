@@ -1,0 +1,105 @@
+"""A shareable-playground message can carry a file the visitor attached.
+
+The playground uploads through ``/api/v1/files/upload/{flow_id}``, which stores
+the file in the flow's typed namespace (``flow-<flow_id>/<name>``), and then
+sends that path to the public run. The path gate must accept it while still
+refusing anything outside the flow's own namespace.
+"""
+
+from __future__ import annotations
+
+from io import BytesIO
+from uuid import UUID
+
+import pytest
+from fastapi import HTTPException
+from httpx import AsyncClient, codes
+from langflow.api.utils.flow_utils import validate_public_files
+from langflow.services.database.models.message.model import MessageTable
+from lfx.services.deps import session_scope
+from lfx.utils.file_path_security import flow_storage_scope
+from PIL import Image as PILImage
+from sqlmodel import select
+
+
+def _pixel_png() -> bytes:
+    buffer = BytesIO()
+    PILImage.new("RGB", (1, 1)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+FLOW_ID = UUID("d3a93ec1-c6a7-4c68-84d5-52b3453c280e")
+FOREIGN_FLOW_ID = UUID("f23a147e-5f12-4a4e-a9db-cf9f6283718c")
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        f"flow-{FLOW_ID}/2026-11-10_11-18-51_meeting-notes-final-v2.txt",
+        f"{FLOW_ID}/2026-11-10_11-18-51_meeting-notes-final-v2.txt",
+    ],
+)
+def test_a_path_in_the_flows_own_namespace_is_accepted(path) -> None:
+    validate_public_files([path], FLOW_ID)
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        f"flow-{FOREIGN_FLOW_ID}/notes.txt",
+        f"flow-{FLOW_ID}/../notes.txt",
+        f"flow-{FLOW_ID}/nested/notes.txt",
+        f"flow-flow-{FLOW_ID}/notes.txt",
+        f"user-{FLOW_ID}/notes.txt",
+        f"/flow-{FLOW_ID}/notes.txt",
+    ],
+)
+def test_a_path_outside_the_flows_namespace_is_still_refused(path) -> None:
+    with pytest.raises(HTTPException) as refused:
+        validate_public_files([path], FLOW_ID)
+    assert refused.value.status_code == codes.BAD_REQUEST
+
+
+async def test_a_visitor_sends_a_message_with_a_file_uploaded_for_the_flow(
+    client: AsyncClient, json_memory_chatbot_no_llm, logged_in_headers
+):
+    from tests.unit.build_utils import create_flow
+
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(f"api/v1/flows/{flow_id}", json={"access_type": "PUBLIC"}, headers=logged_in_headers)
+    assert response.status_code == codes.OK
+    image = _pixel_png()
+    # The owner attaches the image the way the playground does.
+    response = await client.post(
+        f"api/v1/files/upload/{flow_id}",
+        files={"file": ("chart.png", image, "image/png")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.CREATED, response.text
+    file_path = response.json()["file_path"]
+    assert file_path.startswith(f"{flow_storage_scope(flow_id)}/"), file_path
+
+    client.cookies.clear()
+    client.cookies.set("client_id", "attachment-visitor")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(flow_id), "input_value": "see attached", "files": [file_path]},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        body = "".join([chunk async for chunk in response.aiter_text()])
+    assert response.status_code == codes.OK, body
+
+    async with session_scope() as session:
+        messages = (await session.exec(select(MessageTable).where(MessageTable.text == "see attached"))).all()
+    stored = [str(path).replace("\\", "/") for message in messages for path in message.files or []]
+    # The visitor gets the storage key back, never the server's absolute path.
+    assert stored == [file_path], stored
+
+    # The browser previews the image at ``/api/v1/files/images/<stored path>``.
+    client.cookies.clear()
+    preview = await client.get(f"api/v1/files/images/{stored[0]}", headers=logged_in_headers)
+    assert preview.status_code == codes.OK, preview.text
+    assert preview.content == image
+    anonymous = await client.get(f"api/v1/files/images/{stored[0]}")
+    assert anonymous.status_code == codes.FORBIDDEN, anonymous.text

@@ -1667,7 +1667,7 @@
                 "dependencies": [
                   {
                     "name": "pydantic",
-                    "version": "2.13.4"
+                    "version": "2.14.4"
                   },
                   {
                     "name": "trustcall",
@@ -2185,7 +2185,7 @@
                   },
                   {
                     "name": "pydantic",
-                    "version": "2.13.4"
+                    "version": "2.14.4"
                   },
                   {
                     "name": "lfx",

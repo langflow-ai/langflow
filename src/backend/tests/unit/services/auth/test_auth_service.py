@@ -809,6 +809,7 @@ def _login_session_db():
     """Async execution returns a synchronous SQLAlchemy result."""
     db = AsyncMock()
     db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: "registered-session")
+    db.exec.return_value = SimpleNamespace(first=lambda: _dummy_user(uuid4()))
     return db
 
 
