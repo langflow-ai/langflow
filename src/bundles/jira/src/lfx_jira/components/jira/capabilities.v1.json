@@ -3,7 +3,7 @@
   "provider_id": "jira",
   "display_name": "Jira Cloud",
   "icon": "Jira",
-  "docs_url": "https://docs.langflow.org/next/bundles-jira",
+  "docs_url": "https://docs.langflow.org/bundles-jira",
   "auth_profiles": [
     {
       "id": "user",

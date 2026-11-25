@@ -379,7 +379,8 @@ async def test_setup_superuser_with_no_configured_credentials_fails_closed(initi
             await setup_superuser(settings, session)
 
     assert "LANGFLOW_SUPERUSER_PASSWORD" in str(exc_info.value)
-    assert "api-keys-and-authentication#upgrade-from-auto-login" in str(exc_info.value)
+    # Shipped code must link released docs, never the unversioned /next path.
+    assert "https://docs.langflow.org/api-keys-and-authentication#upgrade-from-auto-login" in str(exc_info.value)
 
 
 @pytest.mark.parametrize("username", [DEFAULT_SUPERUSER, "custom_admin"])

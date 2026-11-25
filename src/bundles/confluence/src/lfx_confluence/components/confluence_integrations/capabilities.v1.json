@@ -3,7 +3,7 @@
   "provider_id": "confluence",
   "display_name": "Confluence Cloud",
   "icon": "Confluence",
-  "docs_url": "https://docs.langflow.org/next/bundles-confluence",
+  "docs_url": "https://docs.langflow.org/bundles-confluence",
   "auth_profiles": [
     {
       "id": "user",

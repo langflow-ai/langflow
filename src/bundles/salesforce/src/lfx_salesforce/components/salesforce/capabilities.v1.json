@@ -3,7 +3,7 @@
   "provider_id": "salesforce",
   "display_name": "Salesforce",
   "icon": "Salesforce",
-  "docs_url": "https://docs.langflow.org/next/bundles-salesforce",
+  "docs_url": "https://docs.langflow.org/bundles-salesforce",
   "auth_profiles": [
     {
       "id": "user",
