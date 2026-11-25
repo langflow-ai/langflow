@@ -2,10 +2,8 @@
 
 Targets the private helpers directly, matching ``test_project_artifact_providers.py``.
 
-The distinction every test here circles is the one the deploy has to make: an
-external server's credential can only be supplied where the flow runs, while one
-of our own projects can be rebuilt at deploy with a key minted on the target. Read
-the wrong way round, an external server gets handed a key for our serving plane.
+Every credential is a variable the deploy target supplies. One of our own projects
+has its address made a variable too, because the authored one names the Editor.
 """
 
 from __future__ import annotations
@@ -19,14 +17,19 @@ import pytest
 from langflow.services.deployment_artifacts.builder import (
     ProjectArtifactError,
     ProjectArtifactLimits,
-    ProjectArtifactRequiredMcpProject,
+    _build_archive,
     _build_deployment_snapshot_flows,
     _collect_external_mcp_servers,
     _collect_mcp_requirements,
     _FlowSnapshot,
     _McpRequirements,
 )
-from langflow.utils.mcp_config_secrets import project_id_from_mcp_url, variable_name_for, variable_reference_name
+from langflow.utils.mcp_config_secrets import (
+    mcp_url_variable_name,
+    project_id_from_mcp_url,
+    variable_name_for,
+    variable_reference_name,
+)
 
 SIBLING = "9a2c1f44-0b7e-4d3a-8c21-77f0e5b4d900"
 
@@ -86,41 +89,35 @@ def test_a_literal_value_is_never_mistaken_for_a_variable(value):
 # --- what counts as one of our projects ----------------------------------------
 
 
-def test_a_sibling_project_url_is_reported_with_the_name_the_flow_calls_it_by():
-    """The name travels because the flow resolves by it.
-
-    A rebuilt connection stored under any other name is a row the flow never finds.
-    """
-    flow = _flow(_server("billing", {"url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable"}))
-    requirements = _collect_mcp_requirements(flow)
-    assert requirements.projects == (ProjectArtifactRequiredMcpProject(server_name="billing", project_id=SIBLING),)
-    assert requirements.variables == ()
+PROJECT_URL = f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable"
+BILLING_URL = mcp_url_variable_name("billing")
+BILLING_KEY = variable_name_for("billing", "x-api-key")
 
 
-def test_a_sibling_project_does_not_ask_for_the_credential_beside_it():
-    """The real shape, which an earlier version of this test missed by omitting headers.
+@pytest.mark.parametrize("value", ["sk-editor-key", BILLING_KEY])
+def test_a_project_server_asks_for_its_address_and_its_key(value):
+    flow = _flow(_server("billing", {"url": PROJECT_URL, "headers": {"x-api-key": value}}))
+    assert _collect_mcp_requirements(flow) == _McpRequirements(variables=tuple(sorted((BILLING_URL, BILLING_KEY))))
 
-    Saving a flow scrubs the author's key out of the config into a generated
-    ``MCP_*`` variable name, so a sibling-project server reaches the builder with
-    both a project URL *and* a credential reference. Declaring that reference
-    refuses the deploy over a variable the serving plane must never hold -- it is
-    the authoring plane's key, and the rebuilt connection discards it for one
-    minted on the target. Every internal connection was undeployable until this
-    was pinned.
-    """
-    flow = _flow(
-        _server(
-            "billing",
-            {
-                "url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable",
-                "headers": {"x-api-key": variable_name_for("billing", "x-api-key")},
-            },
-        )
-    )
-    requirements = _collect_mcp_requirements(flow)
 
-    assert requirements.variables == ()
-    assert requirements.projects == (ProjectArtifactRequiredMcpProject(server_name="billing", project_id=SIBLING),)
+def test_a_handwritten_reference_on_a_project_server_keeps_its_name():
+    flow = _flow(_server("billing", {"url": PROJECT_URL, "headers": {"x-api-key": "{{INVOICES_KEY}}"}}))
+    assert _collect_mcp_requirements(flow).variables == tuple(sorted((BILLING_URL, "INVOICES_KEY")))
+
+
+def test_a_project_address_already_holding_a_variable_is_left_to_it():
+    """Copying it into a generated variable would copy the placeholder, which nothing resolves again."""
+    url = f"https://{{{{MCP_HOST}}}}/api/v1/mcp/project/{SIBLING}/streamable"
+    flow = _flow(_server("billing", {"url": url}))
+    assert _collect_mcp_requirements(flow).variables == ("MCP_HOST",)
+    assert _collect_external_mcp_servers(flow)[0].config["url"] == url
+
+
+def test_the_address_variable_cannot_be_a_header_variable():
+    assert mcp_url_variable_name("billing") not in {
+        variable_name_for("billing", "url"),
+        variable_name_for("billing", "project_url"),
+    }
 
 
 def test_an_external_server_still_asks_for_its_credential():
@@ -132,7 +129,7 @@ def test_an_external_server_still_asks_for_its_credential():
 
 
 def test_a_server_with_no_name_declares_no_project():
-    """Without a name there is nothing to key a rebuilt connection on."""
+    """Without a name there is nothing to name its variables after."""
     flow = _flow({"config": {"url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable"}})
     assert _collect_mcp_requirements(flow).projects == ()
 
@@ -162,20 +159,14 @@ def test_a_url_held_in_a_variable_is_asked_for_rather_than_resolved():
 def test_a_path_that_only_resembles_ours_names_no_project(url):
     """The shape has to be the whole path.
 
-    Carried in a query string it would have been read as one of our own projects
-    and rebuilt with a key minted for this plane.
+    Carried in a query string it would have been read as one of our own projects.
     """
     assert project_id_from_mcp_url(url) is None
-    assert _collect_mcp_requirements(_flow(_server("spoof", {"url": url}))).projects == ()
+    assert _collect_mcp_requirements(_flow(_server("spoof", {"url": url}))) == _McpRequirements()
 
 
 def test_our_shape_on_another_host_still_names_the_project():
-    """Deliberate: this answers which project a path names, never whether it is ours.
-
-    The caller confirms a sibling by looking the id up locally, not by checking the
-    host, because a rebuilt connection carries the target's own address and discards
-    whatever origin was configured.
-    """
+    """Deliberate: this answers which project a path names, never whether it is ours."""
     assert project_id_from_mcp_url(f"https://elsewhere.example/api/v1/mcp/project/{SIBLING}/streamable") == SIBLING
 
 
@@ -188,8 +179,7 @@ def test_a_server_inside_a_grouped_node_is_found():
         nested=_server("billing", {"url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/sse"}),
     )
     requirements = _collect_mcp_requirements(flow)
-    assert requirements.variables == ("MCP_STRIPE",)
-    assert [project.project_id for project in requirements.projects] == [SIBLING]
+    assert requirements.variables == (BILLING_URL, "MCP_STRIPE")
 
 
 @pytest.mark.parametrize("flow_data", [None, "nope", {}, {"nodes": "nope"}, {"nodes": [None, 1, "x"]}])
@@ -203,8 +193,7 @@ def test_merging_deduplicates_across_flows():
     merged = _McpRequirements.merged(
         [_collect_mcp_requirements(_flow(external)), _collect_mcp_requirements(_flow(sibling, external))]
     )
-    assert merged.variables == ("MCP_STRIPE",)
-    assert [project.project_id for project in merged.projects] == [SIBLING]
+    assert merged.variables == (BILLING_URL, "MCP_STRIPE")
 
 
 # --- the snapshot carries them --------------------------------------------------
@@ -222,8 +211,7 @@ def test_a_deployment_snapshot_reports_what_its_flows_need():
         },
     )
     *_, requirements = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
-    assert requirements.variables == ("MCP_STRIPE",)
-    assert [(p.server_name, p.project_id) for p in requirements.projects] == [("billing", SIBLING)]
+    assert requirements.variables == (BILLING_URL, "MCP_STRIPE")
 
 
 def test_a_project_with_no_mcp_servers_reports_nothing():
@@ -279,9 +267,7 @@ def test_a_packaged_artifact_reports_the_same_requirements_as_a_snapshot():
     *_, from_snapshot = _build_deployment_snapshot_flows((snapshot,), limits=ProjectArtifactLimits())
 
     assert manifest["required_mcp_variables"] == list(from_snapshot.variables)
-    assert manifest["required_mcp_projects"] == [
-        {"server_name": p.server_name, "project_id": p.project_id} for p in from_snapshot.projects
-    ]
+    assert manifest["required_mcp_projects"] == []
 
 
 def test_the_manifest_claims_v6_only_when_there_is_something_to_declare():
@@ -322,11 +308,18 @@ def test_an_external_server_is_carried_with_the_config_the_author_left():
     assert carried[0].config["headers"] == {"Authorization": "{{MCP_STRIPE}}"}
 
 
-def test_a_sibling_project_is_not_carried():
-    """It is rebuilt against the target with a key minted there, so its config is moot."""
-    carried = _external(_server("billing", {"url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable"}))
+def test_a_project_server_is_carried_with_nothing_but_names():
+    carried = _external(
+        _server(
+            "billing",
+            {"url": PROJECT_URL, "headers": {"x-api-key": "sk-editor-key", "Accept": "application/json"}},
+        )
+    )
 
-    assert carried == ()
+    assert carried[0].config == {
+        "url": f"{{{{{BILLING_URL}}}}}",
+        "headers": {"x-api-key": BILLING_KEY, "Accept": "application/json"},
+    }
 
 
 def test_a_url_in_a_variable_is_carried_unresolved():
@@ -422,7 +415,7 @@ def test_a_sibling_referenced_by_name_alone_is_found_through_the_address_book():
 
     requirements = _collect_mcp_requirements(_named_only("billing"), book)
 
-    assert requirements.projects == (ProjectArtifactRequiredMcpProject(server_name="billing", project_id=SIBLING),)
+    assert requirements.variables == (BILLING_URL,)
 
 
 def test_an_external_referenced_by_name_alone_is_carried_from_the_address_book():
@@ -442,38 +435,48 @@ def test_the_address_book_wins_over_a_stale_inline_config():
     """
     stale = _server(
         "billing",
-        {"url": "http://localhost:7860/api/v1/mcp/project/" + "0" * 8 + "-0000-0000-0000-000000000000/streamable"},
+        {"url": "https://stale.example/mcp"},
     )
     book = {"billing": {"url": f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable"}}
 
-    requirements = _collect_mcp_requirements(_flow(stale), book)
+    carried = _collect_external_mcp_servers(_flow(stale), book)
 
-    assert [project.project_id for project in requirements.projects] == [SIBLING]
+    assert carried[0].config == {"url": f"{{{{{BILLING_URL}}}}}"}
 
 
-def test_a_sibling_configured_as_stdio_is_still_recognised():
-    """Langflow seeds its own projects in the mcp-proxy shape, url buried in `args`.
-
-    Reading `config["url"]` alone saw nothing there, so such a server was classified
-    external and the deploy tried to carry a subprocess command to the target.
-    """
+def test_a_project_server_configured_as_stdio_is_carried_over_http():
+    """Auto-install writes our own projects as an mcp-proxy command, url and key buried in `args`."""
     book = {
-        "lf-billing": {
+        "billing": {
             "command": "uvx",
-            "args": [
-                "--with",
-                "mcp~=1.28",
-                "mcp-proxy",
-                "--transport",
-                "streamablehttp",
-                f"http://localhost:7860/api/v1/mcp/project/{SIBLING}/streamable",
-            ],
+            "args": ["mcp-proxy", "--transport", "streamablehttp", "--headers", "x-api-key", "sk-editor", PROJECT_URL],
         }
     }
 
-    requirements = _collect_mcp_requirements(_named_only("lf-billing"), book)
+    requirements = _collect_mcp_requirements(_named_only("billing"), book)
+    carried = _collect_external_mcp_servers(_named_only("billing"), book)
 
-    assert requirements.projects == (ProjectArtifactRequiredMcpProject(server_name="lf-billing", project_id=SIBLING),)
+    assert requirements.variables == tuple(sorted((BILLING_URL, BILLING_KEY)))
+    assert carried[0].config == {"url": f"{{{{{BILLING_URL}}}}}", "headers": {"x-api-key": BILLING_KEY}}
+
+
+def test_every_variable_a_project_server_needs_is_declared_secret():
+    snapshot = _FlowSnapshot(
+        flow_id=uuid4(),
+        name="support",
+        payload={"data": _flow(_server("billing", {"url": PROJECT_URL, "headers": {"x-api-key": "sk-editor"}}))},
+    )
+    artifact = _build_archive(
+        project_id=uuid4(),
+        project_name="support",
+        snapshots=(snapshot,),
+        limits=ProjectArtifactLimits(),
+        variable_kinds={},
+    )
+    declared = {item.name: item.kind for item in artifact.flows[0].required_variable_declarations}
+    assert declared == {BILLING_URL: "secret", BILLING_KEY: "secret"}
+    assert b"sk-editor" not in artifact.content
+    assert SIBLING.encode() not in artifact.content
 
 
 def test_a_credential_hidden_in_stdio_args_is_never_carried():
