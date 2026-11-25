@@ -7,10 +7,11 @@ hold raw messages; writes hold Interrupt tuples), so each value is encoded with 
 saver's own serde (``dumps_typed`` → ``('msgpack', bytes)``) and base64'd into the
 JSON blob — ``json.dumps``/``dumpd`` would lose the Interrupt.
 
-Only the latest checkpoint is kept (resume loads the latest), matching the observed
-contract: ``aput(ckpt)`` then ``aput_writes(__interrupt__)`` then ``aget_tuple`` →
-that checkpoint + the interrupt write. The store handle is INJECTED (two async
-callables) so lfx never imports langflow.
+Only the latest checkpoint is kept (resume loads the latest). LangGraph can persist
+pending writes before their target checkpoint, so future writes are buffered by
+checkpoint id and promoted when that checkpoint is saved. Superseded writes are
+retired as checkpoints advance. The store handle is INJECTED (two async callables)
+so lfx never imports langflow.
 """
 
 from __future__ import annotations
@@ -63,8 +64,16 @@ class JobCheckpointSaver(BaseCheckpointSaver):
     async def aput(self, config, checkpoint, metadata, new_versions) -> dict[str, Any]:  # noqa: ARG002
         configurable = config.get("configurable", {})
         async with self._lock:
-            # A new checkpoint supersedes the prior step; its writes start empty and
-            # accumulate via aput_writes (the interrupt write lands here next).
+            previous = await self._read()
+            checkpoint_id = checkpoint["id"]
+            future_writes = previous.get("future_writes", {})
+            writes = (
+                previous.get("writes", [])
+                if previous.get("checkpoint_id") == checkpoint_id
+                else future_writes.get(checkpoint_id, [])
+            )
+            # Checkpoint.id is monotonically increasing (LangGraph's Checkpoint contract).
+            # Retain only writes to checkpoints that have not yet been persisted.
             blob = {
                 "v": 1,
                 "thread_id": configurable.get("thread_id"),
@@ -72,7 +81,8 @@ class JobCheckpointSaver(BaseCheckpointSaver):
                 "checkpoint_id": checkpoint["id"],
                 "checkpoint": self._encode(checkpoint),
                 "metadata": self._encode(metadata),
-                "writes": [],
+                "writes": writes,
+                "future_writes": {key: value for key, value in future_writes.items() if key > checkpoint_id},
             }
             await self._save_blob(self._job_id, _KIND, json.dumps(blob))
         return self._result_config(blob)
@@ -80,9 +90,16 @@ class JobCheckpointSaver(BaseCheckpointSaver):
     async def aput_writes(self, config, writes: Sequence[tuple[str, Any]], task_id: str, task_path: str = "") -> None:  # noqa: ARG002
         async with self._lock:
             blob = await self._read()
-            if not blob:
+            checkpoint_id = config["configurable"]["checkpoint_id"]
+            current_id = blob.get("checkpoint_id")
+            if current_id is not None and checkpoint_id < current_id:
+                # This saver exposes only the latest checkpoint; late writes must not
+                # be attached to a different checkpoint or retain old task payloads.
                 return
-            stored = blob.setdefault("writes", [])
+            if checkpoint_id == current_id:
+                stored = blob.setdefault("writes", [])
+            else:
+                stored = blob.setdefault("future_writes", {}).setdefault(checkpoint_id, [])
             for channel, value in writes:
                 stored.append([task_id, channel, *self._encode(value)])
             await self._save_blob(self._job_id, _KIND, json.dumps(blob))
