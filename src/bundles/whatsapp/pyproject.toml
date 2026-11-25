@@ -1,6 +1,6 @@
 [project]
 name = "lfx-whatsapp"
-version = "0.1.1"
+version = "0.1.2"
 description = "WhatsApp Business Cloud API actions and webhook triggers backed by customer-owned connections."
 readme = "README.md"
 requires-python = ">=3.10,<3.16"

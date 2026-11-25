@@ -7,7 +7,7 @@
     "provider_id": "gitlab",
     "display_name": "GitLab",
     "icon": "Gitlab",
-    "docs_url": "https://docs.langflow.org/next/bundles-gitlab",
+    "docs_url": "https://docs.langflow.org/bundles-gitlab",
     "auth_profiles": [
       {
         "id": "gitlab-personal-token",

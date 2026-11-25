@@ -7,7 +7,7 @@
     "provider_id": "servicenow",
     "display_name": "ServiceNow",
     "icon": "ServiceNow",
-    "docs_url": "https://docs.langflow.org/next/bundles-servicenow",
+    "docs_url": "https://docs.langflow.org/bundles-servicenow",
     "auth_profiles": [
       {
         "id": "user",

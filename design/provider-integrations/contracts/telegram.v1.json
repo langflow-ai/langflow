@@ -7,7 +7,7 @@
     "provider_id": "telegram",
     "display_name": "Telegram",
     "icon": "Telegram",
-    "docs_url": "https://docs.langflow.org/next/bundles-telegram",
+    "docs_url": "https://docs.langflow.org/bundles-telegram",
     "auth_profiles": [
       {
         "id": "telegram-bot-token",

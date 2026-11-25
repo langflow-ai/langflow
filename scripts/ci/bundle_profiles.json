@@ -167,7 +167,7 @@
         {
           "distribution": "lfx-confluence",
           "extras": [],
-          "version": ">=0.1.1,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-confluence"
           ]
@@ -175,7 +175,7 @@
         {
           "distribution": "lfx-discord",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-discord"
           ]
@@ -183,7 +183,7 @@
         {
           "distribution": "lfx-jira",
           "extras": [],
-          "version": ">=0.1.1,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-jira"
           ]
@@ -191,7 +191,7 @@
         {
           "distribution": "lfx-salesforce",
           "extras": [],
-          "version": ">=0.1.0,<1.0.0",
+          "version": ">=0.1.1,<1.0.0",
           "providers": [
             "lfx-salesforce"
           ]
@@ -199,7 +199,7 @@
         {
           "distribution": "lfx-gitlab",
           "extras": [],
-          "version": ">=0.1.1,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-gitlab"
           ]
@@ -207,7 +207,7 @@
         {
           "distribution": "lfx-servicenow",
           "extras": [],
-          "version": ">=0.1.1,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-servicenow"
           ]
@@ -215,7 +215,7 @@
         {
           "distribution": "lfx-telegram",
           "extras": [],
-          "version": ">=0.1.1,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-telegram"
           ]
@@ -223,7 +223,7 @@
         {
           "distribution": "lfx-whatsapp",
           "extras": [],
-          "version": ">=0.1.1,<1.0.0",
+          "version": ">=0.1.2,<1.0.0",
           "providers": [
             "lfx-whatsapp"
           ]
