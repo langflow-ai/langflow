@@ -25,7 +25,16 @@ import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-export const DEFAULT_LOCALES = ["de", "es", "fr", "ja", "ko", "pt", "zh-Hans"];
+export const DEFAULT_LOCALES = [
+  "de",
+  "es",
+  "fr",
+  "ja",
+  "ko",
+  "pt",
+  "tr",
+  "zh-Hans",
+];
 const PLURAL_SUFFIXES = ["_zero", "_one", "_two", "_few", "_many", "_other"];
 
 /** Walk a directory for .ts/.tsx files. */
