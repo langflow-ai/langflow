@@ -15,7 +15,7 @@ Instead of string matching, the **Smart Router** uses a model to categorize inco
 The **Routing Mode** parameter sets which kind of model categorizes the message:
 
 * **Language Model** (default): A [language model](/components-models) reads the routes and replies with the name of the one that matches. See [Language Model mode](#language-model-mode).
-* **Decision Model**: A [decision model](./decision-model.mdx) returns a probability for every route, and the router uses the most likely route only when it is likely enough. Answers that aren't go to **Else**. See [Decision Model mode](#decision-model-mode).
+* **Decision Model**: A [decision model](./decision-model.mdx) returns a probability for every route, and the router uses the most likely route only when it is likely enough. Answers that aren't likely enough go to **Else**. See [Decision Model mode](#decision-model-mode).
 
 Use **Decision Model** mode when a wrong route is costly and an uncertain message should go somewhere safe, such as a person, instead.
 

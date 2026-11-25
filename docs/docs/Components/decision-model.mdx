@@ -14,9 +14,9 @@ Langflow uses decision models in the **Decision Model** component, which returns
 
 ## Use the Decision Model component in a flow
 
-This flow classifes a chat message and displays the probability of each category.
+This flow classifies a chat message and displays the probability of each category.
 To open a pre-made version of this flow, open the **Message Classifier** template.
-To build this flow in the **Playground**, do the following:
+To build this flow, do the following:
 
 1. Add a **Chat Input**, a **Decision Model**, and a **Chat Output** component.
 2. Connect the **Chat Input** output to the **Decision Model** component's **Context** input.
@@ -31,6 +31,7 @@ To build this flow in the **Playground**, do the following:
 5. Open the **Playground** and send a message, such as `The export button does nothing when I click it.`
 
 The **Chat Output** displays the **Decision Result**. You can pass that JSON to another component, such as a [**Parser**](/parser) or an [**If-Else** component](/if-else).
+Select the **Decision Model** component and click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to see the provider, the model, and the probability of each option. The same panel appears on the component's trace span, above **Input**.
 A decision result looks like this:
 
 ```json
