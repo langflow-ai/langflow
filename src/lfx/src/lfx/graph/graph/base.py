@@ -142,6 +142,7 @@ class Graph:
         instantiate_components: bool = True,
         snapshot_history_limit: int | None = None,
         authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
+        authorized_extra_file_scopes: set[str] | frozenset[str] | None = None,
     ) -> None:
         """Initializes a new Graph instance.
 
@@ -167,6 +168,9 @@ class Graph:
         # False for a shipped flow run under another flow's id: no stored copy holds its tool settings.
         self.runs_stored_flow = True
         self.authorized_legacy_flow_ids = frozenset(authorized_legacy_flow_ids or ())
+        # Server-stamped extra storage scopes for THIS run's user (for example a deployer's folder a service
+        # account may read). Never taken from request data; a run copy gets its own, never the template's.
+        self.authorized_extra_file_scopes = frozenset(authorized_extra_file_scopes or ())
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
@@ -1740,6 +1744,7 @@ class Graph:
             "source_flow_id": self.source_flow_id,
             "runs_stored_flow": self.runs_stored_flow,
             "authorized_legacy_flow_ids": self.authorized_legacy_flow_ids,
+            "authorized_extra_file_scopes": self.authorized_extra_file_scopes,
             "flow_name": self.flow_name,
             "description": self.description,
             "user_id": self.user_id,
@@ -1775,6 +1780,7 @@ class Graph:
         *,
         user_id: str | None,
         instantiate_components: bool,
+        authorized_extra_file_scopes: frozenset[str],
         before_initialize: Callable[[Graph], None] | None = None,
     ) -> Graph:
         """Copy this graph, optionally binding component construction to one user.
@@ -1789,6 +1795,10 @@ class Graph:
             return memo[id(self)]
 
         policy_kwargs = self._snapshot_history_kwargs(self.snapshot_history_limit)
+        # Passed only when set, so a Graph subclass with an older constructor still copies.
+        scope_kwargs = (
+            {"authorized_extra_file_scopes": authorized_extra_file_scopes} if authorized_extra_file_scopes else {}
+        )
         if self._start is not None and self._end is not None:
             # Deep copy start and end components
             start_copy = copy.deepcopy(self._start, memo)
@@ -1803,6 +1813,7 @@ class Graph:
                 instantiate_components=instantiate_components,
                 authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
                 **policy_kwargs,
+                **scope_kwargs,
             )
             self._verify_snapshot_history_policy(new_graph, self.snapshot_history_limit)
             if before_initialize is not None:
@@ -1819,6 +1830,7 @@ class Graph:
                 instantiate_components=instantiate_components,
                 authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
                 **policy_kwargs,
+                **scope_kwargs,
             )
             self._verify_snapshot_history_policy(new_graph, self.snapshot_history_limit)
             # add_nodes_and_edges synchronously builds FileInput parameters, so
@@ -1868,6 +1880,7 @@ class Graph:
             memo,
             user_id=copy.deepcopy(self.user_id, memo),
             instantiate_components=self._instantiate_components_on_initialize,
+            authorized_extra_file_scopes=self.authorized_extra_file_scopes,
             before_initialize=None,
         )
 
@@ -1876,8 +1889,12 @@ class Graph:
         *,
         user_id: str | None,
         before_instantiate: Callable[[Graph], None] | None = None,
+        authorized_extra_file_scopes: set[str] | frozenset[str] | None = None,
     ) -> Graph:
         """Return an isolated executable graph whose constructors see run defaults.
+
+        ``authorized_extra_file_scopes`` is the server's answer for this run's user. The template's own stamp is
+        never inherited: a template is user-agnostic, so a copy for one user must not carry another user's access.
 
         ``before_instantiate`` can apply request-local raw-parameter overrides
         (for example the implicit streaming value) after frontend-data copying,
@@ -1887,6 +1904,7 @@ class Graph:
             {},
             user_id=user_id,
             instantiate_components=False,
+            authorized_extra_file_scopes=frozenset(authorized_extra_file_scopes or ()),
             before_initialize=before_instantiate,
         )
         new_graph._instantiate_components_in_vertices()  # noqa: SLF001
@@ -1905,6 +1923,7 @@ class Graph:
         state.setdefault("source_flow_id", None)
         state.setdefault("runs_stored_flow", True)
         state.setdefault("authorized_legacy_flow_ids", frozenset())
+        state.setdefault("authorized_extra_file_scopes", frozenset())
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
         state.setdefault("_headless_filesystem_user_id", None)
         state.setdefault("branch_inactivation_sources", {})
@@ -1936,6 +1955,7 @@ class Graph:
         snapshot_history_limit: int | None = None,
         emit_extension_events: bool = True,
         authorized_legacy_flow_ids: set[str] | frozenset[str] | None = None,
+        authorized_extra_file_scopes: set[str] | frozenset[str] | None = None,
     ) -> Graph:
         """Creates a graph from a payload.
 
@@ -1955,6 +1975,8 @@ class Graph:
                 this because it is not scoped to an active caller.
             authorized_legacy_flow_ids: Server-authorized non-colliding flow IDs
                 whose raw legacy storage namespaces remain readable.
+            authorized_extra_file_scopes: Server-authorized extra storage scopes for the run's user
+                (set before components read their file parameters).
 
         Returns:
             Graph: The created graph.
@@ -2088,6 +2110,8 @@ class Graph:
                 **Graph._snapshot_history_kwargs(snapshot_history_limit),
             )
             Graph._verify_snapshot_history_policy(graph, snapshot_history_limit)
+            # Set before add_nodes_and_edges: that call builds the file parameters the scopes guard.
+            graph.authorized_extra_file_scopes = frozenset(authorized_extra_file_scopes or ())
             graph.add_nodes_and_edges(vertices, edges)
             graph.requires_extension_event_replay = bool(migration_report.any_rewritten or migration_report.errors)
         except KeyError as exc:
@@ -3461,6 +3485,7 @@ class Graph:
             user_id=self.user_id,
             context=dict(self.context) if self.context else None,
             authorized_legacy_flow_ids=self.authorized_legacy_flow_ids,
+            authorized_extra_file_scopes=self.authorized_extra_file_scopes,
             snapshot_history_limit=self.snapshot_history_limit,
         )
 

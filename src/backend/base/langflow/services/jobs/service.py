@@ -9,9 +9,10 @@ import os
 from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
+    from collections.abc import AsyncIterator, Sequence
 
     from sqlalchemy.sql.elements import ColumnElement
+    from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.auth.context import AuthCredentialContext
 from datetime import datetime, timedelta, timezone
@@ -21,6 +22,7 @@ from lfx.graph.exceptions import GraphPausedException
 from lfx.observability import inject_trace_carrier
 from sqlalchemy import and_, false, or_, update
 from sqlalchemy.exc import DataError, DBAPIError, IntegrityError, OperationalError, StatementError
+from sqlalchemy.pool import StaticPool
 from sqlmodel import col, func, select
 
 from langflow.services.base import Service
@@ -38,6 +40,7 @@ from langflow.services.database.models.jobs.model import (
     JobType,
     SignalType,
 )
+from langflow.services.database.session import NoopSession
 from langflow.services.deps import get_db_service, session_scope
 from langflow.services.jobs.exceptions import (
     HUMAN_INPUT_REQUIRED_EVENT,
@@ -127,6 +130,38 @@ class JobService(Service):
         self._append_queue: list[_PendingAppend] = []
         self._append_lock: asyncio.Lock | None = None
         self._append_lock_loop: asyncio.AbstractEventLoop | None = None
+        self._metadata_lock: asyncio.Lock | None = None
+        self._metadata_lock_loop: asyncio.AbstractEventLoop | None = None
+
+    def _single_connection_lock(self) -> asyncio.Lock:
+        """Keep concurrent metadata transactions off the same SQLite connection."""
+        loop = asyncio.get_running_loop()
+        if self._metadata_lock is None or self._metadata_lock_loop is not loop:
+            self._metadata_lock = asyncio.Lock()
+            self._metadata_lock_loop = loop
+        return self._metadata_lock
+
+    @contextlib.asynccontextmanager
+    async def _job_for_metadata_update(
+        self, job_id: UUID, *, heartbeat_pool: bool = False
+    ) -> AsyncIterator[tuple[AsyncSession, Job | None]]:
+        """Lock before reading metadata and hold the lock through commit."""
+        scope = get_db_service().session_scope_for_heartbeat if heartbeat_pool else session_scope
+        async with contextlib.AsyncExitStack() as locks, scope() as session:
+            if isinstance(session, NoopSession):
+                yield session, None
+                return
+            bind = session.get_bind()
+            if bind.dialect.name == "sqlite":
+                if isinstance(bind.pool, StaticPool):
+                    await locks.enter_async_context(self._single_connection_lock())
+                else:
+                    # Reserve SQLite's writer before reading, including across worker processes.
+                    await session.exec(update(Job).where(false()).values(job_id=Job.job_id))
+            elif bind.dialect.name == "postgresql":
+                # A writer waiting on the row must see the preceding writer's commit.
+                await session.connection(execution_options={"isolation_level": "READ COMMITTED"})
+            yield session, await session.get(Job, job_id, with_for_update=True)
 
     def _bind_append_lock(self) -> asyncio.Lock:
         """Return the append lock, rebinding it to the currently running loop if needed.
@@ -383,13 +418,30 @@ class JobService(Service):
         Returns:
             The updated Job, or ``None`` if the row does not exist.
         """
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
+        # Locked read: ``suspend_job`` rewrites the same column, and a stale snapshot written last would undo it.
+        async with self._job_for_metadata_update(job_id) as (session, job):
             if job is None:
                 return None
             from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
 
             job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, patch, replace=replace)
+            session.add(job)
+            await session.flush()
+            return job
+
+    async def append_job_metadata_item(self, job_id: UUID, key: str, item: dict) -> Job | None:
+        """Append ``item`` to the list at ``job.job_metadata[key]``, reading and writing under one row lock.
+
+        Two overlapping appends, or an append racing ``suspend_job``, each see the other's change instead of
+        replacing it from a stale read. Returns the updated Job, or ``None`` if the row does not exist.
+        """
+        from langflow.services.jobs.api_key_authorization import preserve_api_key_job_authorization
+
+        async with self._job_for_metadata_update(job_id) as (session, job):
+            if job is None:
+                return None
+            current = (job.job_metadata or {}).get(key) or []
+            job.job_metadata = preserve_api_key_job_authorization(job.job_metadata, {key: [*current, item]})
             session.add(job)
             await session.flush()
             return job
@@ -416,8 +468,7 @@ class JobService(Service):
         last_exc: Exception | None = None
         for attempt in range(_APPEND_EVENT_MAX_RETRIES):
             try:
-                async with session_scope() as session:
-                    job = await session.get(Job, job_id)
+                async with self._job_for_metadata_update(job_id) as (session, job):
                     if job is None:
                         return None
                     merged = preserve_api_key_job_authorization(job.job_metadata, metadata)
@@ -854,8 +905,7 @@ class JobService(Service):
         flags are preserved.
         """
         now = datetime.now(timezone.utc)
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
+        async with self._job_for_metadata_update(job_id) as (session, job):
             if job is None or job.status not in (JobStatus.QUEUED, JobStatus.IN_PROGRESS):
                 return False
             prior = job.job_metadata or {}
@@ -953,10 +1003,7 @@ class JobService(Service):
         # whose pool is saturated by concurrent requests must still record liveness, or
         # sweep_orphans reaps it as worker_lost though it is alive and finishing (LE-3302 F-03).
         with contextlib.suppress(Exception):
-            async with get_db_service().session_scope_for_heartbeat() as session:
-                # The row lock keeps a concurrent job_metadata write from being lost
-                # under this read-modify-write on Postgres. SQLite has no row locks.
-                job = await session.get(Job, job_id, with_for_update=True)
+            async with self._job_for_metadata_update(job_id, heartbeat_pool=True) as (session, job):
                 if job is None or job.status != JobStatus.IN_PROGRESS:
                     return False
                 job.job_metadata = {**(job.job_metadata or {}), **self._heartbeat_stamp()}
@@ -991,10 +1038,7 @@ class JobService(Service):
         from sqlmodel import update
 
         attempt_expr = sa_cast(col(Job.job_metadata)["attempt"].as_string(), Integer)
-        async with session_scope() as session:
-            # Read the current metadata so we can write back a full merged blob
-            # (JSON columns are replaced wholesale, not patched in place).
-            job = await session.get(Job, job_id)
+        async with self._job_for_metadata_update(job_id) as (session, job):
             if job is None:
                 return False
             merged = {**(job.job_metadata or {}), "attempt": new}
@@ -1026,8 +1070,7 @@ class JobService(Service):
         from sqlmodel import update
 
         attempt_expr = sa_cast(col(Job.job_metadata)["attempt"].as_string(), Integer)
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
+        async with self._job_for_metadata_update(job_id) as (session, job):
             if job is None:
                 return False
             # The dead worker's owner/heartbeat_at are deliberately kept: the next
@@ -1075,8 +1118,7 @@ class JobService(Service):
         # The lease starts now whether or not the caller supplied its own token.
         claim_now = datetime.now(timezone.utc)
         claim_heartbeat = heartbeat_at or claim_now.isoformat()
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
+        async with self._job_for_metadata_update(job_id) as (session, job):
             if job is None or job.status != JobStatus.QUEUED:
                 return False
             meta = job.job_metadata or {}
@@ -1292,8 +1334,7 @@ class JobService(Service):
 
         owner_expr = col(Job.job_metadata)["owner"].as_string()
         hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
+        async with self._job_for_metadata_update(job_id) as (session, job):
             if job is None or job.status != JobStatus.QUEUED:
                 return False
             metadata = dict(job.job_metadata or {})
@@ -1398,8 +1439,7 @@ class JobService(Service):
         from sqlmodel import update
 
         owner_expr = col(Job.job_metadata)["owner"].as_string()
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
+        async with self._job_for_metadata_update(job_id) as (session, job):
             if job is None or job.status != JobStatus.IN_PROGRESS:
                 return False
             metadata = dict(job.job_metadata or {})
@@ -1524,8 +1564,7 @@ class JobService(Service):
         from sqlmodel import update
 
         now = datetime.now(timezone.utc).isoformat()
-        async with session_scope() as session:
-            job = await session.get(Job, job_id)
+        async with self._job_for_metadata_update(job_id) as (session, job):
             if job is None:
                 return False
             merged = {**(job.job_metadata or {})}

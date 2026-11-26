@@ -17,6 +17,7 @@ import secrets
 from copy import deepcopy
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from sqlmodel import col, select
 
@@ -56,7 +57,7 @@ from langflow.services.triggers.schedule_config import (
 )
 
 if TYPE_CHECKING:
-    from uuid import UUID
+    from collections.abc import Awaitable, Callable
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -152,6 +153,15 @@ async def _arm_slack(session: AsyncSession, row: Trigger, *, connection_ids: fro
         session.add(row)
 
 
+_run_user_resolver: Callable[..., Awaitable[UUID | None]] | None = None
+
+
+def register_trigger_run_user_resolver(resolver: Callable[..., Awaitable[UUID | None]] | None) -> None:
+    """Let an extension pick who runs a trigger's flow (never registered: the trigger owner runs it)."""
+    global _run_user_resolver  # noqa: PLW0603 - explicit process-wide extension registration
+    _run_user_resolver = resolver
+
+
 class TriggerService(Service):
     """Data access for the ``trigger`` table."""
 
@@ -163,12 +173,15 @@ class TriggerService(Service):
     async def resolve_run_user_id(self, session: AsyncSession, *, flow_id: UUID, trigger_owner_id: UUID) -> UUID | None:
         """Return the user who will own the background job. OSS uses the trigger owner.
 
-        An override can look up the flow's deployment binding using the supplied
+        A resolver registered with ``register_trigger_run_user_resolver`` (or an
+        override) can look up the flow's deployment binding using the supplied
         session. Return None to refuse a run, or raise to retry a failed lookup.
         This hook applies only to flow execution. Source connections belong to
         the trigger owner.
         """
-        _ = session, flow_id
+        if _run_user_resolver is not None:
+            runner = await _run_user_resolver(session, flow_id=flow_id, trigger_owner_id=trigger_owner_id)
+            return runner if isinstance(runner, UUID) else None
         return trigger_owner_id
 
     async def authorize_trigger(self, *, context: TriggerPolicyContext) -> None:

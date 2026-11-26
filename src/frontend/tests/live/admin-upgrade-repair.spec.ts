@@ -352,11 +352,33 @@ test(
         headers,
       });
       expect((await unchanged.json()).data).toEqual(graph);
-      const paused = await page.request.post("/api/v1/maintenance/on", {
-        headers,
-        data: { reason: "Disposable upgrade workflow test" },
+      await page.setViewportSize({ width: 320, height: 800 });
+      const toggle = page.getByRole("button", { name: "Turn maintenance on" });
+      await toggle.focus();
+      await toggle.press("Enter");
+      const enableDialog = page.getByRole("dialog", {
+        name: "Turn maintenance on",
       });
-      expect(paused.ok()).toBeTruthy();
+      const bounds = await enableDialog.boundingBox();
+      expect(bounds).toBeTruthy();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(320);
+      await page.runA11yScan("upgrade-maintenance-dialog-320");
+      await page.screenshot({
+        path: test.info().outputPath("upgrade-maintenance-dialog-320.png"),
+      });
+      await enableDialog
+        .getByLabel("Reason (optional)")
+        .fill("Disposable upgrade workflow test");
+      await enableDialog
+        .getByRole("button", { name: "Turn maintenance on" })
+        .click();
+      await expect(enableDialog).toBeHidden();
+      await expect(page.getByText("No jobs are running.")).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Turn maintenance off" }),
+      ).toBeFocused();
+      await page.setViewportSize({ width: 1280, height: 900 });
       await page
         .getByRole("checkbox", { name: /I reviewed this 1 update/ })
         .check();
@@ -413,9 +435,14 @@ test(
         "href",
         `/flow/${flow.id}?version=${recoveryId}`,
       );
-      expect(
-        (await page.request.post("/api/v1/maintenance/off", { headers })).ok(),
-      ).toBeTruthy();
+      await page.getByRole("button", { name: "Turn maintenance off" }).click();
+      const disableDialog = page.getByRole("dialog", {
+        name: "Turn maintenance off",
+      });
+      await disableDialog
+        .getByRole("button", { name: "Turn maintenance off" })
+        .click();
+      await expect(disableDialog).toBeHidden();
       await expect(page.getByTestId("changes-paused-notice")).toBeEmpty({
         timeout: 45_000,
       });

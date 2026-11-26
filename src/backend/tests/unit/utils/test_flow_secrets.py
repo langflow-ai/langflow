@@ -7,6 +7,7 @@ from copy import deepcopy
 import pytest
 from langflow.utils.flow_secrets import (
     HiddenFieldMetadataError,
+    UnresolvedVariableBindingError,
     restore_redacted_flow_values,
     strip_secret_field_values,
     strip_secret_field_values_in_place,
@@ -417,6 +418,31 @@ def test_preserving_scrub_nulls_values_that_do_not_look_like_references() -> Non
     for field in _template(flow_data).values():
         assert field["value"] is None
     assert variable_references == set()
+
+
+@pytest.mark.parametrize("value", ["bad\nreference", {"nested": "private"}, ["private"], 1234])
+def test_strict_scrub_rejects_malformed_bindings_without_echoing_the_value(value) -> None:
+    flow_data = _flow_data({"label": {"load_from_db": True, "value": value}})
+
+    with pytest.raises(UnresolvedVariableBindingError) as raised:
+        strip_secret_field_values_in_place(flow_data, variable_references=set(), reject_unknown_bindings=True)
+    assert str(raised.value) == "'label'"
+
+
+@pytest.mark.parametrize("value", ["", None, [], {}, 0, False])
+def test_strict_scrub_allows_empty_bound_fields(value) -> None:
+    flow_data = _flow_data(
+        {
+            "label": {"load_from_db": True, "value": value},
+            "table": {
+                "table_schema": [{"name": "value", "load_from_db": True}],
+                "value": [{"value": value, "__load_from_db_fields": {"value": True}}],
+            },
+        }
+    )
+    references = set()
+    strip_secret_field_values_in_place(flow_data, variable_references=references, reject_unknown_bindings=True)
+    assert not references
 
 
 def test_preserving_scrub_collects_references_from_nested_group_nodes() -> None:
