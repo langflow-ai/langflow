@@ -13,7 +13,7 @@ from lfx.projects import (
     CORE_PROJECT_TYPES,
     DEFAULT_PROJECT_TYPE,
     FieldTarget,
-    ProjectType,
+    ProjectTypeDefinition,
     ProjectTypeField,
     all_project_types,
     get_project_type,
@@ -41,37 +41,41 @@ class TestRegistry:
             get_project_type("not-a-type")
 
     def test_registering_returns_the_type_so_it_can_be_bound(self):
-        project_type = ProjectType(name="test-bound", display_name="Bound", icon="Box")
+        class BoundType(ProjectTypeDefinition):
+            name = "test-bound"
+            display_name = "Bound"
+            icon = "Box"
 
-        assert register_project_type(project_type) is project_type
+        assert register_project_type(BoundType) is BoundType
 
     def test_re_registering_the_same_object_is_allowed(self):
         """Re-importing a module that registers a type must not explode."""
-        project_type = ProjectType(name="test-reimport", display_name="Re", icon="Box")
 
-        register_project_type(project_type)
-        register_project_type(project_type)
+        class ReimportType(ProjectTypeDefinition):
+            name = "test-reimport"
+            display_name = "Re"
+            icon = "Box"
 
-        assert get_project_type("test-reimport") is project_type
+        register_project_type(ReimportType)
+        register_project_type(ReimportType)
+
+        assert isinstance(get_project_type("test-reimport"), ReimportType)
 
     def test_a_different_type_cannot_take_a_registered_name(self):
-        register_project_type(ProjectType(name="test-taken", display_name="First", icon="Box"))
+        @register_project_type
+        class FirstType(ProjectTypeDefinition):
+            name = "test-taken"
+            display_name = "First"
+            icon = "Box"
+
+        class SecondType(FirstType):
+            display_name = "Second"
 
         with pytest.raises(ValueError, match="already registered"):
-            register_project_type(ProjectType(name="test-taken", display_name="Second", icon="Box"))
+            register_project_type(SecondType)
 
     def test_all_project_types_matches_the_name_order(self):
         assert [t.name for t in all_project_types()] == list(registered_project_types())
-
-    @pytest.fixture(autouse=True)
-    def _keep_the_registry_clean(self):
-        """Tests here register throwaway types; the shipped ones must survive them."""
-        from lfx.projects import registry
-
-        before = dict(registry._PROJECT_TYPES)
-        yield
-        registry._PROJECT_TYPES.clear()
-        registry._PROJECT_TYPES.update(before)
 
 
 class TestFlows:
@@ -171,18 +175,17 @@ class TestSections:
         assert get_project_type("flows").sections() == ()
 
     def test_sections_keep_the_order_their_first_field_declares(self):
-        project_type = ProjectType(
-            name="test-sections",
-            display_name="Sections",
-            icon="Box",
-            fields=(
+        class SectionsType(ProjectTypeDefinition):
+            name = "test-sections"
+            display_name = "Sections"
+            icon = "Box"
+            fields = (
                 ProjectTypeField(name="b", section="Second", input=StrInput(name="b", display_name="B")),
                 ProjectTypeField(name="a", section="First", input=StrInput(name="a", display_name="A")),
                 ProjectTypeField(name="c", section="Second", input=StrInput(name="c", display_name="C")),
-            ),
-        )
+            )
 
-        assert project_type.sections() == ("Second", "First")
+        assert SectionsType().sections() == ("Second", "First")
 
     def test_a_field_without_a_section_does_not_emit_one(self):
         """An ungrouped field leaves the key out, so the UI can tell it apart from a named group."""

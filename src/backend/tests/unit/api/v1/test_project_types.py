@@ -11,6 +11,74 @@ from lfx.projects import all_project_types
 
 
 @pytest.fixture
+def custom_project_type(monkeypatch):
+    from lfx.inputs.inputs import StrInput
+    from lfx.projects import ProjectTypeDefinition, ProjectTypeField, register_project_type, registry
+
+    original = registry._PROJECT_TYPES
+    isolated = type(original)(
+        adapter_type=original.adapter_type,
+        entry_point_group=original.entry_point_group,
+        config_section_path=original.config_section_path,
+    )
+    for name in original.list_keys():
+        isolated.register_class(name, original.get_class(name))
+    monkeypatch.setattr(registry, "_PROJECT_TYPES", isolated)
+
+    @register_project_type
+    class CustomProjectType(ProjectTypeDefinition):
+        name = "test-custom-project"
+        display_name = "Custom project"
+        icon = "Box"
+        description = "A plugin-defined form."
+        fields = (ProjectTypeField(name="team", input=StrInput(name="team", display_name="Team")),)
+
+    return CustomProjectType, original
+
+
+async def test_custom_type_form_and_config_use_existing_api(client, logged_in_headers, custom_project_type):
+    definition, _ = custom_project_type
+    response = await client.get("api/v1/projects/types", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    template = next(item for item in response.json() if item["name"] == definition.name)["template"]
+    assert template["team"]["display_name"] == "Team"
+
+    response = await client.post(
+        "api/v1/projects/",
+        json={"name": "Plugin project", "project_type": definition.name, "project_config": {"team": "Support"}},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["project_type"] == definition.name
+    assert response.json()["project_config"]["team"] == "Support"
+
+
+async def test_missing_plugin_preserves_existing_project_on_read(
+    client, logged_in_headers, custom_project_type, monkeypatch
+):
+    from lfx.projects import registry
+
+    definition, without_plugin = custom_project_type
+    created = await client.post(
+        "api/v1/projects/",
+        json={
+            "name": "Retained plugin project",
+            "project_type": definition.name,
+            "project_config": {"team": "Support"},
+        },
+        headers=logged_in_headers,
+    )
+    assert created.status_code == status.HTTP_201_CREATED
+    saved = created.json()
+    monkeypatch.setattr(registry, "_PROJECT_TYPES", without_plugin)
+
+    read = await client.get(f"api/v1/projects/{saved['id']}", headers=logged_in_headers)
+    assert read.status_code == status.HTTP_200_OK
+    assert read.json()["project_type"] == definition.name
+    assert read.json()["project_config"] == saved["project_config"]
+
+
+@pytest.fixture
 def harness_from_api():
     async def _fetch(client, headers):
         response = await client.get("api/v1/projects/types", headers=headers)

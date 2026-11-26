@@ -12,7 +12,7 @@ import pytest
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.inputs.inputs import StrInput
 from lfx.projects import apply_project_config, get_project_type
-from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
+from lfx.projects.schema import FieldTarget, ProjectTypeDefinition, ProjectTypeField
 
 
 def agent_node(node_id: str = "Agent-1") -> dict:
@@ -88,15 +88,16 @@ class TestWritingThrough:
 class TestWhatIsNotWritten:
     def test_a_field_with_no_target_is_recorded_and_nothing_more(self):
         """Recording a choice and running it are different things; only a target crosses over."""
-        project_type = ProjectType(
-            name="test-untargeted",
-            display_name="Untargeted",
-            icon="Box",
-            fields=(ProjectTypeField(name="note", input=StrInput(name="note", display_name="Note")),),
-        )
+
+        class UntargetedType(ProjectTypeDefinition):
+            name = "test-untargeted"
+            display_name = "Untargeted"
+            icon = "Box"
+            fields = (ProjectTypeField(name="note", input=StrInput(name="note", display_name="Note")),)
+
         flow = flow_with(agent_node())
 
-        result = apply_project_config(flow, project_type, {"note": "anything"})
+        result = apply_project_config(flow, UntargetedType(), {"note": "anything"})
 
         assert result.inputs_written == 0
         assert result.changed is False
@@ -113,21 +114,22 @@ class TestWhatIsNotWritten:
 
     def test_an_input_the_component_does_not_have_is_not_invented(self):
         """Writing a key the component never declared would produce a template it cannot read."""
-        project_type = ProjectType(
-            name="test-absent-input",
-            display_name="Absent",
-            icon="Box",
-            fields=(
+
+        class AbsentInputType(ProjectTypeDefinition):
+            name = "test-absent-input"
+            display_name = "Absent"
+            icon = "Box"
+            fields = (
                 ProjectTypeField(
                     name="nope",
                     writes_to=FieldTarget("Agent", "not_an_input"),
                     input=StrInput(name="nope", display_name="Nope"),
                 ),
-            ),
-        )
+            )
+
         flow = flow_with(agent_node())
 
-        result = apply_project_config(flow, project_type, {"nope": "x"})
+        result = apply_project_config(flow, AbsentInputType(), {"nope": "x"})
 
         assert result.inputs_written == 0
         assert "not_an_input" not in template_of(result.data)

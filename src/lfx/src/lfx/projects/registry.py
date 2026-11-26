@@ -1,15 +1,97 @@
-"""Registries of project types and reusable flow contracts.
+"""Project declarations with lazy discovery through the shared adapter registry.
 
-Same shape as the vector-store backend registry: a module-level dict, free functions, no
-lock and no reload path. A project type is registered once on import and then read.
+Built-ins and explicit registrations precede entry points. Operator configuration has final
+precedence. Slots remain explicit registrations; importing declarations never runs discovery.
 """
 
 from __future__ import annotations
 
-from lfx.projects.schema import ProjectType, SlotDefinition
+import threading
+from typing import TypeVar
 
-_PROJECT_TYPES: dict[str, ProjectType] = {}
+from lfx.projects.schema import ProjectTypeDefinition, ProjectTypeField, SlotDefinition
+from lfx.services.adapters.registry import AdapterRegistry
+from lfx.services.adapters.schema import AdapterType
+
 _SLOT_DEFINITIONS: dict[str, SlotDefinition] = {}
+_discovery_lock = threading.RLock()
+_discovering = False
+DefinitionT = TypeVar("DefinitionT", bound=ProjectTypeDefinition)
+
+
+def _validate_project_type(key: str, project_type: type[ProjectTypeDefinition]) -> None:
+    if not isinstance(project_type, type) or not issubclass(project_type, ProjectTypeDefinition):
+        msg = "Register a ProjectTypeDefinition subclass."
+        raise TypeError(msg)
+    for attribute in ("name", "display_name", "icon"):
+        value = getattr(project_type, attribute, None)
+        if not isinstance(value, str) or not value.strip():
+            msg = f"Project type {key!r} must declare a non-empty {attribute}."
+            raise ValueError(msg)
+    if project_type.name != key:
+        msg = f"Project type key {key!r} does not match declared name {project_type.name!r}."
+        raise ValueError(msg)
+    if not isinstance(project_type.description, str) or not isinstance(project_type.fields, tuple):
+        msg = f"Project type {key!r} must declare a string description and a tuple of fields."
+        raise TypeError(msg)
+    names: set[str] = set()
+    for field in project_type.fields:
+        if not isinstance(field, ProjectTypeField):
+            msg = f"Project type {key!r} must use ProjectTypeField declarations."
+            raise TypeError(msg)
+        if field.name in names:
+            msg = f"Project type {project_type.name!r} declares field {field.name!r} more than once."
+            raise ValueError(msg)
+        names.add(field.name)
+        definition = field.slot_definition
+        if definition is None:
+            continue
+        if not isinstance(definition, SlotDefinition):
+            msg = f"Project field {project_type.name}.{field.name} must use a registered SlotDefinition instance."
+            raise TypeError(msg)
+        if _SLOT_DEFINITIONS.get(definition.name) is not definition:
+            msg = (
+                f"Project field {project_type.name}.{field.name} uses slot {definition.name!r}, "
+                "but not its registered definition. Register the slot first, then pass that same instance."
+            )
+            raise ValueError(msg)
+
+
+class _ProjectTypeRegistry(AdapterRegistry[ProjectTypeDefinition]):
+    """Validate all discovery sources with the same declaration contract."""
+
+    def register_class(self, key: str, adapter_class: type[ProjectTypeDefinition], *, override: bool = True) -> None:
+        _validate_project_type(key, adapter_class)
+        super().register_class(key, adapter_class, override=override)
+
+
+# Declarations are stateless. This module owns their registry and lazy instance cache.
+_PROJECT_TYPES = _ProjectTypeRegistry(
+    adapter_type=AdapterType.PROJECT_TYPE,
+    entry_point_group=AdapterType.PROJECT_TYPE.entry_point_group,
+    config_section_path=AdapterType.PROJECT_TYPE.config_section_path,
+)
+
+
+def _ensure_discovered() -> None:
+    global _discovering  # noqa: PLW0603
+    if _PROJECT_TYPES.is_discovered:
+        return
+    with _discovery_lock:
+        if _PROJECT_TYPES.is_discovered:
+            return
+        if _discovering:
+            msg = "Project type plugins must declare types without looking up other project types during import."
+            raise RuntimeError(msg)
+        from lfx.services.config_discovery import resolve_config_dir
+        from lfx.services.deps import get_settings_service
+
+        _discovering = True
+        try:
+            config_dir = resolve_config_dir(None, settings_service=get_settings_service())
+            _PROJECT_TYPES.discover(config_dir=config_dir)
+        finally:
+            _discovering = False
 
 
 def register_slot(slot_definition: SlotDefinition) -> SlotDefinition:
@@ -43,58 +125,43 @@ def all_slots() -> tuple[SlotDefinition, ...]:
     return tuple(_SLOT_DEFINITIONS[name] for name in registered_slots())
 
 
-def register_project_type(project_type: ProjectType) -> ProjectType:
-    """Register ``project_type`` under its name, and return it.
+def register_project_type(project_type: type[DefinitionT], *, override: bool = False) -> type[DefinitionT]:
+    """Register a class, also usable as a decorator. Import-time registration does no I/O.
 
-    Idempotent for the identical object; re-registering a different type under a name that is
-    taken raises ``ValueError`` rather than silently shadowing it. The return value lets a
-    caller bind the registered object in one statement.
+    The same class may register again. A different class needs explicit ``override=True``;
+    hosts must register their overrides before the first lookup so operator config wins.
+    Entry points should export undecorated classes: discovery registers their keys itself.
     """
-    existing = _PROJECT_TYPES.get(project_type.name)
-    if existing is not None and existing is not project_type:
-        msg = (
-            f"Project type {project_type.name!r} is already registered as "
-            f"{existing.display_name!r}; refusing to overwrite it."
-        )
-        raise ValueError(msg)
-
-    names: set[str] = set()
-    for field in project_type.fields:
-        if field.name in names:
-            msg = f"Project type {project_type.name!r} declares field {field.name!r} more than once."
+    _validate_project_type(getattr(project_type, "name", ""), project_type)
+    with _discovery_lock:
+        existing = _PROJECT_TYPES.get_class(project_type.name)
+        if existing is not None and existing is not project_type and not override:
+            msg = f"Project type {project_type.name!r} is already registered; refusing to overwrite it."
             raise ValueError(msg)
-        names.add(field.name)
-        definition = field.slot_definition
-        if definition is None:
-            continue
-        if not isinstance(definition, SlotDefinition):
-            msg = f"Project field {project_type.name}.{field.name} must use a registered SlotDefinition instance."
-            raise TypeError(msg)
-        if _SLOT_DEFINITIONS.get(definition.name) is not definition:
-            msg = (
-                f"Project field {project_type.name}.{field.name} uses slot {definition.name!r}, "
-                "but not its registered definition. Register the slot first, then pass that same instance."
-            )
+        if existing is not None and existing is not project_type and _PROJECT_TYPES.is_discovered:
+            msg = "Register project type overrides before the first lookup so operator configuration keeps precedence."
             raise ValueError(msg)
-    _PROJECT_TYPES[project_type.name] = project_type
+        _PROJECT_TYPES.register_class(project_type.name, project_type, override=override)
     return project_type
 
 
-def get_project_type(name: str) -> ProjectType:
-    """Look up a registered project type by name."""
-    try:
-        return _PROJECT_TYPES[name]
-    except KeyError as exc:
-        available = ", ".join(registered_project_types()) or "<none>"
+def get_project_type(name: str) -> ProjectTypeDefinition:
+    """Resolve a declaration. Unknown or unavailable plugins never fall back to another type."""
+    _ensure_discovered()
+    project_type = _PROJECT_TYPES.get_instance(name, factory=lambda cls: cls())
+    if project_type is None:
+        available = ", ".join(_PROJECT_TYPES.list_keys()) or "<none>"
         msg = f"Project type {name!r} is not registered. Registered types: {available}."
-        raise ValueError(msg) from exc
+        raise ValueError(msg)
+    return project_type
 
 
 def registered_project_types() -> tuple[str, ...]:
-    """Every registered project type name, in a stable order."""
-    return tuple(sorted(_PROJECT_TYPES))
+    """Every discovered project type name, in a stable order."""
+    _ensure_discovered()
+    return tuple(_PROJECT_TYPES.list_keys())
 
 
-def all_project_types() -> tuple[ProjectType, ...]:
-    """Every registered project type, in the same stable order."""
-    return tuple(_PROJECT_TYPES[name] for name in registered_project_types())
+def all_project_types() -> tuple[ProjectTypeDefinition, ...]:
+    """Every discovered declaration, in the same stable order."""
+    return tuple(get_project_type(name) for name in registered_project_types())
