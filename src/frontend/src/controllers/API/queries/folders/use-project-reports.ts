@@ -2,6 +2,7 @@ import type { useQueryFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
+import type { ToolDependencyUse } from "./use-project-tool-pack";
 
 export type ReportExecution = {
   flow_id: string;
@@ -44,6 +45,7 @@ export type SourcedReport = {
     tool_call_id: string;
     tool_name: string | null;
   }[];
+  tool_dependencies?: ToolDependencyUse[];
   claim_support: "not_evaluated";
 };
 

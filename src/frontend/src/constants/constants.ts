@@ -809,6 +809,8 @@ export const AUTHORIZED_DUPLICATE_REQUESTS = [
   "/flows",
   // Report pagination, reopen, and retry reads are coordinated by React Query.
   "/reports",
+  // Pack rows, revision review, and retries share a React Query resource.
+  "/tool-pack",
   "/logout",
   "/refresh",
   "/login",

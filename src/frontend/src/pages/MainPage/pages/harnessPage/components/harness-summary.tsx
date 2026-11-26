@@ -12,6 +12,7 @@ interface HarnessSummaryProps {
   model?: unknown;
   showModel?: boolean;
   toolFlows: FlowType[];
+  toolPackCount?: number;
   /** Every other field the form holds, already formatted for reading. */
   details: { name: string; label: string; value: string }[];
   className?: string;
@@ -46,6 +47,7 @@ export const HarnessSummary = ({
   className,
   agentFlow,
   showModel = true,
+  toolPackCount = 0,
 }: HarnessSummaryProps) => {
   const { t } = useTranslation();
   const pickedModel = modelLabel(model);
@@ -122,7 +124,15 @@ export const HarnessSummary = ({
             </Badge>
           )}
         </div>
-        {toolFlows.length === 0 ? (
+        {toolPackCount > 0 && (
+          <a
+            href="#harness-field-tool_packs"
+            className="text-sm underline underline-offset-4"
+          >
+            {t("toolPacks.selectedCount", { count: toolPackCount })}
+          </a>
+        )}
+        {toolFlows.length === 0 && toolPackCount === 0 ? (
           <span
             className="text-sm text-muted-foreground"
             data-testid="harness-summary-tools-empty"

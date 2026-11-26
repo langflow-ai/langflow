@@ -88,7 +88,7 @@ async def test_the_form_carries_the_sections_it_should_be_grouped_into(client, l
 
     sections = [field["section"] for field in harness["template"].values()]
     assert sections == ["Instructions", "Model", "Tools", "Tools", *(["Runtime"] * 8), "Hooks"]
-    assert harness["template"]["tool_packs"]["show"] is False
+    assert harness["template"]["tool_packs"]["show"] is True
     assert harness["template"]["hooks"]["show"] is True
     assert harness["template"]["hooks"]["renders"] == "hook_flows"
 
@@ -117,7 +117,12 @@ async def test_visible_fields_use_available_page_widgets(client, logged_in_heade
     harness = await harness_from_api(client, logged_in_headers)
 
     bespoke = {name: f["renders"] for name, f in harness["template"].items() if f.get("renders") and f.get("show")}
-    assert bespoke == {"system_prompt": "long_text", "tools": "project_flows", "hooks": "hook_flows"}
+    assert bespoke == {
+        "system_prompt": "long_text",
+        "tools": "project_flows",
+        "tool_packs": "project_refs",
+        "hooks": "hook_flows",
+    }
 
 
 async def test_the_harness_form_can_be_saved_as_a_project_config(client, logged_in_headers, harness_from_api):
