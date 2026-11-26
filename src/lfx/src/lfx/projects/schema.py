@@ -222,6 +222,10 @@ class ProjectTypeDefinition:
 
         return remap_declared_references(self, config, mapping)
 
+    def starters(self) -> tuple:
+        """Declare lazy starter factories. Metadata lookup never builds their graphs."""
+        return ()
+
     async def save_config(self, request: SaveRequest, ctx: ProjectSaveContext) -> PreparedSave:  # noqa: ARG002
         """Prepare config without committing. Override to validate and pin sources."""
         from lfx.projects.lifecycle import PreparedSave
