@@ -136,6 +136,8 @@ async def handle_on_chain_end(
     message_id: str | None = None,  # noqa: ARG001
 ) -> tuple[Message, float]:
     data_output = event["data"].get("output")
+    if isinstance(data_output, AgentFinish) and data_output.return_values.get("agent_run_result"):
+        agent_message.properties.agent_run_result = data_output.return_values["agent_run_result"]
     if data_output and isinstance(data_output, AgentFinish) and data_output.return_values.get("output"):
         output = data_output.return_values.get("output")
 

@@ -8,6 +8,7 @@ No mocks of the serializer — the `__interrupt__` write is non-JSON and must su
 
 from __future__ import annotations
 
+import asyncio
 import sys
 
 import pytest
@@ -17,6 +18,7 @@ from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from langchain_core.tools import tool
+from langgraph.checkpoint.base import empty_checkpoint
 from langgraph.types import Command
 from lfx.components.models_and_agents.agent_helpers.job_checkpoint_saver import (
     JobCheckpointSaver,
@@ -52,13 +54,17 @@ class ScriptedModel(BaseChatModel):
         return ChatResult(generations=[ChatGeneration(message=msg)])
 
 
-def _store():
+def _store(latency=0):
     blobs: dict[tuple[str, str], str] = {}
 
     async def save_blob(job_id: str, kind: str, blob: str) -> None:
+        if latency:
+            await asyncio.sleep(latency)
         blobs[(job_id, kind)] = blob
 
     async def load_blob(job_id: str, kind: str) -> str | None:
+        if latency:
+            await asyncio.sleep(latency)
         return blobs.get((job_id, kind))
 
     return blobs, save_blob, load_blob
@@ -85,8 +91,9 @@ def _agent(saver):
     reason="langgraph HITL interrupt() needs asyncio create_task context= (Python 3.11+)",
 )
 @pytest.mark.asyncio
-async def test_durable_saver_round_trip_pauses_persists_and_resumes() -> None:
-    blobs, save_blob, load_blob = _store()
+@pytest.mark.parametrize("latency", [0, 0.002])
+async def test_durable_saver_round_trip_pauses_persists_and_resumes(latency) -> None:
+    blobs, save_blob, load_blob = _store(latency)
     config = {"configurable": {"thread_id": "job-1"}}
 
     # Run 1: pauses at the gated tool; the paused thread is persisted to the blob store.
@@ -122,3 +129,30 @@ async def test_durable_saver_async_only() -> None:
     saver = JobCheckpointSaver("job-1", save_blob, load_blob)
     with pytest.raises(NotImplementedError):
         saver.get_tuple({"configurable": {"thread_id": "job-1"}})
+
+
+@pytest.mark.asyncio
+async def test_task_writes_keep_their_checkpoint_when_they_arrive_before_the_snapshot():
+    _, save_blob, load_blob = _store()
+    saver = JobCheckpointSaver("job-1", save_blob, load_blob)
+    config = {"configurable": {"thread_id": "job-1"}}
+    first = empty_checkpoint()
+    second = empty_checkpoint()
+    first["id"], second["id"] = "001", "002"
+    early = {"configurable": {"thread_id": "job-1", "checkpoint_id": "002"}}
+
+    await saver.aput_writes(early, [("__interrupt__", "review this call")], "tool-task")
+    await saver.aput(config, first, {}, {})
+    restored = await saver.aget_tuple(config)
+    assert restored.pending_writes == []
+    # The pending write is durable too; a fresh saver must attach it to 002.
+    saver = JobCheckpointSaver("job-1", save_blob, load_blob)
+    await saver.aput(config, second, {}, {})
+    restored = await saver.aget_tuple(config)
+    assert restored.pending_writes == [("tool-task", "__interrupt__", "review this call")]
+    await saver.aput_writes(
+        {"configurable": {"thread_id": "job-1", "checkpoint_id": "001"}},
+        [("messages", "late old result")],
+        "old-task",
+    )
+    assert (await saver.aget_tuple(config)).pending_writes == restored.pending_writes
