@@ -103,12 +103,15 @@ class AgentConfiguration(BaseModel):
     tools: tuple[ToolConfiguration, ...] = ()
     flow_bindings: ProjectFlowBindings = Field(default_factory=ProjectFlowBindings)
     skills: HarnessSkills | None = None
+    candidate_digest: str | None = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         value = handler(self)
         if self.skills is None:
             value.pop("skills", None)
+        if self.candidate_digest is None:
+            value.pop("candidate_digest", None)
         return value
 
     @model_validator(mode="after")
@@ -180,6 +183,7 @@ def capture_agent_configuration(component, model, policy: HarnessRuntimeConfig) 
     )
     return AgentConfiguration(
         skills=skills,
+        candidate_digest=graph.runtime_candidate.digest if getattr(graph, "runtime_candidate", None) else None,
         flow_id=str(graph.flow_id) if getattr(graph, "flow_id", None) else None,
         agent_node_id=component._id,  # noqa: SLF001
         flow_revision=flow_revision(data) if data.get("nodes") else None,

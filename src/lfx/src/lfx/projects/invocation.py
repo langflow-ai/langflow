@@ -21,7 +21,9 @@ async def reviewed_flow_source(component, binding, *, field_name, validate):
         resolver = RunFlowComponent(_user_id=component.user_id)
         resolver._vertex = component._vertex  # noqa: SLF001
         source = await resolver.get_flow(flow_id_selected=binding.flow_id)
-        validate(source.data if field_name == "tools" else source.data.get("data", {}), binding)
+        candidate = getattr(parent, "runtime_candidate", None)
+        executable_binding = candidate.execution_binding(binding) if candidate else binding
+        validate(source.data if field_name == "tools" else source.data.get("data", {}), executable_binding)
         if frozen is None:
             definitions = {
                 binding.flow_id: {
@@ -102,13 +104,16 @@ class ReviewedFlowRunner:
             )
         source = self.definitions[key]
         data = source["data"]
-        self.validate(data, binding)
         parent = self.component.graph
+        candidate = getattr(parent, "runtime_candidate", None)
+        self.validate(data, candidate.execution_binding(binding) if candidate else binding)
         context = {
             **deepcopy(context),
             "project_dir": (parent.context or {}).get("project_dir") if parent else None,
         }
-        async with _model_provider_policy(user_id=self.component.user_id, flow_id=binding.flow_id, flow_name=None):
+        async with _model_provider_policy(
+            user_id=self.component.user_id, flow_id=binding.flow_id, flow_name=None, runtime_candidate=candidate
+        ):
             # A reviewed definition is still caller-authored. Recheck policy on
             # every invocation, including definitions cached earlier in this run.
             is_superuser = False
@@ -122,6 +127,8 @@ class ReviewedFlowRunner:
                 context=context,
             )
             graph.frozen_tool_flows = source.get("dependencies")
+            if candidate:
+                candidate.inherit(parent, graph)
             await run_flow(
                 graph=graph,
                 inputs={},

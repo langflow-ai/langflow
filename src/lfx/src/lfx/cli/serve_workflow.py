@@ -80,6 +80,15 @@ class ServeWorkflowHost(WorkflowHostBase):
                 detail={"error": "flow not found", "code": "FLOW_NOT_FOUND", "flow_id": flow_id},
             )
         graph, _meta = hit
+        if graph.runtime_candidate is not None:
+            from lfx.cli.harness_artifacts import preflight_candidate
+
+            try:
+                preflight_candidate(graph.runtime_candidate, no_env_fallback=self._registry.no_env_fallback)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=409, detail={"code": "HARNESS_CANDIDATE_NOT_READY", "message": str(exc)}
+                ) from exc
         # Per-request isolation: never mutate the shared cached graph. deepcopy
         # drops graph.context, so re-stamp the registry's env policy.
         validate_flow_for_current_settings(graph)
