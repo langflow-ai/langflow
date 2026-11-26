@@ -79,7 +79,7 @@ async def writes_paused() -> bool:
     Two independent sources: the file record a migration writes, and the
     maintenance flag in the database this writer prunes. The flag is read through
     this writer's own engine — the service manager points elsewhere — and an
-    unreadable one is not a pause.
+    unreadable flag refuses writes until it can be read again.
     """
     if is_paused():
         return True

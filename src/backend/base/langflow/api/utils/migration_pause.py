@@ -153,12 +153,10 @@ async def maintenance_pauses_writes(
 ) -> bool:
     """Whether the maintenance flag refuses writes, read through ``session_maker``.
 
-    Only a verified flag pauses. An unreadable one does not, because the caller
-    writes through the same engine: the write reports its own failure instead of
-    being preceded by a pause nobody recorded. Reading it as a pause starves the
-    caller silently, which is how a telemetry writer stops pruning for good.
+    An unknown flag cannot authorize a write, even when read through the same
+    engine: an individual read can fail while other writes still succeed.
     """
-    return await _database_pause_status(session_maker, warn=False) is True
+    return await _database_pause_status(session_maker) is not False
 
 
 async def writes_paused() -> bool:
@@ -182,8 +180,7 @@ async def write_refusal(
         return REFUSAL
     if session_maker is not None:
         # A caller that writes through its own engine is answered from that engine.
-        # An unreadable flag there must not read as maintenance: nothing recorded a
-        # pause, and the caller's own write would have reported the real failure.
+        # An unreadable flag must not authorize writes to that database.
         return MAINTENANCE_REFUSAL if await maintenance_pauses_writes(session_maker) else None
     paused = await _database_pause_status()
     if paused is False:

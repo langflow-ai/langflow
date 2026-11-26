@@ -1058,29 +1058,105 @@ async def test_retention_honors_maintenance_in_its_own_engine(writer_with_engine
     assert await count() == 3
 
 
-async def test_retention_survives_an_unreadable_maintenance_flag(writer_with_engine, monkeypatch):
-    """An unreadable flag must not starve the sweep — the write reports its own failure.
-
-    Reading an unavailable flag as maintenance silently starves the caller: nothing
-    recorded the pause and nothing retries it, so retention stops pruning for good.
-    """
-    from langflow.api.utils import migration_pause
-    from sqlalchemy.exc import OperationalError
+@pytest.mark.parametrize("enabled", [None, False, True])
+async def test_scoped_maintenance_gate_singleton_states(writer_with_engine, enabled):
+    """An absent singleton is unpaused; existing flags carry their stored state."""
+    from langflow.services.database.models.maintenance import MAINTENANCE_ID, MaintenanceState
+    from langflow.services.maintenance.state import MAINTENANCE_REFUSAL
 
     writer, engine = writer_with_engine
+    if enabled is not None:
+        async with AsyncSession(engine) as session:
+            session.add(MaintenanceState(id=MAINTENANCE_ID, enabled=enabled))
+            await session.commit()
+
+    refusal = await migration_pause.write_refusal(check_file=False, session_maker=writer._session_maker)
+    assert refusal == (MAINTENANCE_REFUSAL if enabled else None)
+
+
+async def test_scoped_maintenance_gate_before_table_creation(writer_with_engine):
+    """A missing table is unreadable, not the absent-row unpaused state."""
+    from langflow.services.database.models.maintenance import MaintenanceState
+    from langflow.services.maintenance.state import MAINTENANCE_REFUSAL
+
+    writer, engine = writer_with_engine
+    async with engine.begin() as connection:
+        await connection.run_sync(MaintenanceState.__table__.drop)
+    assert (
+        await migration_pause.write_refusal(check_file=False, session_maker=writer._session_maker)
+        == MAINTENANCE_REFUSAL
+    )
+
+
+async def test_retention_survives_an_unreadable_maintenance_flag(writer_with_engine, monkeypatch):
+    """Deny only flag reads: other SQL can succeed, but the writer must wait and retry."""
+    import langflow.services.telemetry_writer.service as writer_module
+    from langflow.services.database.models.maintenance import MAINTENANCE_ID, MaintenanceState
+    from langflow.services.maintenance.state import MAINTENANCE_REFUSAL
+    from sqlalchemy.exc import DatabaseError
+
+    writer, engine = writer_with_engine
+    monkeypatch.setattr(migration_pause, "is_paused", lambda: False)
+    monkeypatch.setattr(writer_module, "is_paused", lambda: False)
     writer.settings_service.settings.max_vertex_builds_per_vertex = 3
     writer.settings_service.settings.max_vertex_builds_to_keep = 10_000
     flow_id = uuid4()
-    vb_batch = [_make_vertex_build_row(flow_id, vertex_id="v1") for _ in range(8)]
-    await writer._flush([], vb_batch)
-
-    async def _unreadable(*_args, **_kwargs):
-        statement = "SELECT 1"
-        raise OperationalError(statement, {}, sqlite3.OperationalError("database is locked"))
-
-    monkeypatch.setattr(migration_pause, "maintenance_enabled", _unreadable)
-    await writer._run_retention_pass()
-
+    await writer._flush([], [_make_vertex_build_row(flow_id) for _ in range(8)])
     async with AsyncSession(engine) as session:
-        count = await session.scalar(select(func.count()).select_from(VertexBuildTable))
-    assert count == 3
+        session.add(MaintenanceState(id=MAINTENANCE_ID, enabled=True))
+        await session.commit()
+
+    def authorize(action, table, column, _database, _trigger):
+        if action == sqlite3.SQLITE_READ and table == "maintenance_state" and column == "enabled":
+            return sqlite3.SQLITE_DENY
+        return sqlite3.SQLITE_OK
+
+    async def set_authorizer(callback):
+        async with engine.connect() as connection:
+            await connection.run_sync(
+                lambda sync_conn: sync_conn.connection.driver_connection._conn.set_authorizer(callback)
+            )
+
+    await set_authorizer(authorize)
+    try:
+        async with AsyncSession(engine) as session:
+            with pytest.raises(DatabaseError):
+                await migration_pause.maintenance_enabled(session)
+        # This deliberately bypasses the admission gate to establish that writes
+        # really can succeed while the maintenance SELECT is denied.
+        await writer._flush([_make_transaction_row(flow_id)], [])
+        async with AsyncSession(engine) as session:
+            assert await session.scalar(select(func.count()).select_from(TransactionTable)) == 1
+        assert (
+            await migration_pause.write_refusal(check_file=False, session_maker=writer._session_maker)
+            == MAINTENANCE_REFUSAL
+        )
+
+        writer.enqueue_transaction(_make_transaction_row(flow_id))
+        writer._shutdown_event.set()
+        await writer._run_writer()
+        await writer._run_retention_pass()
+        async with AsyncSession(engine) as session:
+            assert await session.scalar(select(func.count()).select_from(TransactionTable)) == 1
+            assert await session.scalar(select(func.count()).select_from(VertexBuildTable)) == 8
+        assert len(writer._tx_buffer) == 1
+        assert writer._dirty_vb_flows
+    finally:
+        await set_authorizer(None)
+
+    # A restored read of an active flag still refuses; only a verified false
+    # permits the queued flush and the deferred retention pass to run.
+    await writer._run_writer()
+    await writer._run_retention_pass()
+    assert len(writer._tx_buffer) == 1
+    async with AsyncSession(engine) as session:
+        await session.execute(
+            update(MaintenanceState).where(MaintenanceState.id == MAINTENANCE_ID).values(enabled=False)
+        )
+        await session.commit()
+    await writer._run_writer()
+    await writer._run_retention_pass()
+    async with AsyncSession(engine) as session:
+        assert await session.scalar(select(func.count()).select_from(TransactionTable)) == 2
+        assert await session.scalar(select(func.count()).select_from(VertexBuildTable)) == 3
+    assert not writer._tx_buffer
