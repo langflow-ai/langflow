@@ -64,8 +64,15 @@ def custom_project_type(monkeypatch):
         display_name = "Custom project"
         icon = "Box"
         description = "A plugin-defined form."
+        allows_empty_project = True
+        panels = ("reports",)
         fields = (
             ProjectTypeField(name="team", input=StrInput(name="team", display_name="Team")),
+            ProjectTypeField(
+                name="libraries",
+                input=StrInput(name="libraries", list=True),
+                references="test-custom-project",
+            ),
             ProjectTypeField(
                 name="briefing",
                 input=StrInput(name="briefing", display_name="Briefing"),
@@ -130,8 +137,13 @@ async def test_custom_type_form_and_config_use_existing_api(client, logged_in_he
     definition, _ = custom_project_type
     response = await client.get("api/v1/projects/types", headers=logged_in_headers)
     assert response.status_code == status.HTTP_200_OK
-    template = next(item for item in response.json() if item["name"] == definition.name)["template"]
+    declared = next(item for item in response.json() if item["name"] == definition.name)
+    assert declared["allows_empty_project"] is True
+    assert declared["exportable"] is True
+    assert declared["panels"] == ["reports"]
+    template = declared["template"]
     assert template["team"]["display_name"] == "Team"
+    assert template["libraries"]["references"] == definition.name
 
     response = await client.post(
         "api/v1/projects/",
@@ -141,6 +153,118 @@ async def test_custom_type_form_and_config_use_existing_api(client, logged_in_he
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json()["project_type"] == definition.name
     assert response.json()["project_config"]["team"] == "Support"
+
+
+@pytest.mark.parametrize(
+    ("allows_empty", "exportable", "expected"), [(True, True, 200), (False, True, 404), (True, False, 422)]
+)
+async def test_custom_type_controls_empty_export(
+    client, logged_in_headers, custom_project_type, monkeypatch, allows_empty, exportable, expected
+):
+    definition, _ = custom_project_type
+    monkeypatch.setattr(definition, "allows_empty_project", allows_empty)
+    monkeypatch.setattr(definition, "exportable", exportable)
+    created = await client.post(
+        "api/v1/projects/",
+        headers=logged_in_headers,
+        json={"name": "Empty plugin project", "project_type": definition.name},
+    )
+    assert created.status_code == 201
+    response = await client.get(f"api/v1/projects/download/{created.json()['id']}", headers=logged_in_headers)
+    assert response.status_code == expected, response.text
+    if expected == 200:
+        imported = await client.post(
+            "api/v1/projects/upload/",
+            headers=logged_in_headers,
+            files={"file": ("plugin.zip", response.content, "application/zip")},
+        )
+        assert imported.status_code == 201, imported.text
+
+
+async def test_nonexportable_custom_type_rejects_forged_import(
+    client, logged_in_headers, custom_project_type, monkeypatch
+):
+    import json
+
+    definition, _ = custom_project_type
+    monkeypatch.setattr(definition, "exportable", False)
+    response = await client.post(
+        "api/v1/projects/upload/",
+        headers=logged_in_headers,
+        files={
+            "file": (
+                "plugin.json",
+                json.dumps(
+                    {
+                        "folder_name": "Forbidden import",
+                        "folder_project_type": definition.name,
+                        "flows": [],
+                    }
+                ),
+                "application/json",
+            )
+        },
+    )
+    assert response.status_code == 422, response.text
+    assert "Custom project import" in response.text
+
+
+async def test_declared_reference_checks_actual_type_and_keeps_previous_config_on_failure(
+    client, logged_in_headers, custom_project_type
+):
+    definition, _ = custom_project_type
+    projects = []
+    for name, kind in [("Consumer", definition.name), ("Library", definition.name), ("Wrong type", "flows")]:
+        response = await client.post(
+            "api/v1/projects/",
+            headers=logged_in_headers,
+            json={"name": name, "project_type": kind},
+        )
+        assert response.status_code == 201
+        projects.append(response.json()["id"])
+    consumer, library, wrong = projects
+    reference = {"project_id": library, "revision": "a" * 64}
+    saved = {"libraries": [reference]}
+    response = await client.patch(
+        f"api/v1/projects/{consumer}",
+        headers=logged_in_headers,
+        json={"project_config": saved},
+    )
+    assert response.status_code == 200, response.text
+    for rejected in [{**reference, "expected_type": "flows"}, {**reference, "project_id": wrong}]:
+        response = await client.patch(
+            f"api/v1/projects/{consumer}",
+            headers=logged_in_headers,
+            json={"project_config": {"libraries": [rejected]}},
+        )
+        assert response.status_code == 422, response.text
+        retained = await client.get(f"api/v1/projects/{consumer}", headers=logged_in_headers)
+        assert retained.json()["project_config"]["libraries"] == saved["libraries"]
+
+
+async def test_declared_reference_does_not_reveal_another_users_project(
+    client, logged_in_headers, custom_project_type, user_two_api_key
+):
+    definition, _ = custom_project_type
+    client.cookies.clear()
+    private = await client.post(
+        "api/v1/projects/",
+        headers={"x-api-key": user_two_api_key},
+        json={"name": "Private library", "project_type": definition.name},
+    )
+    assert private.status_code == 201, private.text
+    response = await client.post(
+        "api/v1/projects/",
+        headers=logged_in_headers,
+        json={
+            "name": "Consumer",
+            "project_type": definition.name,
+            "project_config": {
+                "libraries": [{"project_id": private.json()["id"], "revision": "a" * 64}],
+            },
+        },
+    )
+    assert response.status_code == 404, response.text
 
 
 async def test_missing_plugin_preserves_existing_project_on_read(
@@ -166,6 +290,9 @@ async def test_missing_plugin_preserves_existing_project_on_read(
     assert read.status_code == status.HTTP_200_OK
     assert read.json()["project_type"] == definition.name
     assert read.json()["project_config"] == saved["project_config"]
+    export = await client.get(f"api/v1/projects/download/{saved['id']}", headers=logged_in_headers)
+    assert export.status_code == 422, export.text
+    assert "export policy cannot be checked" in export.text
 
 
 @pytest.fixture

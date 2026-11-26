@@ -10,7 +10,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
 import { api } from "@/controllers/API/api";
-import { CapabilityPackPicker } from "../components/capability-pack-picker";
+import {
+  CapabilityPackPicker,
+  capabilityKind,
+} from "../components/capability-pack-picker";
 import { SkillDefinitionsEditor } from "../components/skill-definitions-editor";
 import {
   type SkillDefinition,
@@ -60,6 +63,19 @@ function wrap(children: React.ReactNode) {
 beforeEach(() => {
   jest.clearAllMocks();
   request.mockResolvedValue({ data: manifest });
+});
+
+it("does not offer another pack kind when a reference target has no built-in reviewer", () => {
+  wrap(
+    <CapabilityPackPicker
+      kind={capabilityKind("document-library")}
+      projectId="custom-project"
+      value={[]}
+      onChange={jest.fn()}
+    />,
+  );
+  expect(screen.getByRole("combobox")).toBeDisabled();
+  expect(request).not.toHaveBeenCalled();
 });
 
 it("shows instructions before accepting a reviewed Skill Pack", async () => {

@@ -9,6 +9,8 @@ class SupportDeskType(ProjectTypeDefinition):
     display_name = "Support desk"
     icon = "Headset"
     description = "Triage incoming support requests."
+    allows_empty_project = True
+    panels = ("reports",)
     fields = (
         ProjectTypeField(
             name="instructions",

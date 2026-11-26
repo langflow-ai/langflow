@@ -11,16 +11,13 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from lfx.projects.bindings import flow_revision
 from lfx.projects.dependencies import dependency_ids
+from lfx.projects.references import ProjectReference
 
 
-class ToolPackReference(BaseModel):
+class ToolPackReference(ProjectReference):
     """A reviewed project reference; resolving it must check its type and revision."""
 
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    project_id: UUID
     expected_type: Literal["tool-pack"] = "tool-pack"
-    revision: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
 class FlowDependency(BaseModel):

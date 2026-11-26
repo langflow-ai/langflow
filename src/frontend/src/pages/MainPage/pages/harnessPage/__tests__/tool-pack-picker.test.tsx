@@ -84,6 +84,7 @@ function mount(
     return (
       <ToolPackPicker
         projectId="harness"
+        references="tool-pack"
         agent={enabled ? selectedAgent : undefined}
         value={value}
         saved={initial}

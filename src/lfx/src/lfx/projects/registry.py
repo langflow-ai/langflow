@@ -34,6 +34,17 @@ def _validate_project_type(key: str, project_type: type[ProjectTypeDefinition]) 
     if not isinstance(project_type.description, str) or not isinstance(project_type.fields, tuple):
         msg = f"Project type {key!r} must declare a string description and a tuple of fields."
         raise TypeError(msg)
+    for attribute in ("allows_empty_project", "exportable"):
+        if not isinstance(getattr(project_type, attribute), bool):
+            msg = f"Project type {key!r} must declare a boolean {attribute}."
+            raise TypeError(msg)
+    if (
+        not isinstance(project_type.panels, tuple)
+        or any(not isinstance(panel, str) or not panel.strip() for panel in project_type.panels)
+        or len(set(project_type.panels)) != len(project_type.panels)
+    ):
+        msg = f"Project type {key!r} must declare a tuple of unique, non-empty panel names."
+        raise ValueError(msg)
     names: set[str] = set()
     for field in project_type.fields:
         if not isinstance(field, ProjectTypeField):
@@ -43,6 +54,9 @@ def _validate_project_type(key: str, project_type: type[ProjectTypeDefinition]) 
             msg = f"Project type {project_type.name!r} declares field {field.name!r} more than once."
             raise ValueError(msg)
         names.add(field.name)
+        if not isinstance(field.references, str) or (field.references and not field.references.strip()):
+            msg = f"Project field {project_type.name}.{field.name} must name its referenced project type."
+            raise ValueError(msg)
         definition = field.slot_definition
         if definition is None:
             continue
