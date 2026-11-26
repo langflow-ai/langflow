@@ -89,6 +89,7 @@ class MCPComposerService(Service):
         self._pid_to_project: dict[int, str] = {}  # Track which PID belongs to which project
         self._last_errors: dict[str, str] = {}  # Track last error message per project for UI display
         self._backend_auth_tokens: dict[str, str] = {}  # project_id -> internal Composer-to-Langflow token
+        self._temp_logs_by_pid: dict[int, tuple[Path, ...]] = {}  # Windows: logs of a running composer
 
     def get_last_error(self, project_id: str) -> str | None:
         """Get the last error message for a project, if any."""
@@ -512,18 +513,7 @@ class MCPComposerService(Service):
                     # Check if process is still running before trying to terminate
                     if process.poll() is None:
                         await logger.adebug(f"Terminating MCP Composer process {process.pid} for project {project_id}")
-                        process.terminate()
-
-                        # Wait longer for graceful shutdown
-                        try:
-                            await asyncio.wait_for(asyncio.to_thread(process.wait), timeout=2.0)
-                            await logger.adebug(f"MCP Composer for project {project_id} terminated gracefully")
-                        except asyncio.TimeoutError:
-                            await logger.aerror(
-                                f"MCP Composer for project {project_id} did not terminate gracefully, force killing"
-                            )
-                            await asyncio.to_thread(process.kill)
-                            await asyncio.to_thread(process.wait)
+                        await self._terminate_process_tree(process)
                     else:
                         await logger.adebug(f"MCP Composer process for project {project_id} was already terminated")
 
@@ -544,12 +534,65 @@ class MCPComposerService(Service):
             # Clean up PID tracking
             if process and process.pid:
                 self._pid_to_project.pop(process.pid, None)
+                await self._remove_temp_logs(self._temp_logs_by_pid.pop(process.pid, ()))
                 await logger.adebug(f"Released PID {process.pid} tracking for project {project_id}")
 
             # Remove from tracking
             self.project_composers.pop(project_id, None)
             self._backend_auth_tokens.pop(project_id, None)
             await logger.adebug(f"Removed tracking for project {project_id}")
+
+    async def _terminate_process_tree(self, process: subprocess.Popen) -> None:
+        """Stop the process, and on Windows every process it started.
+
+        On Windows uvx runs mcp-composer as a child that inherits the log file handles and survives
+        TerminateProcess on uvx, so only a tree kill frees the port and lets the logs be deleted.
+        """
+        if platform.system() == "Windows":
+            taskkill_cmd = os.path.join(  # noqa: PTH118
+                os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", "taskkill.exe"
+            )
+            result = await asyncio.to_thread(
+                subprocess.run,
+                [taskkill_cmd, "/F", "/T", "/PID", str(process.pid)],
+                capture_output=True,
+                check=False,
+            )
+            if result.returncode != 0 and process.poll() is None:
+                await asyncio.to_thread(process.kill)
+        else:
+            process.terminate()
+        try:
+            await asyncio.wait_for(asyncio.to_thread(process.wait), timeout=2.0)
+        except asyncio.TimeoutError:
+            await logger.adebug(f"Process {process.pid} did not terminate gracefully, force killing")
+            await asyncio.to_thread(process.kill)
+            await asyncio.to_thread(process.wait)
+
+    @staticmethod
+    def _try_unlink(path: Path) -> bool:
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            return False
+        return True
+
+    async def _remove_temp_logs(self, paths: typing.Iterable[Path]) -> None:
+        """Delete Windows temp logs, retrying while a just-killed child still releases its handles."""
+        attempts = 5
+        for path in paths:
+            for attempt in range(1, attempts + 1):
+                try:
+                    path.unlink(missing_ok=True)
+                    break
+                except PermissionError as e:
+                    if attempt == attempts:
+                        await logger.awarning(f"Could not delete MCP Composer temp log {path}: {e}")
+                        break
+                    await asyncio.sleep(0.2)
+                except OSError as e:
+                    await logger.awarning(f"Could not delete MCP Composer temp log {path}: {e}")
+                    break
 
     async def _wait_for_process_exit(self, process):
         """Wait for a process to exit."""
@@ -1445,6 +1488,7 @@ class MCPComposerService(Service):
         stderr_file = None
         stdout_path: Path | None = None
         stderr_path: Path | None = None
+        started = False
 
         try:
             if platform.system() == "Windows":
@@ -1523,15 +1567,7 @@ class MCPComposerService(Service):
                     f"terminating process {process.pid}"
                 )
                 try:
-                    process.terminate()
-                    # Wait for graceful termination with timeout
-                    try:
-                        await asyncio.wait_for(asyncio.to_thread(process.wait), timeout=2.0)
-                    except asyncio.TimeoutError:
-                        # Force kill if graceful termination times out
-                        await logger.adebug(f"Process {process.pid} did not terminate gracefully, force killing")
-                        await asyncio.to_thread(process.kill)
-                        await asyncio.to_thread(process.wait)
+                    await self._terminate_process_tree(process)
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error terminating process during cancellation: {e}")
                 raise  # Re-raise to propagate cancellation
@@ -1560,7 +1596,7 @@ class MCPComposerService(Service):
                 )
 
                 # Get any available output before terminating
-                process.terminate()
+                await self._terminate_process_tree(process)
                 stdout_content, stderr_content, startup_error_msg = await self._read_process_output_and_extract_error(
                     process, oauth_server_url, stdout_file=stdout_file, stderr_file=stderr_file
                 )
@@ -1570,23 +1606,20 @@ class MCPComposerService(Service):
                 raise MCPComposerStartupError(startup_error_msg, project_id)
 
             # Close the pipes/files if everything is successful
-            if stdout_file and stderr_file:
-                # Clean up temp files on success
-                try:
-                    stdout_file.close()
-                    stderr_file.close()
-                    if stdout_path:
-                        stdout_path.unlink(missing_ok=True)
-                    if stderr_path:
-                        stderr_path.unlink(missing_ok=True)
-                except Exception as e:  # noqa: BLE001
-                    await logger.adebug(f"Error cleaning up temp files on success: {e}")
+            if stdout_file and stderr_file and stdout_path and stderr_path:
+                stdout_file.close()
+                stderr_file.close()
+                # On Windows the running composer still holds these files; delete them when it stops.
+                held = tuple(path for path in (stdout_path, stderr_path) if not self._try_unlink(path))
+                if held:
+                    self._temp_logs_by_pid[process.pid] = held
             else:
                 if process.stdout:
                     process.stdout.close()
                 if process.stderr:
                     process.stderr.close()
 
+            started = True
             return process
         finally:
             if backend_auth_config_path:
@@ -1594,15 +1627,12 @@ class MCPComposerService(Service):
                     backend_auth_config_path.unlink(missing_ok=True)
                 except Exception as e:  # noqa: BLE001
                     await logger.adebug(f"Error cleaning up MCP Composer config file: {e}")
-            # Close before unlink: Windows cannot delete a file that is still open.
-            for temp_file in (stdout_file, stderr_file):
-                if temp_file is None:
-                    continue
-                try:
+            if not started:
+                temp_files = [temp_file for temp_file in (stdout_file, stderr_file) if temp_file is not None]
+                # Close before unlink: Windows cannot delete a file that is still open.
+                for temp_file in temp_files:
                     temp_file.close()
-                    Path(temp_file.name).unlink(missing_ok=True)
-                except Exception as e:  # noqa: BLE001
-                    await logger.adebug(f"Error cleaning up MCP Composer temp log {temp_file.name}: {e}")
+                await self._remove_temp_logs(Path(temp_file.name) for temp_file in temp_files)
 
     @require_composer_enabled
     def get_project_composer_port(self, project_id: str) -> int | None:
