@@ -17,6 +17,7 @@ from lfx.utils.constants import DIRECT_TYPES
 from lfx.utils.file_path_security import (
     LocalFileAccessError,
     StorageNamespaceError,
+    authorized_extra_file_scopes,
     enforce_local_file_access,
     enforce_storage_key_scope,
     flow_storage_scope,
@@ -452,7 +453,7 @@ class ParameterHandler:
         authorized_legacy = getattr(graph, "authorized_legacy_flow_ids", frozenset())
         if not isinstance(authorized_legacy, frozenset):
             authorized_legacy = frozenset()
-        for candidate in sorted(authorized_legacy):
+        for candidate in (*sorted(authorized_legacy), *authorized_extra_file_scopes(graph)):
             scope = str(candidate).strip()
             if scope and scope not in scopes:
                 scopes.append(scope)

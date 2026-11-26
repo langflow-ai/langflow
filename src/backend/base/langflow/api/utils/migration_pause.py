@@ -67,6 +67,7 @@ _ALLOWED_PREFIX = "/api/v1/migration/"
 # These routes check administrator access before taking their write slot through
 # changes_the_instance. Middleware refusal would hide their authentication errors.
 _REPAIR_PATHS = frozenset({"/api/v1/upgrade-repairs/preview", "/api/v1/upgrade-repairs/apply"})
+_UPGRADE_REPORT_PATHS = frozenset({"/api/v1/upgrade-reports", "/api/v1/upgrade-reports/checks"})
 # What a change is told while the pause is on.
 REFUSAL = "This instance is being migrated."
 REPAIR_REFUSAL = "The instance migration pause does not permit repairs"
@@ -423,7 +424,8 @@ def _passes_while_paused(scope) -> bool:
     if scope.get("method") in _READ_METHODS:
         return True
     path = _path(scope)
-    if scope.get("method") == "POST" and path in _REPAIR_PATHS:
+    # The check holds no place for its run, which can take many minutes. It asks about the pause itself.
+    if scope.get("method") == "POST" and (path in _REPAIR_PATHS or path in _UPGRADE_REPORT_PATHS):
         return True
     return path in _ALLOWED_PATHS or f"{path}/".startswith(_ALLOWED_PREFIX)
 

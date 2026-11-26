@@ -10,8 +10,10 @@ from typing import TYPE_CHECKING
 import sqlalchemy as sa
 from sqlmodel import col, func, select
 
+from langflow.services.authorization.audit import audit_decision
 from langflow.services.database.models.upgrade_report import UpgradeReport, UpgradeReportRepair
 from langflow.services.upgrade_reports.schema import (
+    ReportHistorySummary,
     UpgradeReportDocument,
     UpgradeReportMetadata,
     parse_report_timestamp,
@@ -54,6 +56,11 @@ def validate_document(content: bytes) -> tuple[str, UpgradeReportDocument]:
 
 
 async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) -> UpgradeReport:
+    row, _ = await _store_report(session, content, actor_id)
+    return row
+
+
+async def _store_report(session: AsyncSession, content: bytes, actor_id: UUID) -> tuple[UpgradeReport, bool]:
     text, document = validate_document(content)
     row = UpgradeReport(
         created_by=actor_id,
@@ -69,22 +76,54 @@ async def store_report(session: AsyncSession, content: bytes, actor_id: UUID) ->
     session.add(row)
     await session.commit()
     await session.refresh(row)
-    return row
+    return row, bool(document.errors) or len(document.flows) < row.flow_count
+
+
+async def import_report_content(session: AsyncSession, content: bytes, actor_id: UUID) -> tuple[UpgradeReport, bool]:
+    """Validate, store and audit one report. Every way in imports through this.
+
+    Raises UnsupportedReportFormatError, ValidationError, ValueError, UnicodeError or RecursionError
+    when the content cannot be imported.
+    """
+    if len(content) > MAX_REPORT_BYTES:
+        msg = "the report is over the size limit"
+        raise ValueError(msg)
+    row, incomplete = await _store_report(session, content, actor_id)
+    await audit_decision(
+        user_id=actor_id, action="upgrade-report:import", obj=f"upgrade-report:{row.id}", result="allow"
+    )
+    return row, incomplete
 
 
 async def list_reports(
     session: AsyncSession, *, offset: int, limit: int, target_version: str | None = None
-) -> tuple[list[UpgradeReportMetadata], int]:
+) -> tuple[list[ReportHistorySummary], int]:
     filters = [UpgradeReport.target_version == target_version] if target_version else []
     count = (await session.exec(select(func.count()).select_from(UpgradeReport).where(*filters))).one()
+    # Return only the locator and assessment for each page, including older imports.
+    # Casting TEXT to JSON on SQLite would return zero instead of a JSON document.
+    archive = UpgradeReport.document_json
+    document = (
+        sa.cast(archive, sa.JSON)
+        if session.get_bind().dialect.name == "postgresql"
+        else sa.type_coerce(archive, sa.JSON)
+    )
+    locator = document["source"]["identity"]["locator"]
     rows = await session.execute(
-        sa.select(*(getattr(UpgradeReport, name) for name in UpgradeReportMetadata.model_fields))
+        sa.select(
+            *(getattr(UpgradeReport, name) for name in UpgradeReportMetadata.model_fields),
+            func.coalesce(locator["database"].as_string(), locator["path"].as_string()).label("source_database"),
+            sa.or_(
+                func.json_array_length(document["errors"]) > 0,
+                func.json_array_length(document["flows"]) < UpgradeReport.flow_count,
+            ).label("incomplete"),
+        )
         .where(*filters)
         .order_by(col(UpgradeReport.created_at).desc(), col(UpgradeReport.id).desc())
         .offset(offset)
         .limit(limit)
     )
-    return [UpgradeReportMetadata.model_validate(row) for row in rows.mappings()], count
+    return [ReportHistorySummary.model_validate(row) for row in rows.mappings()], count
 
 
 async def require_report(session: AsyncSession, report_id: UUID | None) -> None:

@@ -1033,6 +1033,10 @@ def worker(
             run_worker_loop,
         )
 
+        # Settings first: the service manager reads lfx.toml (the plane's service overrides) from the configured
+        # directory only if settings already exist when the first other service is created. Otherwise a worker
+        # looks in its working directory, misses the file and runs on the OSS allow-all authorization service.
+        get_settings_service()
         await initialize_services()
         settings = get_settings_service().settings
         if not settings.background_backend_is_scaled:
@@ -1041,6 +1045,7 @@ def worker(
 
         from uuid import uuid4
 
+        from langflow.services.deployment_artifacts.activation import worker_lifespan
         from langflow.services.deps import get_job_service
 
         # Process-unique owner so this worker's heartbeats are attributable, and
@@ -1050,29 +1055,44 @@ def worker(
         backend, worker_runner, teardown = await build_worker(owner=owner)
         stop_event = asyncio.Event()
         loop = asyncio.get_running_loop()
-        for sig in (signal.SIGTERM, signal.SIGINT):
-            with suppress(NotImplementedError):
-                loop.add_signal_handler(sig, stop_event.set)
-        logger.info("Langflow worker started; draining queued jobs off the database.")
+        startup_task = asyncio.current_task()
+        cancelled_startup = False
+
+        def request_stop() -> None:
+            nonlocal startup_task, cancelled_startup
+            stop_event.set()
+            # Startup hooks can be waiting on I/O before the claim loop can observe the stop event.
+            if startup_task is not None:
+                cancelled_startup = startup_task.cancel()
+                startup_task = None
+
+        # A worker runs flows without the API app, so what a plane starts in the app's lifespan never reaches it. The
+        # activation extension is what a plane ships for both processes: run it before the first claim.
         try:
-            await run_worker_loop(
-                backend,
-                worker_runner,
-                stop_event=stop_event,
-                idle_block_ms=idle_block_ms,
-                job_service=get_job_service(),
-                owner=owner,
-                lease_ttl_s=settings.background_lease_ttl_s,
-                watchdog_interval_s=settings.background_watchdog_interval_s,
-                roster_enabled=True,
-                # Derived from the SAME knob the collector uses as the online
-                # window, not from the watchdog interval: those are independent
-                # settings, so reusing the watchdog's meant an operator raising
-                # it to cut orphan-scan load would silently make every idle
-                # worker read offline. A third of the window leaves room for
-                # the beat's own jitter and two missed beats.
-                roster_interval_s=settings.background_lease_ttl_s / _ROSTER_BEATS_PER_WINDOW,
-            )
+            for sig in (signal.SIGTERM, signal.SIGINT):
+                with suppress(NotImplementedError):
+                    loop.add_signal_handler(sig, request_stop)
+            async with worker_lifespan():
+                startup_task = None
+                if stop_event.is_set():
+                    return
+                logger.info("Langflow worker started; draining queued jobs off the database.")
+                await run_worker_loop(
+                    backend,
+                    worker_runner,
+                    stop_event=stop_event,
+                    idle_block_ms=idle_block_ms,
+                    job_service=get_job_service(),
+                    owner=owner,
+                    lease_ttl_s=settings.background_lease_ttl_s,
+                    watchdog_interval_s=settings.background_watchdog_interval_s,
+                    roster_enabled=True,
+                    # A third of the online window leaves room for jitter and two missed beats.
+                    roster_interval_s=settings.background_lease_ttl_s / _ROSTER_BEATS_PER_WINDOW,
+                )
+        except asyncio.CancelledError:
+            if not cancelled_startup:
+                raise
         finally:
             await teardown()
 
@@ -1863,8 +1883,10 @@ _SERVER_SETTING_HELP = "The upgraded server's {} setting."
 def upgrade_check(
     database_url: str = typer.Option(
         ...,
+        envvar="LANGFLOW_UPGRADE_CHECK_DATABASE_URL",
         help="URL of the database the server to upgrade uses, such as sqlite:////app/langflow/langflow.db or "
-        "postgresql://user:password@host:5432/langflow. It is only read.",  # pragma: allowlist secret
+        "postgresql://user:password@host:5432/langflow. It is only read. "  # pragma: allowlist secret
+        "Set the environment variable instead to keep the password out of the process list.",
     ),
     serving_database_url: str | None = typer.Option(
         None,
@@ -1890,7 +1912,7 @@ def upgrade_check(
         default=False, help=_SERVER_SETTING_HELP.format("block_code_interpreter_components")
     ),
     custom_component_admin_only: bool = typer.Option(  # noqa: FBT001
-        default=False, help=_SERVER_SETTING_HELP.format("custom_component_admin_only")
+        default=True, help=_SERVER_SETTING_HELP.format("custom_component_admin_only")
     ),
     allow_components_paths_override: bool = typer.Option(  # noqa: FBT001
         default=True, help=_SERVER_SETTING_HELP.format("allow_components_paths_override")

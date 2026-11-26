@@ -1,9 +1,11 @@
 from urllib.parse import urlparse
 
+import requests
 from lfx.base.data.base_file import BaseFileComponent
-from lfx.base.models.provider_ssrf import validate_provider_base_url
+from lfx.base.models.provider_ssrf import ensure_credential_endpoint_allowed, validate_provider_base_url
 from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, MessageTextInput, SecretStrInput
 from lfx.schema.data import Data
+from lfx.utils.ssrf_requests import refuse_redirects
 from pypdf import PdfReader
 
 
@@ -195,6 +197,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                 raise ValueError(error_msg) from e
             # base_url is tenant-editable and the ingest client sends the operator's API key
             # to whatever host it names. Block internal/cloud-metadata destinations.
+            ensure_credential_endpoint_allowed(self.api_key, self.base_url)
             validate_provider_base_url(self.base_url)
         else:
             base_url_error = "Base URL is required"
@@ -209,6 +212,7 @@ class NvidiaIngestComponent(BaseFileComponent):
                 Ingestor(
                     message_client_kwargs={
                         "base_url": self.base_url,
+                        "http_allocator": lambda: refuse_redirects(requests.Session()),
                         "headers": {"Authorization": f"Bearer {self.api_key}"},
                         "max_retries": 3,
                         "timeout": 60,

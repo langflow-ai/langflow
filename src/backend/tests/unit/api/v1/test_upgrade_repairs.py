@@ -771,10 +771,14 @@ async def test_delegated_repairs_enforce_actual_owner_policy_without_hydration(
     )
     assert active_user.id != actor_id
     if not allowed:
+        provider_name = override or "OpenAI"
+        detail = f"The flow owner's model provider policy does not allow {provider_name}."
+        assert result["reason_detail"] == applied["reason_detail"] == detail
         assert applied["reason_codes"] == ["owner_policy_denied"]
         assert await _read(flow_id) == before
         history = (await client.get(f"/api/v1/upgrade-reports/{report_id}/repairs", headers=headers)).json()
         assert [row["result"]["status"] for row in history["items"]] == ["manual"]
+        assert history["items"][0]["result"]["reason_detail"] == detail
 
 
 @pytest.mark.parametrize("dynamic", ["unknown", "malformed", "connected", "variable", "provider_variable", "override"])

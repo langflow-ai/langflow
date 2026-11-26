@@ -13,6 +13,7 @@ import {
 import { CustomLink } from "@/customization/components/custom-link";
 import { DOCS_LINK } from "@/customization/config-constants";
 import { reportTime } from "./format";
+import MaintenanceControls from "./MaintenanceControls";
 import { repairReasonKey, repairRequestErrorKey } from "./reasons";
 
 export default function RepairControls({
@@ -70,15 +71,18 @@ export default function RepairControls({
       flows.find((flow) => flow.kind === "flow" && flow.id === flowId) ??
       flows.find((flow) => flow.id === flowId || flow.flow_id === flowId)
     )?.name?.trim() || flowId;
-  const flowLink = (flowId: string) => (
-    <CustomLink
-      to={`/flow/${encodeURIComponent(flowId)}`}
-      aria-label={t("settings.upgrade.openFlow", { name: flowName(flowId) })}
-      className="text-primary underline"
-    >
-      {flowName(flowId)}
-    </CustomLink>
-  );
+  const flowLink = ({ flow_id: flowId, status }: RepairResult) =>
+    status === "not_found" ? (
+      flowName(flowId)
+    ) : (
+      <CustomLink
+        to={`/flow/${encodeURIComponent(flowId)}`}
+        aria-label={t("settings.upgrade.openFlow", { name: flowName(flowId) })}
+        className="text-primary underline"
+      >
+        {flowName(flowId)}
+      </CustomLink>
+    );
   const recoveryLink = (item: RepairResult) =>
     item.recovery_version_id && (
       <p>
@@ -161,8 +165,16 @@ export default function RepairControls({
         {t("settings.upgrade.preview")}
       </Button>
       {statusKnown &&
-        (!maintenance.data?.maintenance || maintenance.data?.migration) && (
+        !maintenance.data?.maintenance &&
+        !maintenance.data?.migration &&
+        !apply.isError && (
           <p role="note">{t("settings.upgrade.freezeRequired")}</p>
+        )}
+      {statusKnown &&
+        maintenance.data?.migration &&
+        !preview.isError &&
+        !apply.isError && (
+          <p role="note">{t("settings.upgrade.migrationPause")}</p>
         )}
       {statusKnown && runningJobs !== undefined && runningJobs > 0 && (
         <p role="status">
@@ -180,6 +192,9 @@ export default function RepairControls({
         </p>
       )}
       {busy && <p role="status">{t("settings.upgrade.repairBusy")}</p>}
+      {statusKnown && maintenance.data && (
+        <MaintenanceControls status={maintenance.data} busy={busy} />
+      )}
       {result && (
         <>
           <p role="status">
@@ -202,7 +217,7 @@ export default function RepairControls({
             {result.results.map((item) => (
               <li key={item.flow_id} className="break-all">
                 <p>
-                  {flowLink(item.flow_id)} ·{" "}
+                  {flowLink(item)} ·{" "}
                   {t(`settings.upgrade.repairStatus.${item.status}`)}
                 </p>
                 {reasons(item)}
@@ -274,7 +289,7 @@ export default function RepairControls({
                     i18n.language,
                     t("settings.upgrade.unknown"),
                   )}{" "}
-                  · {flowLink(item.result.flow_id)} ·{" "}
+                  · {flowLink(item.result)} ·{" "}
                   {t(`settings.upgrade.repairStatus.${item.result.status}`)}
                   {reasons(item.result)}
                   {recoveryLink(item.result)}

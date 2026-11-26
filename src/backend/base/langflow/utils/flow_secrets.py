@@ -78,6 +78,7 @@ _SECRET_COMPOUND_NAMES = frozenset(
         "database_uri",
         "database_url",
         "dsn",
+        "ocp_apim_subscription_key",
         "private_key",
         "proxy_authorization",
         "set_cookie",
@@ -87,6 +88,10 @@ _SECRET_COMPOUND_NAMES = frozenset(
 
 class HiddenFieldMetadataError(ValueError):
     """A shared graph changed metadata used to hide an owner's value."""
+
+
+class UnresolvedVariableBindingError(ValueError):
+    """A deployment field references a variable the project owner does not have."""
 
 
 def has_api_terms(word: str) -> bool:
@@ -447,8 +452,10 @@ def _normalized_secret_name(value: object) -> str:
 
 
 def _is_secret_name(value: object) -> bool:
+    # HTTP header casing is arbitrary; do not split an acronym into camel-case parts.
+    header_style = str(value or "").strip().lower().replace("-", "_")
     normalized = _normalized_secret_name(value)
-    if normalized in _SECRET_COMPOUND_NAMES:
+    if header_style in _SECRET_COMPOUND_NAMES or normalized in _SECRET_COMPOUND_NAMES:
         return True
     parts = set(normalized.split("_"))
     is_token_value = normalized == "token" or normalized.endswith("_token")
@@ -482,15 +489,20 @@ def _is_variable_reference(value: object) -> bool:
     return not _contains_url_credentials(value)
 
 
-def _is_preserved_reference(value: object, known_variable_names: Collection[str] | None) -> bool:
+def _check_variable_reference(
+    value: object, known_variable_names: Collection[str] | None, required_field: str | None = None
+) -> bool:
     """Return whether a ``load_from_db`` value is kept as a variable-name reference.
 
     ``known_variable_names`` restricts preserved values to names of existing
     global variables. ``None`` keeps every value that passes the shape check.
+    When a location is supplied, a nonempty unresolved binding raises there.
     """
-    if not _is_variable_reference(value):
-        return False
-    return known_variable_names is None or value in known_variable_names
+    if _is_variable_reference(value) and (known_variable_names is None or value in known_variable_names):
+        return True
+    if required_field is not None and value:
+        raise UnresolvedVariableBindingError(required_field)
+    return False
 
 
 def _contains_url_credentials(value: str) -> bool:
@@ -570,7 +582,7 @@ def _cell_loads_from_db(row_metadata: object, column: str) -> bool | None:
     Mirrors ``cell_load_from_db`` in ``lfx.interface.initialize.loading``: a row
     may override its schema column per cell, so the two must agree on which
     cells resolve to a variable and which hold a literal. ``None`` means the row
-    records no choice, which the runtime resolves from the database.
+    records no choice, so the runtime keeps the literal if the lookup misses.
     """
     if isinstance(row_metadata, dict):
         return bool(row_metadata[column]) if column in row_metadata else None
@@ -596,6 +608,7 @@ def _strip_table_rows_in_place(
     reference_columns: frozenset[str],
     variable_references: set[str],
     known_variable_names: Collection[str] | None = None,
+    required_field: str | None = None,
 ) -> None:
     """Strip table rows while preserving valid ``load_from_db`` column references."""
     rows = field.get("value")
@@ -613,17 +626,20 @@ def _strip_table_rows_in_place(
         preserved: dict[str, str | None] = {}
         for column in reference_columns & row.keys():
             cell = row[column]
-            # Only a cell the runtime resolves from the database holds a
-            # variable *name*. A cell the row marks as not loading from the
-            # database holds the literal value itself, so it is scrubbed like
-            # any other secret rather than published as a required variable.
-            if _cell_loads_from_db(row_metadata, column) is False or not _is_preserved_reference(
-                cell, known_variable_names
-            ):
+            bound = _cell_loads_from_db(row_metadata, column)
+            # A legacy row without an override may also hold a literal.
+            required_cell = (
+                f"{required_field}, row {index + 1}, column '{column}'"
+                if required_field is not None and bound
+                else None
+            )
+            # During packaging, leave unmarked literals to the row scrub below.
+            # It keeps an Accept header and clears a literal Authorization header.
+            if bound is not False and _check_variable_reference(cell, known_variable_names, required_cell):
+                variable_references.add(cell)
+                preserved[column] = cell
+            elif required_field is None or bound is not None or not _is_variable_reference(cell):
                 preserved[column] = None
-                continue
-            variable_references.add(cell)
-            preserved[column] = cell
         _strip_structured_secret_values_in_place(row)
         row.update(preserved)
         if row_metadata is not None:
@@ -666,7 +682,7 @@ def _mcp_config_is_clean(config: dict, name: str, known_variable_names: Collecti
     (see ``_mcp_reference_names_known_variable``), so a literal secret shaped
     like an ``MCP_*`` name or a ``{{NAME}}`` placeholder cannot escape a strict
     snapshot just because it is shaped like a reference. ``None`` keeps the
-    shape-only check, matching ``_is_preserved_reference``'s default for other
+    shape-only check, matching ``_check_variable_reference``'s default for other
     secret fields.
     """
     # strip_config_secrets rewrites env/headers entries and drops secret-bearing
@@ -733,6 +749,7 @@ def _strip_template_field_value(
     known_variable_names: Collection[str] | None = None,
     *,
     keep_mcp_config: bool = False,
+    required_field: str | None = None,
 ) -> None:
     """Strip a template field according to metadata and value shape."""
     field_type = str(field.get("type") or "").lower()
@@ -751,21 +768,19 @@ def _strip_template_field_value(
             field["value"] = None
         return
 
-    if (
-        variable_references is not None
-        and field.get("load_from_db")
-        and not isinstance(field.get("value"), (dict, list))
-    ):
+    if variable_references is not None and field.get("load_from_db"):
         # A bound field stores the global-variable *name*, not the secret, so a
         # deployment target can re-resolve the credential it provisions under
-        # that name. Anything that fails the reference shape check, or names no
-        # variable in ``known_variable_names`` when the caller passes it, is nulled.
+        # that name. The owner lookup keeps an unverified name out of the package.
         value = field.get("value")
-        if _is_preserved_reference(value, known_variable_names):
-            variable_references.add(value)
-        else:
-            field["value"] = None
-        return
+        if not isinstance(value, (dict, list)):
+            if _check_variable_reference(value, known_variable_names, required_field):
+                variable_references.add(value)
+            else:
+                field["value"] = None
+            return
+        if required_field is not None and value:
+            raise UnresolvedVariableBindingError(required_field)
 
     if field.get("password") or _is_secret_name(field.get("name")):
         # An already-empty or absent value carries no secret. Nulling it
@@ -809,6 +824,7 @@ def _strip_template_field_value(
             reference_columns,
             variable_references if variable_references is not None else set(),
             known_variable_names if variable_references is not None else frozenset(),
+            required_field,
         )
         return
 
@@ -845,13 +861,18 @@ def iter_mcp_header_cells(headers: object):
     run time. Anything that handles one shape and not the other silently misses half the
     flows people actually have.
     """
+    for _, set_value, name, value in _iter_indexed_mcp_header_cells(headers):
+        yield set_value, name, value
+
+
+def _iter_indexed_mcp_header_cells(headers: object):
     if isinstance(headers, dict):
-        for name, value in list(headers.items()):
-            yield (lambda new, _name=name: headers.__setitem__(_name, new)), name, value
+        for index, (name, value) in enumerate(list(headers.items()), start=1):
+            yield index, (lambda new, _name=name: headers.__setitem__(_name, new)), name, value
     elif isinstance(headers, list):
-        for row in headers:
+        for index, row in enumerate(headers, start=1):
             if isinstance(row, dict) and "key" in row and "value" in row:
-                yield (lambda new, _row=row: _row.__setitem__("value", new)), row["key"], row["value"]
+                yield index, (lambda new, _row=row: _row.__setitem__("value", new)), row["key"], row["value"]
 
 
 def _is_mcp_header_reference(value: object, server_name: str, header_name: str) -> bool:
@@ -870,6 +891,7 @@ def _strip_mcp_header_field(
     template: dict,
     variable_references: set[str] | None,
     known_variable_names: Collection[str] | None = None,
+    required_field: str | None = None,
 ) -> dict | None:
     """Scrub an MCP component's own Headers box, keeping the names save time wrote.
 
@@ -894,7 +916,7 @@ def _strip_mcp_header_field(
     name = server_value.get("name")
     server_name = name if isinstance(name, str) and name else "server"
     preserved: list[tuple[Callable[[object], None], object]] = []
-    for set_value, header_name, value in iter_mcp_header_cells(headers):
+    for index, set_value, header_name, value in _iter_indexed_mcp_header_cells(headers):
         # Credential-named headers only, which is the rule the save side is held to as
         # well so the two agree. Treating every header outside `NON_SECRET_HEADERS` as a
         # credential swept up ordinary routing headers: `X-Tenant: acme` became a
@@ -909,6 +931,10 @@ def _strip_mcp_header_field(
             variable_references.add(value)
             preserved.append((set_value, value))
         elif _mcp_config_secrets.variable_reference_name(value) is not None:
+            if required_field is not None:
+                location = f"row {index}, column 'value'" if isinstance(headers, list) else f"header {index}"
+                required_header = f"{required_field}, {location}"
+                raise UnresolvedVariableBindingError(required_header)
             # A reference that is not this server and header's own: a stale name left by
             # a rename, say. Clear it explicitly so a strict snapshot cannot silently omit
             # its requirement, and a shared read cannot expose the binding.
@@ -931,6 +957,7 @@ def _strip_secrets_from_nodes(
     known_variable_names: Collection[str] | None = None,
     *,
     keep_mcp_config: bool = False,
+    reject_unknown_bindings: bool = False,
 ) -> None:
     """Iteratively strip secret values from regular and grouped flow nodes."""
     node_frames = [iter(nodes)]
@@ -950,11 +977,22 @@ def _strip_secrets_from_nodes(
             continue
         template = node_inner.get("template")
         if isinstance(template, dict):
-            handled = _strip_mcp_header_field(template, variable_references, known_variable_names)
-            for value in template.values():
+            node_id = node.get("id")
+            node_location = f" on node '{node_id}'" if isinstance(node_id, str) and node_id else ""
+            handled = _strip_mcp_header_field(
+                template,
+                variable_references,
+                known_variable_names,
+                f"'headers'{node_location}" if reject_unknown_bindings else None,
+            )
+            for key, value in template.items():
                 if isinstance(value, dict) and value is not handled:
                     _strip_template_field_value(
-                        value, variable_references, known_variable_names, keep_mcp_config=keep_mcp_config
+                        value,
+                        variable_references,
+                        known_variable_names,
+                        keep_mcp_config=keep_mcp_config,
+                        required_field=f"'{key}'{node_location}" if reject_unknown_bindings else None,
                     )
 
         flow = node_inner.get("flow")
@@ -972,6 +1010,7 @@ def strip_secret_field_values_in_place(
     variable_references: set[str] | None = None,
     known_variable_names: Collection[str] | None = None,
     keep_mcp_config: bool = False,
+    reject_unknown_bindings: bool = False,
 ) -> dict | None:
     """Scrub a detached flow-data mapping in place with bounded traversal memory.
 
@@ -990,7 +1029,10 @@ def strip_secret_field_values_in_place(
     ``load_from_db`` metadata is wrong can still carry a raw secret shaped like
     an ordinary name. Callers that can list the owner's global variables pass
     ``known_variable_names`` to close it: only values naming one of those
-    variables are then preserved.
+    variables are then preserved. Deployment archives set ``reject_unknown_bindings``
+    to refuse a reference that would otherwise be silently cleared. In table
+    cells without a row override, archives also keep ordinary literals
+    after scrubbing the row for secrets.
 
     An MCP server field is always reduced to its ``name`` (or nulled if it has
     none) regardless of ``variable_references`` - a deploy target does not need
@@ -1005,13 +1047,20 @@ def strip_secret_field_values_in_place(
         return flow_data
     nodes = flow_data.get("nodes")
     if isinstance(nodes, list):
-        _strip_secrets_from_nodes(nodes, variable_references, known_variable_names, keep_mcp_config=keep_mcp_config)
+        _strip_secrets_from_nodes(
+            nodes,
+            variable_references,
+            known_variable_names,
+            keep_mcp_config=keep_mcp_config,
+            reject_unknown_bindings=reject_unknown_bindings,
+        )
     return flow_data
 
 
 __all__ = [
     "API_WORDS",
     "HiddenFieldMetadataError",
+    "UnresolvedVariableBindingError",
     "has_api_terms",
     "remove_api_keys",
     "restore_request_variable_references",

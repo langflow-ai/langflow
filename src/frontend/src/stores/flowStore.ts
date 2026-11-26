@@ -191,8 +191,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   updateComponentsToUpdate: (nodes, edges = get().edges) => {
     const outdatedNodes: ComponentsToUpdateType[] = [];
     const templates = useTypesStore.getState().templates;
-    const allowCustomComponents =
-      useUtilityStore.getState().allowCustomComponents;
+    const { allowCustomComponents, retiredComponents } =
+      useUtilityStore.getState();
     const fieldsByEdges = new Map<
       EdgeType[],
       ReturnType<typeof connectedFieldsByNode>
@@ -216,6 +216,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           connectedFields && fields !== null
             ? (fields ?? new Set())
             : undefined,
+          retiredComponents?.[node.data.type],
         );
         if (
           codeValidity &&
@@ -1662,6 +1663,13 @@ export function syncNoteTranslations(
     };
   });
   useFlowStore.setState({ nodes: updatedNodes });
+}
+
+// Playwright helpers flush autosave through this hook. Only dev and the Playwright CI build set it.
+if (import.meta.env.DEV || import.meta.env.PW_FRONTEND_BUILD) {
+  (
+    window as unknown as { __LANGFLOW_FLOW_STORE__?: typeof useFlowStore }
+  ).__LANGFLOW_FLOW_STORE__ = useFlowStore;
 }
 
 export default useFlowStore;
