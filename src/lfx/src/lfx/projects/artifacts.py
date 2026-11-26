@@ -18,6 +18,7 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from lfx.projects.run_configuration import AgentConfiguration
 from lfx.projects.tool_packs import ToolDependencyUse
 
 if TYPE_CHECKING:
@@ -123,6 +124,7 @@ class AgentRunResult(BaseModel):
 
     answer: str
     evidence: CollectedEvidence
+    configurations: tuple[AgentConfiguration, ...] = ()
 
 
 class SourcedReport(BaseModel):
@@ -136,6 +138,7 @@ class SourcedReport(BaseModel):
     sources: tuple[SourceRecord, ...] = ()
     source_uses: tuple[SourceUse, ...] = ()
     tool_dependencies: tuple[ToolDependencyUse, ...] = ()
+    configurations: tuple[AgentConfiguration, ...] = ()
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     claim_support: Literal["not_evaluated"] = "not_evaluated"
 
