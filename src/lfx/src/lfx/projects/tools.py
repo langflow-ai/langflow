@@ -111,7 +111,7 @@ def compose_tools(data: dict, *, project_id: str, agent_id: str, targets: list[d
             node = existing[target["id"]]
             origin = node["data"][TOOL_ORIGIN]
             if origin.get("tool_pack") != binding:
-                if origin.get("applied_revision") != _tool_node_revision(node):
+                if origin.get("applied_revision") != tool_node_revision(node):
                     msg = (
                         "This tool was edited on the canvas. "
                         "Restore it or remove its selection before updating the pack."
@@ -123,7 +123,7 @@ def compose_tools(data: dict, *, project_id: str, agent_id: str, targets: list[d
                 add_connection(replacement, node["id"], "component_as_tool", agent_id, "tools", registry=registry)
                 node["data"]["node"] = replacement["data"]["nodes"][-1]["data"]["node"]
                 origin["tool_pack"] = binding
-                origin["applied_revision"] = _tool_node_revision(node)
+                origin["applied_revision"] = tool_node_revision(node)
             # A manually edited tool stays edited when its reviewed definition is unchanged.
             continue
         registry = {"RunFlow": prepare_tool_template(target)}
@@ -142,11 +142,11 @@ def compose_tools(data: dict, *, project_id: str, agent_id: str, targets: list[d
         occupied.append(node["position"])
         add_connection(flow, added["id"], "component_as_tool", agent_id, "tools", registry=registry)
         if binding is not None:
-            node["data"][TOOL_ORIGIN]["applied_revision"] = _tool_node_revision(node)
+            node["data"][TOOL_ORIGIN]["applied_revision"] = tool_node_revision(node)
     return flow["data"]
 
 
-def _tool_node_revision(node: dict) -> str:
+def tool_node_revision(node: dict) -> str:
     """Ignore layout while protecting the generated adapter's canvas configuration."""
     definition = dict(node["data"]["node"])
     # The canvas adds this marker when opening an otherwise unchanged node.
