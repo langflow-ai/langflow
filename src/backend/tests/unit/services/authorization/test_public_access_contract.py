@@ -67,41 +67,57 @@ async def test_compatibility_grants_cannot_bypass_action_floor(action_name):
 @pytest.mark.anyio
 async def test_a2a_compatibility_grant_allows_execute_when_no_public_share():
     module = _contract_module()
-    result = SimpleNamespace(first=lambda: None)
-    session = SimpleNamespace(exec=AsyncMock(return_value=result))
-    flow = SimpleNamespace(id=uuid4(), access_type=object())
+    flow = SimpleNamespace(id=uuid4())
 
     source = await module._resolve_grant(
         flow=flow,
         action=module.PublicResourceAction.EXECUTE,
-        session=session,
+        session=_session_with_public_share(None),
         compatibility_grant=module.PublicGrantSource.A2A_AUTH_NONE,
     )
 
     assert source is module.PublicGrantSource.A2A_AUTH_NONE
 
 
-def _session_with_public_share(permission_level: str | None):
-    result = SimpleNamespace(first=lambda: permission_level)
+def _session_with_public_share(permission_level: str | None, *, legacy_public: bool = False, revoked: bool = False):
+    access_types = _contract_module().AccessTypeEnum
+    access_type = access_types.PUBLIC if legacy_public else access_types.PRIVATE
+    result = SimpleNamespace(first=lambda: (access_type, revoked, permission_level))
     return SimpleNamespace(exec=AsyncMock(return_value=result))
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("permission_level", [None, "read"])
+async def test_explicit_revocation_blocks_anonymous_fallback_only(permission_level):
+    module = _contract_module()
+    flow = SimpleNamespace(id=uuid4())
+
+    source = await module._resolve_grant(
+        flow=flow,
+        action=module.PublicResourceAction.READ,
+        session=_session_with_public_share(permission_level, revoked=True),
+        compatibility_grant=module.PublicGrantSource.A2A_AUTH_NONE,
+    )
+
+    assert source is (module.PublicGrantSource.AUTHZ_SHARE if permission_level else None)
 
 
 @pytest.mark.anyio
 async def test_canonical_read_share_bounds_a_still_public_legacy_flow():
     """A read-only PUBLIC share is authoritative; the legacy flag cannot widen it to execute."""
     module = _contract_module()
-    flow = SimpleNamespace(id=uuid4(), access_type=module.AccessTypeEnum.PUBLIC)
+    flow = SimpleNamespace(id=uuid4())
 
     read_source = await module._resolve_grant(
         flow=flow,
         action=module.PublicResourceAction.READ,
-        session=_session_with_public_share("read"),
+        session=_session_with_public_share("read", legacy_public=True),
         compatibility_grant=None,
     )
     execute_source = await module._resolve_grant(
         flow=flow,
         action=module.PublicResourceAction.EXECUTE,
-        session=_session_with_public_share("read"),
+        session=_session_with_public_share("read", legacy_public=True),
         compatibility_grant=None,
     )
 
@@ -112,7 +128,7 @@ async def test_canonical_read_share_bounds_a_still_public_legacy_flow():
 @pytest.mark.anyio
 async def test_canonical_read_share_also_bounds_the_a2a_compatibility_grant():
     module = _contract_module()
-    flow = SimpleNamespace(id=uuid4(), access_type=object())
+    flow = SimpleNamespace(id=uuid4())
 
     source = await module._resolve_grant(
         flow=flow,
@@ -128,12 +144,12 @@ async def test_canonical_read_share_also_bounds_the_a2a_compatibility_grant():
 async def test_deleting_the_share_falls_back_to_the_documented_legacy_grant():
     """With no share row the legacy flag is still the compatibility grant it claims to be."""
     module = _contract_module()
-    flow = SimpleNamespace(id=uuid4(), access_type=module.AccessTypeEnum.PUBLIC)
+    flow = SimpleNamespace(id=uuid4())
 
     source = await module._resolve_grant(
         flow=flow,
         action=module.PublicResourceAction.EXECUTE,
-        session=_session_with_public_share(None),
+        session=_session_with_public_share(None, legacy_public=True),
         compatibility_grant=None,
     )
 
@@ -154,12 +170,11 @@ async def test_deleting_the_share_falls_back_to_the_documented_legacy_grant():
 async def test_capabilities_report_the_same_decision_the_guard_would_make(permission_level, legacy_public, expected):
     """The advisory capability set never disagrees with authorize_public_flow_access."""
     module = _contract_module()
-    access_type = module.AccessTypeEnum.PUBLIC if legacy_public else module.AccessTypeEnum.PRIVATE
-    flow = SimpleNamespace(id=uuid4(), access_type=access_type, workspace_id=None, folder_id=None)
+    flow = SimpleNamespace(id=uuid4(), workspace_id=None, folder_id=None)
 
     capabilities = await module.public_flow_capabilities(
         flow=flow,
-        session=_session_with_public_share(permission_level),
+        session=_session_with_public_share(permission_level, legacy_public=legacy_public),
     )
 
     assert (capabilities.can_read, capabilities.can_execute) == expected
@@ -173,7 +188,7 @@ async def test_capabilities_are_advisory_and_never_audited(monkeypatch):
     and drown the real anonymous-denial signal operators watch for.
     """
     module = _contract_module()
-    flow = SimpleNamespace(id=uuid4(), access_type=module.AccessTypeEnum.PRIVATE, workspace_id=None, folder_id=None)
+    flow = SimpleNamespace(id=uuid4(), workspace_id=None, folder_id=None)
     audit = AsyncMock()
     monkeypatch.setattr(module, "audit_decision", audit)
 
@@ -190,7 +205,7 @@ async def test_capabilities_are_advisory_and_never_audited(monkeypatch):
 async def test_capabilities_fail_closed_when_an_enabled_plugin_denies(monkeypatch):
     """An enabled plugin bounds the hint too, so the UI cannot offer a run the guard would refuse."""
     module = _contract_module()
-    flow = SimpleNamespace(id=uuid4(), access_type=module.AccessTypeEnum.PUBLIC, workspace_id=None, folder_id=None)
+    flow = SimpleNamespace(id=uuid4(), workspace_id=None, folder_id=None)
     service = SimpleNamespace(
         supports_public_principals=AsyncMock(return_value=True),
         resolve_public_tenant=AsyncMock(return_value="tenant-a"),
@@ -204,7 +219,7 @@ async def test_capabilities_fail_closed_when_an_enabled_plugin_denies(monkeypatc
 
     capabilities = await module.public_flow_capabilities(
         flow=flow,
-        session=_session_with_public_share(None),
+        session=_session_with_public_share(None, legacy_public=True),
     )
 
     assert capabilities.can_read is True

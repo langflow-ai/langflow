@@ -3,6 +3,11 @@ title: Maintenance mode
 slug: /maintenance-mode
 ---
 
+In **Settings > Upgrade reports**, open a report and go to **Update selected flows**.
+Choose **Turn maintenance on**, optionally enter a reason, and confirm.
+Wait for running jobs to finish before applying reviewed updates. Verify the updated flows, then choose **Turn maintenance off** and confirm to resume queued work.
+You can also manage maintenance from a terminal.
+
 ```bash
 langflow maintenance on --reason "Upgrade rehearsal"
 langflow maintenance status

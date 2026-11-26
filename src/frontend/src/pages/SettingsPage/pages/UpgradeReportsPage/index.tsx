@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { reportAssessment, reportTime } from "./format";
 import ReportView from "./ReportView";
+import RunCheck from "./RunCheck";
 
 export default function UpgradeReportsPage() {
   const { t } = useTranslation();
@@ -32,12 +33,21 @@ function UpgradeReports() {
   const history = useGetUpgradeReports({ offset });
   const id = params.get("report") ?? history.data?.items[0]?.id ?? "";
   const report = useGetUpgradeReport({ id });
+  const [focusReport, setFocusReport] = useState<string | null>(null);
+  useEffect(() => {
+    if (!focusReport || id !== focusReport || report.data?.id !== id) return;
+    const heading = document.getElementById("upgrade-report-title");
+    heading?.scrollIntoView({ behavior: "smooth", block: "start" });
+    heading?.focus({ preventScroll: true });
+    setFocusReport(null);
+  }, [id, report.data?.id, focusReport]);
   const imported = useImportUpgradeReport();
   const upload = () => {
     if (!file) return;
     setFileError(false);
     imported.mutate(file, {
       onSuccess: (response) => {
+        setFocusReport(null);
         setOffset(0);
         setParams({ report: response.id });
       },
@@ -83,6 +93,13 @@ function UpgradeReports() {
           </code>
         </pre>
       </details>
+      <RunCheck
+        onSelectReport={(reportId, focus) => {
+          setOffset(0);
+          setParams({ report: reportId });
+          setFocusReport(focus ? reportId : null);
+        }}
+      />
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <section
           aria-labelledby="upgrade-import-title"
@@ -168,9 +185,10 @@ function UpgradeReports() {
                   value={
                     history.data.items.some((item) => item.id === id) ? id : ""
                   }
-                  onChange={(event) =>
-                    setParams({ report: event.target.value })
-                  }
+                  onChange={(event) => {
+                    setFocusReport(null);
+                    setParams({ report: event.target.value });
+                  }}
                 >
                   <option value="" disabled>
                     {t("settings.upgrade.chooseReport")}

@@ -282,12 +282,14 @@ async def test_defaults_when_no_overrides(client: AsyncClient, active_user, flow
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_security_schemes_apikey(client: AsyncClient, active_user, flow_data):
+async def test_security_schemes_apikey(client: AsyncClient, active_user, created_api_key, flow_data):
     """A folder with apikey auth reflects an x-api-key security scheme onto the card."""
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
     flow_id = await _create_flow(active_user.id, data=flow_data, folder_id=folder_id)
 
-    body = (await client.get(_card_url(flow_id))).json()
+    response = await client.get(_card_url(flow_id), headers={"x-api-key": created_api_key.api_key})
+    assert response.status_code == 200
+    body = response.json()
 
     assert body["securitySchemes"] == {
         "apiKey": {
@@ -301,7 +303,9 @@ async def test_security_schemes_apikey(client: AsyncClient, active_user, flow_da
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_card_with_overrides_and_apikey_is_spec_valid(client: AsyncClient, active_user, flow_data):
+async def test_card_with_overrides_and_apikey_is_spec_valid(
+    client: AsyncClient, active_user, logged_in_headers, flow_data
+):
     """The full card revalidates against the spec model on the override + apikey path.
 
     The default-card test pins the bare path; the override and apikey tests above assert
@@ -319,7 +323,9 @@ async def test_card_with_overrides_and_apikey_is_spec_valid(client: AsyncClient,
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "apikey"})
     flow_id = await _create_flow(active_user.id, data=flow_data, folder_id=folder_id, overrides=overrides)
 
-    body = (await client.get(_card_url(flow_id))).json()
+    response = await client.get(_card_url(flow_id), headers=logged_in_headers)
+    assert response.status_code == 200
+    body = response.json()
 
     # The served card carries inputSchema; drop the non-model key, then the card round-trips through the spec model.
     assert "inputSchema" in body["skills"][0]
@@ -333,7 +339,7 @@ async def test_card_with_overrides_and_apikey_is_spec_valid(client: AsyncClient,
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_security_schemes_oauth_folder(client: AsyncClient, active_user, flow_data):
+async def test_security_schemes_oauth_folder(client: AsyncClient, active_user, created_api_key, flow_data):
     """An oauth folder advertises the same x-api-key scheme as apikey.
 
     The broker fronts the OAuth dance, but the A2A transport still takes an owner-scoped api
@@ -342,7 +348,9 @@ async def test_security_schemes_oauth_folder(client: AsyncClient, active_user, f
     folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": "oauth"})
     flow_id = await _create_flow(active_user.id, data=flow_data, folder_id=folder_id)
 
-    body = (await client.get(_card_url(flow_id))).json()
+    response = await client.get(_card_url(flow_id), headers={"x-api-key": created_api_key.api_key})
+    assert response.status_code == 200
+    body = response.json()
 
     assert body["securitySchemes"] == {
         "apiKey": {
@@ -353,6 +361,19 @@ async def test_security_schemes_oauth_folder(client: AsyncClient, active_user, f
         }
     }
     assert body["security"] == [{"apiKey": []}]
+
+
+@pytest.mark.usefixtures("a2a_flag_on")
+@pytest.mark.parametrize("auth_type", ["apikey", "oauth"])
+async def test_protected_agent_card_requires_credentials(client: AsyncClient, active_user, flow_data, auth_type):
+    folder_id = await _create_folder(active_user.id, auth_settings={"auth_type": auth_type})
+    flow_id = await _create_flow(active_user.id, data=flow_data, folder_id=folder_id)
+    client.cookies.clear()
+
+    response = await client.get(_card_url(flow_id))
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Not Found"}
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
@@ -2139,11 +2160,14 @@ async def test_unknown_folder_auth_type_fails_closed(client: AsyncClient, active
 
 
 @pytest.mark.usefixtures("a2a_flag_on")
-async def test_card_get_public_for_apikey_folder(client: AsyncClient, active_user, echo_flow_data):
-    """Discovery stays public even for an apikey folder (only the jsonrpc route enforces)."""
+async def test_card_denies_credentials_without_flow_access(client: AsyncClient, active_user, echo_flow_data):
     flow_id = await _apikey_flow(active_user, echo_flow_data)
+    other_user_id = await _create_other_user()
+    key = await _create_api_key(other_user_id)
 
-    assert (await client.get(_card_url(flow_id))).status_code == 200
+    response = await client.get(_card_url(flow_id), headers={"x-api-key": key})
+
+    assert response.status_code == 404
 
 
 @pytest.mark.usefixtures("a2a_flag_on")

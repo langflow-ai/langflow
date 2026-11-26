@@ -793,11 +793,14 @@ def validate_model_provider_key(
             llm.invoke("test")
 
         elif provider == "IBM WatsonX":
+            from lfx.base.models.model_utils import ensure_watsonx_credential_endpoint_allowed
+
             api_key = variables.get("WATSONX_APIKEY")
             project_id = variables.get("WATSONX_PROJECT_ID")
             url = variables.get("WATSONX_URL") or "https://us-south.ml.cloud.ibm.com"
             if not api_key or not project_id:
                 return
+            ensure_watsonx_credential_endpoint_allowed(api_key, url)
             validate_connector_url_for_ssrf(url)
 
             if not validation_model:

@@ -142,19 +142,10 @@ class MemoryBaseComponent(Component):
             raise ValueError(msg)
 
         from langflow.api.utils.kb_helpers import resolve_embedding_selection
-        from langflow.services.database.models.memory_base.model import MemoryBase
-        from sqlmodel import select
+        from langflow.services.memory_base.run_lookup import find_for_run
 
         async with session_scope() as db:
-            memory_base = (
-                await db.exec(
-                    select(MemoryBase).where(
-                        MemoryBase.name == selected,
-                        MemoryBase.flow_id == flow_id,
-                        MemoryBase.user_id == owner_user_id,
-                    )
-                )
-            ).first()
+            memory_base = await find_for_run(db, name=selected, flow_id=flow_id, user_id=owner_user_id)
         if memory_base is None:
             msg = f"Memory Base '{selected}' is not attached to this flow."
             raise ValueError(msg)
@@ -259,19 +250,10 @@ class MemoryBaseComponent(Component):
         execution_user_id: uuid.UUID,
     ) -> tuple[MemoryBase, User]:
         """Look up the MB row scoped to the exact flow execution principal."""
-        from langflow.services.database.models.memory_base.model import MemoryBase
         from langflow.services.database.models.user.crud import get_user_by_id
-        from sqlmodel import select
+        from langflow.services.memory_base.run_lookup import find_for_run
 
-        mb = (
-            await db.exec(
-                select(MemoryBase).where(
-                    MemoryBase.name == selected,
-                    MemoryBase.flow_id == flow_id,
-                    MemoryBase.user_id == execution_user_id,
-                )
-            )
-        ).first()
+        mb = await find_for_run(db, name=selected, flow_id=flow_id, user_id=execution_user_id)
         if mb is None:
             msg = f"Memory Base '{selected}' is not attached to this flow."
             raise ValueError(msg)
