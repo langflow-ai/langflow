@@ -4,7 +4,7 @@ import json
 from copy import deepcopy
 
 import pytest
-from lfx.projects.baselines import compaction_baseline, context_baseline, hook_baseline
+from lfx.projects.baselines import compaction_baseline, context_baseline, hook_baseline, permission_baseline
 from lfx.projects.bindings import flow_revision, reject_recursive_binding
 from lfx.projects.compaction import COMPACTION_ORIGIN, CompactionBinding, compose_compaction
 from lfx.projects.context import compose_context
@@ -16,6 +16,7 @@ from lfx.projects.flow_slots import (
     validate_project_binding,
 )
 from lfx.projects.hooks import compose_hooks
+from lfx.projects.permissions import compose_permission
 
 from tests.unit.projects.test_context_bindings import agent_data as context_agent_data
 
@@ -23,6 +24,7 @@ from tests.unit.projects.test_context_bindings import agent_data as context_agen
 def agent_data():
     data = context_agent_data()
     data["nodes"][0]["data"]["node"]["template"]["compaction_binding"] = {"value": "", "override_skip": True}
+    data["nodes"][0]["data"]["node"]["template"]["permission_binding"] = {"value": "", "override_skip": True}
     return data
 
 
@@ -120,13 +122,29 @@ def test_non_text_empty_values_cannot_be_mistaken_for_unconfigured_bindings(valu
         ("context_strategy", "compaction"),
         ("compaction", "hooks"),
         ("hooks", "compaction"),
+        ("tool_policy", "compaction"),
+        ("compaction", "tool_policy"),
+        ("tool_policy", "context_strategy"),
+        ("context_strategy", "tool_policy"),
+        ("tool_policy", "hooks"),
+        ("hooks", "tool_policy"),
     ],
 )
 def test_mixed_import_remaps_children_before_parent_revisions(outer_field, inner_field):
     from lfx.components.models_and_agents.agent import AgentComponent
 
-    baselines = {"compaction": compaction_baseline, "context_strategy": context_baseline, "hooks": hook_baseline}
-    composers = {"compaction": compose_compaction, "context_strategy": compose_context, "hooks": compose_hooks}
+    baselines = {
+        "compaction": compaction_baseline,
+        "context_strategy": context_baseline,
+        "hooks": hook_baseline,
+        "tool_policy": permission_baseline,
+    }
+    composers = {
+        "compaction": compose_compaction,
+        "context_strategy": compose_context,
+        "hooks": compose_hooks,
+        "tool_policy": compose_permission,
+    }
 
     def bind(data, field, target, flow_id):
         output = binding_outputs(field, target)[0]

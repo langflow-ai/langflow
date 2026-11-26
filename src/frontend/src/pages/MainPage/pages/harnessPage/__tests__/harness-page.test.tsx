@@ -35,6 +35,12 @@ const compactionBinding = {
   timeout_seconds: 2.5,
   trigger_tokens: 2400,
 };
+const permissionBinding = {
+  ...instructionsBinding,
+  flow_id: "permission-source",
+  output_name: "permission",
+  timeout_seconds: 2.5,
+};
 const hookBinding: HookBinding = {
   flow_id: "hook-source",
   node_id: "hook",
@@ -97,7 +103,9 @@ jest.mock("../components/instructions-flow-picker", () => ({
             ? "bind-context"
             : fieldName === "compaction"
               ? "bind-compaction"
-              : "bind-instructions"
+              : fieldName === "tool_policy"
+                ? "bind-permission"
+                : "bind-instructions"
         }
         data-initial-config={JSON.stringify(initialConfig)}
         onClick={() =>
@@ -108,12 +116,29 @@ jest.mock("../components/instructions-flow-picker", () => ({
                 ? contextBinding
                 : fieldName === "compaction"
                   ? compactionBinding
-                  : instructionsBinding,
+                  : fieldName === "tool_policy"
+                    ? permissionBinding
+                    : instructionsBinding,
           )
         }
       >
         {value ? "Unbind" : "Bind"}
       </button>
+      {fieldName === "tool_policy" && (
+        <>
+          <button data-testid="open-permission" onClick={onOpen}>
+            Open permission
+          </button>
+          <button
+            data-testid="invalidate-permission"
+            onClick={() =>
+              onChange({ ...permissionBinding, timeout_seconds: NaN })
+            }
+          >
+            Invalid permission timeout
+          </button>
+        </>
+      )}
       {fieldName === "context_strategy" && (
         <>
           <button data-testid="open-context" onClick={onOpen}>
@@ -924,6 +949,117 @@ const enableCompactionFields = () => {
     description: "",
   } as FlowType);
 };
+
+const enablePermissionFields = () => {
+  enableCompactionFields();
+  const type = projectTypes![0];
+  projectTypes = [
+    {
+      ...type,
+      template: {
+        ...type.template,
+        tool_policy: {
+          name: "tool_policy",
+          display_name: "Permissions",
+          section: "Runtime",
+          value: "deny",
+          option_labels: {
+            tool_defaults: "Use tool settings",
+            ask: "Ask before each call",
+            deny: "Block all tools",
+          },
+          supports_flow_binding: true,
+        },
+      },
+    },
+  ];
+  projectFlows!.push({
+    id: "permission-source",
+    name: "Review research tools",
+    description: "",
+  } as FlowType);
+};
+
+it("creates Permissions from the current policy and restores that policy when unbound", () => {
+  enablePermissionFields();
+  renderPage();
+  expect(screen.getByTestId("bind-permission")).toHaveAttribute(
+    "data-initial-config",
+    JSON.stringify({ tool_policy: "deny" }),
+  );
+  fireEvent.click(screen.getByTestId("bind-permission"));
+  expect(
+    screen.queryByTestId("harness-choice-tool_policy"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByTestId("harness-summary-detail-tool_policy"),
+  ).toHaveTextContent("Review research tools · flow");
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    tool_policy: "deny",
+    flow_bindings: { tool_policy: permissionBinding },
+  });
+  fireEvent.click(screen.getByTestId("bind-permission"));
+  expect(screen.getByTestId("harness-choice-tool_policy")).toHaveTextContent(
+    "Block all tools",
+  );
+});
+
+it("retains five bindings and form edits across the permission canvas round trip", () => {
+  enablePermissionFields();
+  const projectConfig = {
+    flow_bindings: {
+      system_prompt: instructionsBinding,
+      context_strategy: contextBinding,
+      compaction: compactionBinding,
+      hooks: [hookBinding],
+    },
+  };
+  const first = renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("bind-permission"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  fireEvent.click(screen.getByTestId("open-permission"));
+  first.unmount();
+  renderPage({ projectConfig });
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    n_messages: "27",
+    flow_bindings: {
+      ...projectConfig.flow_bindings,
+      tool_policy: permissionBinding,
+    },
+  });
+});
+
+it("blocks a save with invalid permission timeout while retaining other bindings", () => {
+  enablePermissionFields();
+  renderPage({
+    projectConfig: {
+      flow_bindings: {
+        context_strategy: contextBinding,
+        compaction: compactionBinding,
+        hooks: [hookBinding],
+      },
+    },
+  });
+  fireEvent.click(screen.getByTestId("invalidate-permission"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  expect(screen.getByTestId("harness-save-btn")).toBeDisabled();
+  expect(mockPatch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByTestId("bind-permission"));
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(
+    mockPatch.mock.lastCall[0].data.project_config.flow_bindings,
+  ).toMatchObject({
+    context_strategy: contextBinding,
+    compaction: compactionBinding,
+    hooks: [hookBinding],
+  });
+});
 
 it("creates Compaction from current settings and restores scalar controls when unbound", () => {
   enableCompactionFields();

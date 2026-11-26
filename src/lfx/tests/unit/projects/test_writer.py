@@ -34,6 +34,19 @@ def harness():
     return get_project_type("agent-harness")
 
 
+def test_new_untargeted_nodes_do_not_change_saved_field_baselines(harness):
+    config = {"tool_policy": "deny"}
+    first = apply_project_config(flow_with(agent_node()), harness, config)
+    # Binding Instructions adds a Run Flow node after scalar values are written.
+    expanded = {
+        **first.data,
+        "nodes": [*first.data["nodes"], {"id": "generated", "data": {"type": "RunFlow", "node": {"template": {}}}}],
+    }
+    repeated = apply_project_config(expanded, harness, config, previous_values=first.applied_values)
+    assert not repeated.changed
+    assert repeated.applied_values == first.applied_values
+
+
 class TestWritingThrough:
     def test_a_targeted_field_lands_on_the_component(self, harness):
         flow = flow_with(agent_node())

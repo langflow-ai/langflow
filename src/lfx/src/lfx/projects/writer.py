@@ -87,7 +87,7 @@ def apply_project_config(
             continue
         node_type = node.get("data", {}).get("type")
         node_id = node.get("id") or node.get("data", {}).get("id")
-        baseline = applied.setdefault(node_id, {}) if isinstance(node_id, str) else {}
+        baseline = applied.get(node_id, {}) if isinstance(node_id, str) else {}
 
         for config_field, target in targets:
             if node_type != target.component_type or config_field.name not in config:
@@ -101,6 +101,8 @@ def apply_project_config(
                 continue
             value = config[config_field.name]
             baseline[target.input_name] = deepcopy(value)
+            if isinstance(node_id, str):
+                applied[node_id] = baseline
             if entry.get("value") == value:
                 continue
             entry["value"] = deepcopy(value)
