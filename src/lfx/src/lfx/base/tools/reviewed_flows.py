@@ -35,7 +35,23 @@ def instruction_binding(component):
     return FlowBinding.model_validate({key: origin[key] for key in FlowBinding.model_fields if key in origin})
 
 
-async def reviewed_source(component, flow_id, flow_name) -> dict | None:  # noqa: ARG001
+def frozen_flow(component, flow_id, flow_name) -> dict | None:
+    """Return the dependency snapshot a reviewed parent graph froze for this flow."""
+    graph = component.graph
+    definitions = getattr(graph, "frozen_tool_flows", None) if graph is not None else None
+    if definitions is None:
+        return None
+    source = definitions.get(str(flow_id)) if flow_id else None
+    if not flow_id:
+        matches = [item for item in definitions.values() if item["name"] == flow_name]
+        source = matches[0] if len(matches) == 1 else None
+    if source is None:
+        msg = "This flow was not included in the reviewed tool dependency snapshots. Review the Tool Pack again."
+        raise ValueError(msg)
+    return source
+
+
+async def reviewed_source(component, flow_id, flow_name) -> dict | None:
     """Return the reviewed definition this node runs, or ``None`` for an ordinary Run Flow.
 
     The result has ``data``, ``id``, ``name``, ``description`` and ``dependencies``. A bound
@@ -45,6 +61,8 @@ async def reviewed_source(component, flow_id, flow_name) -> dict | None:  # noqa
     if pack is not None and str(pack.tool.flow_id) != str(flow_id):
         msg = "The Tool Pack adapter points to a different flow. Restore its reviewed reference."
         raise ValueError(msg)
+    if (frozen := frozen_flow(component, flow_id, flow_name)) is not None:
+        return {**frozen, "dependencies": component.graph.frozen_tool_flows}
     if pack is None:
         return None
     key = (getattr(component.graph, "_run_id", None), pack)
@@ -55,7 +73,18 @@ async def reviewed_source(component, flow_id, flow_name) -> dict | None:  # noqa
 
 
 async def _resolve_tool_pack(component, binding) -> dict:
-    snapshot = await get_tool_pack_flow(user_id=component.user_id, binding=binding)
+    graph = component.graph
+    recorded = getattr(graph, "reviewed_tool_packs", {})
+    value = binding.model_dump(mode="json")
+    if recorded.get(str(binding.tool.flow_id)) == value:
+        snapshot = await get_tool_pack_flow(user_id=component.user_id, binding=binding, require_current=False)
+    else:
+        snapshot = await get_tool_pack_flow(user_id=component.user_id, binding=binding)
+    if binding.tool.dependencies and not snapshot.data.get("dependencies"):
+        msg = "The reviewed tool dependency snapshots are unavailable. Review the Tool Pack again."
+        raise ValueError(msg)
+    if graph is not None:
+        graph.reviewed_tool_packs[str(binding.tool.flow_id)] = value
     data = deepcopy(snapshot.data)
     return {
         "data": data["data"],
