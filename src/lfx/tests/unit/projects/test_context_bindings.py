@@ -6,7 +6,8 @@ from copy import deepcopy
 import pytest
 from lfx.projects.baselines import context_baseline, hook_baseline
 from lfx.projects.bindings import flow_revision, reject_recursive_binding
-from lfx.projects.context import CONTEXT_ORIGIN, ContextBinding, compose_context, validate_context_binding
+from lfx.projects.builtin_slots import CONTEXT_MANAGER
+from lfx.projects.context import CONTEXT_ORIGIN, ContextBinding, validate_context_binding
 from lfx.projects.flow_slots import ProjectFlowBindings, flow_runtime_bindings, remap_runtime_bindings
 from lfx.projects.hooks import compose_hooks, validate_hook_binding
 
@@ -39,7 +40,7 @@ def context_binding(source, flow_id="source"):
 
 
 def compose(data, binding):
-    return compose_context(data, project_id="project", agent_id="agent", binding=binding)
+    return CONTEXT_MANAGER.compose_binding(data, project_id="project", agent_id="agent", binding=binding)
 
 
 def test_context_reconciles_idempotently_and_removes_only_owned_value():

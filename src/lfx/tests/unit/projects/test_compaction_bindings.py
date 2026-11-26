@@ -6,8 +6,8 @@ from copy import deepcopy
 import pytest
 from lfx.projects.baselines import compaction_baseline, context_baseline, hook_baseline, permission_baseline
 from lfx.projects.bindings import flow_revision, reject_recursive_binding
-from lfx.projects.compaction import COMPACTION_ORIGIN, CompactionBinding, compose_compaction
-from lfx.projects.context import compose_context
+from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, PERMISSION_GATE
+from lfx.projects.compaction import COMPACTION_ORIGIN, CompactionBinding
 from lfx.projects.flow_slots import (
     ProjectFlowBindings,
     binding_outputs,
@@ -16,7 +16,6 @@ from lfx.projects.flow_slots import (
     validate_project_binding,
 )
 from lfx.projects.hooks import compose_hooks
-from lfx.projects.permissions import compose_permission
 
 from tests.unit.projects.test_context_bindings import agent_data as context_agent_data
 
@@ -40,7 +39,7 @@ def binding_for(source, flow_id="source"):
 
 
 def compose(data, binding):
-    return compose_compaction(data, project_id="project", agent_id="agent", binding=binding)
+    return COMPACTOR.compose_binding(data, project_id="project", agent_id="agent", binding=binding)
 
 
 def test_compaction_reconciles_and_clears_only_owned_values():
@@ -140,10 +139,10 @@ def test_mixed_import_remaps_children_before_parent_revisions(outer_field, inner
         "tool_policy": permission_baseline,
     }
     composers = {
-        "compaction": compose_compaction,
-        "context_strategy": compose_context,
+        "compaction": COMPACTOR.compose_binding,
+        "context_strategy": CONTEXT_MANAGER.compose_binding,
         "hooks": compose_hooks,
-        "tool_policy": compose_permission,
+        "tool_policy": PERMISSION_GATE.compose_binding,
     }
 
     def bind(data, field, target, flow_id):

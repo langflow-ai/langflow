@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import Field
 
 from lfx.base.agents.permissions import Permission, PermissionSourceChangedError
-from lfx.projects.bindings import FlowBinding, compose_single_binding, contract_outputs, flow_revision
+from lfx.projects.bindings import FlowBinding, contract_outputs, flow_revision
 from lfx.projects.builtin_slots import PERMISSION_GATE
 from lfx.projects.invocation import ReviewedFlowRunner
 
@@ -18,18 +18,6 @@ class PermissionBinding(FlowBinding):
 
 def parse_permission_binding(value: str) -> PermissionBinding | None:
     return PermissionBinding.model_validate_json(value) if value.strip() not in {"", "null", "{}"} else None
-
-
-def compose_permission(data: dict, *, project_id: str, agent_id: str, binding: PermissionBinding | None) -> dict:
-    return compose_single_binding(
-        data,
-        project_id=project_id,
-        agent_id=agent_id,
-        binding=binding,
-        input_name=PERMISSION_GATE.agent_input_name,
-        origin_name=PERMISSION_ORIGIN,
-        label="Permissions",
-    )
 
 
 def permission_outputs(data: dict) -> list[dict]:
