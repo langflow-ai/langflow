@@ -304,7 +304,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
         _assert_floor(_requirement(overrides, name), minimum)
 
     litellm = _requirement(constraints, "litellm")
-    _assert_floor(litellm, "1.109.0")
+    _assert_floor(litellm, "1.109.1")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
     _assert_specifier(litellm, "!=", "1.107.0")
     _assert_specifier(litellm, "<", "1.110.0")
@@ -315,7 +315,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
         ("oauthlib", "4.0.1"),
         ("pyjwt", "2.15.1"),
         ("urllib3", "2.8.0"),
-        ("litellm", "1.109.0"),
+        ("litellm", "1.109.1"),
         ("a2a-sdk", "1.2.1"),
         ("authlib", "1.8.0"),
         ("virtualenv", "21.14.2"),
@@ -356,7 +356,7 @@ def test_published_packages_enforce_current_python_floors() -> None:
     _assert_specifier(urllib3, "<", "3.0.0")
 
     litellm = _requirement(base_project["optional-dependencies"]["litellm"], "litellm")
-    _assert_floor(litellm, "1.109.0")
+    _assert_floor(litellm, "1.109.1")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
     _assert_specifier(litellm, "!=", "1.107.0")
     _assert_specifier(litellm, "<", "1.110.0")
@@ -366,7 +366,7 @@ def test_published_packages_enforce_current_python_floors() -> None:
         cuga_litellm = [Requirement(spec) for spec in cuga_requirements if Requirement(spec).name.lower() == "litellm"]
         assert len(cuga_litellm) == 2
         for requirement in cuga_litellm:
-            _assert_floor(requirement, "1.109.0")
+            _assert_floor(requirement, "1.109.1")
             _assert_specifier(requirement, "!=", "1.104.0rc1")
             _assert_specifier(requirement, "!=", "1.107.0")
             _assert_specifier(requirement, "<", "1.110.0")
@@ -376,8 +376,15 @@ def test_published_packages_enforce_current_python_floors() -> None:
 
 
 def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None:
-    """Standalone bundle installs must retain the published PyMongo security floor."""
+    """Keep the PyMongo and LiteLLM security floors in standalone bundle installs."""
     extras = _load_pyproject("src/lfx/pyproject.toml")["project"]["optional-dependencies"]
     legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
     assert "1.3.9" not in legacy_bundle.specifier
-    assert "1.3.10" in legacy_bundle.specifier
+    assert "1.3.10" not in legacy_bundle.specifier
+    assert "1.3.11" in legacy_bundle.specifier
+    assert "1.3.11rc1" in legacy_bundle.specifier
+
+    toolguard = _requirement(extras["toolguard"], "lfx-toolguard")
+    assert "0.3.3" not in toolguard.specifier
+    assert "0.3.4" in toolguard.specifier
+    assert "0.3.4rc1" in toolguard.specifier

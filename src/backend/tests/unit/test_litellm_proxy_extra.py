@@ -80,7 +80,7 @@ def test_litellm_dependent_extras_are_available_on_python_314() -> None:
     optional = _load_base_pyproject()["project"]["optional-dependencies"]
 
     litellm = next(Requirement(spec) for spec in optional["litellm"] if Requirement(spec).name == "litellm")
-    assert any(spec.operator == ">=" and spec.version == "1.109.0" for spec in litellm.specifier)
+    assert any(spec.operator == ">=" and spec.version == "1.109.1" for spec in litellm.specifier)
     assert litellm.marker is None
 
     opik = next(Requirement(spec) for spec in optional["opik"] if Requirement(spec).name == "opik")
@@ -103,10 +103,11 @@ def test_litellm_constraint_requires_patched_versions_on_all_supported_pythons()
         "1.103.10",
         "1.104.0rc1",
         "1.107.0",
+        "1.109.0",
     )
-    for python_version in ("3.10", "3.11", "3.12", "3.13", "3.14"):
+    for python_version in ("3.10", "3.11", "3.12", "3.13", "3.14", "3.15"):
         specifier = _active_litellm_constraint(python_version).specifier
-        assert Version("1.109.0") in specifier
+        assert Version("1.109.1") in specifier
         assert Version("1.109.5") in specifier
         assert not specifier.contains("1.110.0", prereleases=True)
         assert Version("2.0.0") not in specifier

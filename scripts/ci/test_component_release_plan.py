@@ -4,14 +4,11 @@ from __future__ import annotations
 
 import json
 import subprocess
-from typing import TYPE_CHECKING
+from pathlib import Path
 
 import pytest
-
-if TYPE_CHECKING:
-    from pathlib import Path
-
 from component_release_plan import release_plan
+from packaging.requirements import Requirement
 
 
 class Index:
@@ -146,7 +143,7 @@ def test_runner_preserves_venv_python_and_retains_other_breaks_after_failed_base
     python = tmp_path / "venv/bin/python"
     python.parent.mkdir(parents=True)
     python.symlink_to(sys.executable)
-    seen = []
+    install_commands = []
 
     def export(interpreter, _exporter, output, _home):
         if output.name == "current.json":
@@ -156,7 +153,7 @@ def test_runner_preserves_venv_python_and_retains_other_breaks_after_failed_base
 
     def run(command):
         if command[:3] == ["uv", "pip", "install"]:
-            seen.append(command[-1])
+            install_commands.append(command)
             if command[-1].startswith("langflow["):
                 raise subprocess.CalledProcessError(1, command)
 
@@ -183,7 +180,16 @@ def test_runner_preserves_venv_python_and_retains_other_breaks_after_failed_base
     report = json.loads((output / "comparison.json").read_text())
     assert [row["distribution"] for row in report["could_not_verify"]] == ["langflow"]
     assert [row["component"] for row in report["changes"]] == ["Example"]
-    assert len(seen) == 3
+    assert len(install_commands) == 3
+    assert all("--no-config" in command for command in install_commands)
+    constraint_paths = {Path(command[command.index("--constraint") + 1]) for command in install_commands}
+    [constraints] = constraint_paths
+    [guard] = [Requirement(line) for line in constraints.read_text().splitlines() if line and not line.startswith("#")]
+    assert guard.name == "litellm"
+    for version in ("1.103.10", "1.109.5"):
+        assert guard.specifier.contains(version)
+    for version in ("1.103.9", "1.104.0rc1", "1.107.0", "1.109.0"):
+        assert not guard.specifier.contains(version, prereleases=True)
     assert "lfx-example" in (output / "candidate-breaks.md").read_text()
     assert not (output / "release-notes.md").exists()
 

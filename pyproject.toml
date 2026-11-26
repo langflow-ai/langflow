@@ -297,9 +297,9 @@ constraint-dependencies = [
     "fsspec>=2026.6.0",  # CVE-2026-104851
     "langgraph>=1.2.15",  # GHSA-3fx2-cqw9-xr3c
     "langgraph-sdk>=0.4.6",  # GHSA-fvww-7h3r-vfhp / CVE-2026-104873, GHSA-3fx2-cqw9-xr3c
-    # LiteLLM 1.109.0 is the first compatible security line for Enterprise's
-    # filelock floor; retain the explicit exclusions for known bad releases.
-    "litellm>=1.109.0,<1.110.0,!=1.104.0rc1,!=1.107.0",
+    # GHSA-2rwg-2wh4-7c4f is fixed in 1.109.1 on the maintenance line that
+    # supports Enterprise's filelock floor.
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0",
     "multidict>=6.9.1",  # GHSA-54p9-h82j-f925 / CVE-2026-104874
     # Security floors for every workspace dependency path, including optional bundles.
     "oauthlib>=4.0.1,<5.0.0",  # CVE-2026-49264, CVE-2026-49265, CVE-2026-49272
