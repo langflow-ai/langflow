@@ -24,6 +24,7 @@ from langflow.services.deployment_artifacts.builder import (
     _FlowSnapshot,
     _McpRequirements,
 )
+from langflow.services.deps import get_settings_service
 from langflow.utils.mcp_config_secrets import (
     mcp_url_variable_name,
     project_id_from_mcp_url,
@@ -327,6 +328,28 @@ def test_a_project_server_is_carried_with_nothing_but_names():
         "url": f"{{{{{BILLING_URL}}}}}",
         "headers": {"x-api-key": BILLING_KEY, "Accept": "application/json"},
     }
+
+
+@pytest.mark.parametrize("stdio", [False, True])
+def test_a_project_server_uses_the_configured_base_url_prefix(stdio, monkeypatch):
+    base_url = "https://gateway.example/langflow/editor"
+    monkeypatch.setattr(get_settings_service().settings, "mcp_base_url", f"  {base_url}/  ")
+    url = f"{base_url}/api/v1/mcp/project/{SIBLING}/streamable"
+    config = {"command": "uvx", "args": ["mcp-proxy", "--transport", "streamablehttp", url]} if stdio else {"url": url}
+    snapshot = _FlowSnapshot(flow_id=uuid4(), name="support", payload={"data": _flow(_server("billing", config))})
+
+    artifact = _archive(snapshot)
+
+    assert artifact.flows[0].required_mcp_variables == (BILLING_URL,)
+    assert artifact.external_mcp_servers[0].config == {"url": f"{{{{{BILLING_URL}}}}}"}
+
+
+def test_a_project_server_keeps_its_http_connection_options():
+    url = PROJECT_URL.removesuffix("/streamable") + "/sse"
+    options = {"mode": "SSE", "verify_ssl": False, "allow_sse_fallback": False}
+    carried = _external(_server("billing", {"url": url, **options}))
+
+    assert carried[0].config == {"url": f"{{{{{BILLING_URL}}}}}", **options}
 
 
 def test_a_url_in_a_variable_is_carried_unresolved():

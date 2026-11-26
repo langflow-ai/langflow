@@ -48,7 +48,6 @@ from langflow.utils.mcp_config_secrets import (
     MCP_SECRET_CONFIG_MAPS,
     NON_SECRET_HEADERS,
     mcp_url_variable_name,
-    project_id_from_mcp_url,
     project_server_http_config,
     strip_config_secrets,
     url_reads_a_variable,
@@ -702,6 +701,11 @@ def effective_mcp_config(
     return inline if isinstance(inline, dict) else {}
 
 
+def _configured_project_mcp_http_config(config: dict[str, Any]) -> dict[str, Any] | None:
+    settings = get_settings_service().settings
+    return project_server_http_config(config, base_url=getattr(settings, "mcp_base_url", ""))
+
+
 def mcp_config_url(config: dict[str, Any]) -> object:
     """The address this config connects to, whichever shape it is written in.
 
@@ -711,11 +715,8 @@ def mcp_config_url(config: dict[str, Any]) -> object:
     """
     if config.get("url") is not None:
         return config.get("url")
-    args = config.get("args")
-    if isinstance(args, list):
-        for argument in args:
-            if isinstance(argument, str) and project_id_from_mcp_url(argument):
-                return argument
+    if isinstance(config.get("args"), list) and (project_config := _configured_project_mcp_http_config(config)):
+        return project_config["url"]
     return None
 
 
@@ -735,7 +736,7 @@ def _mcp_config_requirements(server_name: object, config: object) -> tuple[set[s
     literals: dict[str, str] = {}
     if not isinstance(config, dict) or not isinstance(server_name, str) or not server_name:
         return variables, literals
-    project_config = project_server_http_config(config)
+    project_config = _configured_project_mcp_http_config(config)
     if project_config is not None:
         config = project_config
         # An address that already reads a variable is asked for by that variable, below.
@@ -743,7 +744,7 @@ def _mcp_config_requirements(server_name: object, config: object) -> tuple[set[s
             name = mcp_url_variable_name(server_name)
             variables.add(name)
             literals[name] = project_config["url"]
-    url = mcp_config_url(config)
+    url = config.get("url")
     url_variables = set(GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.findall(url)) if isinstance(url, str) else set()
     if url_variable := variable_reference_name(url):
         url_variables.add(url_variable)
@@ -870,8 +871,7 @@ def _collect_external_mcp_servers(
         config = effective_mcp_config(name, value.get("config"), registered)
         if not isinstance(name, str) or not name or not config:
             continue
-        url = mcp_config_url(config)
-        project_config = project_server_http_config(config)
+        project_config = _configured_project_mcp_http_config(config)
         if project_config is not None:
             if name not in servers:
                 carried, _, _ = strip_config_secrets(project_config, name)
@@ -879,7 +879,7 @@ def _collect_external_mcp_servers(
                     carried["url"] = f"{{{{{mcp_url_variable_name(name)}}}}}"
                 servers[name] = ProjectArtifactExternalMcpServer(server_name=name, config=carried)
             continue
-        if not url or "command" in config or config.get("mode") == "Stdio":
+        if not config.get("url") or "command" in config or config.get("mode") == "Stdio":
             msg = (
                 f"MCP server {name!r} cannot be deployed. Configure an HTTP URL on this server "
                 "instead of a local command before deploying."

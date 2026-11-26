@@ -43,11 +43,8 @@ PLACEHOLDER_PATTERN = re.compile(r"^\{\{\s*[A-Za-z_][A-Za-z0-9_\-]*\s*\}\}$")
 MCP_SECRET_CONFIG_MAPS = ("env", "headers")
 
 # A Langflow project's own MCP endpoint, as ``_build_project_url`` composes it in
-# ``langflow.api.utils.mcp.config_utils``. Anchored at the start and matched against the
-# parsed *path* only: searching the raw URL let a query string carry the shape, so
-# ``https://elsewhere.example/?next=/api/v1/mcp/project/<id>/x`` read as one of our own
-# projects and would have been rebuilt with a key minted for this plane. The id must be a
-# UUID so a path that merely contains the word cannot be read as a project reference.
+# ``langflow.api.utils.mcp.config_utils``. Match only the parsed path, at the root or
+# after the configured public MCP base path, so a query string cannot supply the route.
 _PROJECT_MCP_PATH = re.compile(
     r"^/api/v1/mcp/project/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:/|$)"
 )
@@ -78,7 +75,7 @@ def _is_variable_reference(value: str) -> bool:
     return variable_reference_name(value) is not None
 
 
-def project_id_from_mcp_url(url: object) -> str | None:
+def project_id_from_mcp_url(url: object, *, base_url: str = "") -> str | None:
     """The Langflow project a server URL points at, or None when it points elsewhere.
 
     Both kinds of server are deployed the same way: credentials become variables the target
@@ -101,6 +98,12 @@ def project_id_from_mcp_url(url: object) -> str | None:
     except ValueError:  # malformed authority, e.g. a bad IPv6 literal
         return None
     match = _PROJECT_MCP_PATH.match(path)
+    if match is None and base_url:
+        try:
+            base_path = urlparse(base_url.strip()).path.rstrip("/")
+        except ValueError:
+            return None
+        match = _PROJECT_MCP_PATH.match(path.removeprefix(base_path))
     return match.group(1).lower() if match else None
 
 
@@ -150,7 +153,7 @@ def url_reads_a_variable(url: object) -> bool:
     )
 
 
-def project_server_http_config(config: dict[str, Any]) -> dict[str, Any] | None:
+def project_server_http_config(config: dict[str, Any], *, base_url: str = "") -> dict[str, Any] | None:
     """An entry pointing at a Langflow project as a plain HTTP config, or None for any other entry.
 
     Auto-install writes these as an ``mcp-proxy`` command with the URL and the headers among its
@@ -161,13 +164,23 @@ def project_server_http_config(config: dict[str, Any]) -> dict[str, Any] | None:
     headers = dict(config["headers"]) if isinstance(config.get("headers"), dict) else {}
     args = config.get("args")
     if url is None and isinstance(args, list):
-        url = next((item for item in args if project_id_from_mcp_url(item) is not None), None)
+        url = next((item for item in args if project_id_from_mcp_url(item, base_url=base_url) is not None), None)
         for index, item in enumerate(args[:-2]):
             if item == HEADER_ARG_FLAG and isinstance(args[index + 1], str):
                 headers[args[index + 1]] = args[index + 2]
-    if project_id_from_mcp_url(url) is None:
+    if project_id_from_mcp_url(url, base_url=base_url) is None:
         return None
-    return {"url": url, **({"headers": headers} if headers else {})}
+
+    http_config = {"url": url}
+    if headers:
+        http_config["headers"] = headers
+    if config.get("url") is not None:
+        if config.get("mode") in ("SSE", "Streamable_HTTP"):
+            http_config["mode"] = config["mode"]
+        for option in ("verify_ssl", "allow_sse_fallback"):
+            if isinstance(config.get(option), bool):
+                http_config[option] = config[option]
+    return http_config
 
 
 def strip_config_secrets(config: dict[str, Any], server_name: str) -> tuple[dict[str, Any], dict[str, str], bool]:
