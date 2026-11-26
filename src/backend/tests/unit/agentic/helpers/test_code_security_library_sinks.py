@@ -51,13 +51,37 @@ def test_rejects_library_execution_apis(module, member, source):
     assert any(member in violation for violation in result.violations)
 
 
-@pytest.mark.parametrize("module", ["duckdb", "_duckdb"])
+@pytest.mark.parametrize("module", ["duckdb", "_duckdb", "sqlite3", "_sqlite3"])
 @pytest.mark.parametrize("source", ["import {module}", "import {module} as sql", "from {module} import connect"])
 def test_rejects_embedded_sql_execution_modules(module, source):
-    """Both DuckDB module names expose execution capabilities and are rejected."""
+    """Reject both the public database modules and their native backends."""
     result = scan_code_security(source.format(module=module))
     assert not result.is_safe
     assert any(module in violation for violation in result.violations)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "import logging.config",
+        "import logging.config as config",
+        "from logging.config import dictConfig",
+        "from logging import config as log_config",
+        "import logging as log\nconfig = log.config",
+        "import logging\nconfig = getattr(logging, 'config')",
+    ],
+)
+def test_rejects_logging_configuration_access(source: str) -> None:
+    result = scan_code_security(source)
+
+    assert not result.is_safe
+    assert any("logging.config" in violation for violation in result.violations)
+
+
+def test_preserves_component_logging() -> None:
+    source = "import logging\nlogger = logging.getLogger(__name__)\nlogger.info('Component finished')"
+
+    assert scan_code_security(source).is_safe
 
 
 @pytest.mark.parametrize(
@@ -104,6 +128,8 @@ def test_rejects_mutable_sandbox_before_rendering_external_template(constructor,
         "from jinja2.sandbox import ImmutableSandboxedEnvironment\nenv = ImmutableSandboxedEnvironment()",
         "import sympy\nresult = sympy.sympify(source)",
         "import duckdb\nresult = duckdb.sql(source)",
+        "import sqlite3",
+        "import logging.config",
     ],
 )
 async def test_runtime_validation_blocks_sinks_before_component_construction(source, monkeypatch):

@@ -1,7 +1,3 @@
-import io
-
-from dotenv import load_dotenv
-
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import MultilineSecretInput
 from lfx.schema.message import Message
@@ -10,7 +6,7 @@ from lfx.template.field.base import Output
 
 class Dotenv(Component):
     display_name = "Dotenv"
-    description = "Load .env file into env vars"
+    description = "Retired. Use Langflow global variables for flow configuration."
     icon = "AstraDB"
     legacy = True
     inputs = [
@@ -27,10 +23,5 @@ class Dotenv(Component):
     ]
 
     def process_inputs(self) -> Message:
-        fake_file = io.StringIO(self.dotenv_file_content)
-        result = load_dotenv(stream=fake_file, override=True)
-
-        message = Message(text="No variables found in .env")
-        if result:
-            message = Message(text="Loaded .env")
-        return message
+        msg = "The Dotenv component has been retired. Replace it with Langflow global variables."
+        raise ValueError(msg)

@@ -15,7 +15,7 @@ class FeatureFlags(BaseSettings):
     """
     Enable GDPR data subject requests: the request queue, find, export and erase APIs.
     """
-    evals: bool = False
+    evals: bool = True
     """
     Enable Evals: datasets of test cases and evaluation runs that score a flow against them.
     """

@@ -3860,7 +3860,7 @@ class TestMemoryBaseCreateAtomicity:
                 "langflow.services.memory_base.service._create_kb_record_for_memory_base",
                 AsyncMock(return_value=created_kb_id),
             ),
-            patch("langflow.api.utils.knowledge_base_service.delete_record", row_cleanup),
+            patch("langflow.api.utils.knowledge_base_service.discard_provisioned_record", row_cleanup),
             patch("langflow.services.memory_base.service.delete_kb", disk_cleanup),
             pytest.raises(ValueError, match="already exists"),
         ):

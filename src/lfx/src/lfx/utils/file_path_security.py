@@ -97,6 +97,12 @@ class StorageNamespaceError(LocalFileAccessError):
 _RESERVED_SECRET_FILENAMES = frozenset({"secret_key", "private_key.pem", "public_key.pem"})
 
 
+def is_mcp_credential_file(name: str | Path) -> bool:
+    """Identify legacy MCP configuration files, which may contain credentials."""
+    stem = Path(name).stem.casefold()
+    return stem == "_mcp_servers" or stem.startswith("_mcp_servers_")
+
+
 def is_local_file_access_restricted() -> bool:
     """Return True if local file access is restricted to the storage directory.
 
@@ -267,6 +273,10 @@ def enforce_storage_key_scope(path: str, scope_ids: Iterable[object] | None) -> 
     if not scopes:
         return namespace, file_name
 
+    if is_mcp_credential_file(file_name):
+        msg = "Access to MCP credential files from a flow is not permitted."
+        raise StorageNamespaceError(msg)
+
     legacy_user_scope = user_storage_scope(namespace).casefold()
     if namespace.casefold() not in scopes and legacy_user_scope not in scopes:
         msg = (
@@ -339,7 +349,8 @@ def enforce_local_file_access(
     """Ensure a local path is inside the current user/flow storage scope when restricted.
 
     Symlinks are resolved before the containment check so a symlink inside the storage dir
-    cannot point outside it. UNC/device paths are always denied before resolution.
+    cannot point outside it. UNC/device paths are always denied before resolution. Scoped reads
+    also reject MCP credential files, including symlinks to them.
 
     Args:
         resolved_path: A filesystem path. It is re-resolved here (``Path.resolve()``) so that
@@ -370,7 +381,19 @@ def enforce_local_file_access(
         raise LocalFileAccessError(msg)
 
     path = Path(resolved_path)
-    if not is_local_file_access_restricted():
+    restricted = is_local_file_access_restricted()
+    if not restricted and scope_ids is None:
+        return path
+    try:
+        candidate = path.resolve()
+    except OSError as e:
+        msg = f"Could not resolve file path '{resolved_path}': {e}"
+        raise LocalFileAccessError(msg) from e
+
+    if scope_ids is not None and (is_mcp_credential_file(path.name) or is_mcp_credential_file(candidate.name)):
+        msg = "Access to MCP credential files from a flow is not permitted."
+        raise LocalFileAccessError(msg)
+    if not restricted:
         return path
 
     # The restriction is in force, so an unreadable settings service must deny rather than
@@ -386,12 +409,6 @@ def enforce_local_file_access(
         )
         raise LocalFileAccessError(msg) from e
     allowed_roots = _scope_roots(data_dir, scope_ids, allow_storage_root=allow_storage_root)
-    try:
-        candidate = path.resolve()
-    except OSError as e:
-        msg = f"Could not resolve file path '{resolved_path}': {e}"
-        raise LocalFileAccessError(msg) from e
-
     if not any(candidate == root or candidate.is_relative_to(root) for root in allowed_roots):
         msg = (
             "Access to local file paths outside the authenticated user's storage scope is disabled "

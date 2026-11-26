@@ -7,6 +7,7 @@ from pydantic_core import PydanticCustomError
 from sqlalchemy import Boolean, Text, UniqueConstraint, false
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
+from langflow.schema.project_auth import ProjectAuthSettings
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.user.model import User
@@ -73,6 +74,7 @@ class Folder(FolderBase, table=True):  # type: ignore[call-arg]
 
 
 class FolderCreate(FolderBase):
+    auth_settings: ProjectAuthSettings | None = None
     components_list: list[UUID] | None = None
     flows_list: list[UUID] | None = None
 
@@ -110,4 +112,4 @@ class FolderUpdate(SQLModel):
     def validate_name(cls, value: str | None) -> str | None:
         return validate_project_name(value)
 
-    auth_settings: dict | None = None
+    auth_settings: ProjectAuthSettings | None = None
