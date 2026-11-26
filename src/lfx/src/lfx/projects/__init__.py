@@ -13,6 +13,7 @@ from lfx.projects.registry import (
     registered_project_types,
 )
 from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
+from lfx.projects.writer import ConfigWrite, apply_project_config
 
 DEFAULT_PROJECT_TYPE = builtins.DEFAULT_PROJECT_TYPE
 
@@ -23,10 +24,12 @@ CORE_PROJECT_TYPES = frozenset({builtins.FLOWS.name, builtins.AGENT_HARNESS.name
 __all__ = [
     "CORE_PROJECT_TYPES",
     "DEFAULT_PROJECT_TYPE",
+    "ConfigWrite",
     "FieldTarget",
     "ProjectType",
     "ProjectTypeField",
     "all_project_types",
+    "apply_project_config",
     "get_project_type",
     "register_project_type",
     "registered_project_types",
