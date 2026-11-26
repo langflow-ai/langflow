@@ -1,46 +1,23 @@
-"""Authorize a Skill Pack and validate the reviewed Tool Packs it requires."""
+"""Authorize and describe a Skill Pack through the shared type resolver."""
 
 from uuid import UUID
 
 from fastapi import HTTPException
-from lfx.projects.skills import skill_pack_manifest
+from lfx.projects.lifecycle import ProjectConfigError
+from lfx.projects.source_resolution import resolve_skill_pack as resolve_sources
 
-from langflow.services.authorization import FlowAction, ProjectAction, ensure_project_permission
-from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
-from langflow.services.database.models.folder.model import Folder
-from langflow.services.database.models.folder.tool_packs import resolve_tool_pack
+from langflow.services.authorization import FlowAction
+from langflow.services.database.models.folder.save_context import LangflowProjectSaveContext, project_error_http
 
 
 async def resolve_skill_pack(session, user, project_id: UUID, *, action=FlowAction.READ):
-    project = await authorized_or_owner_scoped(
-        session, Folder, id_column=Folder.id, resource_id=project_id, owner_column=Folder.user_id, owner_id=user.id
-    )
-    if project is None:
-        raise HTTPException(404, "Skill Pack not found")
     try:
-        await ensure_project_permission(
-            user,
-            ProjectAction.READ,
-            project_id=project.id,
-            project_user_id=project.user_id,
-            workspace_id=project.workspace_id,
+        return await resolve_sources(
+            LangflowProjectSaveContext(session, user),
+            project_id,
+            access="execute" if action == FlowAction.EXECUTE else "read",
         )
-    except HTTPException as exc:
-        raise deny_to_404(exc, "Skill Pack not found") from exc
-    if project.project_type != "skill-pack":
-        raise HTTPException(422, "Choose a project of type Skill Pack.")
-    try:
-        manifest = skill_pack_manifest(project.id, project.name, project.project_config)
+    except ProjectConfigError as exc:
+        raise project_error_http(exc) from exc
     except (ValueError, TypeError) as exc:
-        raise HTTPException(422, f"Invalid Skill Pack: {exc}") from exc
-    references = {}
-    for skill in manifest.skills:
-        for reference in skill.tool_packs:
-            if reference.project_id not in references:
-                current, _ = await resolve_tool_pack(session, user, reference.project_id, action=action)
-                references[reference.project_id] = current.reference
-            if reference != references[reference.project_id]:
-                raise HTTPException(
-                    422, f"A Tool Pack used by skill '{skill.name}' changed. Review it in the Skill Pack."
-                )
-    return manifest
+        raise HTTPException(422, "Invalid Skill Pack. Review its skill definitions.") from exc

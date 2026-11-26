@@ -129,9 +129,9 @@ async def test_tool_pack_discovery_checks_identity_type_and_project_flow_permiss
         raise HTTPException(403)
 
     with monkeypatch.context() as patch:
-        patch.setattr("langflow.services.database.models.folder.tool_packs.ensure_project_permission", deny)
+        patch.setattr("langflow.services.database.models.folder.save_context.ensure_project_permission", deny)
         assert (await client.get(url, headers=logged_in_headers)).status_code == 404
         assert calls[-1]["project_id"] == UUID(project_id)
-    monkeypatch.setattr("langflow.services.database.models.folder.tool_packs.ensure_flow_permission", deny)
+    monkeypatch.setattr("langflow.services.database.models.folder.save_context.ensure_flow_permission", deny)
     assert (await client.get(url, headers=logged_in_headers)).status_code == 404
     assert calls[-1]["flow_id"] == UUID(first)

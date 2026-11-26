@@ -179,6 +179,11 @@ AGENT_HARNESS = AgentHarnessType()
 
 @register_project_type
 class ToolPackType(ProjectTypeDefinition):
+    async def save_config(self, request, ctx):
+        from lfx.projects.source_resolution import prepare_tool_pack
+
+        return await prepare_tool_pack(request, ctx)
+
     name = "tool-pack"
     display_name = "Tool Pack"
     icon = "Package"
@@ -206,6 +211,11 @@ TOOL_PACK = ToolPackType()
 
 @register_project_type
 class SkillPackType(ProjectTypeDefinition):
+    async def save_config(self, request, ctx):
+        from lfx.projects.source_resolution import prepare_skill_pack
+
+        return await prepare_skill_pack(request, ctx)
+
     name = "skill-pack"
     display_name = "Skill Pack"
     icon = "BookOpen"
