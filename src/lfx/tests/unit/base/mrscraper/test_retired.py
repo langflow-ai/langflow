@@ -75,7 +75,7 @@ def test_lfx_upgrade_reports_the_saved_node_as_retired(tmp_path, capsys, fingerp
     display_name = getattr(retired, name).display_name
     assert (
         f"[RETIRED] {display_name} (ext:mrscraper:{name}@official) - id: {name}-saved"
-        " - retired in 1.13.0, replace with: mrscraper.MrscraperFetchHtml"
+        " - retired in 1.13.0, replace with: MrScraper Scraper API"
     ) in capsys.readouterr().out
     assert flow_file.read_text() == before
 

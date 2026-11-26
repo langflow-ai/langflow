@@ -379,6 +379,8 @@ To modify the Windows user environment variables, do the following:
 export LANGFLOW_DEPLOYMENT_TYPED_VARIABLES_ENABLED=true
 ```
 
+Deployment packages resolve saved field bindings against the project owner's variables. If only a collaborator owns the referenced variable, packaging stops and identifies the flow and field to rebind. This check also applies when typed declarations are disabled.
+
 Enable typed declarations only when the destination supports version 7 deployment artifacts.
 This setting requires `LANGFLOW_VARIABLE_STORE=db` and defaults to `false`.
 Packages declare each referenced variable as `secret` or `plain` without including its value.
@@ -456,6 +458,7 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
+| `LANGFLOW_WORKFLOW_EXECUTION_TIMEOUT` | Integer | `300` | Wall-clock ceiling in seconds for a client-attached v2 workflow run. Sync runs raise HTTP 408; streaming and public runs emit the protocol's terminal-error event. Background runs use `LANGFLOW_BACKGROUND_JOB_TIMEOUT` instead. |
 | `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | Enables Gunicorn `preload_app`. Non-Windows only. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
 | `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend for the v1 build endpoints (`/api/v1/build/*`). Use `redis` for multi-worker deployments. Does not affect background runs of the v2 workflows API; see `LANGFLOW_BACKGROUND_BACKEND`. See [Deploy Langflow with multiple workers](./deployment-multi-worker#configuration-reference). |
 | `LANGFLOW_BACKGROUND_BACKEND` | String | `default` | Backend for background runs of the v2 workflows API. `default` runs them inside API workers. `scaled` queues them in the database for separate `langflow worker` processes to run. See [Scale background runs](./deployment-multi-worker#scale-background-runs). |
@@ -555,6 +558,7 @@ The `exec-sandbox` backend is not included in a default `uv pip install langflow
 | `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | `True` | Whether to create templates during initialization. If `false`, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as `false`. |
 | `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | `True` | Whether to update templates with the latest component versions when initializing after an upgrade. |
 | `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | `False` | If `true`, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but can cause a slight delay when a component is first used. |
+| `LANGFLOW_COMPONENT_CLASS_CACHE_ENABLED` | Boolean | `False` | If `true`, Langflow reuses the Python class of a small set of reviewed built-in components across flow builds instead of re-parsing and re-executing their source for every component in every build: **Chat Input**, **Chat Output**, **Text Input**, **Text Output**, **Create List**, **Parser**, **Type Convert**, and **Prompt Template**. Only their unchanged shipped source is reused. All other components, including edited copies of these, extension bundles, and components loaded from `LANGFLOW_COMPONENTS_PATH`, always take the normal path. Every build still gets a fresh component instance. |
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend: `polling`, `streaming` or `direct`. |
 | `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. For development purposes only when you need to serve specific frontend code. |
 | `LANGFLOW_FS_TOOL_BASE_DIR` | String | `~/.langflow/fs_tool/fs_sandbox` | Base directory for the [**File System** component](../Components/file-system.mdx) sandbox. All agent file operations are confined to this directory. |

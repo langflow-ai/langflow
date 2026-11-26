@@ -563,45 +563,6 @@ def _backend_from_record(record) -> tuple[str, dict[str, Any]]:
     )
 
 
-async def _cancel_inflight_ingestion_for_kb(
-    *,
-    kb_name: str,
-    asset_id: uuid.UUID,
-    job_service: JobService,
-) -> None:
-    """Cancel queued / in-progress ingestion jobs for the named KB.
-
-    Transitions every job with ``asset_type='knowledge_base'`` and
-    ``status in (QUEUED, IN_PROGRESS)`` to ``CANCELLED``. The ingestion polls
-    :func:`KBIngestionHelper.is_job_cancelled` between batches and bails out via
-    :class:`IngestionCancelledError` to stop unnecessary work promptly.
-
-    Cancellation is best-effort. The deletion path independently fences the KB,
-    drains guarded storage operations, and persists a SQLite tombstone or drops
-    the remote collection before removing routing. Cancellation failure cannot
-    allow an old writer to recreate deleted SQLite storage.
-
-    Not filtered by user: ``asset_id`` is the KB row the caller is already
-    authorized to delete, and a collaborator's run on a shared KB must stop
-    too, or it keeps writing into the deleted KB's storage.
-    """
-    try:
-        cancelled = await job_service.cancel_in_flight_jobs_by_asset(
-            asset_id=asset_id,
-            asset_type="knowledge_base",
-        )
-    except Exception as exc:  # noqa: BLE001
-        await logger.awarning("Cancel-on-delete failed for KB %s: %s", kb_name, exc)
-        return
-
-    if cancelled:
-        await logger.ainfo(
-            "Cancelled %d in-flight ingestion job(s) before deleting KB '%s'",
-            len(cancelled),
-            kb_name,
-        )
-
-
 @router.post("/test-connection", status_code=HTTPStatus.OK)
 async def test_backend_connection(
     request: TestBackendConnectionRequest,
@@ -1863,19 +1824,18 @@ async def list_ingestion_runs(
 ) -> PaginatedIngestionRunResponse:
     """Paginated list of ingestion runs for a KB (newest first).
 
-    Scoped to the requesting user so one account can't observe
-    another's run history. Returns counter-only rows; the UI fetches
-    the detail endpoint for the drill-down.
+    Readers of this KB can see its ingestion runs, including runs started by a collaborator.
     """
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
     # Verify the KB exists before exposing run history — otherwise a crafted
     # ``kb_name`` could be used to probe for other users' KBs by timing
     # list_runs_for_kb.
-    await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+    record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
 
     rows, total = await ingestion_run_service.list_runs_for_kb(
         kb_name=kb_name,
         user_id=_kb_guard.owner_user.id,
+        authorized_kb_id=record.id,
         page=page,
         limit=limit,
     )
@@ -1898,9 +1858,9 @@ async def get_ingestion_run(
 ) -> IngestionRunDetail:
     """Full run detail including per-item breakdown + error messages."""
     _kb_guard = await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=kb_name)
-    await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
+    record = await _require_kb_record(kb_name, _kb_guard.owner_user, _kb_guard)
 
-    row = await ingestion_run_service.get_run(run_id, user_id=_kb_guard.owner_user.id)
+    row = await ingestion_run_service.get_run(run_id, user_id=_kb_guard.owner_user.id, authorized_kb_id=record.id)
     if row is None or row.kb_name != kb_name:
         raise HTTPException(status_code=404, detail="Ingestion run not found.")
 
@@ -1980,15 +1940,7 @@ async def delete_knowledge_base(
         # KB removable from any replica.
         record = await _require_kb_record(kb_name, kb_owner, _kb_guard)
 
-        # Request cancellation promptly, then let the storage deletion fence
-        # drain existing writers before deleting their collection.
-        await _cancel_inflight_ingestion_for_kb(
-            kb_name=kb_name,
-            asset_id=record.id,
-            job_service=job_service,
-        )
-
-        await knowledge_base_service.delete_record(record.id)
+        await knowledge_base_service.delete_record(record.id, job_service=job_service)
 
     except StorageUnavailableError as exc:
         raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
@@ -2013,7 +1965,7 @@ async def delete_knowledge_bases_bulk(
     # owner context (path + DB row owner) when an authorization plugin authorizes
     # a non-owner via a share grant.
     kb_guards: dict[str, _KbGuardResult] = {}
-    for kb_name in request.kb_names:
+    for kb_name in dict.fromkeys(request.kb_names):
         kb_guards[kb_name] = await _guard_kb_action(
             current_user=current_user,
             action=KnowledgeBaseAction.DELETE,
@@ -2025,10 +1977,9 @@ async def delete_knowledge_bases_bulk(
         failed_kbs = []
         memory_base_kbs: list[str] = []
         remote_warnings: list[str] = []
+        deletions = []
 
-        for kb_name in request.kb_names:
-            kb_guard = kb_guards[kb_name]
-
+        for kb_name, kb_guard in kb_guards.items():
             # DB-backed Memory-Base guard — mirrors the per-KB guard the
             # single-delete / ingest / chunks routes apply, so Memory-Base KBs
             # (managed through the Memory Base APIs) are not deletable through
@@ -2047,21 +1998,14 @@ async def delete_knowledge_bases_bulk(
 
             _validate_kb_name_or_403(kb_name, kb_guard.owner_user)
 
-            # Resolved OUTSIDE the per-KB try below: a containment failure is a
-            # 403 that must abort the whole request, not be downgraded to a
-            # per-item "failed" entry in a 200 response.
+            context = await knowledge_base_service.prepare_record_deletion(record)
+            deletions.append((kb_name, record, context))
 
+        # A pre-hook refusal aborts the entire request before any ingestion
+        # cancellation or storage deletion. Provider failures stay per-item.
+        for kb_name, record, context in deletions:
             try:
-                # Cancel any in-flight ingestion before tearing down
-                # this KB. See the matching call in the single-delete
-                # endpoint for the failure mode this prevents. Owner-
-                # scoped so a shared-KB delete clears the owner's job.
-                await _cancel_inflight_ingestion_for_kb(
-                    kb_name=kb_name,
-                    asset_id=record.id,
-                    job_service=job_service,
-                )
-                await knowledge_base_service.delete_record(record.id)
+                await knowledge_base_service.delete_prepared_record(record, context, job_service=job_service)
                 deleted_count += 1
             except (HTTPException, OSError, ValueError) as e:
                 await logger.aexception("Error deleting knowledge base '%s': %s", kb_name, e)

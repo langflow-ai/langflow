@@ -25,7 +25,7 @@ from langflow.api.v1.flow_conflict import (
 )
 from langflow.api.v1.flow_fork import FlowFork, build_fork_payload
 from langflow.api.v1.flow_validation import flow_validation_error
-from langflow.api.v1.flows import _validate_catalog_policy_for_write
+from langflow.api.v1.flows import _flow_read_for_caller, _validate_catalog_policy_for_write
 from langflow.api.v1.flows_helpers import _new_flow, _patch_flow
 from langflow.services.database.models.flow.model import FlowRead, FlowUpdate
 from langflow.services.database.models.flow_version.crud import create_flow_version_entry
@@ -65,7 +65,7 @@ async def fork_flow(
     whoever forked it and inherits no exposure from the source.
     """
     try:
-        payload = build_fork_payload(flow, fork)
+        payload = build_fork_payload(_flow_read_for_caller(flow, current_user.id), fork)
     except ValidationError as exc:
         raise flow_validation_error(exc) from exc
     _validate_catalog_policy_for_write(payload.data, snapshot=get_catalog_policy_service().snapshot)

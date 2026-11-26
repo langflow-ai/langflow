@@ -48,6 +48,54 @@
       "distribution": "lfx-bundles",
       "source_version": "1.3.5",
       "target_version": "1.3.8"
+    },
+    {
+      "id": "5ad788897846b2782d8a7e01094484a287cb572fdf2c62aef3f2683f25c28d52",
+      "reason": "Accept the documented ALTK Agent retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-5ad788897846.md",
+      "distribution": "langflow",
+      "source_version": "1.13.3",
+      "target_version": "1.14.0"
+    },
+    {
+      "id": "a2b8cd4b1888d222cddf29ccac495061642614782a5535bd2fcb9dd026326c2e",
+      "reason": "Accept the documented Chroma Vector Store retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-a2b8cd4b1888.md",
+      "distribution": "langflow",
+      "source_version": "1.13.3",
+      "target_version": "1.14.0"
+    },
+    {
+      "id": "8d83f423647fca5f3a013027f8fc1097bd6d29666d20b1f38514b39415a0dcdf",
+      "reason": "Accept the documented Local DB retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-8d83f423647f.md",
+      "distribution": "langflow",
+      "source_version": "1.13.3",
+      "target_version": "1.14.0"
+    },
+    {
+      "id": "cebabf34a3f9bae029da544d0071b3833a38122c52cf9bf2f76f69a68c6e8cde",
+      "reason": "Accept the documented ALTK Agent retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-cebabf34a3f9.md",
+      "distribution": "langflow",
+      "source_version": "1.13.4",
+      "target_version": "1.14.0"
+    },
+    {
+      "id": "48b3f4f6ba546594e0efcafe408f35778ae8318b1f2f1c20b5cd5e9efccdb6b9",
+      "reason": "Accept the documented Chroma Vector Store retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-48b3f4f6ba54.md",
+      "distribution": "langflow",
+      "source_version": "1.13.4",
+      "target_version": "1.14.0"
+    },
+    {
+      "id": "145d9cbde53b0524146f385ae6991d1e89295669d9677f30f2da0fd072c6207f",
+      "reason": "Accept the documented Local DB retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-145d9cbde53b.md",
+      "distribution": "langflow",
+      "source_version": "1.13.4",
+      "target_version": "1.14.0"
     }
   ]
 }

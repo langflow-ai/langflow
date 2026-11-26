@@ -149,6 +149,7 @@ class AuthorizationMutationKind(str, Enum):
     """Canonical policy-relevant lifecycle mutations emitted by Langflow."""
 
     USER_CREATED = "user.created"
+    USER_ACTIVATED = "user.activated"
     USER_DISABLED = "user.disabled"
     USER_SUPERUSER_DEMOTED = "user.superuser_demoted"
     USER_DELETED = "user.deleted"
@@ -610,15 +611,16 @@ class BaseAuthorizationService(Service, abc.ABC):
         permission_level: str,
         operation: str,
     ) -> None:
-        """Veto a share before it is written. Plugin override; OSS no-op.
+        """Veto a share before it is written or revoked. Plugin override; OSS no-op.
 
-        Called by ``POST /authz/shares`` (``operation="create"``) and ``PATCH /authz/shares/{id}``
-        (``operation="update"``) after the caller's own permission checks and before the row is written, for
-        every caller including a superuser and the resource owner (the owner skips ``enforce``, so this is the
-        only place a plugin sees an owner's share). ``owner_id`` is the resource's owner; for an update,
-        ``scope`` and ``target_id`` are those of the stored share and ``permission_level`` is the new level.
+        Called by ``POST /authz/shares`` (``operation="create"``), ``PATCH /authz/shares/{id}``
+        (``operation="update"``) and ``DELETE /authz/shares/{id}`` (``operation="delete"``) after the caller's own
+        permission checks and before the row is written or removed, for every caller including a superuser and the
+        resource owner (the owner skips ``enforce``, so this is the only place a plugin sees an owner's share).
+        ``owner_id`` is the resource's owner; for an update or delete, ``scope``, ``target_id`` and (for a delete)
+        ``permission_level`` are those of the stored share, and for an update ``permission_level`` is the new level.
         Raise ``HTTPException(403)`` to refuse: the route answers 404 like any other refused share. Any other
-        exception fails the request; it is never read as permission. Not called when a share is deleted.
+        exception fails the request; it is never read as permission.
         """
         _ = (actor, resource_type, resource_id, owner_id, scope, target_id, permission_level, operation)
 
@@ -704,6 +706,7 @@ class BaseAuthorizationService(Service, abc.ABC):
         }
         user_kinds = {
             AuthorizationMutationKind.USER_CREATED,
+            AuthorizationMutationKind.USER_ACTIVATED,
             AuthorizationMutationKind.USER_DISABLED,
             AuthorizationMutationKind.USER_SUPERUSER_DEMOTED,
             AuthorizationMutationKind.USER_DELETED,

@@ -8,7 +8,7 @@ from sqlalchemy import delete, update
 from sqlmodel import and_, col, or_, select
 
 from langflow.services.data_subjects.audit_redaction import redact_audit_rows
-from langflow.services.data_subjects.batching import clear_reference_batch, delete_batch, delete_job_batch
+from langflow.services.data_subjects.batching import BATCH_SIZE, clear_reference_batch, delete_batch, delete_job_batch
 from langflow.services.data_subjects.evaluation_steps import EVALUATION_STEPS
 from langflow.services.data_subjects.transactions import builder_transactions
 from langflow.services.data_subjects.upgrade_reports import erase_upgrade_reports
@@ -42,11 +42,23 @@ from langflow.services.database.models.project_replacement_operation import Proj
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.upgrade_report import UpgradeReportRepair
 from langflow.services.database.models.variable.model import Variable
+from langflow.services.deletion_hooks import (
+    RESOURCE_FILE,
+    RESOURCE_PROJECT,
+    RESOURCE_VARIABLE,
+    VIA_ERASE,
+    DeletionContext,
+    registered_post_deletion_hooks,
+    registered_pre_deletion_hooks,
+    run_post_deletion_after_commit,
+    run_pre_deletion_hooks,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
     from uuid import UUID
 
+    from sqlalchemy.sql.elements import ColumnElement
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.data_subjects.context import EraseContext, EraseStepPending
@@ -121,6 +133,51 @@ def _delete_by_user(model: type, column: object) -> Step:
     return step
 
 
+async def _erase_resources(
+    session: AsyncSession,
+    model: type[File | Folder | Variable],
+    resource: str,
+    *where: ColumnElement[bool],
+) -> int:
+    """Preserve bounded erase batches while guarding and reporting each resource."""
+    if not (registered_pre_deletion_hooks(resource) or registered_post_deletion_hooks(resource)):
+        return await delete_batch(session, model, *where)
+    rows = (await session.exec(select(model).where(*where).limit(BATCH_SIZE))).all()
+    contexts = [
+        DeletionContext(
+            resource=resource,
+            resource_id=row.id,
+            owner_id=row.user_id,
+            name=row.name,
+            via=VIA_ERASE,
+            session=session,
+            extra={"path": row.path} if isinstance(row, File) else {},
+        )
+        for row in rows
+        if row.id is not None
+    ]
+    if not contexts:
+        return 0
+    for context in contexts:
+        await run_pre_deletion_hooks(context)
+    removed = await session.execute(
+        delete(model).where(col(model.id).in_([context.resource_id for context in contexts])).returning(model.id)
+    )
+    ids = set(removed.scalars())
+    for context in contexts:
+        if context.resource_id in ids:
+            run_post_deletion_after_commit(session, context)
+    return len(ids)
+
+
+async def erase_files(session: AsyncSession, ctx: EraseContext) -> int:
+    return await _erase_resources(session, File, RESOURCE_FILE, File.user_id == ctx.subject_user_id)
+
+
+async def erase_variables(session: AsyncSession, ctx: EraseContext) -> int:
+    return await _erase_resources(session, Variable, RESOURCE_VARIABLE, Variable.user_id == ctx.subject_user_id)
+
+
 def _clear_reference(model: type, column: object, *, pk: object = None) -> Step:
     async def step(session: AsyncSession, ctx: EraseContext) -> int:
         return await clear_reference_batch(session, model, column, ctx.subject_user_id, pk=pk)
@@ -172,7 +229,9 @@ async def erase_folders(session: AsyncSession, ctx: EraseContext) -> int:
     """Leaf folders first, so a parent is never deleted while a child still points at it."""
     uid = ctx.subject_user_id
     has_children = select(Folder.parent_id).where(col(Folder.parent_id).is_not(None))
-    deleted = await delete_batch(session, Folder, Folder.user_id == uid, col(Folder.id).not_in(has_children))
+    deleted = await _erase_resources(
+        session, Folder, RESOURCE_PROJECT, Folder.user_id == uid, col(Folder.id).not_in(has_children)
+    )
     if deleted:
         return deleted
     remaining = (await session.exec(select(Folder.id).where(Folder.user_id == uid).limit(1))).first()
@@ -188,8 +247,8 @@ BUILDER_ACCOUNT_STEPS: tuple[tuple[str, Step], ...] = (
     ("ingestion_runs", erase_ingestion_runs),
     *EVALUATION_STEPS,
     ("mcp_servers", _delete_by_user(MCPServer, MCPServer.user_id)),
-    ("files", _delete_by_user(File, File.user_id)),
-    ("variables", _delete_by_user(Variable, Variable.user_id)),
+    ("files", erase_files),
+    ("variables", erase_variables),
     ("api_keys", _delete_by_user(ApiKey, ApiKey.user_id)),
     ("refresh_sessions", erase_refresh_sessions),
     ("connections", erase_connections),

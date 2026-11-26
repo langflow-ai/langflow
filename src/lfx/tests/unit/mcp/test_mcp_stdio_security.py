@@ -920,6 +920,11 @@ def test_command_safe_flags_extensibility():
         "OPENSSL_MODULES",
         # An unenumerated member of the same family must also be denied.
         "OPENSSL_SOMETHING_NEW",
+        # Docker client settings belong to the operator.
+        "DOCKER_HOST",
+        "DOCKER_CONTEXT",
+        "DOCKER_CONFIG",
+        "DOCKER_TLS_VERIFY",
         # CPython interpreter control beyond PYTHONPATH/PYTHONSTARTUP.
         "PYTHONHOME",
         "PYTHONBREAKPOINT",

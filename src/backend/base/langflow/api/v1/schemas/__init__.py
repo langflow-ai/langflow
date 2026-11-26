@@ -9,6 +9,7 @@ from lfx.custom.schema import ComponentUpdateWarning
 from lfx.graph.schema import RunOutputs
 from lfx.services.settings.base import Settings
 from lfx.services.settings.feature_flags import FEATURE_FLAGS, FeatureFlags
+from lfx.upgrade.retired import retirement_lookup
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -21,6 +22,7 @@ from pydantic import (
 
 from langflow.schema.dotdict import dotdict
 from langflow.schema.graph import Tweaks
+from langflow.schema.project_auth import ProjectAuthType
 from langflow.schema.schema import InputType, OutputType, OutputValue
 from langflow.serialization.serialization import get_max_items_length, get_max_text_length, serialize
 from langflow.services.database.models.api_key.model import ApiKeyRead
@@ -468,6 +470,7 @@ class ConfigResponse(BaseConfigResponse):
     """
 
     type: Literal["full"] = "full"
+    retired_components: dict[str, dict] = Field(default_factory=retirement_lookup)
     serialization_max_items_length: int
     serialization_max_text_length: int
     auto_saving: bool
@@ -604,7 +607,7 @@ class CancelFlowResponse(BaseModel):
 class AuthSettings(BaseModel):
     """Model representing authentication settings for MCP."""
 
-    auth_type: Literal["none", "apikey", "oauth"] = "none"
+    auth_type: ProjectAuthType
     oauth_host: str | None = None
     oauth_port: str | None = None
     oauth_server_url: str | None = None

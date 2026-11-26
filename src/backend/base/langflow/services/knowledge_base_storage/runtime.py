@@ -40,8 +40,10 @@ _READ_METHODS = frozenset(
         "asimilarity_search",
         "asimilarity_search_with_score",
         "count",
+        "count_job",
         "iter_documents",
         "get_documents_by_ids",
+        "iter_job_documents",
         "storage_size_bytes",
         "read_migration_manifest",
         "integrity_check",
@@ -346,6 +348,7 @@ async def _remote_lock(kb_id: UUID, *, shared=False):
                 pool_size=getattr(get_settings_service().settings, "knowledge_base_storage_pool_size", 20),
                 max_overflow=0,
                 pool_timeout=30,
+                pool_pre_ping=True,  # as the app pool: a database failover or restart ends the pooled connections
                 connect_args=database._get_connect_args(),  # noqa: SLF001 -- preserve configured driver TLS options
             )
             _coordination_engines[engine_key] = engine
@@ -504,6 +507,14 @@ class _GuardedMethods:
         value = getattr(self._target, name)
         if name == "vector_store":
             return _GuardedMethods(value, self._record)
+        if name == "staging":
+            # A deploy's staging store lives under the same knowledge base, so it takes the same fences.
+            return lambda token: _GuardedMethods(
+                value(token),
+                self._record,
+                before_write=self._before_write,
+                preserve_existing_documents=self._preserve_existing_documents,
+            )
         if inspect.isasyncgenfunction(value):
 
             async def iterate(*args, **kwargs):

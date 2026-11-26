@@ -13,13 +13,21 @@ if TYPE_CHECKING:
 
 from lfx.graph.graph.utils import process_flow
 from lfx.upgrade.applier import apply_safe_upgrades
-from lfx.upgrade.checker import _canonical_types, build_registry_lookup, check_flow_compatibility, iter_flow_nodes
+from lfx.upgrade.checker import (
+    _canonical_types,
+    build_registry_lookup,
+    can_replace_empty_field,
+    check_flow_compatibility,
+    iter_flow_nodes,
+)
+from lfx.upgrade.retired import replacement_label
 
 
 @dataclass(frozen=True)
 class RepairPlan:
     data: dict[str, Any] | None = None
     updated_nodes: int = 0
+    reason_detail: str | None = None
     reason_codes: list[str] = field(default_factory=list)
 
 
@@ -72,6 +80,8 @@ def _preserves_template_state(old_template: object, new_template: object) -> boo
         new_field = new_template.get(name)
         if not isinstance(new_field, dict):
             return False
+        if can_replace_empty_field(old_field, new_field):
+            continue
         for key in ("value", "load_from_db", "file_path"):
             if key in old_field and old_field[key] != new_field.get(key):
                 return False
@@ -170,7 +180,14 @@ def plan_flow_repair(data: dict[str, Any], all_types: Mapping[str, Any]) -> Repa
             {node.status for node in report.nodes if node.status in {"blocked", "retired", "outdated_breaking"}}
         )
         if unsafe:
-            return RepairPlan(reason_codes=unsafe)
+            retired = []
+            for node in report.nodes:
+                if node.status == "retired":
+                    detail = f"{node.display_name} was retired in {node.retired_in}."
+                    if node.replacement:
+                        detail += f" Replace with {', '.join(map(replacement_label, node.replacement))}."
+                    retired.append(detail)
+            return RepairPlan(reason_codes=unsafe, reason_detail=" ".join(dict.fromkeys(retired)) or None)
         safe_sources = {}
         for node in report.nodes:
             if node.status == "outdated_safe":

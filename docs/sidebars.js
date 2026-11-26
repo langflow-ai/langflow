@@ -85,6 +85,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Flows/evaluations",
+          label: "Evaluate flows"
+        },
+        {
+          type: "doc",
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
@@ -410,6 +415,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Lfx/lfx-dependency-ready",
+          label: "Dependency-ready Python graphs"
+        },
+        {
+          type: "doc",
           id: "Lfx/lfx-serve",
           label: "Serve flows with LFX"
         },
@@ -632,6 +642,7 @@ module.exports = {
             "Components/bundles-serply",
             "Components/bundles-servicenow",
             "Components/bundles-slack",
+            "Components/bundles-socialscrape",
             "Components/bundles-supabase",
             "Components/bundles-telegram",
             "Components/bundles-upstash",

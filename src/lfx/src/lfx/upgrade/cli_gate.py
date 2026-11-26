@@ -20,9 +20,12 @@ from typing import TYPE_CHECKING, Any
 from lfx.upgrade.applier import apply_safe_upgrades
 from lfx.upgrade.checker import build_registry_lookup, check_flow_compatibility
 from lfx.upgrade.registry import UpgradeRegistryError, load_upgrade_registry
+from lfx.upgrade.retired import replacement_label
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
+    from lfx.upgrade.checker import NodeStatus
 
 
 class UpgradeFlowMode(str, Enum):
@@ -106,9 +109,15 @@ def apply_upgrade_gate(
     registry = build_registry_lookup(all_types_dict)
     report = check_flow_compatibility(flow_dict, all_types_dict, registry=registry)
 
+    def describe(node: NodeStatus) -> str:
+        if node.status == "retired":
+            replacements = ", ".join(map(replacement_label, node.replacement)) or "no direct replacement"
+            return f"{node.display_name} (retired), retired in {node.retired_in}, replace with: {replacements}"
+        return f"{node.display_name} ({node.status})"
+
     if mode == UpgradeFlowMode.CHECK:
         if not report.is_clean:
-            names = ", ".join(f"{n.display_name} ({n.status})" for n in report.nodes if n.status != "ok")
+            names = ", ".join(describe(n) for n in report.nodes if n.status != "ok")
             msg = f"flow has components requiring attention (--upgrade-flow=check): {names}"
             if report.has_customized:
                 msg += (
@@ -122,11 +131,7 @@ def apply_upgrade_gate(
 
     # mode is SAFE.
     if report.has_blocked or report.has_breaking or report.has_retired:
-        names = ", ".join(
-            f"{n.display_name} ({n.status})"
-            for n in report.nodes
-            if n.status in ("blocked", "outdated_breaking", "retired")
-        )
+        names = ", ".join(describe(n) for n in report.nodes if n.status in ("blocked", "outdated_breaking", "retired"))
         msg = f"flow has components that cannot be auto-upgraded: {names}"
         raise UpgradeFlowError(msg)
     if report.has_customized and not _custom_components_allowed():
