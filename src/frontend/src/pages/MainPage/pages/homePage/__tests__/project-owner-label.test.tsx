@@ -59,6 +59,9 @@ jest.mock("@/contexts/permissionsContext", () => ({
 jest.mock("@/controllers/API/queries/folders/use-get-folder", () => ({
   useGetFolderQuery: () => mockFolderQuery,
 }));
+jest.mock("@/controllers/API/queries/folders/use-get-project-types", () => ({
+  useGetProjectTypesQuery: () => ({ data: undefined, isLoading: false }),
+}));
 jest.mock("@/customization/components/custom-banner", () => ({
   CustomBanner: () => null,
 }));
