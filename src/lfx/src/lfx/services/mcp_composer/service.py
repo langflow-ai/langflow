@@ -534,13 +534,16 @@ class MCPComposerService(Service):
             # Clean up PID tracking
             if process and process.pid:
                 self._pid_to_project.pop(process.pid, None)
-                await self._remove_temp_logs(self._temp_logs_by_pid.pop(process.pid, ()))
                 await logger.adebug(f"Released PID {process.pid} tracking for project {project_id}")
 
             # Remove from tracking
             self.project_composers.pop(project_id, None)
             self._backend_auth_tokens.pop(project_id, None)
             await logger.adebug(f"Removed tracking for project {project_id}")
+
+            # Last: the retries wait, and a cancellation there must not skip the tracking cleanup above.
+            if process and process.pid:
+                await self._remove_temp_logs(self._temp_logs_by_pid.pop(process.pid, ()))
 
     async def _terminate_process_tree(self, process: subprocess.Popen) -> None:
         """Stop the process, and on Windows every process it started.
@@ -552,13 +555,18 @@ class MCPComposerService(Service):
             taskkill_cmd = os.path.join(  # noqa: PTH118
                 os.environ.get("SYSTEMROOT", "C:\\Windows"), "System32", "taskkill.exe"
             )
-            result = await asyncio.to_thread(
-                subprocess.run,
-                [taskkill_cmd, "/F", "/T", "/PID", str(process.pid)],
-                capture_output=True,
-                check=False,
-            )
-            if result.returncode != 0 and process.poll() is None:
+            try:
+                result = await asyncio.to_thread(
+                    subprocess.run,
+                    [taskkill_cmd, "/F", "/T", "/PID", str(process.pid)],
+                    capture_output=True,
+                    check=False,
+                )
+                tree_killed = result.returncode == 0
+            except (OSError, subprocess.SubprocessError) as e:
+                await logger.awarning(f"taskkill failed for MCP Composer process {process.pid}: {e}")
+                tree_killed = False
+            if not tree_killed and process.poll() is None:
                 await asyncio.to_thread(process.kill)
         else:
             process.terminate()

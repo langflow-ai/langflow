@@ -551,6 +551,38 @@ class TestWindowsTempLogCleanupOnAbort:
         assert windows_tree.tree_kills == 1
         self._assert_logs_cleaned(tmp_path, handles)
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "taskkill",
+        [
+            {"return_value": subprocess.CompletedProcess([], 128, b"", b"")},
+            {"side_effect": FileNotFoundError("taskkill.exe")},
+        ],
+        ids=["taskkill_fails", "taskkill_missing"],
+    )
+    async def test_should_kill_the_process_when_taskkill_does_not_work(self, mcp_service, taskkill):
+        process = self._running_process()
+
+        with patch("platform.system", return_value="Windows"), patch("subprocess.run", **taskkill):
+            await mcp_service._terminate_process_tree(process)
+
+        process.kill.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_should_drop_composer_tracking_even_if_log_cleanup_is_cancelled(self, mcp_service, tmp_path):
+        process = self._running_process()
+        process.poll.return_value = 0
+        mcp_service.project_composers["test-project"] = {"process": process, "port": 2000}
+        mcp_service._temp_logs_by_pid[process.pid] = (tmp_path / "mcp_composer_test_stdout_x.log",)
+
+        with (
+            patch.object(mcp_service, "_remove_temp_logs", side_effect=asyncio.CancelledError),
+            pytest.raises(asyncio.CancelledError),
+        ):
+            await mcp_service._do_stop_project_composer("test-project")
+
+        assert "test-project" not in mcp_service.project_composers
+
 
 class TestIncreasedStartupTimeout:
     """Test that startup timeout was increased for Windows."""
