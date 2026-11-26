@@ -36,7 +36,7 @@ dependencies = [
     "langchain-mongodb>=0.11.0",
     # langchain-mongodb always installs pymongo; publish the patched floor on this unconditional path.
     "pymongo>=4.18.3,<5.0.0; python_version < '3.11'",  # CVE-2026-88029, CVE-2026-96747, CVE-2026-96748, CVE-2026-96749
-    "pymongo>=4.20.1,<5.0.0; python_version >= '3.11'",  # CVE-2026-129926, CVE-2026-129927
+    "pymongo>=4.20.2,<5.0.0; python_version >= '3.11'",  # CVE-2026-129926, CVE-2026-129927, CVE-2026-135898, CVE-2026-135146
     # Publish transitive DNS and JOSE floors for fresh base wheel installs.
     "dnspython>=2.9.2,<3.0.0; python_version >= '3.11'",
     "joserfc>=1.7.6,<2.0.0",
@@ -146,8 +146,8 @@ dependencies = [
     "openinference-instrumentation-langchain>=0.1.29",
     "opik>=2.0.0,<3.0.0",
     # Opik installs LiteLLM even without the optional litellm extra.
-    # Block the compromised 1.107.0 release in published wheel metadata.
-    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0",
+    # Block compromised and vulnerable LiteLLM releases in published metadata.
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0",
     # Newer Opik releases cap LiteLLM below its security floor on Python 3.10.
     # Publish the compatible version constraint so fresh wheel installs stay valid.
     "opik==2.2.7; python_version < '3.11'",
@@ -249,7 +249,7 @@ clickhouse = ["clickhouse-connect==0.7.19"]
 
 mongodb = [
     "pymongo>=4.18.3,<5.0.0; python_version < '3.11'",
-    "pymongo>=4.20.1,<5.0.0; python_version >= '3.11'",
+    "pymongo>=4.20.2,<5.0.0; python_version >= '3.11'",
 ]
 supabase = ["supabase>=2.6.0,<3.0.0"]
 redis = ["redis>=7.4.0,<8.0.0"]
@@ -358,7 +358,7 @@ pgvector = [
     "psycopg[binary]>=3.1,<4.0",
 ]
 litellm = [
-    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0",
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # Pull in only the modules Langflow uses from litellm[proxy] rather than
@@ -447,8 +447,8 @@ cuga = [
     # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
     "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
     "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
-    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
-    "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
     "mlx>=0.29.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version >= '3.12'",
