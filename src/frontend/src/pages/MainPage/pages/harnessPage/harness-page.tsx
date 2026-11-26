@@ -24,6 +24,7 @@ import {
   agentCandidates,
   defaultAgent,
 } from "./components/agent-flow-picker";
+import { HarnessReports } from "./components/harness-reports";
 import { HarnessSummary } from "./components/harness-summary";
 import { HookFlowPicker } from "./components/hook-flow-picker";
 import { HarnessFlowPicker } from "./components/instructions-flow-picker";
@@ -368,6 +369,12 @@ const HarnessPage = ({
         </div>
 
         <div className="flex shrink-0 items-center gap-3">
+          {projectType === "agent-harness" && (
+            <HarnessReports
+              projectId={projectId}
+              onOpenFlow={() => editorDraft.keep(projectId, edits)}
+            />
+          )}
           {isDirty && (
             <span
               className="text-xs text-muted-foreground"
