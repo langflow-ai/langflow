@@ -8,18 +8,23 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 from lfx.base.agents.harness import HarnessRuntimeConfig
-from lfx.projects.bindings import reject_recursive_binding
+from lfx.projects.bindings import compose_instructions, reject_recursive_binding
+from lfx.projects.compaction import compose_compaction
+from lfx.projects.context import compose_context
 from lfx.projects.dependencies import validate_binding_dependencies
 from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
-from lfx.projects.lifecycle import PreparedSave, ProjectConfigError
+from lfx.projects.hooks import compose_hooks
+from lfx.projects.lifecycle import FlowChange, PreparedSave, ProjectConfigError
 from lfx.projects.local_tools import local_tool_bindings, local_tool_definition
-from lfx.projects.skills import HarnessSkills, skill_pack_references
+from lfx.projects.permissions import compose_permission
+from lfx.projects.skills import HarnessSkills, compose_skills, skill_pack_references
 from lfx.projects.source_resolution import resolve_skill_pack, resolve_sources, resolve_tool_pack
 from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_references
-from lfx.projects.tools import agent_node_ids
+from lfx.projects.tools import agent_node_ids, compose_tools
+from lfx.projects.writer import apply_project_config
 
 if TYPE_CHECKING:
-    from lfx.projects.lifecycle import FlowView, ProjectSaveContext, SaveRequest
+    from lfx.projects.lifecycle import CompositionContext, FlowView, ProjectSaveContext, SaveRequest
 
 
 @dataclass(frozen=True)
@@ -317,3 +322,89 @@ async def prepare_harness(request: SaveRequest, ctx: ProjectSaveContext) -> Prep
         ),
     )
     return PreparedSave(None if clearing_config else config, tuple(flow.id for flow in targets), state)
+
+
+def compose_harness(definition, prepared: PreparedSave, ctx: CompositionContext) -> tuple[FlowChange, ...]:
+    """Compose copied graphs; only the host applies changes or creates restore points."""
+    state = prepared.state
+    if state is None:
+        return ()
+    config = state.config
+    bindings, skills = state.bindings, state.skills
+    instruction_binding, instruction_target = bindings.system_prompt, state.instruction_target
+    changes = []
+    for flow in ctx.flows:
+        values = {key: value for key, value in config.items() if key != "system_prompt" or instruction_binding is None}
+        write = apply_project_config(
+            flow.data, definition, values, previous_values=ctx.applied_values.get(str(flow.id))
+        )
+        data = write.data
+        try:
+            data = compose_skills(data, project_id=str(ctx.project.id), agent_id=agent_node_ids(data)[0], skills=skills)
+        except (ValueError, TypeError) as exc:
+            msg = f"Could not configure skills: {exc}"
+            raise ProjectConfigError(msg) from exc
+        try:
+            data = compose_instructions(
+                data,
+                project_id=str(ctx.project.id),
+                agent_id=agent_node_ids(data)[0],
+                target={"name": instruction_target.name, "data": instruction_target.data}
+                if instruction_target
+                else None,
+                binding=instruction_binding,
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            msg = f"Could not bind Instructions: {exc}"
+            raise ProjectConfigError(msg) from exc
+        try:
+            data = compose_hooks(
+                data, project_id=str(ctx.project.id), agent_id=agent_node_ids(data)[0], bindings=bindings.hooks
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            msg = f"Could not bind Hooks: {exc}"
+            raise ProjectConfigError(msg) from exc
+        try:
+            data = compose_context(
+                data,
+                project_id=str(ctx.project.id),
+                agent_id=agent_node_ids(data)[0],
+                binding=bindings.context_strategy,
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            msg = f"Could not bind Context: {exc}"
+            raise ProjectConfigError(msg) from exc
+        try:
+            data = compose_compaction(
+                data,
+                project_id=str(ctx.project.id),
+                agent_id=agent_node_ids(data)[0],
+                binding=bindings.compaction,
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            msg = f"Could not bind Compaction: {exc}"
+            raise ProjectConfigError(msg) from exc
+        try:
+            data = compose_permission(
+                data,
+                project_id=str(ctx.project.id),
+                agent_id=agent_node_ids(data)[0],
+                binding=bindings.tool_policy,
+            )
+        except (ValueError, KeyError, TypeError) as exc:
+            msg = f"Could not bind Permissions: {exc}"
+            raise ProjectConfigError(msg) from exc
+        if state.compose_tools:
+            try:
+                data = compose_tools(
+                    data,
+                    project_id=str(ctx.project.id),
+                    agent_id=agent_node_ids(data)[0],
+                    targets=list(state.tool_targets),
+                )
+            except (ValueError, KeyError, TypeError) as exc:
+                msg = f"Could not configure the selected tools: {exc}"
+                raise ProjectConfigError(msg) from exc
+
+        changes.append(FlowChange(flow.id, flow.token, data, write.applied_values, write.inputs_skipped))
+    return tuple(changes)

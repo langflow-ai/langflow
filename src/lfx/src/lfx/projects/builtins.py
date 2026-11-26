@@ -36,6 +36,11 @@ class AgentHarnessType(ProjectTypeDefinition):
 
         return await prepare_harness(request, ctx)
 
+    def compose(self, prepared, ctx):
+        from lfx.projects.harness_lifecycle import compose_harness
+
+        return compose_harness(self, prepared, ctx)
+
     name = "agent-harness"
     display_name = "Agent Harness"
     icon = "Bot"
