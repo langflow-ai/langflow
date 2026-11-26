@@ -66,3 +66,45 @@ def test_the_known_display_names_of_a_bundle_component_include_its_translations(
         _locale("pt")[component_field_key("slackonmessagetrigger", "description", _SLACK_DESCRIPTION)]
         in known["description"]
     )
+
+
+def _schedule_node() -> dict:
+    return {
+        "name": "ScheduleTrigger",
+        "display_name": "Schedule",
+        "template": {
+            "schedule_type": {"options": ["Daily", "Weekly"], "translate_options": True, "value": "Weekly"},
+            "timezone": {"options": ["UTC", "Europe/Lisbon"], "value": "UTC"},
+        },
+    }
+
+
+def test_options_marked_for_translation_get_labels_and_keep_their_values() -> None:
+    zh = _locale("zh-Hans")
+
+    translated = translate_component_node("ScheduleTrigger", _schedule_node(), "zh-Hans")
+
+    field = translated["template"]["schedule_type"]
+    assert field["options"] == ["Daily", "Weekly"]
+    assert field["value"] == "Weekly"
+    assert field["option_labels"] == {
+        option: zh[component_field_key("scheduletrigger", "inputs.schedule_type.options", option)]
+        for option in ("Daily", "Weekly")
+    }
+    assert field["option_labels"]["Weekly"] != "Weekly"
+    assert "option_labels" not in translated["template"]["timezone"]
+
+
+def test_every_schedule_option_is_translated_in_every_locale() -> None:
+    """The picker is unusable in a language that shows half its choices in English."""
+    from lfx.base.triggers.schedule import SCHEDULE_TYPES, WEEKDAYS
+
+    expected = {("schedule_type", option) for option in SCHEDULE_TYPES} | {("days_of_week", day) for day in WEEKDAYS}
+    for code in ("de", "es", "fr", "ja", "ko", "pt", "zh-Hans"):
+        locale = _locale(code)
+        missing = [
+            option
+            for field, option in expected
+            if component_field_key("scheduletrigger", f"inputs.{field}.options", option) not in locale
+        ]
+        assert missing == [], f"{code} is missing {missing}"

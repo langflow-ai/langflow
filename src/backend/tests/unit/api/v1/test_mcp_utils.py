@@ -256,6 +256,33 @@ async def test_handle_list_resources_requires_current_user(monkeypatch):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("has_other_project_credential", [False, True])
+async def test_project_resources_require_a_credential(monkeypatch, has_other_project_credential):
+    """Resource admission must run before any database or storage access."""
+    session_scope = MagicMock()
+    get_storage_service = MagicMock()
+    monkeypatch.setattr(mcp_utils, "session_scope", session_scope)
+    monkeypatch.setattr(mcp_utils, "get_storage_service", get_storage_service)
+
+    project_id = uuid4()
+    user_token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=uuid4()))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(None)
+    composer_project = uuid4() if has_other_project_credential else None
+    composer_token = mcp_utils.composer_authenticated_project_ctx.set(composer_project)
+    try:
+        assert await mcp_utils.handle_list_resources(project_id=project_id) == []
+        with pytest.raises(ValueError, match="Resource not found or access denied"):
+            await mcp_utils.handle_read_resource("resource.txt", project_id=project_id)
+    finally:
+        mcp_utils.composer_authenticated_project_ctx.reset(composer_token)
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
+        mcp_utils.current_user_ctx.reset(user_token)
+
+    session_scope.assert_not_called()
+    get_storage_service.assert_not_called()
+
+
+@pytest.mark.asyncio
 async def test_handle_read_resource_rejects_path_traversal(monkeypatch):
     """Encoded ../ sequences must be rejected before reaching storage."""
     own_flow = SimpleNamespace(id="flow-own", user_id="user-bob", folder_id=None)
@@ -326,16 +353,19 @@ async def test_handle_read_resource_denies_user_bucket_under_project_scope(monke
     monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
 
     token = mcp_utils.current_user_ctx.set(SimpleNamespace(id="user-bob"))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(uuid4())
     try:
         uri = "http://host/api/v1/files/download/user-bob/my-file.txt"
         with pytest.raises(ValueError, match="access denied"):
-            await mcp_utils.handle_read_resource(uri, project_id="project-xyz")
+            await mcp_utils.handle_read_resource(uri, project_id=uuid4())
     finally:
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
 
 @pytest.mark.asyncio
-async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypatch, async_session):
+@pytest.mark.parametrize("credential", ["caller", "composer"])
+async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypatch, async_session, credential):
     """A flow UUID parsed from an advertised resource URI must remain UUID-typed in the database query."""
     user = User(username="mcp-resource-reader", password=str(uuid4()))
     project = Folder(name="MCP Resource Project", user_id=user.id)
@@ -358,6 +388,8 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
     monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
 
     token = mcp_utils.current_user_ctx.set(user)
+    caller_token = mcp_utils.authenticated_caller_ctx.set(user.id if credential == "caller" else None)
+    composer_token = mcp_utils.composer_authenticated_project_ctx.set(project.id if credential == "composer" else None)
     try:
         uri = f"http://host/api/v1/files/download/{flow.id}/{file_name}"
         result = await mcp_utils.handle_read_resource(uri, project_id=project.id)
@@ -369,6 +401,8 @@ async def test_handle_read_resource_project_scope_binds_flow_id_as_uuid(monkeypa
         with pytest.raises(ValueError, match="access denied"):
             await mcp_utils.handle_read_resource(uri, project_id="not-a-uuid")
     finally:
+        mcp_utils.composer_authenticated_project_ctx.reset(composer_token)
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
     import base64
@@ -425,9 +459,11 @@ async def test_handle_list_resources_respects_project_flow_visibility(monkeypatc
     )
 
     token = mcp_utils.current_user_ctx.set(user)
+    caller_token = mcp_utils.authenticated_caller_ctx.set(user.id)
     try:
         resources = await mcp_utils.handle_list_resources(project_id=project.id if project_scoped else None)
     finally:
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
     expected_flows = (
@@ -465,6 +501,7 @@ async def test_handle_read_resource_respects_project_flow_visibility(
     monkeypatch.setattr(mcp_utils, "get_storage_service", lambda: storage_service)
 
     token = mcp_utils.current_user_ctx.set(user)
+    caller_token = mcp_utils.authenticated_caller_ctx.set(user.id)
     try:
         uri = f"http://host/api/v1/files/download/{flow.id}/resource.txt"
         if project_scoped and not mcp_enabled:
@@ -474,6 +511,7 @@ async def test_handle_read_resource_respects_project_flow_visibility(
             result = await mcp_utils.handle_read_resource(uri, project_id=project.id if project_scoped else None)
             assert base64.b64decode(result) == b"resource contents"
     finally:
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
 
@@ -539,9 +577,11 @@ async def test_handle_list_resources_project_scoped_excludes_user_bucket(monkeyp
     )
 
     token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=user_id))
+    caller_token = mcp_utils.authenticated_caller_ctx.set(uuid4())
     try:
-        resources = await mcp_utils.handle_list_resources(project_id="project-xyz")
+        resources = await mcp_utils.handle_list_resources(project_id=uuid4())
     finally:
+        mcp_utils.authenticated_caller_ctx.reset(caller_token)
         mcp_utils.current_user_ctx.reset(token)
 
     uris = {str(resource.uri) for resource in resources}
@@ -639,7 +679,8 @@ async def _invoke_handle_call_tool(
 
     monkeypatch.setattr(mcp_utils, "get_flow_snake_case", fake_get_flow_snake_case)
     monkeypatch.setattr(mcp_utils, "simple_run_flow", simple_run_flow_mock)
-    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(SimpleNamespace()))
+    session = SimpleNamespace(get=AsyncMock(return_value=SimpleNamespace(is_active=True)))
+    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(session))
     # Force progress notifications off so the test does not exercise that path.
     mcp_utils.get_mcp_config().enable_progress_notifications = False
 
@@ -668,6 +709,29 @@ async def _invoke_handle_call_tool(
         mcp_utils.current_user_ctx.reset(token)
 
     return simple_run_flow_mock
+
+
+@pytest.mark.parametrize("project_user", [None, SimpleNamespace(is_active=False)], ids=["missing", "inactive"])
+async def test_handle_call_tool_rechecks_project_owner_before_flow_lookup(monkeypatch, project_user):
+    owner_id = uuid4()
+    session = SimpleNamespace(get=AsyncMock(return_value=project_user))
+    flow_lookup = AsyncMock()
+    run_flow = AsyncMock()
+    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(session))
+    monkeypatch.setattr(mcp_utils, "get_flow_snake_case", flow_lookup)
+    monkeypatch.setattr(mcp_utils, "simple_run_flow", run_flow)
+    monkeypatch.setattr(mcp_utils.get_mcp_config(), "enable_progress_notifications", False)
+
+    token = mcp_utils.current_user_ctx.set(SimpleNamespace(id=owner_id, is_active=True))
+    try:
+        with pytest.raises(ValueError, match="Project owner not found"):
+            await mcp_utils.handle_call_tool("my_flow", {}, _build_fake_server(), project_id=uuid4())
+    finally:
+        mcp_utils.current_user_ctx.reset(token)
+
+    session.get.assert_awaited_once_with(mcp_utils.User, owner_id)
+    flow_lookup.assert_not_awaited()
+    run_flow.assert_not_awaited()
 
 
 async def test_handle_call_tool_applies_public_policy_and_scopes_session(monkeypatch):

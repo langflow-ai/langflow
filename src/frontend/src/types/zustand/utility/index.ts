@@ -1,4 +1,5 @@
 import type { EventDeliveryType } from "@/constants/enums";
+import type { ComponentRetirement } from "@/types/api";
 import type { Pagination, Tag } from "@/types/utils/types";
 
 export type UtilityStoreType = {
@@ -38,6 +39,7 @@ export type UtilityStoreType = {
   setDefaultFolderName: (defaultFolderName: string) => void;
   hideGettingStartedProgress: boolean;
   setHideGettingStartedProgress: (hideGettingStartedProgress: boolean) => void;
+  retiredComponents: Record<string, ComponentRetirement>;
   allowCustomComponents: boolean;
   setAllowCustomComponents: (allowCustomComponents: boolean) => void;
   substituteOutdatedComponentCode: boolean;

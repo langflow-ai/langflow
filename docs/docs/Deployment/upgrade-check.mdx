@@ -28,7 +28,7 @@ Update replays saved, nonempty refresh selectors that the current component stil
 
 The command doesn't do the following:
 
-- It doesn't run flows. The Python audit guard described below applies during target component discovery and dry runs. During discovery, a refused operation or a wait over 30 seconds stops the check with exit 2, preventing a report against an incomplete registry. During a node's dry run, a refused or incomplete update records `could_not_verify` as its dry-run result and reason, and the check continues. This does not automatically replace the node's compatibility status, which can remain `outdated_safe` or `outdated_breaking`. Inspect dry-run results and reasons as well as node statuses when finding these warnings.
+- It doesn't run flows. The Python audit guard described below applies during target component discovery and dry runs. During discovery, a refused operation or a wait over the discovery timeout stops the check with exit 2, preventing a report against an incomplete registry. The default timeout is 300 seconds. During a node's dry run, a refused or incomplete update records `could_not_verify` as its dry-run result and reason, and the check continues. This does not automatically replace the node's compatibility status, which can remain `outdated_safe` or `outdated_breaking`. Inspect dry-run results and reasons as well as node statuses when finding these warnings.
 - It doesn't migrate the database schema or update any flow.
 - It doesn't check files, knowledge bases, credentials, or variables. To check those, see [Migrate to a new Langflow instance](/instance-migration).
 
@@ -54,13 +54,16 @@ Unrelated component import or template errors retain the shared loader's existin
 | `--allow-custom-components` / `--no-allow-custom-components` | `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Allowed |
 | `--substitute-outdated-component-code` / `--no-substitute-outdated-component-code` | `LANGFLOW_SUBSTITUTE_OUTDATED_COMPONENT_CODE` | On |
 | `--block-code-interpreter-components` / `--no-block-code-interpreter-components` | `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS` | Off |
-| `--custom-component-admin-only` / `--no-custom-component-admin-only` | `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` | Off |
+| `--custom-component-admin-only` / `--no-custom-component-admin-only` | `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` | On |
 | `--allow-components-paths-override` / `--no-allow-components-paths-override` | `LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE` | On |
 | `--components-path`, once per folder | `LANGFLOW_COMPONENTS_PATH` | None |
 
 If the upgraded server loads custom components, pass every folder the server actually loads with `--components-path`.
 The command loads them the way the server does at startup, which imports their code, so the command needs the same Python packages as the server.
 If you pass `--no-allow-custom-components` and `--no-allow-components-paths-override`, the command loads none of the folders you pass.
+
+On a busy machine or with many installed components, use `--discovery-timeout 600` to allow ten minutes for discovery.
+This option accepts a positive number of seconds. Each node's dry run still has a separate 30-second limit.
 
 If the database is SQLite, the database's folder must be writable.
 Langflow keeps SQLite in WAL mode, and SQLite creates a `-shm` file next to the database even to read it.
@@ -108,6 +111,8 @@ uvx --from "langflow==1.14.0" langflow upgrade-check \
 ```
 
 Other users of the machine can see the database URL in the process list while the check runs.
+
+To keep the password out of the process list, set the `LANGFLOW_UPGRADE_CHECK_DATABASE_URL` environment variable instead of passing `--database-url`.
 
 </TabItem>
 <TabItem value="docker" label="Docker">

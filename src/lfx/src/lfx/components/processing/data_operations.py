@@ -86,11 +86,37 @@ class DataOperationsComponent(Component):
     ]
 
     @staticmethod
+    def _unquoted_paths(obj, path: str = "") -> list[str]:
+        """Return the paths the picker offered before keys were quoted: every key written bare."""
+        paths = []
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                paths.append(f"{path}.{k}")
+                paths.extend(DataOperationsComponent._unquoted_paths(v, f"{path}.{k}"))
+        elif isinstance(obj, list) and obj:
+            paths.append(f"{path}[0]")
+            paths.extend(DataOperationsComponent._unquoted_paths(obj[0], f"{path}[0]"))
+        return paths
+
+    @staticmethod
+    def _keep_saved_path(options: list[str], saved_path: object, mapped_json: object) -> list[str]:
+        """Keep a saved path the old unquoted rule offered for this JSON; drop one an edit removed."""
+        if (
+            isinstance(saved_path, str)
+            and saved_path not in options
+            and saved_path in DataOperationsComponent._unquoted_paths(mapped_json)
+        ):
+            return [*options, saved_path]
+        return options
+
+    @staticmethod
     def extract_all_paths(obj, path=""):
         paths = []
         if isinstance(obj, dict):
             for k, v in obj.items():
-                new_path = f"{path}.{k}" if path else f".{k}"
+                # jq reads only ASCII identifiers bare; any other key must be a quoted string.
+                field = k if k.isascii() and k.isidentifier() else json.dumps(k, ensure_ascii=False)
+                new_path = f"{path}.{field}"
                 paths.append(new_path)
                 paths.extend(DataOperationsComponent.extract_all_paths(v, new_path))
         elif isinstance(obj, list) and obj:
@@ -459,7 +485,9 @@ class DataOperationsComponent(Component):
             try:
                 parsed_json = json.loads(field_value)
                 keys = DataOperationsComponent.extract_all_paths(parsed_json)
-                build_config["selected_key"]["options"] = keys
+                build_config["selected_key"]["options"] = self._keep_saved_path(
+                    keys, build_config["selected_key"].get("value"), parsed_json
+                )
                 build_config["selected_key"]["show"] = True
             except (json.JSONDecodeError, TypeError, ValueError) as e:
                 logger.error(f"Error parsing mapped JSON: {e}")
@@ -499,7 +527,10 @@ class DataOperationsComponent(Component):
             mapped_json = template.get("mapped_json_display", {}).get("value")
             if mapped_json:
                 try:
-                    template["selected_key"]["options"] = self.extract_all_paths(json.loads(mapped_json))
+                    parsed_json = json.loads(mapped_json)
+                    template["selected_key"]["options"] = self._keep_saved_path(
+                        self.extract_all_paths(parsed_json), template["selected_key"].get("value"), parsed_json
+                    )
                 except (json.JSONDecodeError, TypeError, ValueError, RecursionError) as e:
                     logger.warning(f"Error parsing saved mapped JSON: {e}")
                     template["selected_key"]["show"] = False

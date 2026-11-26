@@ -11,7 +11,8 @@ from uuid import UUID
 
 from cryptography.fernet import InvalidToken
 from lfx.log.logger import logger
-from sqlmodel import select
+from sqlalchemy import case, update
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.auth import utils as auth_utils
@@ -308,6 +309,41 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
     return result.user if result is not None else None
 
 
+async def _record_api_key_authentication(
+    session: AsyncSession,
+    api_key: ApiKey,
+    *,
+    track_usage: bool,
+    backfill_hash: str | None = None,
+) -> None:
+    """Persist successful-authentication bookkeeping with one UPDATE in the caller's transaction.
+
+    ``total_uses`` is incremented against the stored value, so overlapping
+    authentications that read the same row cannot overwrite each other's uses.
+    ``last_used_at`` only moves forward, even when requests reach the UPDATE out
+    of order. A legacy key's hash backfill shares the same statement.
+    """
+    values: dict[str, Any] = {}
+    if backfill_hash is not None:
+        values["api_key_hash"] = backfill_hash
+    if track_usage:
+        now = datetime.datetime.now(datetime.timezone.utc)
+        last_used_at = col(ApiKey.last_used_at)
+        values["total_uses"] = col(ApiKey.total_uses) + 1
+        values["last_used_at"] = case(
+            (last_used_at.is_(None), now),
+            (last_used_at < now, now),
+            else_=last_used_at,
+        )
+    if not values:
+        return
+    await session.execute(
+        update(ApiKey).where(col(ApiKey.id) == api_key.id).values(**values).execution_options(synchronize_session=False)
+    )
+    # The loaded instance may predate other transactions' increments; reload these on next access.
+    session.expire(api_key, list(values))
+
+
 async def _check_key_from_db_with_context(
     session: AsyncSession,
     api_key: str,
@@ -343,10 +379,7 @@ async def _check_key_from_db_with_context(
             logger.info("API key rejected for externally managed user while external access ceiling is enabled")
             return None
         if settings_service.settings.disable_track_apikey_usage is not True and not await maintenance_enabled(session):
-            api_key_obj.total_uses += 1
-            api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-            session.add(api_key_obj)
-            await session.flush()
+            await _record_api_key_authentication(session, api_key_obj, track_usage=True)
         return _api_key_auth_result(user, api_key_obj, fingerprint=incoming_hash)
 
     if len(matches) > 1:
@@ -390,13 +423,15 @@ async def _check_key_from_db_with_context(
                 logger.info("API key rejected for externally managed user while external access ceiling is enabled")
                 return None
             # Authentication stays available without changing the frozen database.
+            # The hash backfill is a one-time index write, independent of usage
+            # tracking, so later requests take the O(1) path above.
             if not await maintenance_enabled(session):
-                api_key_obj.api_key_hash = incoming_hash
-                if settings_service.settings.disable_track_apikey_usage is not True:
-                    api_key_obj.total_uses += 1
-                    api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
-                session.add(api_key_obj)
-                await session.flush()
+                await _record_api_key_authentication(
+                    session,
+                    api_key_obj,
+                    track_usage=settings_service.settings.disable_track_apikey_usage is not True,
+                    backfill_hash=incoming_hash,
+                )
             return _api_key_auth_result(user, api_key_obj, fingerprint=incoming_hash)
 
     return None

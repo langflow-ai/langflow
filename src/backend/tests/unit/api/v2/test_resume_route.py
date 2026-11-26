@@ -431,3 +431,48 @@ class TestUnwrapPausePayload:
         stored = {"type": "CUSTOM", "name": "langflow.human_input_required", "value": raw}
         pending = _unwrap_pause_payload(stored)
         assert reroute_decision_on_timeout(pending, {"action_id": "approve"})["action_id"] == "fallback"
+
+
+async def test_resume_records_who_answered(client, created_api_key, suspended_job):
+    """The answer is kept with the credential and the time; a deployment's callers share one user."""
+    body = {"request_id": "req-1", "decision": {"action_id": "approve"}}
+    resp = await client.post(f"api/v2/workflows/{suspended_job}/resume", json=body, headers=_headers(created_api_key))
+    assert resp.status_code == 200
+    async with session_scope() as session:
+        job = await session.get(Job, suspended_job)
+    [record] = job.job_metadata["resume_decisions"]
+    assert record["request_id"] == "req-1"
+    assert record["action_id"] == "approve"
+    assert record["user_id"] == str(created_api_key.user_id)
+    assert record["api_key_id"] == str(created_api_key.id)
+    assert record["end_user_id"] is None
+    assert record["at"]
+
+
+async def test_a_refused_resume_records_nothing(client, created_api_key, suspended_job):
+    body = {"request_id": "WRONG", "decision": {"action_id": "approve"}}
+    resp = await client.post(f"api/v2/workflows/{suspended_job}/resume", json=body, headers=_headers(created_api_key))
+    assert resp.status_code == 409
+    async with session_scope() as session:
+        job = await session.get(Job, suspended_job)
+    assert "resume_decisions" not in (job.job_metadata or {})
+
+
+async def test_the_record_keeps_every_answer_and_the_end_user(created_api_key, suspended_job):
+    """A run that pauses twice keeps both answers, each with the end user the gateway named."""
+    from langflow.api.v2.hitl import record_resume_decision
+
+    for request_id in ("req-1", "req-2"):
+        await record_resume_decision(
+            suspended_job,
+            request_id=request_id,
+            decision={"action_id": "approve"},
+            user_id=created_api_key.user_id,
+            end_user_id="alice",
+        )
+    async with session_scope() as session:
+        job = await session.get(Job, suspended_job)
+    records = job.job_metadata["resume_decisions"]
+    assert [r["request_id"] for r in records] == ["req-1", "req-2"]
+    assert {r["end_user_id"] for r in records} == {"alice"}
+    assert job.job_metadata["pending_request_id"] == "req-1"  # the other metadata is untouched

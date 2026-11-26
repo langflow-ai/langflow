@@ -6,6 +6,7 @@ to eliminate duplication across Component, LCModelComponent, and TokenUsageCallb
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from lfx.schema.properties import Usage
@@ -53,12 +54,12 @@ def extract_usage_from_message(message: Any) -> Usage | None:
             )
 
     response_metadata = getattr(message, "response_metadata", None)
-    if not response_metadata:
+    if not isinstance(response_metadata, Mapping):
         return None
 
-    # Strategy 2: response_metadata["token_usage"] (OpenAI format)
-    if "token_usage" in response_metadata:
-        token_usage = response_metadata["token_usage"]
+    # ChatOpenAI can set token_usage to None when the endpoint omits usage.
+    token_usage = response_metadata.get("token_usage")
+    if isinstance(token_usage, Mapping):
         return Usage(
             input_tokens=token_usage.get("prompt_tokens"),
             output_tokens=token_usage.get("completion_tokens"),
@@ -66,8 +67,8 @@ def extract_usage_from_message(message: Any) -> Usage | None:
         )
 
     # Strategy 3: response_metadata["usage"] (Anthropic format)
-    if "usage" in response_metadata:
-        usage = response_metadata["usage"]
+    usage = response_metadata.get("usage")
+    if isinstance(usage, Mapping):
         input_tokens = usage.get("input_tokens")
         output_tokens = usage.get("output_tokens")
         return Usage(
@@ -153,20 +154,22 @@ def extract_usage_from_chunk(chunk: Any) -> Usage | None:
     if hasattr(chunk, "usage_metadata") and chunk.usage_metadata:
         return _normalize_usage_metadata(chunk.usage_metadata)
 
-    if hasattr(chunk, "response_metadata") and chunk.response_metadata:
-        metadata = chunk.response_metadata
-        if "token_usage" in metadata:
-            return Usage(
-                input_tokens=metadata["token_usage"].get("prompt_tokens"),
-                output_tokens=metadata["token_usage"].get("completion_tokens"),
-                total_tokens=metadata["token_usage"].get("total_tokens"),
-            )
-        if "usage" in metadata:
-            return Usage(
-                input_tokens=metadata["usage"].get("input_tokens"),
-                output_tokens=metadata["usage"].get("output_tokens"),
-                total_tokens=None,
-            )
+    metadata = getattr(chunk, "response_metadata", None)
+    if not isinstance(metadata, Mapping):
+        return None
+
+    token_usage = metadata.get("token_usage")
+    if isinstance(token_usage, Mapping):
+        return Usage(
+            input_tokens=token_usage.get("prompt_tokens"),
+            output_tokens=token_usage.get("completion_tokens"),
+            total_tokens=token_usage.get("total_tokens"),
+        )
+    usage = metadata.get("usage")
+    if isinstance(usage, Mapping):
+        return Usage(
+            input_tokens=usage.get("input_tokens"), output_tokens=usage.get("output_tokens"), total_tokens=None
+        )
 
     return None
 

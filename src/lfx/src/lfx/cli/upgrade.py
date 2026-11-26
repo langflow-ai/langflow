@@ -11,6 +11,7 @@ import typer
 from lfx.upgrade.applier import apply_safe_upgrades
 from lfx.upgrade.checker import CompatibilityReport, build_registry_lookup, check_flow_compatibility
 from lfx.upgrade.registry import UpgradeRegistryError, load_upgrade_registry
+from lfx.upgrade.retired import replacement_label
 from lfx.utils.flow_envelope import merge_flow_envelope, split_flow_envelope
 
 # ASCII status markers (no Unicode glyphs) so output is safe on Windows cp1252 consoles,
@@ -49,7 +50,7 @@ def _print_report(report: CompatibilityReport) -> None:
         marker = _STATUS_MARKERS.get(n.status, "[?]")
         line = f"  {marker} {n.display_name} ({n.component_type}) - id: {n.node_id}"
         if n.status == "retired":
-            replacement = ", ".join(n.replacement) if n.replacement else "no direct replacement"
+            replacement = ", ".join(map(replacement_label, n.replacement)) if n.replacement else "no direct replacement"
             line += f" - retired in {n.retired_in}, replace with: {replacement}"
         typer.echo(line)
 
