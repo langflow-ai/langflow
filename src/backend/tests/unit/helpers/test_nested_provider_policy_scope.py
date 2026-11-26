@@ -58,6 +58,7 @@ class _ProviderGraph:
         self.user_id: str | None = None
         self.run_id = None
         self.session_id = None
+        self.checkpointing_enabled = False
         self.vertices = []
         self.successor_map = {}
         self.description = None

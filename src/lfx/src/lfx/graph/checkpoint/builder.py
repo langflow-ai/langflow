@@ -88,4 +88,5 @@ def build_checkpoint(graph: Graph) -> GraphCheckpoint:
         vertex_results={vertex.id: _vertex_data(vertex) for vertex in graph.vertices},
         pause_context=graph.pause_info,
         human_input_decisions=dict(getattr(graph, "human_input_decisions", {}) or {}),
+        child_checkpoints=dict(graph.child_checkpoints),
     )

@@ -8,7 +8,7 @@ be accepted while approval N+1 is pending (and applied to the wrong tool call).
 from types import SimpleNamespace
 
 from lfx.components.models_and_agents.agent_helpers.tool_approval import ToolApprovalMixin
-from lfx.run.hitl import request_id_targets_vertex
+from lfx.run.hitl import nested_request_prefix, request_id_targets_vertex
 
 EMPTY_INTERRUPT = {"action_requests": [], "review_configs": []}
 
@@ -66,6 +66,16 @@ def test_legacy_caller_without_interrupt_id_stays_none_when_ambiguous():
             "Agent-x:run-1:int-B": {"action_id": "reject"},
         }
     )
+    assert agent._injected_agent_decision("run-1") is None
+
+
+def test_a_decision_for_a_flow_the_agent_runs_nested_is_not_the_agents_own():
+    # An Agent that runs a flow nested pauses the parent under its own vertex and run with the child's id.
+    nested = nested_request_prefix("Agent-x", "run-1") + "hitl:child-run"
+    agent = _Agent({nested: {"action_id": "approve"}})
+
+    assert request_id_targets_vertex(nested, "Agent-x", "run-1")
+    assert agent._has_candidate_decision("run-1") is False
     assert agent._injected_agent_decision("run-1") is None
 
 

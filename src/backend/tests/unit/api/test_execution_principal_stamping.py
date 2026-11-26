@@ -428,7 +428,9 @@ async def test_the_run_flow_component_forwards_its_graph_principal(monkeypatch: 
     monkeypatch.setattr(component, "get_graph", lambda **_kwargs: _awaitable(child_graph))
     monkeypatch.setattr(component, "_build_flow_tweak_data", dict)
     monkeypatch.setattr(component, "_build_inputs", lambda _tweaks: {})
-    component._vertex = SimpleNamespace(data={}, graph=SimpleNamespace(execution_principal=principal))
+    component._vertex = SimpleNamespace(
+        data={}, graph=SimpleNamespace(execution_principal=principal, checkpointing_enabled=False)
+    )
     component.flow_name_selected = None
     component.flow_id_selected = None
     component.session_id = "session"

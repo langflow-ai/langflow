@@ -62,6 +62,8 @@ class GraphCheckpoint(BaseModel):
     vertex_results: dict[str, VertexCheckpointData] = Field(default_factory=dict)
     pause_context: dict[str, Any] | None = None
     human_input_decisions: dict[str, Any] = Field(default_factory=dict)
+    # Paused nested runs, keyed by the call's request prefix (lfx.run.hitl.nested_request_prefix).
+    child_checkpoints: dict[str, GraphCheckpoint] = Field(default_factory=dict)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     expires_at: datetime | None = None
 

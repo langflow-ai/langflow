@@ -79,6 +79,7 @@ def _restore_or_none(wire: dict[str, Any] | None, vertex_id: str, field: str, un
 
 def _restore_vertices(graph: Graph, checkpoint: GraphCheckpoint) -> set[str]:
     """Restore per-vertex state, returning the ids whose built state could not be fully restored."""
+    from lfx.graph.schema import ResultData
     from lfx.graph.vertex.base import VertexStates
 
     unrestorable: set[str] = set()
@@ -108,6 +109,15 @@ def _restore_vertices(graph: Graph, checkpoint: GraphCheckpoint) -> set[str]:
                 unrestorable.add(vertex_id)
         if vertex_data.built_result is not None:
             vertex.built_result = _restore_or_none(vertex_data.built_result, vertex_id, "built_result", unrestorable)
+        if vertex.built:
+            # A run collects its outputs from ``result``, which only a live build sets.
+            vertex.result = ResultData(
+                results=vertex.get_built_result(),
+                artifacts=vertex.artifacts,
+                outputs={},
+                component_display_name=vertex.display_name,
+                component_id=vertex.id,
+            )
     return unrestorable
 
 
@@ -161,12 +171,13 @@ def resume_graph_with_decision(
     graph = Graph.resume_from_checkpoint(
         checkpoint, checkpoint_store=store, snapshot_history_limit=snapshot_history_limit
     )
-    graph.checkpointing_enabled = True
-    graph.checkpoint_store = store
-    graph.human_input_decisions = {
-        **(getattr(graph, "human_input_decisions", {}) or {}),
-        request_id: decision,
-    }
+    inject_decision(graph, request_id, decision)
+    return graph
+
+
+def inject_decision(graph: Graph, request_id: str, decision: dict) -> None:
+    """Record ``decision`` on a restored graph and un-build the vertex it answers, so that vertex re-runs."""
+    graph.human_input_decisions = {**graph.human_input_decisions, request_id: decision}
     for vertex in graph.vertices:
         vertex_request_id = f"{vertex.id}:{graph.run_id}"
         if request_id == vertex_request_id or request_id.startswith(vertex_request_id + ":"):
@@ -174,7 +185,6 @@ def resume_graph_with_decision(
     # Re-run the fixpoint after un-building the paused vertex so any opaque-dropped
     # producer it consumes is rebuilt instead of restoring a None value.
     _unbuild_needed_dropped_producers(graph)
-    return graph
 
 
 def restore_graph_from_checkpoint(
@@ -206,6 +216,11 @@ def restore_graph_from_checkpoint(
     )
     if runtime_candidate is not None:
         runtime_candidate.bind(graph)
+    return apply_checkpoint(graph, checkpoint, store=store)
+
+
+def apply_checkpoint(graph: Graph, checkpoint: GraphCheckpoint, *, store: CheckpointStore | None = None) -> Graph:
+    """Put a checkpoint's run state onto ``graph``, a graph built from the checkpoint's flow."""
     graph.source_flow_id = checkpoint.source_flow_id
     # Retain only provenance for the restored identity; the runner still checks
     # explicit identities and host principals before enabling shared storage.
@@ -238,6 +253,7 @@ def restore_graph_from_checkpoint(
     }
     graph.conditionally_excluded_vertices = {str(v) for v in checkpoint.conditionally_excluded_vertices}
     graph.human_input_decisions = dict(checkpoint.human_input_decisions)
+    graph.child_checkpoints = dict(checkpoint.child_checkpoints)
     graph.activated_vertices = list(checkpoint.activated_vertices)
     # Built-at-checkpoint vertices must not have their async generators re-consumed; the output loop skips this set.
     graph.checkpoint_restored_built_ids = {vid for vid, vd in checkpoint.vertex_results.items() if vd.built}

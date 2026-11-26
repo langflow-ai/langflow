@@ -51,6 +51,17 @@ def request_id_targets_vertex(request_id: str, vertex_id: str, run_id: str) -> b
     return request_id == base or request_id.startswith(base + ":")
 
 
+def nested_request_prefix(vertex_id: str, run_id: str) -> str:
+    """``vertex_id:run_id:nested:``, the prefix of the request ids a nested run under this vertex pauses with.
+
+    The child's own request id follows it, so the id still targets the vertex that runs the child. The
+    ``nested`` segment stands where an Agent puts its interrupt id, which keeps the child's decisions apart
+    from the Agent's own when an Agent runs a nested flow. It is also the child's slot in the parent's
+    ``child_checkpoints``.
+    """
+    return f"{vertex_id}:{run_id}:nested:"
+
+
 def reroute_decision_on_timeout(pending: dict | None, decision: dict) -> dict:
     """Reroute a late HITL decision once the pause timed out.
 
@@ -209,8 +220,11 @@ def flow_has_blocking_pausing_node(graph: Graph) -> bool:
 
 
 def raise_if_nested_hitl_unsupported(graph: Graph) -> None:
-    """Reject a nested run of a pausing flow with a clear error instead of a silent non-pause."""
-    if flow_has_blocking_pausing_node(graph):
+    """Reject a nested run of a pausing flow with a clear error instead of a silent non-pause.
+
+    A child that run_nested armed with checkpointing carries its pause to the parent, so it may hold one.
+    """
+    if not graph.checkpointing_enabled and flow_has_blocking_pausing_node(graph):
         raise NestedHITLUnsupportedError(NESTED_HITL_UNSUPPORTED)
 
 

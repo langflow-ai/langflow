@@ -15,6 +15,7 @@ from langchain_core.tools import tool
 from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.components.flow_controls.human_input import HumanInput
 from lfx.components.flow_controls.loop import LoopComponent
+from lfx.components.flow_controls.run_flow import RunFlowComponent
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents.agent import AgentComponent
 from lfx.custom import Component
@@ -60,17 +61,105 @@ def write_flow(flows_dir: Path, name: str, flow: dict) -> None:
     (flows_dir / f"{name}.json").write_text(json.dumps({"data": flow}))
 
 
-def wrapper_payload(child: str, flows_dir: Path) -> dict:
-    """Chat Input -> Run Flow (running ``child``) -> Chat Output."""
-    runner = NestedRunFlow(_id="runner", flow_name_selected=child, flow_id_selected=CHILD_ID, flows_dir=str(flows_dir))
-    return payload(
-        [
-            node(ChatInput(_id="w_in", should_store_message=False)),
-            node(runner),
-            node(ChatOutput(_id="w_out", should_store_message=False)),
-        ],
-        [edge("w_in", "runner", "message"), edge("runner", "w_out", "text")],
+def hitl_payload(*, approved=None, early: bool = False) -> dict:
+    """Chat Input -> Human Input -> one Chat Output per branch, through ``approved`` on the approve branch.
+
+    ``early`` adds a Chat Output fed by the Chat Input, which is built before the pause.
+    """
+    chat_input = node(ChatInput(_id="c_in", should_store_message=False))
+    # Run Flow exposes this field to an Agent that calls the flow as a tool.
+    chat_input["data"]["node"]["field_order"] = ["input_value"]
+    nodes = [
+        chat_input,
+        node(HumanInput(_id="hitl")),
+        node(ChatOutput(_id="out_approve", should_store_message=False)),
+        node(ChatOutput(_id="out_reject", should_store_message=False)),
+    ]
+    edges = [edge("c_in", "hitl", "message", field="prompt"), edge("hitl", "out_reject", "branch_reject")]
+    if approved is None:
+        edges.append(edge("hitl", "out_approve", "branch_approve"))
+    else:
+        nodes.append(node(approved))
+        edges += [edge("hitl", approved._id, "branch_approve"), edge(approved._id, "out_approve", "message")]
+    if early:
+        nodes.append(node(ChatOutput(_id="out_early", should_store_message=False)))
+        edges.append(edge("c_in", "out_early", "message"))
+    return payload(nodes, edges)
+
+
+def agent_payload(*, terminal: bool = False) -> dict:
+    """Chat Input -> an Agent that asks before each tool call [-> Chat Output]."""
+    nodes = [
+        node(ChatInput(_id="c_in", should_store_message=False)),
+        node(ScriptedAgent(_id="agent", tool_policy="ask")),
+    ]
+    edges = [edge("c_in", "agent", "message")]
+    if not terminal:
+        nodes.append(node(ChatOutput(_id="c_out", should_store_message=False)))
+        edges.append(edge("agent", "c_out", "response"))
+    return payload(nodes, edges)
+
+
+def wrapper_payload(child: str, flows_dir: Path, *, runner: type | None = None, terminal: bool = False) -> dict:
+    """Chat Input -> Run Flow (running ``child``) [-> Chat Output]."""
+    runner = (runner or NestedRunFlow)(
+        _id="runner", flow_name_selected=child, flow_id_selected=CHILD_ID, flows_dir=str(flows_dir)
     )
+    nodes = [node(ChatInput(_id="w_in", should_store_message=False)), node(runner)]
+    edges = [edge("w_in", "runner", "message")]
+    if not terminal:
+        nodes.append(node(ChatOutput(_id="w_out", should_store_message=False)))
+        edges.append(edge("runner", "w_out", "text"))
+    return payload(nodes, edges)
+
+
+def parent_graph(flows_dir: Path, levels: int) -> Graph:
+    """A parent whose Run Flow nests ``levels`` deep above the Human Input flow (written under ``flows_dir``)."""
+    write_flow(flows_dir, "level0", hitl_payload())
+    for level in range(1, levels):
+        write_flow(flows_dir, f"level{level}", wrapper_payload(f"level{level - 1}", flows_dir))
+    return graph_from(wrapper_payload(f"level{levels - 1}", flows_dir))
+
+
+def tool_payload(child: str, flows_dir: Path) -> dict:
+    """Run Flow (running ``child``) as the tool of a Tool Caller -> Chat Output."""
+    runner = NestedRunFlow(_id="runner", flow_name_selected=child, flow_id_selected=CHILD_ID, flows_dir=str(flows_dir))
+    runner_node = node(runner)
+    runner_node["data"]["node"]["outputs"].append(runner._build_tool_output().model_dump())
+    runner_node["data"]["node"]["tool_mode"] = True
+    return payload(
+        [runner_node, node(ToolCaller(_id="caller")), node(ChatOutput(_id="w_out", should_store_message=False))],
+        [
+            edge("runner", "caller", "component_as_tool", field="tools", types=("Tool",)),
+            edge("caller", "w_out", "text"),
+        ],
+    )
+
+
+def candidate_runner_node(child_id: str) -> dict:
+    """The real Run Flow running ``child_id``, with the output and input the Human Input flow exposes."""
+    runner = node(RunFlowComponent(_id="runner", flow_id_selected=child_id, flow_name_selected="child"))
+    runner["data"]["node"]["outputs"] = [
+        {
+            "name": "out_approve~message",
+            "display_name": "Message",
+            "method": "_resolve_flow_output__out_approve__message",
+            "types": ["Message"],
+            "selected": "Message",
+            "allows_loop": False,
+            "cache": True,
+            "tool_mode": True,
+        }
+    ]
+    runner["data"]["node"]["template"]["c_in~input_value"] = {
+        "name": "c_in~input_value",
+        "value": "hello",
+        "type": "str",
+        "_input_type": "MessageTextInput",
+        "show": True,
+        "tool_mode": True,
+    }
+    return runner
 
 
 def loop_body_payload(step: str, marker: Path) -> dict:
@@ -142,6 +231,49 @@ class NestedRunFlow(RunFlowBaseComponent):
             return Message(text="")
         results = [r for r in run_outputs[0].outputs if r]
         return Message(text="|".join(f"{r.component_id}:{r.results['message'].get_text()}" for r in results))
+
+
+class StatefulRunFlow(NestedRunFlow):
+    """Attaches caller state to the fresh child graph, as RunFlowBaseComponent.get_graph does."""
+
+    display_name = "Stateful Run Flow"
+    name = "StatefulRunFlow"
+
+    async def get_graph(self, *args, **kwargs) -> Graph:
+        graph = await super().get_graph(*args, **kwargs)
+        graph.flow_name = self.flow_name_selected
+        graph.context["caller"] = "run-flow"
+        graph.frozen_tool_flows = {CHILD_ID: {}}
+        graph.authorized_extra_file_scopes = frozenset({"extra-scope"})
+        return graph
+
+
+class CallerState(Component):
+    """Shows the caller state of the graph it runs in."""
+
+    display_name = "Caller State"
+    name = "CallerState"
+    inputs = [MessageTextInput(name="input_value", display_name="In")]
+    outputs = [Output(display_name="Message", name="message", method="show")]
+
+    def show(self) -> Message:
+        graph = self.graph
+        frozen = sorted(graph.frozen_tool_flows or {})
+        scopes = sorted(graph.authorized_extra_file_scopes)
+        return Message(text=f"{graph.context.get('caller')}|{frozen}|{scopes}|{graph.flow_name}")
+
+
+class ToolCaller(Component):
+    """Stands in for an Agent: calls its first tool once and shows what the tool returned."""
+
+    display_name = "Tool Caller"
+    name = "ToolCaller"
+    inputs = [HandleInput(name="tools", display_name="Tools", input_types=["Tool"], is_list=True)]
+    outputs = [Output(display_name="Text", name="text", method="call_tool")]
+
+    async def call_tool(self) -> Message:
+        result = await self.tools[0].ainvoke({"flow_tweak_data": {"c_in~input_value": "hello"}})
+        return Message(text=str(result))
 
 
 class Marker(Component):
