@@ -709,7 +709,7 @@ async def test_should_delete_stored_message_and_emit_remove_event_on_exception_w
     with (
         patch.object(type(component), "_get_shared_callbacks", return_value=[]),
         patch.object(type(component), "_send_message_event", new=send_event),
-        patch("lfx.components.models_and_agents.agent.delete_message", new=delete_message_mock),
+        patch("lfx.base.agents.events.delete_message", new=delete_message_mock),
         patch(
             "lfx.components.models_and_agents.agent.process_agent_events",
             new=AsyncMock(side_effect=raised_exc),
@@ -743,7 +743,7 @@ async def test_should_skip_delete_message_on_exception_when_message_was_not_stor
     with (
         patch.object(type(component), "_get_shared_callbacks", return_value=[]),
         patch.object(type(component), "_send_message_event", new=send_event),
-        patch("lfx.components.models_and_agents.agent.delete_message", new=delete_message_mock),
+        patch("lfx.base.agents.events.delete_message", new=delete_message_mock),
         patch(
             "lfx.components.models_and_agents.agent.process_agent_events",
             new=AsyncMock(side_effect=raised_exc),

@@ -1,5 +1,6 @@
 # Add helper functions for each event type
 import json
+import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 from time import perf_counter
 from typing import Any, Protocol
@@ -7,10 +8,13 @@ from typing import Any, Protocol
 from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
 
+from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.events.event_manager import emit_token
+from lfx.memory import delete_message
 from lfx.schema.content_types import ContentBlock, TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
+from lfx.utils.constants import MESSAGE_SENDER_AI
 
 GetPendingInterrupt = Callable[[], Awaitable[dict[str, Any] | None]]
 
@@ -41,6 +45,35 @@ class AgentPausedError(Exception):
         # Why: carries the persisted id so the caller can retract the bubble (its own ref predates streaming reassigns).
         self.agent_message = agent_message
         super().__init__("Agent paused for human approval")
+
+
+def initial_agent_message(component: Any) -> Message:
+    """The partial Agent message that `process_agent_events` fills in during one run of `component`."""
+    if hasattr(component, "graph"):
+        session_id = component.graph.session_id
+    elif hasattr(component, "_session_id"):
+        session_id = component._session_id  # noqa: SLF001
+    else:
+        session_id = None
+    return Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name=get_chat_output_sender_name(component) or component.display_name or "AI",
+        properties={"icon": "Bot", "state": "partial"},
+        # `text=""` sentinel so MessageTable's no_content check accepts
+        # an in-flight agent message whose content_blocks haven't been
+        # populated yet. Mirrors ChatInput's convention.
+        text="",
+        # Flat chronological event log; see lfx.base.agents.events.
+        content_blocks=[],
+        session_id=session_id or uuid.uuid4(),
+    )
+
+
+async def retract_partial_message(component: Any, message: Message) -> None:
+    """Delete a partial Agent message, if it was stored, and tell the chat to drop its bubble."""
+    if msg_id := message.get_id():
+        await delete_message(id_=msg_id)
+    await component._send_message_event(message, category="remove_message")  # noqa: SLF001
 
 
 def _calculate_duration(start_time: float) -> int:

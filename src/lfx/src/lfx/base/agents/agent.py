@@ -1,5 +1,4 @@
 import re
-import uuid
 from abc import abstractmethod
 from typing import TYPE_CHECKING, cast
 
@@ -10,20 +9,23 @@ from langchain_core.messages import BaseMessage, HumanMessage
 from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
-from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.events import (
+    ExceptionWithMessageError,
+    initial_agent_message,
+    process_agent_events,
+    retract_partial_message,
+)
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
-from lfx.base.agents.utils import get_chat_output_sender_name, resolve_agent_verbose
+from lfx.base.agents.utils import resolve_agent_verbose
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import InputTypes
 from lfx.io import BoolInput, HandleInput, IntInput, MessageInput
 from lfx.log.logger import logger
-from lfx.memory import delete_message
 from lfx.schema.data import Data
 from lfx.schema.log import OnTokenFunctionType
 from lfx.schema.message import Message
 from lfx.template.field.base import Output
-from lfx.utils.constants import MESSAGE_SENDER_AI
 
 if TYPE_CHECKING:
     from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
@@ -253,26 +255,7 @@ class LCAgentComponent(Component):
         else:
             input_dict["input"] = current_input
 
-        if hasattr(self, "graph"):
-            session_id = self.graph.session_id
-        elif hasattr(self, "_session_id"):
-            session_id = self._session_id
-        else:
-            session_id = None
-
-        sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
-        agent_message = Message(
-            sender=MESSAGE_SENDER_AI,
-            sender_name=sender_name,
-            properties={"icon": "Bot", "state": "partial"},
-            # `text=""` sentinel so MessageTable's no_content check accepts
-            # an in-flight agent message whose content_blocks haven't been
-            # populated yet. Mirrors ChatInput's convention.
-            text="",
-            # Flat chronological event log; see lfx.base.agents.events.
-            content_blocks=[],
-            session_id=session_id or uuid.uuid4(),
-        )
+        agent_message = initial_agent_message(self)
 
         # Create token callback if event_manager is available
         # This wraps the event_manager's on_token method to match OnTokenFunctionType Protocol
@@ -301,12 +284,7 @@ class LCAgentComponent(Component):
                 on_token_callback,
             )
         except ExceptionWithMessageError as e:
-            # Only delete message from database if it has an ID (was stored)
-            if hasattr(e, "agent_message"):
-                msg_id = e.agent_message.get_id()
-                if msg_id:
-                    await delete_message(id_=msg_id)
-            await self._send_message_event(e.agent_message, category="remove_message")
+            await retract_partial_message(self, e.agent_message)
             # exception(), not error(f"...{e}"): this class's str() interpolates the model's
             # partial completion, and passing the exception rather than formatting it is what
             # gives the exported record an error.type to triage on.
