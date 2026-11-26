@@ -39,6 +39,7 @@ baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
 # Retired in 1.13. Saved component identities remain importable.
 chroma = []
+clawifi = []
 cleanlab = ["cleanlab-tlm>=1.1.2,<2.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
 cloudflare = ["langchain-cloudflare~=0.3.9"]
@@ -117,6 +118,7 @@ all = [
     "lfx-bundles[assemblyai]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
+    "lfx-bundles[clawifi]",
     "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",
     "lfx-bundles[cloudflare]",
@@ -194,6 +196,7 @@ all-no-torch = [
     "lfx-bundles[assemblyai]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
+    "lfx-bundles[clawifi]",
     "lfx-bundles[cleanlab]",
     "lfx-bundles[clickhouse]",
     "lfx-bundles[cloudflare]",
