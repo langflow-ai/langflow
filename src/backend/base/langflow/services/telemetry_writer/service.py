@@ -66,6 +66,28 @@ _UUID_TAG = "__lftw_uuid__"
 # to a loud error so operators see sustained data-loss risk.
 _FAILURE_ESCALATION_THRESHOLD = 6
 
+# The retention gate lives at module level so one name carries the whole pause
+# decision and callers (including tests) can substitute it in a single place.
+# The maintenance flag is read through the writer's own engine, which the service
+# publishes right before it sweeps.
+_retention_session_maker: "async_sessionmaker | None" = None
+
+
+async def writes_paused() -> bool:
+    """Whether either pause source refuses new telemetry work.
+
+    Two independent sources: the file record a migration writes, and the
+    maintenance flag in the database this writer prunes. The flag is read through
+    this writer's own engine — the service manager points elsewhere — and an
+    unreadable one is not a pause.
+    """
+    if is_paused():
+        return True
+    session_maker = _retention_session_maker
+    if session_maker is None:
+        return False
+    return await maintenance_pauses_writes(session_maker)
+
 
 def _host_boot_identity() -> tuple[str, str]:
     """Return ``(hostname, boot_marker)`` for the current host.
@@ -818,11 +840,13 @@ class TelemetryWriterService(Service):
                 logger.exception("telemetry_writer: cross-host orphan prune failed")
 
     async def _run_retention_pass(self) -> None:
-        # Two independent sources: the file record a migration writes, and the
-        # maintenance flag in the database this writer prunes. The flag is read through
-        # this writer's own engine — the service manager points elsewhere — and an
-        # unreadable one is not a pause.
-        if self._session_maker is None or is_paused() or await maintenance_pauses_writes(self._session_maker):
+        if self._session_maker is None:
+            return
+        # Publish the engine the module-level gate reads the maintenance flag through.
+        # The gate is one name, so substituting it replaces the whole decision.
+        global _retention_session_maker  # noqa: PLW0603
+        _retention_session_maker = self._session_maker
+        if await writes_paused():
             return
         settings = self.settings_service.settings
         max_transactions = int(getattr(settings, "max_transactions_to_keep", 3000))
