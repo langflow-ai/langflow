@@ -142,6 +142,7 @@ def test_contract_metadata_does_not_replace_the_existing_field_value_or_widget()
     }
     assert template["n_messages"]["value"] == 100
     assert template["context_strategy"]["flow_contract"]["name"] == "ContextManager"
+    assert template["context_strategy"]["supports_flow_binding"]
     assert template["tool_policy"]["flow_contract"]["name"] == "PermissionGate"
     assert not template["tool_policy"].get("supports_flow_binding", False)
 

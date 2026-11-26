@@ -17,7 +17,7 @@ import {
   moveHook,
   orderedHooks,
   outputKey,
-  validHookTimeout,
+  validFlowTimeout,
 } from "../flow-binding";
 import { ProjectChoiceField } from "./project-choice-field";
 
@@ -279,9 +279,9 @@ export function HookFlowPicker({
                       aria-label={t("harness.hookTimeoutLabel", {
                         count: position + 1,
                       })}
-                      aria-invalid={!validHookTimeout(timeout)}
+                      aria-invalid={!validFlowTimeout(timeout)}
                       aria-describedby={
-                        !validHookTimeout(timeout)
+                        !validFlowTimeout(timeout)
                           ? `hook-timeout-error-${position}`
                           : undefined
                       }
@@ -291,7 +291,7 @@ export function HookFlowPicker({
                         })
                       }
                     />
-                    {!validHookTimeout(timeout) && (
+                    {!validFlowTimeout(timeout) && (
                       <p
                         id={`hook-timeout-error-${position}`}
                         className="text-xs text-destructive"
