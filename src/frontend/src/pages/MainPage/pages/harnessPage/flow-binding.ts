@@ -42,3 +42,6 @@ export function moveHook(
 
 export const validFlowTimeout = (value: number) =>
   Number.isFinite(value) && value > 0 && value <= 300;
+
+export const validCompactionThreshold = (value: number) =>
+  Number.isInteger(value) && value >= 1 && value <= 10_000_000;

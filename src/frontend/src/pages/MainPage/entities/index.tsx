@@ -89,6 +89,7 @@ export type FlowOutputChoice = FlowBinding & {
 };
 
 export type ContextBinding = FlowBinding & { timeout_seconds?: number };
+export type CompactionBinding = ContextBinding & { trigger_tokens?: number };
 
 export type HookEvent =
   | "before_llm_call"
@@ -104,7 +105,7 @@ export type HookBinding = FlowBinding & {
 };
 export type ProjectFlowBindings = Record<
   string,
-  FlowBinding | ContextBinding | HookBinding[] | undefined
+  FlowBinding | ContextBinding | CompactionBinding | HookBinding[] | undefined
 >;
 
 /** A project type and the form it renders, from `GET /api/v1/projects/types`. */
