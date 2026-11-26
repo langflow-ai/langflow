@@ -97,7 +97,7 @@ AGENT_HARNESS = register_project_type(
                     info="Reviewed tools from reusable Tool Pack projects.",
                     list=True,
                     value=[],
-                    show=False,
+                    show=True,
                 ),
             ),
             ProjectTypeField(
