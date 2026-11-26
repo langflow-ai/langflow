@@ -142,3 +142,19 @@ class TestVllmMultivectorSSRF:
 
         assert call_count == 2
         mock_post.assert_not_called()
+
+
+@pytest.mark.parametrize("trusted", [False, True])
+def test_vllm_requires_operator_approval_to_send_environment_credential(monkeypatch, trusted):
+    monkeypatch.setenv("VLLM_FIXTURE_TOKEN", _FAKE_VLLM_API_KEY)
+    monkeypatch.setenv("LANGFLOW_PROVIDER_CREDENTIAL_ALLOWED_HOSTS", "vllm.example" if trusted else "other.example")
+    monkeypatch.setattr(
+        "lfx_nextplaid.components.nextplaid.vllm_multivector_impl.validate_provider_base_url", lambda _url: None
+    )
+
+    if trusted:
+        client = VllmMultivectorEmbeddings(url="https://vllm.example", model="test-model", api_key=_FAKE_VLLM_API_KEY)
+        assert client.url == "https://vllm.example"
+    else:
+        with pytest.raises(ValueError, match="server environment"):
+            VllmMultivectorEmbeddings(url="https://vllm.example", model="test-model", api_key=_FAKE_VLLM_API_KEY)

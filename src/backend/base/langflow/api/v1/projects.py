@@ -27,6 +27,7 @@ from langflow.api.utils import (
     cascade_delete_flow,
     custom_params,
 )
+from langflow.api.utils.flow_utils import begin_flow_deletion_transaction
 from langflow.api.utils.mcp.flow_secrets import extract_and_strip_mcp_secrets, mcp_server_names, stage_mcp_secrets
 from langflow.api.v1.auth_helpers import get_default_project_auth_settings, handle_auth_settings_update
 from langflow.api.v1.flows import (
@@ -124,6 +125,7 @@ from langflow.services.database.models.folder.model import (
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.database.models.user.model import User
+from langflow.services.deletion_hooks import DeletionContext, run_post_deletion_after_commit, run_pre_deletion_hooks
 from langflow.services.deployment_artifacts import (
     EmptyProjectArtifactError,
     ProjectArtifactError,
@@ -2440,16 +2442,14 @@ async def delete_project(
             detail=msg,
         )
 
-    # Cascade and deployment guards operate over the project owner's flows —
-    # a non-owner with a delete share must remove the owner's resources, not
-    # only their own (which is the empty set for a non-owner).
     project_owner_id = project.user_id
 
     from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
 
     memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
+    deleted_project: Folder | None = None
 
-    def _make_delete_operation(target: Folder):
+    def _make_delete_operation(target: Folder, context: DeletionContext):
         async def _delete_project_operation() -> None:
             memory_base_cleanups.clear()
             await _lock_project_for_delete(session, project_id)
@@ -2460,17 +2460,17 @@ async def delete_project(
                 raise HTTPException(
                     status_code=400, detail="UUID5 flow IDs are reserved for public execution histories."
                 )
-            flows = [flow for flow in flows if flow.user_id == project_owner_id]
             removed_flows = {flow.id: flow.name for flow in flows}
-            if len(flows) > 0:
-                for flow in flows:
-                    await cascade_delete_flow(session, flow.id, memory_base_cleanups=memory_base_cleanups)
+            for flow in flows:
+                await cascade_delete_flow(session, flow.id, memory_base_cleanups=memory_base_cleanups)
 
             await check_project_has_deployments(session, project_id=project_id)
             await delete_project_evaluations(session, project_id)
             await session.delete(target)
             # Flush eagerly so guard/constraint errors surface in-request rather than at teardown commit.
             await session.flush()
+            # Dropped with the attempt if the transaction rolls back (a lock retry), run once when it commits.
+            run_post_deletion_after_commit(session, context)
             for flow_id, flow_name in removed_flows.items():
                 await stage_flow_succeeded(
                     session,
@@ -2497,6 +2497,8 @@ async def delete_project(
     # therefore re-read with awaits — a plain attribute read on expired state
     # would lazy-load outside the greenlet context and raise MissingGreenlet.
     async def _delete_attempt(attempt: int) -> None:
+        nonlocal deleted_project
+        deleted_project = None
         # LE-2020 follow-up: a prior attempt may have populated memory_base_cleanups
         # before hitting a lock error. If this attempt short-circuits below (target
         # is None — the project was already deleted by a concurrent request), the
@@ -2513,13 +2515,22 @@ async def delete_project(
             target = await _load_project()
         if target is None:
             return
-        await cleanup_mcp_on_delete(target, project_id, current_user, session)
+        context = DeletionContext(
+            resource=RESOURCE_PROJECT,
+            resource_id=project_id,
+            owner_id=target.user_id,
+            name=target.name,
+            session=session,
+        )
+        await run_pre_deletion_hooks(context)
+        await begin_flow_deletion_transaction(session)
         await retry_project_operation_on_deployment_guard(
             db=session,
             user_id=project_owner_id,
             project_id=project_id,
-            operation=_make_delete_operation(target),
+            operation=_make_delete_operation(target, context),
         )
+        deleted_project = target
 
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
@@ -2527,6 +2538,8 @@ async def delete_project(
         # Memory Base's remote collection is dropped only for flows that are gone.
         await session.commit()
         mark_committed()
+        if deleted_project is not None:
+            await cleanup_mcp_on_delete(deleted_project, project_id, current_user, session)
         await finalize_flow_memory_base_cleanup(memory_base_cleanups)
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     except HTTPException:

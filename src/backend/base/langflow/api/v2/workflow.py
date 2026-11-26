@@ -665,16 +665,20 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
             current_user = UserRead.model_validate(owner, from_attributes=True)
         flow = await resolve_flow_for_execution(str(flow_id), current_user)
-        validation_input = parsed
+        # The build treats an empty override as absent. Validate the saved canvas
+        # in the same case so graph construction cannot pick a different revision.
+        validation_input = replace(parsed, data=None) if resume is None and parsed.data == {} else parsed
         bound_trigger = request.get("execution_family") in TRIGGER_FAMILIES and current_user.id != flow.user_id
         if bound_trigger:
             # The dispatcher submits directly, outside the authenticated run route.
             await authorize_flow_action(current_user, flow, WorkflowAction.EXECUTE)
             # The dispatcher selected the snapshot and supplied the event. Check
             # component policy against that snapshot using the job owner's privileges.
-            if parsed.data is not None:
-                flow = flow.model_copy(update={"data": parsed.data})
-            validation_input = replace(parsed, data=strip_secret_field_values(flow.data), tweaks={})
+            if validation_input.data is not None:
+                flow = flow.model_copy(update={"data": validation_input.data})
+            validation_input = replace(validation_input, data=strip_secret_field_values(flow.data), tweaks={})
+        if resume is None and validation_input.data is None and not flow.data:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Flow has no saved graph data.")
         execution_parsed = _validate_flow_data_for_execution(
             validation_input, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
         )

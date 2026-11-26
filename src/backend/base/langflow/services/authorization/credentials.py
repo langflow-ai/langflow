@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from pathlib import Path
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
+from lfx.utils.file_path_security import is_mcp_credential_file
 
 from langflow.services.auth.context import current_auth_is_restricted_api_key
 from langflow.services.authorization.audit import audit_decision
@@ -15,11 +15,6 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-
-def is_mcp_credential_file(name: str) -> bool:
-    stem = Path(name).stem.casefold()
-    return stem == "_mcp_servers" or stem.startswith("_mcp_servers_")
 
 
 async def ensure_mcp_credential_file_access(

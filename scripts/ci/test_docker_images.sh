@@ -1,6 +1,17 @@
 #!/usr/bin/env bash
+# Build one Docker image and check it. CI runs one image per job:
+# test_docker_images.sh full|backend|base|frontend
 
 set -euo pipefail
+
+image=${1:-}
+case "$image" in
+  full | backend | base | frontend) ;;
+  *)
+    echo "usage: test_docker_images.sh full|backend|base|frontend" >&2
+    exit 2
+    ;;
+esac
 
 if command -v docker >/dev/null 2>&1; then
   runtime=docker
@@ -68,41 +79,45 @@ check_image_authentication() {
   "$runtime" rm -f "$container_id" >/dev/null
 }
 
-"$runtime" build -t langflowai/langflow:latest-dev \
-  -f docker/build_and_push.Dockerfile .
-actual_main_version=$("$runtime" run --rm --entrypoint python langflowai/langflow:latest-dev \
-  -c 'from langflow.utils.version import get_version_info; print(get_version_info()["version"])')
-[[ "$actual_main_version" == "$main_version" ]] || {
-  echo "Expected main version $main_version; got $actual_main_version" >&2
-  exit 1
-}
-check_image_authentication langflowai/langflow:latest-dev
-
-"$runtime" build -t langflowai/langflow-backend:latest-dev \
-  --build-arg "BASE_VERSION=$base_version" \
-  -f docker/build_and_push_backend.Dockerfile .
-actual_backend_version=$("$runtime" run --rm --entrypoint python langflowai/langflow-backend:latest-dev \
-  -c 'from langflow.utils.version import get_version_info; print(get_version_info()["version"])')
-[[ "$actual_backend_version" == "$base_version" ]] || {
-  echo "Expected backend version $base_version; got $actual_backend_version" >&2
-  exit 1
-}
-check_image_authentication langflowai/langflow-backend:latest-dev
-
-# Once both images are verified, release their layers before building the
-# standalone base image.
-cleanup
-
-"$runtime" build -t langflowai/langflow:base-latest-dev \
-  -f docker/build_and_push.Dockerfile --target base .
-actual_base_version=$("$runtime" run --rm --entrypoint python langflowai/langflow:base-latest-dev \
-  -c 'from importlib.metadata import version; print(version("langflow-base"))')
-[[ "$actual_base_version" == "$base_version" ]] || {
-  echo "Expected base version $base_version; got $actual_base_version" >&2
-  exit 1
+# Build the full image and check its version and authentication.
+test_full() {
+  "$runtime" build -t langflowai/langflow:latest-dev \
+    -f docker/build_and_push.Dockerfile .
+  actual_main_version=$("$runtime" run --rm --entrypoint python langflowai/langflow:latest-dev \
+    -c 'from langflow.utils.version import get_version_info; print(get_version_info()["version"])')
+  [[ "$actual_main_version" == "$main_version" ]] || {
+    echo "Expected main version $main_version; got $actual_main_version" >&2
+    exit 1
+  }
+  check_image_authentication langflowai/langflow:latest-dev
 }
 
-"$runtime" run --rm --entrypoint python langflowai/langflow:base-latest-dev -c '
+# Build the backend image and check its version and authentication.
+test_backend() {
+  "$runtime" build -t langflowai/langflow-backend:latest-dev \
+    --build-arg "BASE_VERSION=$base_version" \
+    -f docker/build_and_push_backend.Dockerfile .
+  actual_backend_version=$("$runtime" run --rm --entrypoint python langflowai/langflow-backend:latest-dev \
+    -c 'from langflow.utils.version import get_version_info; print(get_version_info()["version"])')
+  [[ "$actual_backend_version" == "$base_version" ]] || {
+    echo "Expected backend version $base_version; got $actual_backend_version" >&2
+    exit 1
+  }
+  check_image_authentication langflowai/langflow-backend:latest-dev
+}
+
+# Build the base image and check its version, distributions and authentication.
+test_base() {
+  "$runtime" build -t langflowai/langflow:base-latest-dev \
+    -f docker/build_and_push.Dockerfile --target base .
+  actual_base_version=$("$runtime" run --rm --entrypoint python langflowai/langflow:base-latest-dev \
+    -c 'from importlib.metadata import version; print(version("langflow-base"))')
+  [[ "$actual_base_version" == "$base_version" ]] || {
+    echo "Expected base version $base_version; got $actual_base_version" >&2
+    exit 1
+  }
+
+  "$runtime" run --rm --entrypoint python langflowai/langflow:base-latest-dev -c '
 import importlib.metadata as metadata
 names = {dist.metadata["Name"].lower() for dist in metadata.distributions()}
 required = {"langflow-base", "lfx", "langflow-sdk"}
@@ -114,13 +129,21 @@ forbidden = sorted(
 assert not missing, f"missing base distributions: {missing}"
 assert not forbidden, f"extension distributions installed: {forbidden}"
 '
-"$runtime" run --rm --entrypoint bash langflowai/langflow:base-latest-dev -c \
-  'command -v langflow >/dev/null && ! command -v langflow-base >/dev/null'
+  "$runtime" run --rm --entrypoint bash langflowai/langflow:base-latest-dev -c \
+    'command -v langflow >/dev/null && ! command -v langflow-base >/dev/null'
 
-check_image_authentication langflowai/langflow:base-latest-dev
+  check_image_authentication langflowai/langflow:base-latest-dev
+}
 
-# Keep peak disk usage bounded on the 40 GB ARM runner.
-cleanup
+# Build the frontend image.
+test_frontend() {
+  "$runtime" build -t langflowai/langflow-frontend:latest-dev \
+    -f docker/frontend/build_and_push_frontend.Dockerfile .
+}
 
-"$runtime" build -t langflowai/langflow-frontend:latest-dev \
-  -f docker/frontend/build_and_push_frontend.Dockerfile .
+case "$image" in
+  full) test_full ;;
+  backend) test_backend ;;
+  base) test_base ;;
+  frontend) test_frontend ;;
+esac

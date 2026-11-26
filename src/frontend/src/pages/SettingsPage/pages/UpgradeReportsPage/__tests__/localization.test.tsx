@@ -10,6 +10,7 @@ import ko from "@/locales/ko.json";
 import pt from "@/locales/pt.json";
 import zh from "@/locales/zh-Hans.json";
 import FlowList from "../FlowList";
+import { Failure } from "../RunCheck";
 import { report } from "./fixture";
 
 jest.unmock("react-i18next");
@@ -67,3 +68,52 @@ it.each(locales)(
     expect(screen.queryByText(/triggers trigger-1/)).not.toBeInTheDocument();
   },
 );
+
+async function localized(locale: string, messages: Record<string, string>) {
+  const i18n = jest
+    .requireActual<{
+      createInstance: () => I18nextProviderProps["i18n"];
+    }>("i18next")
+    .createInstance();
+  await i18n.init({
+    lng: locale,
+    fallbackLng: false,
+    resources: { [locale]: { translation: messages } },
+  });
+  return i18n;
+}
+
+it.each(locales)(
+  "has copy in %s for every code the check can fail with",
+  async (locale, messages) => {
+    const i18n = await localized(locale, messages);
+    const codes = [
+      "unsupported_upgrade_report_format",
+      "subprocess_unavailable",
+    ];
+    for (const code of codes) {
+      const { unmount } = render(
+        <I18nextProvider i18n={i18n}>
+          <Failure run={{ kind: "failed", code, message: "server said" }} />
+        </I18nextProvider>,
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        messages[`settings.upgrade.check.error.${code}`],
+      );
+      expect(screen.getByRole("alert")).not.toHaveTextContent("server said");
+      unmount();
+    }
+  },
+);
+
+it("shows what the server said for a code the page has no copy for", async () => {
+  const i18n = await localized("en", en);
+  render(
+    <I18nextProvider i18n={i18n}>
+      <Failure
+        run={{ kind: "failed", code: "new_code", message: "Something new." }}
+      />
+    </I18nextProvider>,
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent("Something new.");
+});

@@ -39,6 +39,14 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.deletion_hooks import (
+    RESOURCE_FLOW,
+    VIA_CASCADE,
+    VIA_ERASE,
+    DeletionContext,
+    run_post_deletion_after_commit,
+    run_pre_deletion_hooks,
+)
 from langflow.services.triggers.cleanup import delete_triggers
 
 if TYPE_CHECKING:
@@ -200,11 +208,43 @@ async def build_and_cache_graph_from_data(
     return graph
 
 
+async def begin_flow_deletion_transaction(session: AsyncSession) -> None:
+    """Keep a SQLite deletion savepoint inside a physical, rollback-capable transaction."""
+    if session.get_bind().dialect.name == "sqlite":
+        # SQLAlchemy can have an outer transaction object even though SQLite's
+        # legacy driver has not begun one. A deferred BEGIN keeps RELEASE from
+        # committing the deletion while retaining SQLite's writer retry behavior.
+        connection = await session.connection()
+        driver_connection = (await connection.get_raw_connection()).driver_connection
+        if not driver_connection.in_transaction:
+            await connection.exec_driver_sql("BEGIN")
+
+
+async def prepare_flow_deletion(session: AsyncSession, flow_id: uuid.UUID, *, via: str) -> DeletionContext | None:
+    """Run a flow's guard before its row or dependent data changes."""
+    flow = await session.get(Flow, flow_id)
+    if flow is None:
+        return None
+    context = DeletionContext(
+        resource=RESOURCE_FLOW,
+        resource_id=flow_id,
+        owner_id=flow.user_id,
+        name=flow.name,
+        via=via,
+        session=session,
+        extra={"project_id": flow.folder_id},
+    )
+    await run_pre_deletion_hooks(context)
+    return context
+
+
 async def cascade_delete_flow(
     session: AsyncSession,
     flow_id: uuid.UUID,
     *,
     memory_base_cleanups: list[FlowMemoryBaseCleanup] | None = None,
+    via: str = VIA_CASCADE,
+    prepared: DeletionContext | None = None,
 ) -> bool:
     """Delete a flow and its related rows, returning whether the flow was removed.
 
@@ -224,11 +264,14 @@ async def cascade_delete_flow(
 
     try:
         await check_flow_has_deployed_versions(session, flow_id=flow_id)
+        deleted_flow = prepared or await prepare_flow_deletion(session, flow_id, via=via)
         # Reclaim the flow's Memory Bases first: this drops the message_ingestion_record
         # rows that reference this flow's messages, so the MessageTable delete below
         # cannot trip an FK constraint. Returns handles for the post-commit external
         # teardown of remote collections + local KB directories.
-        flow_memory_base_cleanups = await purge_flow_memory_bases(session, flow_id)
+        flow_memory_base_cleanups = await purge_flow_memory_bases(
+            session, flow_id, via=VIA_ERASE if via == VIA_ERASE else VIA_CASCADE
+        )
         # Remove trigger pins before versions, and payloads even when SQLite
         # foreign-key enforcement is disabled.
         trigger_ids = (await session.exec(select(Trigger.id).where(Trigger.flow_id == flow_id))).all()
@@ -261,6 +304,8 @@ async def cascade_delete_flow(
         result = await session.exec(delete(Flow).where(Flow.id == flow_id))
     except StorageUnavailableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,
@@ -270,6 +315,10 @@ async def cascade_delete_flow(
         raise RuntimeError(msg, e) from e
     if memory_base_cleanups is not None:
         memory_base_cleanups.extend(flow_memory_base_cleanups)
+    if result.rowcount == 1 and deleted_flow is not None:
+        # Every flow deletion funnels through here, so this is where a plugin learns that one is gone (once the
+        # caller's transaction commits). The shares above are removed here; what the plugin built on them is its own.
+        run_post_deletion_after_commit(session, deleted_flow)
     return result.rowcount == 1
 
 
