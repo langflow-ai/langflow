@@ -28,14 +28,16 @@ def instructions_baseline(initial_value: str | None = None) -> dict:
     return flow
 
 
-def build_slot_baseline(reference: str, initial_value: str | None = None) -> dict:
+def build_slot_baseline(
+    reference: str, initial_value: str | None = None, *, initial_config: dict | None = None
+) -> dict:
     """Resolve only shipped, executable baselines. References never import arbitrary code."""
     if reference == "builtin:instructions":
         return instructions_baseline(initial_value)
     if reference == "builtin:hook":
         return hook_baseline()
     if reference == "builtin:context":
-        return context_baseline()
+        return context_baseline(initial_config)
     msg = "This contract does not yet provide a working baseline."
     raise ValueError(msg)
 
@@ -56,13 +58,17 @@ def hook_baseline() -> dict:
     return flow
 
 
-def context_baseline() -> dict:
+def context_baseline(initial_config: dict | None = None) -> dict:
+    from lfx.base.agents.harness import HarnessRuntimeConfig
     from lfx.components.models_and_agents.agent_context import AgentContextComponent
     from lfx.components.models_and_agents.context_manager import ContextManagerComponent
     from lfx.graph.flow_builder import add_component, add_connection, empty_flow
 
     flow = empty_flow("Context", "Prepare the messages the agent receives before each model call.")
-    for component in (AgentContextComponent(), ContextManagerComponent()):
+    policy = HarnessRuntimeConfig.model_validate(initial_config or {})
+    context = ContextManagerComponent()
+    context.set(strategy=policy.context_strategy, turns=policy.context_turns)
+    for component in (AgentContextComponent(), context):
         add_component(flow, component.name, {component.name: component.to_frontend_node()["data"]["node"]})
     source, target = flow["data"]["nodes"]
     source["position"], target["position"] = {"x": 150, "y": 150}, {"x": 600, "y": 150}
