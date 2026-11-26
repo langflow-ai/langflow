@@ -8,6 +8,7 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 import {
   type MaintenancePauseQueryOptions,
+  type MaintenancePauseStatus,
   migrationKeys,
   useMigrationPauseQuery,
 } from "../migration";
@@ -19,6 +20,7 @@ import type {
 } from "./types";
 
 export * from "./types";
+export * from "./use-upgrade-check";
 
 export const useGetUpgradeReports: useQueryFunctionType<
   { offset: number },
@@ -96,6 +98,26 @@ export const useUpgradeMaintenance = (options?: MaintenancePauseQueryOptions) =>
     retry: false,
     ...options,
   });
+export const useSetUpgradeMaintenance = () => {
+  const { mutate, queryClient } = UseRequestProcessor();
+  return mutate(
+    ["useSetUpgradeMaintenance"],
+    async ({ enabled, reason }: { enabled: boolean; reason?: string }) => {
+      const { data } = await api.post<MaintenancePauseStatus>(
+        getURL("MAINTENANCE", { path: enabled ? "on" : "off" }),
+        enabled ? { reason } : undefined,
+      );
+      return data;
+    },
+    {
+      retry: false,
+      onSuccess: (status) =>
+        queryClient.setQueryData(migrationKeys.pause, status),
+      onSettled: () =>
+        queryClient.invalidateQueries({ queryKey: migrationKeys.pause }),
+    },
+  );
+};
 export const usePreviewUpgradeRepair: useMutationFunctionType<
   undefined,
   { flow_ids: string[]; report_id: string },

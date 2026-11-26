@@ -3,10 +3,11 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Annotated, Any
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Depends, Query, status
 from fastapi.responses import StreamingResponse
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.api.utils.migration_pause import changes_the_instance
 from langflow.api.v1.evals_errors import evals_http_errors, evals_write
 from langflow.services.authorization import DatasetAction, FlowAction
 from langflow.services.database.models.evaluation import Evaluation, EvaluationResult, EvaluationRun
@@ -184,6 +185,7 @@ async def start_evaluation_run_endpoint(
 async def list_evaluation_runs(
     evaluation_id: UUID,
     current_user: CurrentActiveUser,
+    _changes: Annotated[None, Depends(changes_the_instance)],
     session: DbSession,
     page: PageParam = 1,
     size: SizeParam = 50,
@@ -209,7 +211,12 @@ async def list_evaluation_runs(
 
 
 @router.get("/evaluation-runs/{run_id}", response_model=EvaluationRunRead)
-async def get_evaluation_run(run_id: UUID, current_user: CurrentActiveUser, session: DbSession) -> EvaluationRunRead:
+async def get_evaluation_run(
+    run_id: UUID,
+    current_user: CurrentActiveUser,
+    _changes: Annotated[None, Depends(changes_the_instance)],
+    session: DbSession,
+) -> EvaluationRunRead:
     async with evals_http_errors():
         run = await run_service.get_run(session, current_user, run_id)
         summary = await run_service.live_summary(session, run)
@@ -263,6 +270,7 @@ def _result_read(row: EvaluationResult, *, preview_chars: int | None) -> Evaluat
 async def list_evaluation_results(
     run_id: UUID,
     current_user: CurrentActiveUser,
+    _changes: Annotated[None, Depends(changes_the_instance)],
     session: DbSession,
     passed: bool | None = None,  # noqa: FBT001
     page: PageParam = 1,
@@ -278,7 +286,11 @@ async def list_evaluation_results(
 
 @router.get("/evaluation-runs/{run_id}/results/{result_id}", response_model=EvaluationResultRead)
 async def get_evaluation_result(
-    run_id: UUID, result_id: UUID, current_user: CurrentActiveUser, session: DbSession
+    run_id: UUID,
+    result_id: UUID,
+    current_user: CurrentActiveUser,
+    _changes: Annotated[None, Depends(changes_the_instance)],
+    session: DbSession,
 ) -> EvaluationResultRead:
     async with evals_http_errors():
         run = await run_service.get_run(session, current_user, run_id)
@@ -287,7 +299,12 @@ async def get_evaluation_result(
 
 
 @router.get("/evaluation-runs/{run_id}/export")
-async def export_evaluation_run(run_id: UUID, current_user: CurrentActiveUser, session: DbSession) -> StreamingResponse:
+async def export_evaluation_run(
+    run_id: UUID,
+    current_user: CurrentActiveUser,
+    _changes: Annotated[None, Depends(changes_the_instance)],
+    session: DbSession,
+) -> StreamingResponse:
     async with evals_http_errors():
         run = await run_service.get_run(session, current_user, run_id)
     rows, _ = await run_service.list_results(session, run.id, passed=None, page=1, size=run.total_items or 1)

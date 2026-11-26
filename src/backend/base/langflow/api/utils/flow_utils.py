@@ -8,8 +8,14 @@ from typing import TYPE_CHECKING, Literal
 
 from fastapi import HTTPException
 from lfx.graph.graph.base import Graph
+from lfx.log.logger import logger
 from lfx.services.deps import session_scope
-from lfx.utils.file_path_security import FLOW_STORAGE_SCOPE_PREFIX
+from lfx.utils.file_path_security import (
+    FLOW_STORAGE_SCOPE_PREFIX,
+    USER_STORAGE_SCOPE_PREFIX,
+    is_valid_scope_name,
+    storage_scope_id,
+)
 from sqlalchemy import delete
 from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -33,9 +39,19 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.trigger.model import Trigger
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
+from langflow.services.deletion_hooks import (
+    RESOURCE_FLOW,
+    VIA_CASCADE,
+    VIA_ERASE,
+    DeletionContext,
+    run_post_deletion_after_commit,
+    run_pre_deletion_hooks,
+)
 from langflow.services.triggers.cleanup import delete_triggers
 
 if TYPE_CHECKING:
+    from collections.abc import Awaitable, Callable
+
     from lfx.services.authorization.base import ExecutionPrincipal
 
     from langflow.services.chat.service import ChatService
@@ -63,6 +79,49 @@ async def get_authorized_legacy_flow_ids(flow_id: uuid.UUID | str) -> frozenset[
     return frozenset({str(flow_uuid)})
 
 
+_file_scope_provider: Callable[[uuid.UUID | str, str], Awaitable[object]] | None = None
+
+
+def register_file_scope_provider(provider: Callable[[uuid.UUID | str, str], Awaitable[object]] | None) -> None:
+    """Install, or with ``None`` remove, the server's answer to "which extra storage scopes may this user read?".
+
+    ``provider(flow_id, run_user_id)`` returns the typed scopes (for example ``user-<owner-id>``) a run by that
+    user may address on top of its own, the flow's and any authorized legacy ones. With no provider every run
+    keeps today's scopes, so OSS behavior is unchanged unless an extension registers one at startup.
+    """
+    global _file_scope_provider  # noqa: PLW0603 - explicit process-wide extension registration
+    _file_scope_provider = provider
+
+
+def _is_valid_extra_scope(scope: str) -> bool:
+    """The same rule ``_scope_roots`` applies: the scope, and for ``user-<id>`` the id too, must name one folder."""
+    if not is_valid_scope_name(scope):
+        return False
+    return not scope.startswith(USER_STORAGE_SCOPE_PREFIX) or is_valid_scope_name(storage_scope_id(scope))
+
+
+async def get_authorized_extra_file_scopes(flow_id: uuid.UUID | str, user_id: object | None) -> frozenset[str]:
+    """Ask the registered provider for this run's extra storage scopes; fail closed on any problem."""
+    if _file_scope_provider is None or not user_id:
+        return frozenset()
+    try:
+        answer = await _file_scope_provider(flow_id, str(user_id))
+    except Exception:  # noqa: BLE001 - a provider fault must never widen access
+        await logger.aexception("File scope provider failed for flow %s; granting no extra scopes", flow_id)
+        return frozenset()
+    if not isinstance(answer, (set, frozenset, list, tuple)):
+        return frozenset()
+    if not all(isinstance(item, str) for item in answer):
+        return frozenset()
+    scopes = frozenset(scope for scope in (item.strip() for item in answer) if scope)
+    # One member that cannot name a storage folder makes the whole answer invalid: passing it on would fail every
+    # file read of the run in restricted local-file mode, including the run's own.
+    if not all(_is_valid_extra_scope(scope) for scope in scopes):
+        await logger.awarning("File scope provider returned an invalid scope for flow %s; granting none", flow_id)
+        return frozenset()
+    return scopes
+
+
 async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwargs):
     """Build and cache the graph.
 
@@ -84,6 +143,7 @@ async def build_graph_from_data(flow_id: uuid.UUID | str, payload: dict, **kwarg
         flow_name,
         kwargs.get("user_id"),
         authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+        authorized_extra_file_scopes=await get_authorized_extra_file_scopes(flow_id, kwargs.get("user_id")),
     )
     if (execution_principal := kwargs.get("execution_principal")) is not None:
         stamp_execution_principal(graph, execution_principal)
@@ -140,6 +200,7 @@ async def build_and_cache_graph_from_data(
         str_flow_id,
         user_id=user_id,
         authorized_legacy_flow_ids=await get_authorized_legacy_flow_ids(flow_id),
+        authorized_extra_file_scopes=await get_authorized_extra_file_scopes(flow_id, user_id),
     )
     if execution_principal is not None:
         stamp_execution_principal(graph, execution_principal)
@@ -147,11 +208,43 @@ async def build_and_cache_graph_from_data(
     return graph
 
 
+async def begin_flow_deletion_transaction(session: AsyncSession) -> None:
+    """Keep a SQLite deletion savepoint inside a physical, rollback-capable transaction."""
+    if session.get_bind().dialect.name == "sqlite":
+        # SQLAlchemy can have an outer transaction object even though SQLite's
+        # legacy driver has not begun one. A deferred BEGIN keeps RELEASE from
+        # committing the deletion while retaining SQLite's writer retry behavior.
+        connection = await session.connection()
+        driver_connection = (await connection.get_raw_connection()).driver_connection
+        if not driver_connection.in_transaction:
+            await connection.exec_driver_sql("BEGIN")
+
+
+async def prepare_flow_deletion(session: AsyncSession, flow_id: uuid.UUID, *, via: str) -> DeletionContext | None:
+    """Run a flow's guard before its row or dependent data changes."""
+    flow = await session.get(Flow, flow_id)
+    if flow is None:
+        return None
+    context = DeletionContext(
+        resource=RESOURCE_FLOW,
+        resource_id=flow_id,
+        owner_id=flow.user_id,
+        name=flow.name,
+        via=via,
+        session=session,
+        extra={"project_id": flow.folder_id},
+    )
+    await run_pre_deletion_hooks(context)
+    return context
+
+
 async def cascade_delete_flow(
     session: AsyncSession,
     flow_id: uuid.UUID,
     *,
     memory_base_cleanups: list[FlowMemoryBaseCleanup] | None = None,
+    via: str = VIA_CASCADE,
+    prepared: DeletionContext | None = None,
 ) -> bool:
     """Delete a flow and its related rows, returning whether the flow was removed.
 
@@ -171,11 +264,14 @@ async def cascade_delete_flow(
 
     try:
         await check_flow_has_deployed_versions(session, flow_id=flow_id)
+        deleted_flow = prepared or await prepare_flow_deletion(session, flow_id, via=via)
         # Reclaim the flow's Memory Bases first: this drops the message_ingestion_record
         # rows that reference this flow's messages, so the MessageTable delete below
         # cannot trip an FK constraint. Returns handles for the post-commit external
         # teardown of remote collections + local KB directories.
-        flow_memory_base_cleanups = await purge_flow_memory_bases(session, flow_id)
+        flow_memory_base_cleanups = await purge_flow_memory_bases(
+            session, flow_id, via=VIA_ERASE if via == VIA_ERASE else VIA_CASCADE
+        )
         # Remove trigger pins before versions, and payloads even when SQLite
         # foreign-key enforcement is disabled.
         trigger_ids = (await session.exec(select(Trigger.id).where(Trigger.flow_id == flow_id))).all()
@@ -208,6 +304,8 @@ async def cascade_delete_flow(
         result = await session.exec(delete(Flow).where(Flow.id == flow_id))
     except StorageUnavailableError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except HTTPException:
+        raise
     except Exception as e:
         await araise_if_deployment_guard_error_or_skip(
             e,
@@ -217,6 +315,10 @@ async def cascade_delete_flow(
         raise RuntimeError(msg, e) from e
     if memory_base_cleanups is not None:
         memory_base_cleanups.extend(flow_memory_base_cleanups)
+    if result.rowcount == 1 and deleted_flow is not None:
+        # Every flow deletion funnels through here, so this is where a plugin learns that one is gone (once the
+        # caller's transaction commits). The shares above are removed here; what the plugin built on them is its own.
+        run_post_deletion_after_commit(session, deleted_flow)
     return result.rowcount == 1
 
 

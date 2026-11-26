@@ -88,27 +88,23 @@ def _child_flow_payload() -> dict:
     }
 
 
-@asynccontextmanager
-async def _authorized_target_scope(**_kwargs):
-    """Unit-test seam; target-scope behavior has dedicated DB-backed coverage."""
-    yield
-
-
 @pytest.fixture
 def nested_env(monkeypatch):
     """Neutralize the seams around the policy so only the policy wiring is exercised."""
     from lfx.base.tools import run_flow as run_flow_module
 
     env = SimpleNamespace(
+        target_flow=Mock(),
         get_user_is_superuser=AsyncMock(return_value=False),
         admin_only_build_required=Mock(return_value=False),
         custom_component_admin_only_enabled=Mock(return_value=None),
     )
-    monkeypatch.setattr(
-        run_flow_module,
-        "scoped_model_provider_policy_for_target_flow",
-        _authorized_target_scope,
-    )
+
+    @asynccontextmanager
+    async def target_scope(**_kwargs):
+        yield env.target_flow
+
+    monkeypatch.setattr(run_flow_module, "scoped_model_provider_policy_for_target_flow", target_scope)
     monkeypatch.setattr(run_flow_module, "get_user_is_superuser", env.get_user_is_superuser)
     monkeypatch.setattr(run_flow_module, "admin_only_build_required", env.admin_only_build_required)
     monkeypatch.setattr(
@@ -126,7 +122,7 @@ def _component(*, cache_flow: bool = False) -> RunFlowBaseComponent:
     return component
 
 
-async def test_get_graph_builds_from_the_sanitized_child_payload(nested_env, monkeypatch):  # noqa: ARG001
+async def test_get_graph_builds_from_the_sanitized_child_payload(nested_env, monkeypatch):
     """The nested graph is built from the policy's trusted copy, not the stored bytes."""
     from lfx.base.tools import run_flow as run_flow_module
 
@@ -144,7 +140,7 @@ async def test_get_graph_builds_from_the_sanitized_child_payload(nested_env, mon
 
     monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
     monkeypatch.setattr(run_flow_module.Graph, "from_payload", fake_from_payload)
-    monkeypatch.setattr(component, "get_flow", AsyncMock(return_value=child))
+    nested_env.target_flow.to_data.return_value = child
 
     result = await component.get_graph(flow_id_selected=str(uuid4()))
 
@@ -160,7 +156,7 @@ async def test_get_graph_builds_from_the_sanitized_child_payload(nested_env, mon
     assert child.data["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "# caller-authored source"
 
 
-async def test_get_graph_policy_denial_stops_graph_construction(nested_env, monkeypatch):  # noqa: ARG001
+async def test_get_graph_policy_denial_stops_graph_construction(nested_env, monkeypatch):
     """A policy rejection on the child payload must abort before any graph is built."""
     from lfx.base.tools import run_flow as run_flow_module
 
@@ -172,7 +168,7 @@ async def test_get_graph_policy_denial_stops_graph_construction(nested_env, monk
 
     monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
     monkeypatch.setattr(run_flow_module.Graph, "from_payload", from_payload)
-    monkeypatch.setattr(component, "get_flow", AsyncMock(return_value=_child_flow_data("# caller-authored source")))
+    nested_env.target_flow.to_data.return_value = _child_flow_data("# caller-authored source")
 
     with pytest.raises(CustomComponentValidationError, match="restricted to administrators"):
         await component.get_graph(flow_id_selected=str(uuid4()))
@@ -191,7 +187,7 @@ async def test_get_graph_forwards_the_callers_superuser_status(nested_env, monke
 
     monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
     monkeypatch.setattr(run_flow_module.Graph, "from_payload", lambda **_kwargs: MagicMock(spec=Graph))
-    monkeypatch.setattr(component, "get_flow", AsyncMock(return_value=_child_flow_data("# admin source")))
+    nested_env.target_flow.to_data.return_value = _child_flow_data("# admin source")
 
     await component.get_graph(flow_id_selected=str(uuid4()))
 
@@ -214,7 +210,7 @@ async def test_get_graph_skips_the_flow_cache_when_admin_only_applies(nested_env
     monkeypatch.setattr(component, "_flow_cache_call", cache_calls)
     monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
     monkeypatch.setattr(run_flow_module.Graph, "from_payload", lambda **_kwargs: MagicMock(spec=Graph))
-    monkeypatch.setattr(component, "get_flow", AsyncMock(return_value=_child_flow_data("# caller-authored source")))
+    nested_env.target_flow.to_data.return_value = _child_flow_data("# caller-authored source")
 
     result = await component.get_graph(flow_id_selected=str(uuid4()))
 
@@ -237,7 +233,7 @@ async def test_get_graph_skips_the_user_lookup_when_admin_only_is_configured_off
 
     monkeypatch.setattr(run_flow_module, "prepare_flow_build_for_user", prepare)
     monkeypatch.setattr(run_flow_module.Graph, "from_payload", lambda **_kwargs: MagicMock(spec=Graph))
-    monkeypatch.setattr(component, "get_flow", AsyncMock(return_value=_child_flow_data("# caller-authored source")))
+    nested_env.target_flow.to_data.return_value = _child_flow_data("# caller-authored source")
 
     result = await component.get_graph(flow_id_selected=str(uuid4()))
 
