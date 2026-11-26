@@ -110,11 +110,8 @@ async def write_with_hooks(session, project, definition, *, current_user, previo
                 targets[flow_id] = row
         applied = deepcopy((previous_config or {}).get("_applied", {}))
         applied = applied if isinstance(applied, dict) else {}
-        if (
-            previous_config
-            and "_applied" not in previous_config
-            and any(field.writes_to for field in definition.fields)
-        ):
+        tracks_fields = any(field.writes_to for field in definition.fields)
+        if previous_config and "_applied" not in previous_config and tracks_fields:
             for view in views:
                 applied.setdefault(str(view.id), apply_project_config(view.data, definition, previous).applied_values)
         composition = CompositionContext(identity, tuple(local[flow_id] for flow_id in targets), applied)
@@ -151,7 +148,9 @@ async def write_with_hooks(session, project, definition, *, current_user, previo
             session.add(row)
             result.flows.append(row)
         normalized = deepcopy(prepared.config)
-        if normalized is not None and (applied or "_applied" in (previous_config or {})):
+        # An empty baseline is still a completed save. Without the marker, a flow
+        # added later looks like a legacy canvas edit and misses its first write.
+        if normalized is not None and (tracks_fields or applied or "_applied" in (previous_config or {})):
             normalized["_applied"] = applied
         project.project_config = normalized
         session.add(project)
