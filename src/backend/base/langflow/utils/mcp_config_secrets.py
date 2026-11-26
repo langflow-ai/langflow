@@ -143,6 +143,13 @@ def mcp_url_variable_name(server_name: str) -> str:
     return variable_name_for(server_name, "project url")
 
 
+def url_reads_a_variable(url: object) -> bool:
+    """Whether an address is already resolved from a variable where it runs, so it is portable as it stands."""
+    return isinstance(url, str) and (
+        PLACEHOLDER_PATTERN.match(url) is not None or "{{" in url or url.startswith(VARIABLE_PREFIX)
+    )
+
+
 def project_server_http_config(config: dict[str, Any]) -> dict[str, Any] | None:
     """An entry pointing at a Langflow project as a plain HTTP config, or None for any other entry.
 
@@ -158,8 +165,7 @@ def project_server_http_config(config: dict[str, Any]) -> dict[str, Any] | None:
         for index, item in enumerate(args[:-2]):
             if item == HEADER_ARG_FLAG and isinstance(args[index + 1], str):
                 headers[args[index + 1]] = args[index + 2]
-    # A URL that already reads a variable is portable as it stands.
-    if project_id_from_mcp_url(url) is None or "{{" in url:
+    if project_id_from_mcp_url(url) is None:
         return None
     return {"url": url, **({"headers": headers} if headers else {})}
 
@@ -224,6 +230,7 @@ __all__ = [
     "project_id_from_mcp_url",
     "project_server_http_config",
     "strip_config_secrets",
+    "url_reads_a_variable",
     "variable_name_for",
     "variable_reference_name",
 ]

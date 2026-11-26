@@ -105,12 +105,19 @@ def test_a_handwritten_reference_on_a_project_server_keeps_its_name():
     assert _collect_mcp_requirements(flow).variables == tuple(sorted((BILLING_URL, "INVOICES_KEY")))
 
 
-def test_a_project_address_already_holding_a_variable_is_left_to_it():
+@pytest.mark.parametrize("stdio", [False, True])
+def test_a_project_address_already_holding_a_variable_is_left_to_it(stdio):
     """Copying it into a generated variable would copy the placeholder, which nothing resolves again."""
     url = f"https://{{{{MCP_HOST}}}}/api/v1/mcp/project/{SIBLING}/streamable"
-    flow = _flow(_server("billing", {"url": url}))
-    assert _collect_mcp_requirements(flow).variables == ("MCP_HOST",)
-    assert _collect_external_mcp_servers(flow)[0].config["url"] == url
+    config = (
+        {"command": "uvx", "args": ["mcp-proxy", "--headers", "x-api-key", "sk-editor", url]}
+        if stdio
+        else {"url": url, "headers": {"x-api-key": "sk-editor"}}
+    )
+    flow = _flow(_server("billing", config))
+
+    assert _collect_mcp_requirements(flow).variables == tuple(sorted(("MCP_HOST", BILLING_KEY)))
+    assert _collect_external_mcp_servers(flow)[0].config == {"url": url, "headers": {"x-api-key": BILLING_KEY}}
 
 
 def test_the_address_variable_cannot_be_a_header_variable():

@@ -51,6 +51,7 @@ from langflow.utils.mcp_config_secrets import (
     project_id_from_mcp_url,
     project_server_http_config,
     strip_config_secrets,
+    url_reads_a_variable,
     variable_name_for,
     variable_reference_name,
 )
@@ -736,10 +737,12 @@ def _mcp_config_requirements(server_name: object, config: object) -> tuple[set[s
         return variables, literals
     project_config = project_server_http_config(config)
     if project_config is not None:
-        name = mcp_url_variable_name(server_name)
-        variables.add(name)
-        literals[name] = project_config["url"]
         config = project_config
+        # An address that already reads a variable is asked for by that variable, below.
+        if not url_reads_a_variable(project_config["url"]):
+            name = mcp_url_variable_name(server_name)
+            variables.add(name)
+            literals[name] = project_config["url"]
     url = mcp_config_url(config)
     url_variables = set(GLOBAL_VARIABLE_PLACEHOLDER_PATTERN.findall(url)) if isinstance(url, str) else set()
     if url_variable := variable_reference_name(url):
@@ -872,7 +875,8 @@ def _collect_external_mcp_servers(
         if project_config is not None:
             if name not in servers:
                 carried, _, _ = strip_config_secrets(project_config, name)
-                carried["url"] = f"{{{{{mcp_url_variable_name(name)}}}}}"
+                if not url_reads_a_variable(carried["url"]):
+                    carried["url"] = f"{{{{{mcp_url_variable_name(name)}}}}}"
                 servers[name] = ProjectArtifactExternalMcpServer(server_name=name, config=carried)
             continue
         if not url or "command" in config or config.get("mode") == "Stdio":
