@@ -8,6 +8,10 @@ export type FlowVersionEntry = {
   created_at: string;
   /** Resolved server-side; absent for versions whose author was deleted. */
   username?: string | null;
+  /** Set by the server (deploys, evaluations, upgrade repairs): the version is never pruned or deleted. */
+  retained?: boolean;
+  /** Why the version is retained. The list endpoint omits it when null. */
+  retained_reason?: string | null;
 };
 
 export type FlowVersionEntryWithData = FlowVersionEntry & {

@@ -13,6 +13,7 @@ import {
 import { CustomLink } from "@/customization/components/custom-link";
 import { DOCS_LINK } from "@/customization/config-constants";
 import { reportTime } from "./format";
+import MaintenanceControls from "./MaintenanceControls";
 import { repairReasonKey, repairRequestErrorKey } from "./reasons";
 
 export default function RepairControls({
@@ -191,6 +192,9 @@ export default function RepairControls({
         </p>
       )}
       {busy && <p role="status">{t("settings.upgrade.repairBusy")}</p>}
+      {statusKnown && maintenance.data && (
+        <MaintenanceControls status={maintenance.data} busy={busy} />
+      )}
       {result && (
         <>
           <p role="status">

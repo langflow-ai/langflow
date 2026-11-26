@@ -7,6 +7,7 @@ This test suite validates the MCP component functionality using real MCP servers
 
 import re
 import shutil
+from contextlib import contextmanager
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -16,6 +17,7 @@ from lfx.base.mcp.util import MCPSessionManager, MCPStdioClient, MCPStreamableHt
 from lfx.components.models_and_agents.mcp_component import MCPToolsComponent
 from lfx.inputs.inputs import BoolInput, MessageTextInput, NestedDictInput
 from lfx.schema.json_schema import create_input_schema_from_json_schema
+from lfx.services.shared_component_cache.service import SharedComponentCacheService
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 
@@ -1304,6 +1306,140 @@ class TestMCPComponentGlobalVariableResolution:
         )
         with pytest.raises(RuntimeVariableError, match="Target disabled"):
             await self._run({"AUTH-VAR1": "caller-only"}, variable_service=variable_service)
+
+
+class TestMCPComponentHeaderOverrideWriteBack:
+    """Component header overrides apply to discovery only, never to the saved server config.
+
+    ``update_tool_list`` returns the server config that ``update_build_config`` writes back
+    to ``mcp_server.value``. When the server has no database config (an imported flow, or
+    LFX standalone) that inline config is the only source, so a component override merged
+    into it would replace the inline header for good: clearing the override later would
+    leave the override value in place.
+    """
+
+    USER_ID = "11111111-1111-1111-1111-111111111111"
+    SERVER_NAME = "inline_server"
+    INLINE_HEADERS = {"Authorization": "Bearer inline", "X-Tenant": "inline-tenant"}
+    OVERRIDE_HEADERS = [
+        {"key": "Authorization", "value": "Bearer override"},
+        {"key": "X-Extra", "value": "component-only"},
+    ]
+
+    def _server_value(self):
+        return {
+            "name": self.SERVER_NAME,
+            "config": {"url": "https://echo.invalid/mcp", "headers": dict(self.INLINE_HEADERS)},
+        }
+
+    @staticmethod
+    def _build_config(server_value):
+        return {
+            "mcp_server": {"value": server_value},
+            "tool": {"show": True, "options": [], "value": "", "placeholder": ""},
+            "tool_placeholder": {"tool_mode": False},
+            "tools_metadata": {"show": False},
+        }
+
+    @contextmanager
+    def _discovery(self):
+        """Stub the database and the MCP round-trip; yield the headers each discovery used."""
+        discovered_headers: list[dict] = []
+
+        async def fake_update_tools(**kwargs):
+            # Snapshot at call time so a later in-place edit of the config cannot hide a leak.
+            discovered_headers.append(dict(kwargs["server_config"].get("headers") or {}))
+            return "Streamable_HTTP", [], {}
+
+        with (
+            # No database config: the inline config in ``mcp_server.value`` is the only source.
+            patch("langflow.api.v2.mcp.get_server", new=AsyncMock(return_value=None)),
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id",
+                new=AsyncMock(return_value=SimpleNamespace(id=self.USER_ID, is_superuser=True)),
+            ),
+            patch("lfx.components.models_and_agents.mcp_component.session_scope"),
+            patch("lfx.components.models_and_agents.mcp_component.update_tools", new=fake_update_tools),
+        ):
+            yield discovered_headers
+
+    @pytest.mark.asyncio
+    async def test_override_is_used_for_discovery_but_not_returned(self):
+        component = MCPToolsComponent()
+        component._user_id = self.USER_ID
+        component.mcp_server = self._server_value()
+        component.headers = self.OVERRIDE_HEADERS
+
+        with self._discovery() as discovered_headers:
+            _tools, server_info = await component.update_tool_list()
+
+        assert discovered_headers == [
+            {"Authorization": "Bearer override", "X-Tenant": "inline-tenant", "X-Extra": "component-only"}
+        ]
+        assert server_info["name"] == self.SERVER_NAME
+        assert server_info["config"]["headers"] == self.INLINE_HEADERS
+        # The inline config held by the component must not be edited in place either.
+        assert component.mcp_server["config"]["headers"] == self.INLINE_HEADERS
+
+    @pytest.mark.asyncio
+    async def test_clearing_override_restores_inline_header(self):
+        component = MCPToolsComponent()
+        component._user_id = self.USER_ID
+        component.mcp_server = self._server_value()
+        component.headers = self.OVERRIDE_HEADERS
+
+        with self._discovery() as discovered_headers:
+            _tools, server_info = await component.update_tool_list()
+            # The flow saves the returned value, then the user clears the override.
+            component.mcp_server = server_info
+            component.headers = []
+            _tools, server_info = await component.update_tool_list()
+
+        assert discovered_headers[0]["Authorization"] == "Bearer override"
+        assert discovered_headers[1] == self.INLINE_HEADERS
+        assert server_info["config"]["headers"] == self.INLINE_HEADERS
+
+    @pytest.mark.asyncio
+    async def test_build_config_write_back_keeps_inline_header(self):
+        component = MCPToolsComponent()
+        component._user_id = self.USER_ID
+        component.use_cache = False
+        component.headers = self.OVERRIDE_HEADERS
+        server_value = self._server_value()
+
+        with self._discovery() as discovered_headers:
+            build_config = await component.update_build_config(
+                self._build_config(server_value), server_value, "mcp_server"
+            )
+
+        assert discovered_headers[0]["Authorization"] == "Bearer override"
+        assert build_config["mcp_server"]["value"]["name"] == self.SERVER_NAME
+        assert build_config["mcp_server"]["value"]["config"]["headers"] == self.INLINE_HEADERS
+
+    @pytest.mark.asyncio
+    async def test_credential_bearing_config_keeps_inline_header_without_caching(self, monkeypatch):
+        cache = SharedComponentCacheService()
+        monkeypatch.setattr(
+            "lfx.custom.custom_component.component_with_cache.get_shared_component_cache_service",
+            lambda: cache,
+        )
+        component = MCPToolsComponent()
+        component._user_id = self.USER_ID
+        # Give the shared cache a full caller scope, a user and a Langflow session.
+        component._vertex = SimpleNamespace(
+            graph=SimpleNamespace(session_id="session-1", flow_id="flow-1", context={}, user_id=self.USER_ID)
+        )
+        component.use_cache = True
+        component.mcp_server = self._server_value()
+        component.headers = self.OVERRIDE_HEADERS
+
+        with self._discovery() as discovered_headers:
+            await component.update_tool_list()
+            _tools, server_info = await component.update_tool_list()
+
+        assert len(discovered_headers) == 2
+        assert all(headers["Authorization"] == "Bearer override" for headers in discovered_headers)
+        assert server_info["config"]["headers"] == self.INLINE_HEADERS
 
 
 # ============================================================================
