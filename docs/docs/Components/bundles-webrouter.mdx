@@ -1,0 +1,81 @@
+---
+title: WebRouter
+slug: /bundles-webrouter
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **WebRouter** bundle.
+
+[WebRouter](https://github.com/Nimbleway/webrouter) is an open-source Python library that puts one interface in front of several web search and page extraction providers.
+Each call goes to one provider, and if that call fails, WebRouter falls back to the next one.
+The bundle requires Python 3.11 or later.
+
+Both components work without an API key.
+With no key, WebRouter uses the providers' keyless tiers: Nimble, Tavily, You.com, Exa, Parallel and Keenable for search, and Nimble, Tavily, Jina Reader, Firecrawl and Keenable for extraction.
+
+To add a provider to the routing, set its API key, such as `TAVILY_API_KEY`, `EXA_API_KEY`, or `FIRECRAWL_API_KEY`, in the environment of the Langflow server.
+Calls that provider serves are billed to that key.
+For the list of variables, see the [WebRouter configuration reference](https://docs.webrouter.net/configuration).
+
+To send every call from a component to one provider, enter the provider's name in **Provider**.
+You can also enter that provider's key in **Provider API Key**, or store it in a [global variable](/configuration-global-variables), instead of setting it in the server environment.
+
+For more information, see the [WebRouter documentation](https://docs.webrouter.net).
+
+## WebRouter Search
+
+This component searches the web through WebRouter.
+
+It returns the results as a [`Table`](/data-types#table), with one row per result.
+Each row has the page's `title`, `url`, `snippet`, `published_date` when the provider returns one, and `provider`, the provider that served the search.
+
+When the component is used as a [tool](/agents-tools), the agent can set the search query and the domains to search.
+
+### WebRouter Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query (`query`) | String | Input parameter. The query to search the web for. |
+| Max Results (`max_results`) | Integer | Input parameter. The number of results to return, from 1 to 20. Default: `5`. |
+| Include Domains (`include_domains`) | String | Input parameter. Only return results from these domains, separated by commas, such as `docs.python.org`. |
+| Provider (`provider`) | String | Input parameter. A provider to send every search to, such as `tavily` or `exa`. Leave empty to let WebRouter pick and fall back. |
+| Provider API Key (`api_key`) | SecretString | Input parameter. Optional. An API key for the provider named in **Provider**. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for the search, including fallbacks. Default: `30`. |
+
+## WebRouter Extract
+
+This component reads one or more web pages through WebRouter and returns their main content as markdown.
+
+It returns a [`Table`](/data-types#table) with one row per URL.
+A page that was read has its `url`, `title`, `content`, and `provider`.
+A URL that could not be read has its `url` and an `error` with the reason.
+
+The extraction provider fetches the pages on its own servers, so Langflow only sends the URLs to the provider and never connects to the pages itself.
+
+When the component is used as a [tool](/agents-tools), the agent can set the URLs.
+
+### WebRouter Extract parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| URLs (`urls`) | String | Input parameter. One to ten `http://` or `https://` URLs to read, separated by commas or new lines. |
+| Provider (`provider`) | String | Input parameter. A provider to send every call to, such as `firecrawl` or `tavily`. Leave empty to let WebRouter pick and fall back. |
+| Provider API Key (`api_key`) | SecretString | Input parameter. Optional. An API key for the provider named in **Provider**. |
+| Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for the pages, including fallbacks. Default: `30`. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Keenable** bundle](/bundles-keenable)
+* [**DuckDuckGo** bundle](/bundles-duckduckgo)
