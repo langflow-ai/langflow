@@ -33,8 +33,8 @@ def litellm_guard(request: pytest.FixtureRequest) -> Requirement:
     for guard in guards:
         assert "1.107.0" not in guard.specifier
         assert "1.103.0" not in guard.specifier
-        assert "1.103.10" in guard.specifier
-        assert "1.103.11" in guard.specifier, "Do not freeze installs to the current lockfile version"
+        assert "1.109.0" in guard.specifier
+        assert "1.109.5" in guard.specifier, "Do not freeze installs below the compatible security line"
         if project["name"] != "lfx-bundles":
             assert guard.marker is None
     # Exercise CUGA's version restriction independently of its platform markers.
@@ -65,7 +65,8 @@ def offline_resolver(tmp_path: Path):
         dependencies = ["upstream"] + ([str(guard)] if guard else [])
         for name, version, requirements in (
             ("litellm", "1.103.10", []),
-            ("litellm", "1.103.11", []),
+            ("litellm", "1.109.0", []),
+            ("litellm", "1.109.5", []),
             ("litellm", "1.107.0", []),
             ("upstream", "1.0.0", ["litellm>=1.103.1"]),
             ("consumer", "1.0.0", dependencies),
@@ -115,13 +116,13 @@ def test_published_requirement_protects_transitive_install_without_lockfile(
     unprotected = offline_resolver(None)
     assert unprotected.returncode == 0, unprotected.stdout + unprotected.stderr
     before = json.loads((tmp_path / "resolved.json").read_text())
-    assert any(item["metadata"]["version"] == "1.107.0" for item in before["install"])
+    assert any(item["metadata"]["name"] == "litellm" for item in before["install"])
 
     protected = offline_resolver(litellm_guard)
     assert protected.returncode == 0, protected.stdout + protected.stderr
     after = json.loads((tmp_path / "resolved.json").read_text())
     versions = {item["metadata"]["name"]: item["metadata"]["version"] for item in after["install"]}
-    assert versions["litellm"] == "1.103.11"
+    assert versions["litellm"] == "1.109.5"
 
 
 def test_published_requirement_rejects_explicit_compromised_release(
