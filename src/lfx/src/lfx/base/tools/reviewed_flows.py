@@ -26,6 +26,14 @@ def tool_pack_binding(component):
     return ToolPackToolBinding.model_validate(binding) if binding is not None else None
 
 
+def local_tool_binding(component):
+    from lfx.projects.local_tools import LocalToolBinding
+    from lfx.projects.tools import TOOL_ORIGIN
+
+    binding = (_origin(component, TOOL_ORIGIN) or {}).get("local_tool")
+    return LocalToolBinding.model_validate(binding) if binding is not None else None
+
+
 def instruction_binding(component):
     """Read the typed contract on a generated Instructions reference node, if present."""
     from lfx.projects.bindings import BINDING_ORIGIN, FlowBinding
@@ -47,7 +55,10 @@ def frozen_flow(component, flow_id, flow_name) -> dict | None:
         matches = [item for item in definitions.values() if item["name"] == flow_name]
         source = matches[0] if len(matches) == 1 else None
     if source is None:
-        msg = "This flow was not included in the reviewed tool dependency snapshots. Review the Tool Pack again."
+        msg = (
+            "This flow was not included in the reviewed dependency snapshots. "
+            "Review and save its containing flow or Tool Pack."
+        )
         raise ValueError(msg)
     return source
 
@@ -59,13 +70,17 @@ async def reviewed_source(component, flow_id, flow_name) -> dict | None:
     definition is resolved once per run; every invocation still builds a fresh graph from it.
     """
     pack = tool_pack_binding(component)
+    local = local_tool_binding(component)
     instruction = instruction_binding(component)
     if pack is not None and str(pack.tool.flow_id) != str(flow_id):
         msg = "The Tool Pack adapter points to a different flow. Restore its reviewed reference."
         raise ValueError(msg)
+    if local is not None and local.flow_id != str(flow_id):
+        msg = "The local tool adapter points to another flow. Restore its reviewed selection."
+        raise ValueError(msg)
     if (frozen := frozen_flow(component, flow_id, flow_name)) is not None:
         return {**frozen, "dependencies": component.graph.frozen_tool_flows}
-    binding = instruction or pack
+    binding = local or instruction or pack
     if binding is None:
         return None
     if binding is instruction and instruction.flow_id != str(flow_id):
@@ -77,23 +92,25 @@ async def reviewed_source(component, flow_id, flow_name) -> dict | None:
         if binding is pack:
             resolved = await _resolve_tool_pack(component, pack)
         else:
-            resolved = await _resolve_instructions(component, instruction)
+            resolved = await _resolve_flow_binding(component, binding, local=binding is local)
         component._reviewed_source = (key, resolved)  # noqa: SLF001
     return component._reviewed_source[1]  # noqa: SLF001
 
 
-async def _resolve_instructions(component, binding) -> dict:
+async def _resolve_flow_binding(component, binding, *, local: bool) -> dict:
     from lfx.projects.bindings import validate_instruction_binding
     from lfx.projects.invocation import reviewed_flow_source
+    from lfx.projects.local_tools import validate_local_tool_source
 
-    snapshot = await reviewed_flow_source(
-        component, binding, field_name="system_prompt", validate=validate_instruction_binding
+    field_name, validate = (
+        ("tools", validate_local_tool_source) if local else ("system_prompt", validate_instruction_binding)
     )
+    snapshot = await reviewed_flow_source(component, binding, field_name=field_name, validate=validate)
     return {
         "data": snapshot["data"],
         "id": binding.flow_id,
-        "name": snapshot.get("name"),
-        "description": None,
+        "name": binding.name if local else snapshot.get("name"),
+        "description": binding.description if local else None,
         "dependencies": snapshot.get("dependencies"),
     }
 
@@ -126,6 +143,8 @@ def tool_metadata(component) -> dict:
     metadata = {}
     if (pack := tool_pack_binding(component)) is not None:
         metadata["harness_tool_pack"] = pack.model_dump(mode="json")
+    if (local := local_tool_binding(component)) is not None:
+        metadata["harness_local_tool"] = local.model_dump(mode="json")
     return metadata
 
 

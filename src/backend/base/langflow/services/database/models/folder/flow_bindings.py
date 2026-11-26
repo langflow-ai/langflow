@@ -87,7 +87,12 @@ async def resolve_binding_snapshot(session, user, binding, field_name, *, requir
     """Check current access and review, then read required versions rather than live code."""
     root = await _authorize(session, user, binding.flow_id, FlowAction.EXECUTE)
     if require_current or not binding.version_id:
-        validate_project_binding(field_name, root.data or {}, binding)
+        if field_name == "tools":
+            from lfx.projects.local_tools import validate_local_tool_source
+
+            validate_local_tool_source(flow_definitions([root])[0], binding)
+        else:
+            validate_project_binding(field_name, root.data or {}, binding)
         current = await resolve_binding_flows(session, user, root, action=FlowAction.EXECUTE)
         validate_binding_dependencies(binding, flow_definitions(current.values()))
     definitions = {}
@@ -111,8 +116,8 @@ async def resolve_binding_snapshot(session, user, binding, field_name, *, requir
             data = version.data
         definitions[item.flow_id] = {
             "id": item.flow_id,
-            "name": source.name if item is binding else item.name,
-            "description": (source.description or "") if item is binding else item.description,
+            "name": getattr(item, "name", source.name),
+            "description": getattr(item, "description", source.description or ""),
             "data": deepcopy(data),
             "version_id": item.version_id,
         }

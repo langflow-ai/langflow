@@ -41,6 +41,53 @@ const record: AgentConfiguration = {
 
 beforeEach(() => jest.clearAllMocks());
 
+it("links the recorded local tool and its required snapshots", () => {
+  const onOpen = jest.fn();
+  const saved: AgentConfiguration = {
+    ...record,
+    tools: [
+      {
+        name: "lookup_tool",
+        description: "Configured local lookup",
+        input_schema: {},
+        return_direct: false,
+        approval_actions: [],
+        tool_pack: null,
+        local_flow: {
+          flow_id: "local-lookup",
+          name: "Original lookup",
+          revision: "e".repeat(64),
+          version_id: "local-snapshot",
+          dependencies: [
+            {
+              flow_id: "child-lookup",
+              name: "Original child",
+              revision: "f".repeat(64),
+              version_id: "child-snapshot",
+            },
+          ],
+        },
+      },
+    ],
+  };
+  render(
+    <MemoryRouter>
+      <ReportConfigurations configurations={[saved]} onOpen={onOpen} />
+    </MemoryRouter>,
+  );
+  fireEvent.click(screen.getByText("Inspect configuration"));
+  fireEvent.click(screen.getByText("lookup_tool"));
+  fireEvent.click(screen.getByText(/Original lookup ·/));
+  expect(
+    screen.getByText("local-snapshot", { exact: true }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText("child-snapshot", { exact: true }),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("link", { name: "Original child" }));
+  expect(onOpen).toHaveBeenCalledTimes(1);
+});
+
 it("shows recorded values and preserves the draft before opening a configured flow", () => {
   const onOpen = jest.fn();
   render(<ReportConfigurations configurations={[record]} onOpen={onOpen} />);

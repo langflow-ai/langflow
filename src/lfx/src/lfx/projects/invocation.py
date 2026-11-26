@@ -21,7 +21,7 @@ async def reviewed_flow_source(component, binding, *, field_name, validate):
         resolver = RunFlowComponent(_user_id=component.user_id)
         resolver._vertex = component._vertex  # noqa: SLF001
         source = await resolver.get_flow(flow_id_selected=binding.flow_id)
-        validate(source.data.get("data", {}), binding)
+        validate(source.data if field_name == "tools" else source.data.get("data", {}), binding)
         if frozen is None:
             definitions = {
                 binding.flow_id: {
@@ -51,13 +51,13 @@ async def reviewed_flow_source(component, binding, *, field_name, validate):
             validate_binding_dependencies(binding, list(definitions.values()))
             frozen = definitions
         return {**deepcopy(source.data), "dependencies": frozen}
-    key = f"{field_name}:{binding.flow_id}:{binding.node_id}:{binding.output_name}"
+    key = f"{field_name}:{binding.flow_id}:{getattr(binding, 'node_id', '')}:{getattr(binding, 'output_name', '')}"
     recorded = getattr(parent, "reviewed_harness_flows", {})
     value = binding.model_dump(mode="json")
     source = await get_harness_flow(
         user_id=component.user_id, binding=binding, field_name=field_name, require_current=recorded.get(key) != value
     )
-    validate(source.data["data"], binding)
+    validate(source.data if field_name == "tools" else source.data["data"], binding)
     if parent is not None:
         parent.reviewed_harness_flows[key] = value
     return deepcopy(source.data)
