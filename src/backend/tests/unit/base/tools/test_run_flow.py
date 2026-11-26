@@ -253,6 +253,27 @@ class TestRunFlowBaseComponentFlowRetrieval:
         mock_cache_call.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_reviewed_local_tool_child_gets_the_parents_extra_file_scopes(self, target_flow):  # noqa: ARG002
+        """A reviewed local tool snapshot reads files with the run's extra scopes, like any child flow."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component._vertex = SimpleNamespace(
+            data={}, graph=SimpleNamespace(authorized_extra_file_scopes=frozenset({"user-d"}))
+        )
+        flow_id = str(uuid4())
+        local = SimpleNamespace(flow_id=flow_id, name="Local tool", description="", model_dump_json=lambda: "binding")
+        snapshot = {"data": {"nodes": [], "edges": []}, "name": "Local tool"}
+
+        with (
+            patch("lfx.base.tools.reviewed_flows.local_tool_binding", return_value=local),
+            patch("lfx.projects.invocation.reviewed_flow_source", return_value=snapshot),
+            patch("lfx.base.tools.run_flow.Graph.from_payload", return_value=MagicMock(spec=Graph)) as from_payload,
+        ):
+            await component.get_graph(flow_name_selected="Local tool", flow_id_selected=flow_id)
+
+        assert from_payload.call_args.kwargs["authorized_extra_file_scopes"] == frozenset({"user-d"})
+
+    @pytest.mark.asyncio
     async def test_reviewed_instructions_child_gets_the_parents_extra_file_scopes(self, target_flow):  # noqa: ARG002
         """A reviewed Instructions snapshot reads files with the run's extra scopes, like any child flow."""
         component = RunFlowBaseComponent()
