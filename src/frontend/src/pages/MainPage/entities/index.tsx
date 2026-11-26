@@ -110,6 +110,7 @@ export type ProjectFlowBindings = Record<
 
 /** A project type and the form it renders, from `GET /api/v1/projects/types`. */
 export type ProjectTypeType = {
+  starters?: { name: string; display_name: string; description: string }[];
   name: string;
   display_name: string;
   icon: string;
