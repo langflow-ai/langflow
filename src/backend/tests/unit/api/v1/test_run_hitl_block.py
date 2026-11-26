@@ -16,6 +16,18 @@ def _node(node_id: str, node_type: str, template: dict | None = None) -> dict:
 
 
 class TestFlowRequiresHitl:
+    def test_permission_flow_binding_requires_resumable_api(self):
+        data = {
+            "nodes": [_node("agent", "Agent", {"permission_binding": {"value": '{"flow_id":"reviewed"}'}})],
+            "edges": [],
+        }
+        assert flow_requires_hitl(data) is True
+
+    def test_empty_permission_binding_does_not_require_hitl(self):
+        for value in (None, "", "  ", "null", "{}"):
+            data = {"nodes": [_node("agent", "Agent", {"permission_binding": {"value": value}})], "edges": []}
+            assert flow_requires_hitl(data) is False
+
     def test_harness_ask_policy_requires_a_resumable_endpoint(self):
         data = {"nodes": [_node("agent", "Agent", {"tool_policy": {"value": "ask"}})], "edges": []}
         assert flow_requires_hitl(data) is True

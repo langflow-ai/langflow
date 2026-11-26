@@ -53,7 +53,12 @@ class ToolApprovalMixin:
         ``InterruptOnConfig`` so the card offers exactly those decisions. Ask adds an
         approve/reject gate to otherwise ungated tools; deny never requests approval.
         """
-        policy = getattr(self, "tool_policy", "tool_defaults")
+        from lfx.projects.permissions import parse_permission_binding
+
+        # Any custom decision may ask at runtime, so every connected tool needs a
+        # resumable path. Flow approval still honors each tool's own review choices.
+        binding = parse_permission_binding(getattr(self, "permission_binding", ""))
+        policy = "ask" if binding else getattr(self, "tool_policy", "tool_defaults")
         if policy == "deny":
             return {}
         gated: dict[str, dict[str, Any]] = {}
