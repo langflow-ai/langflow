@@ -23325,6 +23325,238 @@
           },
           "tool_mode": false
         },
+        "AgentStepComponent": {
+          "base_classes": [
+            "Message",
+            "Table"
+          ],
+          "beta": true,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "One model call of an agent loop. Outputs to Response (done) or Tool Calls (continue the loop).",
+          "display_name": "Agent Step",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "model",
+            "api_key",
+            "messages",
+            "system_message",
+            "tools"
+          ],
+          "frozen": false,
+          "icon": "brain",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "1ef6ad38173b",
+            "component_class_name": "AgentStepComponent",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "langchain_core",
+                  "version": "1.5.1"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.models_and_agents.agent_step.AgentStepComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Response",
+              "group_outputs": true,
+              "method": "get_ai_message",
+              "name": "ai_message",
+              "selected": "Message",
+              "tool_mode": true,
+              "types": [
+                "Message"
+              ],
+              "value": "__UNDEFINED__"
+            },
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Tool Calls",
+              "group_outputs": true,
+              "method": "get_tool_calls",
+              "name": "tool_calls",
+              "selected": "Table",
+              "tool_mode": true,
+              "types": [
+                "Table"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "api_key": {
+              "_input_type": "SecretStrInput",
+              "advanced": true,
+              "api_editable": false,
+              "display_name": "API Key",
+              "dynamic": false,
+              "info": "Model Provider API key",
+              "input_types": [],
+              "load_from_db": true,
+              "name": "api_key",
+              "override_skip": false,
+              "password": true,
+              "placeholder": "",
+              "real_time_refresh": true,
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"AgentStep: one model call of an agent loop.\n\nTakes the history, makes one call through the harness loop runtime and returns the history the call rewrote,\nwhich ends in the model's message, on `tool_calls`. `ai_message` is the answer, and its branch stops when the\nmodel asked for tools.\n\nWhileLoop -> AgentStep -[tool_calls]-> ExecuteTool -> WhileLoop\n                       -[ai_message]-> the answer\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom typing import Any\n\nfrom langchain_core.messages import AIMessage, BaseMessage\n\nfrom lfx.base.agents.loop_rows import messages_to_rows, rows_to_messages\nfrom lfx.base.agents.loop_runtime import HarnessLoopRuntime\nfrom lfx.base.models.unified_models import get_language_model_options, get_llm, update_model_options_in_build_config\nfrom lfx.components.models_and_agents.agent_helpers.loop_blocks import block_call, block_tools\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import HandleInput, ModelInput, MultilineInput, Output, SecretStrInput\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.dotdict import dotdict  # noqa: TC001\nfrom lfx.schema.message import Message\n\n\nclass AgentStepComponent(Component):\n    display_name = \"Agent Step\"\n    description = \"One model call of an agent loop. Outputs to Response (done) or Tool Calls (continue the loop).\"\n    icon = \"brain\"\n    beta = True\n\n    inputs = [\n        ModelInput(\n            name=\"model\",\n            display_name=\"Language Model\",\n            info=\"Select your model provider. Ignored when the loop runs inside a harness, which brings its own model.\",\n            real_time_refresh=True,\n            required=False,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            info=\"Model Provider API key\",\n            required=False,\n            show=True,\n            real_time_refresh=True,\n            advanced=True,\n        ),\n        HandleInput(\n            name=\"messages\",\n            display_name=\"Messages\",\n            info=\"The conversation so far, one row per message.\",\n            input_types=[\"DataFrame\"],\n            required=True,\n        ),\n        MultilineInput(\n            name=\"system_message\",\n            display_name=\"System Message\",\n            info=\"Optional system message to set the behavior of the assistant.\",\n            advanced=False,\n        ),\n        HandleInput(\n            name=\"tools\",\n            display_name=\"Tools\",\n            info=\"Tools the model may call. Execute Tool must get the same tools.\",\n            input_types=[\"Tool\"],\n            is_list=True,\n            required=False,\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Response\", name=\"ai_message\", method=\"get_ai_message\", group_outputs=True),\n        Output(display_name=\"Tool Calls\", name=\"tool_calls\", method=\"get_tool_calls\", group_outputs=True),\n    ]\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        return update_model_options_in_build_config(\n            component=self,\n            build_config=build_config,\n            cache_key_prefix=\"agent_step_model_options\",\n            get_options_func=get_language_model_options,\n            field_name=field_name,\n            field_value=field_value,\n        )\n\n    def _pre_run_setup(self):\n        super()._pre_run_setup()\n        self._step_result = None\n\n    def _own_runtime(self) -> HarnessLoopRuntime:\n        return HarnessLoopRuntime(\n            model=get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key, stream=True),\n            tools=block_tools(self.tools),\n            system_prompt=self.system_message or None,\n            middleware=[],\n        )\n\n    async def _call_model(self) -> tuple[list[BaseMessage], Message]:\n        \"\"\"The one model call of this build. `ai_message` and `tool_calls` both read it.\"\"\"\n        if self._step_result is None:\n            self._step_result = await block_call(\n                self, self._own_runtime, rows_to_messages(self.messages), lambda runtime, h: runtime.model_call(h)\n            )\n        return self._step_result\n\n    async def get_ai_message(self) -> Message:\n        \"\"\"The final answer. Stops this branch when the model asked for tools.\"\"\"\n        history, message = await self._call_model()\n        if history and isinstance(history[-1], AIMessage) and history[-1].tool_calls:\n            self.stop(\"ai_message\")\n            self.graph.exclude_branch_conditionally(self._id, output_name=\"ai_message\")\n            return Message(text=\"\")\n        return message\n\n    async def get_tool_calls(self) -> DataFrame:\n        \"\"\"The history the model call rewrote, ending in the model's message. It feeds the loop back.\"\"\"\n        history, _ = await self._call_model()\n        return DataFrame(messages_to_rows(history))\n"
+            },
+            "messages": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Messages",
+              "dynamic": false,
+              "info": "The conversation so far, one row per message.",
+              "input_types": [
+                "DataFrame"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "messages",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "model": {
+              "_input_type": "ModelInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Language Model",
+              "dynamic": false,
+              "external_options": {
+                "fields": {
+                  "data": {
+                    "node": {
+                      "display_name": "Connect other models",
+                      "icon": "CornerDownLeft",
+                      "name": "connect_other_models"
+                    }
+                  }
+                }
+              },
+              "info": "Select your model provider. Ignored when the loop runs inside a harness, which brings its own model.",
+              "input_types": [
+                "LanguageModel"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "model_type": "language",
+              "name": "model",
+              "override_skip": false,
+              "placeholder": "Setup Provider",
+              "real_time_refresh": true,
+              "refresh_button": true,
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "track_in_telemetry": false,
+              "type": "model",
+              "value": ""
+            },
+            "system_message": {
+              "_input_type": "MultilineInput",
+              "advanced": false,
+              "ai_enabled": false,
+              "api_editable": false,
+              "copy_field": false,
+              "display_name": "System Message",
+              "dynamic": false,
+              "info": "Optional system message to set the behavior of the assistant.",
+              "input_types": [
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "load_from_db": false,
+              "multiline": true,
+              "name": "system_message",
+              "override_skip": false,
+              "password": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_input": true,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "str",
+              "value": ""
+            },
+            "tools": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Tools",
+              "dynamic": false,
+              "info": "Tools the model may call. Execute Tool must get the same tools.",
+              "input_types": [
+                "Tool"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "tools",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            }
+          },
+          "tool_mode": false
+        },
         "CompactionInput": {
           "base_classes": [
             "JSON",
@@ -24283,6 +24515,135 @@
               "track_in_telemetry": true,
               "type": "int",
               "value": 200
+            }
+          },
+          "tool_mode": false
+        },
+        "ExecuteToolComponent": {
+          "base_classes": [
+            "Table"
+          ],
+          "beta": true,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Run the tool calls the model asked for and return the history with the tool results.",
+          "display_name": "Execute Tool",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "messages",
+            "tools"
+          ],
+          "frozen": false,
+          "icon": "play",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "65605e7837d1",
+            "component_class_name": "ExecuteToolComponent",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "langchain",
+                  "version": "1.3.14"
+                },
+                {
+                  "name": "langchain_core",
+                  "version": "1.5.1"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 3
+            },
+            "module": "lfx.components.models_and_agents.execute_tool.ExecuteToolComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "New Messages",
+              "group_outputs": false,
+              "method": "execute_tools",
+              "name": "new_messages",
+              "selected": "Table",
+              "tool_mode": true,
+              "types": [
+                "Table"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"ExecuteTool: runs the tool calls the model asked for.\n\nTakes the history from AgentStep. When it ends in an AI message with tool calls, it runs them in parallel through\nthe harness loop runtime and returns the history plus the tool results, which feed back to While Loop as the new\nstate. Any other history passes through unchanged.\n\"\"\"\n\nfrom __future__ import annotations\n\nfrom langchain.agents.middleware import ToolRetryMiddleware\nfrom langchain_core.messages import AIMessage, BaseMessage\n\nfrom lfx.base.agents.loop_rows import messages_to_rows, rows_to_messages\nfrom lfx.base.agents.loop_runtime import HarnessLoopRuntime\nfrom lfx.components.models_and_agents.agent_helpers.loop_blocks import block_call, block_tools\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.io import HandleInput, Output\nfrom lfx.schema.dataframe import DataFrame\n\n\nclass ExecuteToolComponent(Component):\n    display_name = \"Execute Tool\"\n    description = \"Run the tool calls the model asked for and return the history with the tool results.\"\n    icon = \"play\"\n    beta = True\n\n    inputs = [\n        HandleInput(\n            name=\"messages\",\n            display_name=\"Messages\",\n            info=\"The history from Agent Step. Its tool calls run when it ends in an AI message that has some.\",\n            input_types=[\"DataFrame\"],\n            required=True,\n        ),\n        HandleInput(\n            name=\"tools\",\n            display_name=\"Tools\",\n            info=\"The tools to run. Not needed when the loop runs inside a harness, which brings its own.\",\n            input_types=[\"Tool\"],\n            is_list=True,\n            required=False,\n        ),\n    ]\n\n    outputs = [Output(display_name=\"New Messages\", name=\"new_messages\", method=\"execute_tools\")]\n\n    def _own_runtime(self) -> HarnessLoopRuntime:\n        # The model is never called here. A failing tool returns its error to the model, as in the Agent.\n        return HarnessLoopRuntime(\n            model=None,\n            tools=block_tools(self.tools),\n            system_prompt=None,\n            middleware=[ToolRetryMiddleware(max_retries=0)],\n        )\n\n    async def execute_tools(self) -> DataFrame:\n        history = rows_to_messages(self.messages)\n        if not history or not isinstance(history[-1], AIMessage) or not history[-1].tool_calls:\n            return self.messages\n\n        async def run(runtime: HarnessLoopRuntime, messages: list[BaseMessage]) -> list[BaseMessage]:\n            # A middleware that ended the run after the model asked for tools stops them here, as in create_agent.\n            return [] if runtime.stopped else await runtime.tool_calls(messages[-1].tool_calls, messages)\n\n        results, _ = await block_call(self, self._own_runtime, history, run)\n        return DataFrame(messages_to_rows([*history, *results]))\n"
+            },
+            "messages": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Messages",
+              "dynamic": false,
+              "info": "The history from Agent Step. Its tool calls run when it ends in an AI message that has some.",
+              "input_types": [
+                "DataFrame"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "messages",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "tools": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Tools",
+              "dynamic": false,
+              "info": "The tools to run. Not needed when the loop runs inside a harness, which brings its own.",
+              "input_types": [
+                "Tool"
+              ],
+              "list": true,
+              "list_add_label": "Add More",
+              "name": "tools",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
             }
           },
           "tool_mode": false
@@ -36556,9 +36917,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 143,
+    "num_components": 145,
     "num_modules": 17
   },
-  "sha256": "5f7247a2ada7dbe581b46b28df387662af9710ee46724ae93a76b690aa922688",
+  "sha256": "188f8a2d32b42b9861a446e86c76bb53dfbd91780c92fceda1d3f857564a6eb9",
   "version": "1.14.0"
 }
