@@ -5287,6 +5287,16 @@
       "added_in": "1.14.0"
     },
     {
+      "bare_class_name": "BhivedSearchComponent",
+      "target": "ext:bhived:BhivedSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "BhivedWriteComponent",
+      "target": "ext:bhived:BhivedWriteComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "OlostepAnswerComponent",
       "target": "ext:olostep:OlostepAnswerComponent@official",
       "added_in": "1.14.0"
