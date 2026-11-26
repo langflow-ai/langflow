@@ -8,7 +8,7 @@ import slotContracts from "./slot-contracts";
 
 const mockPatch = jest.fn();
 jest.mock("../components/local-tool-review", () => ({
-  LocalToolReview: () => null,
+  LocalToolReview: () => <div data-testid="local-tool-review-panel" />,
 }));
 const packReference = {
   project_id: "pack",
@@ -40,7 +40,7 @@ jest.mock("../components/tool-pack-picker", () => ({
 
 // The report workbench has its own API/reader integration suite.
 jest.mock("../components/harness-reports", () => ({
-  HarnessReports: () => null,
+  HarnessReports: () => <div data-testid="reports-panel" />,
 }));
 const mockSuccess = jest.fn();
 const mockError = jest.fn();
@@ -317,6 +317,7 @@ jest.mock("../components/project-flow-picker", () => ({
 }));
 
 const HARNESS: ProjectTypeType = {
+  panels: ["agent", "reports", "local-tool-review"],
   name: "agent-harness",
   display_name: "Agent Harness",
   icon: "Bot",
@@ -396,6 +397,32 @@ const defaultProps = {
 
 const renderPage = (props: Partial<ComponentProps<typeof HarnessPage>> = {}) =>
   render(<HarnessPage {...defaultProps} {...props} />);
+
+it("selects panels from a plugin declaration instead of its type name", () => {
+  const plugin = { ...HARNESS, name: "support-desk", panels: ["reports"] };
+  projectTypes = [plugin];
+  const { rerender } = renderPage({ projectType: plugin.name });
+  expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
+  expect(
+    screen.queryByTestId("local-tool-review-panel"),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText("Agent flow")).not.toBeInTheDocument();
+  projectTypes = [{ ...plugin, panels: ["agent", "local-tool-review"] }];
+  rerender(<HarnessPage {...defaultProps} projectType={plugin.name} />);
+  expect(screen.queryByTestId("reports-panel")).not.toBeInTheDocument();
+  expect(screen.getByTestId("local-tool-review-panel")).toBeInTheDocument();
+  expect(screen.getByText("Agent flow")).toBeInTheDocument();
+});
+
+it("renders a declared panel when the project has no form fields", () => {
+  const plugin = { ...FLOWS, name: "document-library", panels: ["reports"] };
+  projectTypes = [plugin];
+  renderPage({ projectType: plugin.name });
+  expect(screen.getByTestId("reports-panel")).toBeInTheDocument();
+  expect(
+    screen.queryByTestId("local-tool-review-panel"),
+  ).not.toBeInTheDocument();
+});
 
 it("summarizes a Skill Pack without claiming that callable flows are missing", () => {
   projectTypes = [
@@ -1456,6 +1483,7 @@ it("keeps local tools, bindings, and a reviewed pack through the project navigat
           list: true,
           section: "Tools",
           renders: "project_refs",
+          references: "tool-pack",
           show: true,
           value: [],
         },

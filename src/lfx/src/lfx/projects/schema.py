@@ -148,6 +148,7 @@ class ProjectTypeField:
     supports_flow_binding: bool = False
     show_when: dict[str, str] = field(default_factory=dict)
     option_labels: dict[str, str] = field(default_factory=dict)
+    references: str = ""
 
     def to_template(self) -> dict:
         """Serialise for the API, in the shape the frontend field renderer expects."""
@@ -167,6 +168,8 @@ class ProjectTypeField:
             rendered["option_labels"] = dict(self.option_labels)
         if self.supports_flow_binding:
             rendered["supports_flow_binding"] = True
+        if self.references:
+            rendered["references"] = self.references
         return rendered
 
 
@@ -183,6 +186,9 @@ class ProjectTypeDefinition:
     icon: ClassVar[str]
     description: ClassVar[str] = ""
     fields: ClassVar[tuple[ProjectTypeField, ...]] = ()
+    allows_empty_project: ClassVar[bool] = False
+    exportable: ClassVar[bool] = True
+    panels: ClassVar[tuple[str, ...]] = ()
 
     def field_names(self) -> tuple[str, ...]:
         return tuple(f.name for f in self.fields)

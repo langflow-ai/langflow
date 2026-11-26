@@ -36,8 +36,8 @@ interface HeaderComponentProps {
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
   selectedFlows: string[];
-  /** The open project's type. Anything other than "flows" renders its own tab. */
-  projectType?: string;
+  /** Whether the resolved declaration supplies fields or panels. Undefined while loading. */
+  hasProjectForm?: boolean;
   /** That type's own label, so the tab names the thing rather than a hardcoded word. */
   projectTypeLabel?: string;
 }
@@ -53,7 +53,7 @@ const HeaderComponent = ({
   setSearch,
   isEmptyFolder,
   selectedFlows,
-  projectType,
+  hasProjectForm,
   projectTypeLabel,
 }: HeaderComponentProps) => {
   const { t } = useTranslation();
@@ -86,11 +86,11 @@ const HeaderComponent = ({
       (flowType === "mcp" && !isMCPEnabled) ||
       (flowType === "components" && isMCPEnabled) ||
       // Switching to a project that has no form leaves the harness tab selected but gone.
-      (flowType === "harness" && (!projectType || projectType === "flows"))
+      (flowType === "harness" && hasProjectForm === false)
     ) {
       setFlowType("flows");
     }
-  }, [flowType, isMCPEnabled, projectType, setFlowType]);
+  }, [flowType, isMCPEnabled, hasProjectForm, setFlowType]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDebouncedSearch(e.target.value);
@@ -100,10 +100,6 @@ const HeaderComponent = ({
     (s) => s.featureFlags.wxo_deployments === true,
   );
   const hideNewFlowButton = useUtilityStore((s) => s.hideNewFlowButton);
-
-  // A typed project keeps its own tab, which is how its form is reached. "flows" is the
-  // default type and has no form, so it adds nothing here.
-  const hasProjectForm = Boolean(projectType) && projectType !== "flows";
 
   const showFlowControls =
     flowType !== "mcp" &&

@@ -14,6 +14,7 @@ import orjson
 from fastapi import File, HTTPException, UploadFile
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
+from lfx.projects import get_project_type
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
 from lfx.projects.flow_slots import (
     BINDING_LABELS,
@@ -82,6 +83,13 @@ async def download_project_flows(
         if not project:
             raise HTTPException(status_code=404, detail="Project not found")
 
+        try:
+            definition = get_project_type(project.project_type)
+        except ValueError as exc:
+            raise HTTPException(422, "This project type is unavailable; its export policy cannot be checked.") from exc
+        if not definition.exportable:
+            raise HTTPException(422, f"{definition.display_name} export is not supported.")
+
         flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.user_id == owner_id)
         flows_result = await session.exec(flows_query)
         visible_flows = await filter_visible_resources(
@@ -94,7 +102,7 @@ async def download_project_flows(
         )
         flows = [FlowRead.model_validate(flow, from_attributes=True) for flow in visible_flows]
 
-        if not flows and project.project_type != "skill-pack":
+        if not flows and not definition.allows_empty_project:
             raise HTTPException(status_code=404, detail="No flows found in project")
 
         if project.project_type in {"agent-harness", "tool-pack", "skill-pack"}:
@@ -192,6 +200,9 @@ def _imported_project_type(value: object) -> str:
             "Ignoring unknown project_type %r in uploaded project; importing as %s", value, DEFAULT_PROJECT_TYPE
         )
         return DEFAULT_PROJECT_TYPE
+    definition = get_project_type(value)
+    if not definition.exportable:
+        raise HTTPException(422, f"{definition.display_name} import is not supported.")
     return value
 
 
@@ -227,7 +238,9 @@ async def upload_project_flows(
         except ValueError as e:
             raise HTTPException(status_code=400, detail=str(e)) from e
         if not flows_data:
-            raise HTTPException(status_code=400, detail="No valid flow JSON files found in the ZIP")
+            project_type = _imported_project_type((project_metadata or {}).get("project_type"))
+            if not get_project_type(project_type).allows_empty_project:
+                raise HTTPException(status_code=400, detail="No valid flow JSON files found in the ZIP")
 
         # Use the uploaded filename (without extension) as the project name
         project_name_base = file.filename.rsplit(".", 1)[0] if file.filename else "Imported Project"

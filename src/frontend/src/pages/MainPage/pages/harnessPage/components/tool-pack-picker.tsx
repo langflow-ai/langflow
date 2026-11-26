@@ -24,6 +24,7 @@ import { ProjectChoiceField } from "./project-choice-field";
 
 type Props = {
   projectId: string;
+  references?: string;
   value: ToolPackReference[];
   saved: ToolPackReference[];
   agent?: FlowType;
@@ -34,6 +35,7 @@ type Props = {
 
 export function ToolPackPicker({
   projectId,
+  references = "",
   value,
   saved,
   agent,
@@ -48,7 +50,7 @@ export function ToolPackPicker({
   const trigger = useRef<HTMLButtonElement>(null);
   const choices = (folders.data ?? []).filter(
     (project) =>
-      project.project_type === "tool-pack" &&
+      project.project_type === references &&
       project.id !== projectId &&
       !value.some((reference) => reference.project_id === project.id),
   );
