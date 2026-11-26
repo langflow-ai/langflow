@@ -1,6 +1,5 @@
-import type { UseMutationResult } from "@tanstack/react-query";
 import { useEffect } from "react";
-import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
+import type { APIClassType } from "@/types/api";
 import useAlertStore from "../../stores/alertStore";
 import { mutateTemplate } from "../helpers/mutate-template";
 
@@ -9,11 +8,7 @@ const useFetchDataOnMount = (
   nodeId: string,
   setNodeClass: (node: APIClassType) => void,
   name: string,
-  postTemplateValue: UseMutationResult<
-    APIClassType | undefined,
-    ResponseErrorDetailAPI,
-    any
-  >,
+  postTemplateValue: Parameters<typeof mutateTemplate>[4],
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -21,6 +16,19 @@ const useFetchDataOnMount = (
     async function fetchData() {
       const template = node.template[name];
       if (!template) return;
+
+      // A saved MCP selection already carries its generated inputs. Replaying
+      // historical component code on mount can discard them before Update.
+      const savedTool = node.template.tool;
+      if (
+        template._input_type === "McpInput" &&
+        !node.tool_mode &&
+        typeof savedTool?.value === "string" &&
+        savedTool.value !== "" &&
+        savedTool.options?.includes(savedTool.value)
+      ) {
+        return;
+      }
 
       const isRealtimeOrRefresh =
         template.real_time_refresh ||
