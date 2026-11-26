@@ -10050,7 +10050,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.2.12"
+version = "1.2.13"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -11144,7 +11144,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-toolguard"
-version = "0.2.4"
+version = "0.2.5"
 source = { editable = "src/bundles/toolguard" }
 dependencies = [
     { name = "fastmcp" },
