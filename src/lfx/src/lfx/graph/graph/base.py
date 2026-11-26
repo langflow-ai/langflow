@@ -93,7 +93,7 @@ INPUT_TYPE_COMPONENT_TYPES = {
 }
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncIterator, Callable, Generator, Iterable
+    from collections.abc import AsyncIterator, Callable, Generator, Iterable, Mapping
     from typing import Any
 
     from lfx.custom.custom_component.component import Component
@@ -102,6 +102,7 @@ if TYPE_CHECKING:
     from lfx.graph.checkpoint.store import CheckpointStore
     from lfx.graph.edge.schema import EdgeData
     from lfx.graph.schema import ResultData
+    from lfx.projects.runtime_artifacts import RuntimeCandidate
     from lfx.schema.schema import InputValueRequest
     from lfx.services.chat.schema import GetCache, SetCache
     from lfx.services.tracing.service import TracingService
@@ -258,7 +259,8 @@ class Graph:
         # definitions remain private to the running graph and are reloaded by version.
         self.reviewed_tool_packs: dict[str, dict] = {}
         self.reviewed_harness_flows: dict[str, dict] = {}
-        self.frozen_tool_flows: dict[str, dict] | None = None
+        self.frozen_tool_flows: Mapping[str, dict] | None = None
+        self.runtime_candidate: RuntimeCandidate | None = None
         # Vertices already built at checkpoint time: on resume their async generators are exhausted,
         # so the output-collection loop must NOT re-consume them. Empty for fresh (non-resume) runs.
         self.checkpoint_restored_built_ids: set[str] = set()
@@ -899,7 +901,7 @@ class Graph:
         if self._run_id and str(run_id) != self._run_id:
             self.reviewed_tool_packs = {}
             self.reviewed_harness_flows = {}
-            self.frozen_tool_flows = None
+            self.frozen_tool_flows = self.runtime_candidate.definitions if self.runtime_candidate else None
 
         self._run_id = str(run_id)
 
@@ -1879,6 +1881,8 @@ class Graph:
         new_graph.runs_stored_flow = self.runs_stored_flow
         if user_id == self.user_id:
             new_graph._headless_filesystem_user_id = self._headless_filesystem_user_id  # noqa: SLF001
+        if self.runtime_candidate is not None:
+            self.runtime_candidate.bind(new_graph)
 
         # Store the newly created object in memo
         memo[id(self)] = new_graph
@@ -1932,6 +1936,7 @@ class Graph:
         # loadable and simply have no additional trusted storage namespace.
         state.setdefault("source_flow_id", None)
         state.setdefault("runs_stored_flow", True)
+        state.setdefault("runtime_candidate", None)
         state.setdefault("authorized_legacy_flow_ids", frozenset())
         state.setdefault("authorized_extra_file_scopes", frozenset())
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())
@@ -3517,6 +3522,8 @@ class Graph:
         subgraph.reviewed_tool_packs = self.reviewed_tool_packs
         subgraph.reviewed_harness_flows = self.reviewed_harness_flows
         subgraph.frozen_tool_flows = self.frozen_tool_flows
+        if self.runtime_candidate is not None:
+            self.runtime_candidate.bind(subgraph)
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges

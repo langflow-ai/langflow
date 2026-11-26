@@ -43,6 +43,9 @@ def _vertex_data(vertex: Vertex) -> VertexCheckpointData:
 
 
 def build_checkpoint(graph: Graph) -> GraphCheckpoint:
+    if graph.runtime_candidate is not None:
+        msg = "Durable Harness candidate checkpoints are not supported by this runtime yet."
+        raise ValueError(msg)
     run_state = graph.run_manager.to_dict()
     shared_user = getattr(graph, "_headless_filesystem_user_id", None)
     principal = getattr(graph, "execution_principal", None)

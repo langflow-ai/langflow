@@ -151,6 +151,14 @@ def test_graph_copy_and_pickle_preserve_source_flow_id():
     assert pickle.loads(pickle.dumps(graph)).source_flow_id == "source-flow"  # noqa: S301
 
 
+def test_unpickled_graph_accepts_a_new_run_id():
+    restored = pickle.loads(pickle.dumps(Graph()))  # noqa: S301
+
+    restored.set_run_id("next-run")
+
+    assert restored.runtime_candidate is None
+
+
 def test_graph_copy_and_pickle_preserve_authorized_legacy_flow_ids():
     flow_id = "non-colliding-flow-id"
     graph = Graph.from_payload(

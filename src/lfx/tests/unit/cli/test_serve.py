@@ -597,7 +597,7 @@ class TestPythonScriptServe:
             result = CliRunner().invoke(app, [str(bad)])
 
         assert result.exit_code != 0
-        assert ".json or .py" in result.output
+        assert ".json, .py, or .lfpkg" in result.output
 
 
 def test_build_registry_from_paths_no_env_fallback_stamps_graphs(tmp_path):

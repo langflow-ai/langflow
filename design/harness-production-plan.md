@@ -11,6 +11,18 @@ the Workflows API. Research producing a sourced artifact remains the proof workf
 Agent Harness, Tool Pack, Skill Pack, and the planned Eval Suite remain the product
 model; deployment artifacts and releases are lifecycle records.
 
+## Runtime artifact delivery update
+
+The first branch now implements an explicit v5 candidate writer/reader and LFX
+mount through the Workflows API. See [the implementation and verification record](harness-runtime-artifacts.md)
+for the shipped contract, reader refusal evidence, clean-process acceptance, and
+host restrictions. The assessment below is the pre-implementation baseline.
+The next branch remains `feat/harness-workflow-reliability`: retained candidate
+identity in durable Langflow jobs/checkpoints and approval/restart coverage.
+Files, memory/knowledge services, and request-only credential provisioning remain
+blocked by the initial standalone mount; their production host provisioning still
+needs verification. Existing Control Plane deployment is not candidate-aware.
+
 ## Revised gap assessment
 
 | Area | What exists | Remaining gap |
