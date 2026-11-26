@@ -70,7 +70,7 @@ _FAILURE_ESCALATION_THRESHOLD = 6
 # decision and callers (including tests) can substitute it in a single place.
 # The maintenance flag is read through the writer's own engine, which the service
 # publishes right before it sweeps.
-_retention_session_maker: "async_sessionmaker | None" = None
+_retention_session_maker: async_sessionmaker | None = None
 
 
 async def writes_paused() -> bool:
