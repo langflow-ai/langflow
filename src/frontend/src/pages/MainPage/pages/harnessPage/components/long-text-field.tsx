@@ -2,9 +2,11 @@ import { Textarea } from "@/components/ui/textarea";
 
 interface LongTextFieldProps {
   name: string;
+  label?: string;
   value: string;
   placeholder?: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -16,14 +18,18 @@ interface LongTextFieldProps {
  */
 export const LongTextField = ({
   name,
+  label,
   value,
   placeholder,
   onChange,
+  disabled,
 }: LongTextFieldProps) => (
   <Textarea
+    aria-label={label ?? name}
     data-testid={`long-text-${name}`}
     className="min-h-[220px] w-full resize-y font-normal"
     value={value}
+    disabled={disabled}
     placeholder={placeholder}
     onChange={(event) => onChange(event.target.value)}
   />
