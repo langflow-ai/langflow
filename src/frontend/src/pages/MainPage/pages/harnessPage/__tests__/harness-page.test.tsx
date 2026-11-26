@@ -6,6 +6,10 @@ import { editorDraft } from "../editor-draft";
 import HarnessPage from "../harness-page";
 
 const mockPatch = jest.fn();
+// The report workbench has its own API/reader integration suite.
+jest.mock("../components/harness-reports", () => ({
+  HarnessReports: () => null,
+}));
 const mockSuccess = jest.fn();
 const mockError = jest.fn();
 let projectTypes: ProjectTypeType[] | undefined;
