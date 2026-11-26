@@ -126,19 +126,21 @@ def test_default_and_full_profiles_are_no_torch() -> None:
     assert "lfx-bundles" in resolve_profile(load_contract(), "python-full")["required_distributions"]
 
 
-def test_every_application_artifact_rejects_retired_transitive_sdks() -> None:
+def test_every_application_artifact_rejects_forbidden_transitive_dependencies() -> None:
+    forbidden = {"accelerate", "agent-lifecycle-toolkit", "chromadb", "langchain-chroma"}
     contract = load_contract()
     for name in contract["profiles"]:
         profile = resolve_profile(contract, name)
-        assert {"chromadb", "langchain-chroma", "agent-lifecycle-toolkit"} <= set(profile["forbidden_distributions"])
+        assert forbidden <= set(profile["forbidden_distributions"]), name
     actual = {
         "managed_distributions": {"lfx": "1.13.0"},
-        "all_distributions": {"lfx": "1.13.0", "chromadb": "1.5.9"},
+        "all_distributions": {"lfx": "1.13.0", "accelerate": "1.14.0", "chromadb": "1.5.9"},
         "entry_points": {},
         "bundle_names": [],
     }
-    errors, _ = validate_inventory({"forbidden_distributions": ["chromadb"]}, actual, {}, [])
-    assert errors == ["forbidden distributions installed: ['chromadb']"]
+    profile = {"forbidden_distributions": sorted(forbidden)}
+    errors, _ = validate_inventory(profile, actual, {}, [])
+    assert errors == ["forbidden distributions installed: ['accelerate', 'chromadb']"]
 
 
 def test_full_python_profile_uses_the_reviewed_root_extra() -> None:

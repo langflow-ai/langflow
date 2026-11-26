@@ -2,8 +2,14 @@
 
 from __future__ import annotations
 
+import os
+import re
+import shlex
+import subprocess
+import sys
 from pathlib import Path
 
+import pytest
 import yaml
 
 WORKFLOWS_DIR = Path(__file__).resolve().parents[2] / ".github" / "workflows"
@@ -262,6 +268,43 @@ def test_backend_docker_build_applies_release_version_and_wheels_after_source_in
     assert "--frontend-source" not in dockerfile
     assert 'metadata.version("langflow-base")' in dockerfile[release_install:runtime_copy]
     assert 'os.environ["BASE_VERSION"]' in dockerfile[release_install:runtime_copy]
+
+
+@pytest.mark.parametrize(
+    ("dockerfile_name", "target"),
+    [
+        ("build_and_push.Dockerfile", "base"),
+        ("build_and_push.Dockerfile", "full-bundles"),
+        ("build_and_push.Dockerfile", "full"),
+        ("build_and_push_backend.Dockerfile", "runtime"),
+    ],
+)
+@pytest.mark.parametrize("installed", [False, True], ids=["absent", "installed"])
+def test_release_image_accelerate_guard(dockerfile_name: str, target: str, tmp_path: Path, *, installed: bool) -> None:
+    dockerfile = (WORKFLOWS_DIR.parents[1] / "docker" / dockerfile_name).read_text(encoding="utf-8")
+    stages = re.split(r"(?m)^FROM ", dockerfile)[1:]
+    stage = next(stage for stage in stages if stage.partition("\n")[0].endswith(f" AS {target}"))
+    guard = next(line for line in stage.splitlines() if line.startswith("RUN ") and "CVE-2026-69112" in line)
+    venv_copy = stage.index("/app/.venv /app/.venv")
+    lxml_check = stage.index("RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py")
+    assert venv_copy < stage.index(guard) < lxml_check
+    instruction, interpreter, option, code = shlex.split(guard)
+    assert (instruction, interpreter, option) == ("RUN", "/app/.venv/bin/python", "-c")
+
+    if installed:
+        metadata = tmp_path / "accelerate-1.14.0.dist-info"
+        metadata.mkdir()
+        (metadata / "METADATA").write_text("Name: accelerate\nVersion: 1.14.0\n", encoding="utf-8")
+    result = subprocess.run(  # noqa: S603 - fixed interpreter and repository-controlled guard
+        [sys.executable, "-S", option, code],
+        env={**os.environ, "PYTHONPATH": str(tmp_path)},
+        capture_output=True,
+        check=False,
+        text=True,
+        timeout=10,
+    )
+    assert result.returncode == int(installed), result.stderr
+    assert ("CVE-2026-69112" in result.stderr) == installed
 
 
 def test_release_docker_jobs_are_not_skipped_by_skipped_ancestors() -> None:

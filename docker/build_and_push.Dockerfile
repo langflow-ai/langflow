@@ -254,6 +254,7 @@ CMD ["langflow", "run"]
 FROM runtime AS base
 
 COPY --from=base-builder --chown=1000:0 /app/.venv /app/.venv
+RUN /app/.venv/bin/python -c 'from importlib.metadata import distributions; raise SystemExit("accelerate is forbidden in release images (CVE-2026-69112)" if any(distributions(name="accelerate")) else 0)'
 RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 LABEL org.opencontainers.image.title=langflow-base
 
@@ -264,6 +265,7 @@ LABEL org.opencontainers.image.title=langflow-base
 FROM runtime AS full-bundles
 
 COPY --from=full-bundles-builder --chown=1000:0 /app/.venv /app/.venv
+RUN /app/.venv/bin/python -c 'from importlib.metadata import distributions; raise SystemExit("accelerate is forbidden in release images (CVE-2026-69112)" if any(distributions(name="accelerate")) else 0)'
 RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 LABEL org.opencontainers.image.title=langflow-all
 
@@ -274,5 +276,6 @@ LABEL org.opencontainers.image.title=langflow-all
 FROM runtime AS full
 
 COPY --from=full-builder --chown=1000:0 /app/.venv /app/.venv
+RUN /app/.venv/bin/python -c 'from importlib.metadata import distributions; raise SystemExit("accelerate is forbidden in release images (CVE-2026-69112)" if any(distributions(name="accelerate")) else 0)'
 RUN /app/.venv/bin/python /tmp/verify_lxml_runtime.py && rm /tmp/verify_lxml_runtime.py
 LABEL org.opencontainers.image.title=langflow

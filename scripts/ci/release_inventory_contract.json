@@ -24,6 +24,7 @@
         "lfx"
       ],
       "forbidden_distributions": [
+        "accelerate",
         "agent-lifecycle-toolkit",
         "chromadb",
         "langchain-chroma",
