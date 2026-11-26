@@ -70,7 +70,7 @@ dev = [
     "dictdiffer>=0.9.0",
     "pytest-split>=0.9.0",
     "pytest-flakefinder>=1.1.0",
-    "packaging>=24.1,<25.0",
+    "packaging>=26.3,<27.0",
     "asgi-lifespan>=2.1.0",
     "pytest-github-actions-annotate-failures>=0.2.0",
     "blockbuster>=1.5.20,<1.6",
@@ -296,7 +296,7 @@ override-dependencies = [
     "playwright>=1.59.0",  # Latest available on PyPI; ensures updated Chromium with CVE fixes
     "authlib>=1.9.1,<2.0.0",  # Reject empty JWS signatures and empty HMAC keys.
     "PyJWT>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
-    "virtualenv>=21.14.4,<22.0.0",  # Scanner reported virtualenv 21.7.0; use the latest compatible release.
+    "virtualenv>=21.15.9,<22.0.0",  # virtualenv 21.15.9 requires packaging>=26.3.
     "Werkzeug>=3.1.9,<4.0.0",  # Scanner reported Werkzeug 3.1.8; use the latest compatible release.
     # Temporary compatibility valve: langchain-litellm 0.6.1-0.7.0 cap
     # cryptography below 49; 0.5.1 is the newest release without that cap.
