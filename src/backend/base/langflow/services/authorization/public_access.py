@@ -24,12 +24,12 @@ from lfx.services.authorization import (
 )
 from lfx.services.deps import session_scope_readonly
 from pydantic import BaseModel, Field
-from sqlmodel import select
+from sqlmodel import and_, col, or_, select
 
 from langflow.services.authorization.audit import AUDIT_ALLOW, AUDIT_DENY, audit_decision
 from langflow.services.authorization.guards import _resolve_authz_domain
 from langflow.services.database.models.auth import AuthzShare, ShareScope
-from langflow.services.database.models.flow.model import AccessTypeEnum
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_authorization_service, get_settings_service
 
@@ -37,8 +37,6 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.flow.model import Flow
 
 
 class PublicGrantSource(str, Enum):
@@ -96,13 +94,30 @@ def public_execution_user() -> UserRead:
     )
 
 
-async def _public_share_permission(session: AsyncSession, flow_id: UUID) -> str | None:
-    statement = select(AuthzShare.permission_level).where(
-        AuthzShare.resource_type == "flow",
-        AuthzShare.resource_id == flow_id,
-        AuthzShare.scope == ShareScope.PUBLIC.value,
+async def _public_grant_state(
+    session: AsyncSession, flow_id: UUID
+) -> tuple[AccessTypeEnum, bool | None, str | None] | None:
+    # Read both grant sources from the same snapshot, including for callers
+    # that carry a flow projection in a background execution worker.
+    statement = (
+        select(Flow.access_type, Flow.anonymous_access_revoked, AuthzShare.permission_level)
+        .select_from(Flow)
+        .outerjoin(
+            AuthzShare,
+            and_(
+                AuthzShare.resource_type == "flow",
+                AuthzShare.resource_id == Flow.id,
+                AuthzShare.scope == ShareScope.PUBLIC.value,
+                or_(col(Flow.revoked_public_share_id).is_(None), AuthzShare.id != Flow.revoked_public_share_id),
+            ),
+        )
+        .where(Flow.id == flow_id)
     )
-    return (await session.exec(statement)).first()
+    row = (await session.exec(statement)).first()
+    if row is None:
+        return None
+    access_type, revoked, permission = row
+    return access_type, revoked, permission
 
 
 async def _resolve_grant(
@@ -117,17 +132,22 @@ async def _resolve_grant(
 
     if session is None:
         async with session_scope_readonly() as read_session:
-            permission = await _public_share_permission(read_session, flow.id)
+            grant_state = await _public_grant_state(read_session, flow.id)
     else:
-        permission = await _public_share_permission(session, flow.id)
+        grant_state = await _public_grant_state(session, flow.id)
 
+    if grant_state is None:
+        return None
+    access_type, revoked, permission = grant_state
     if permission is not None:
         # A canonical PUBLIC share is authoritative for every anonymous action on
         # this resource. Its level bounds the grant, so a still-set legacy flag
         # cannot widen a read-only share back to execute, and the level the owner
         # chose is the level that is enforced.
         return PublicGrantSource.AUTHZ_SHARE if public_grant_allows(permission, action) else None
-    if flow.access_type is AccessTypeEnum.PUBLIC:
+    if revoked:
+        return None
+    if access_type is AccessTypeEnum.PUBLIC:
         return PublicGrantSource.LEGACY_ACCESS_TYPE
     if compatibility_grant is PublicGrantSource.A2A_AUTH_NONE:
         return PublicGrantSource.A2A_AUTH_NONE
@@ -206,10 +226,10 @@ async def authorize_public_flow_access(
     function never performs tenant discovery and never grants list visibility.
 
     A canonical PUBLIC share, when present, is the only grant consulted: its
-    permission level bounds the action and a still-set legacy flag cannot widen
-    it. With no share row, changing ``Flow.access_type``/A2A ``auth_type``
-    removes the compatibility grant. New starts and resumes call this function
-    again, while already-running work is not interrupted.
+    permission level bounds the action. Explicit unpublishing suppresses the old
+    share and both compatibility grants. A newly issued share carries its own
+    permission level. New starts and resumes call this function again, while
+    already-running work is not interrupted.
     """
     principal = AuthorizationPrincipal.public_anonymous()
     decision = await _decide(

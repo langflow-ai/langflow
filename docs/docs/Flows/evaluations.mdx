@@ -1,0 +1,130 @@
+---
+title: Evaluate flows
+slug: /evaluations
+---
+
+import Icon from "@site/src/components/icon";
+
+:::tip
+As of Langflow version 1.14.0, evaluations are enabled by default.
+To disable them, set the following environment variable in your `.env` file before starting Langflow:
+
+```bash
+LANGFLOW_FEATURE_EVALS=false
+```
+:::
+
+Evaluations run a flow against a dataset of test cases in the background and score every answer.
+Use evaluations to keep the same set of inputs and replay the set after you change a prompt or a model, and then compare the results.
+
+To instead run one prompt at a time, see [Test flows in the Playground](/concepts-playground).
+
+## Prerequisites
+
+* Evaluations enabled, which is the default.
+* Permission to run the flow.
+* A flow Langflow can evaluate.
+  The flow must have a **Chat Input** and a **Chat Output** component, and it must run to the output component without pausing for [human approval](/human-in-the-loop).
+  If the flow has more than one output component, select the output you want to evaluate in the **Output to score** field.
+* A Langflow server with a database.
+  `lfx serve` has no database, so it does not support evaluations.
+
+## Evaluate a flow
+
+An evaluation connects one flow, one dataset, and one scoring method.
+Each evaluation run sends every row of the dataset through one saved version of the flow and saves the results.
+To evaluate a flow, do the following:
+
+1. To open the **Datasets** tab, click <Icon name="FlaskConical" aria-hidden="true" /> **Evaluations**.
+
+2. To create a dataset, click **New dataset**.
+   A dataset is a list of inputs and optional expected outputs.
+3. Click **Add item**, and then enter an **Input**, such as `How do I change the email address on my account?`
+   **Expected output** is the answer you want the flow to return for that input, and is not required.
+   Optionally, click **Or start from an example** to fill the empty dataset with test data.
+
+4. To load rows from a file, click **Import CSV**.
+   If you have the **Datasets** list opened, this creates a new dataset from the file.
+   If you already have a dataset opened, clicking **Import CSV** adds the file's rows to the opened dataset.
+   The file must be UTF-8 format and must have a header row.
+
+   For CSV limits, see [Configuration](#configuration).
+
+5. To run the evaluation, from the flow canvas, click <Icon name="FlaskConical" aria-hidden="true" /> **Evaluate**.
+   Langflow saves the flow, and then opens the **Evaluate flow** pane.
+
+6. Under **Setup**, select the dataset.
+   If the flow has more than one output, select **Output to score**.
+   The step lists the first rows of the dataset and reports whether the flow can be evaluated.
+   If the flow cannot be evaluated, **Setup** names the requirement that blocks the run.
+
+7. Under **Scoring**, select one or more scoring methods, and then set **Pass when the average score reaches (threshold)**.
+   Each scoring method scores a row from 0 to 1. The row passes when the average of those scores reaches this threshold number. The default is `0.5`.
+
+   To score with an **LLM judge**, select a **Judge model**.
+   For more information, see [Configuration](#scoring).
+
+8. Under **Models**, complete any model fields that the flow didn't populate.
+
+   To compare models, click **Compare with other models**.
+   A comparison runs 2 to 8 flow versions successively, with the same flow version and the same dataset.
+   A flow version that fails does not stop the flows after it.
+
+9. Under **Review**, confirm your selections.
+   **Review** also displays an estimate of tokens and cost.
+
+   Under **Flow version**, **Latest (current saved draft)** runs the flow as it is currently saved, including auto-saved edits.
+   You can also select an earlier snapshot from the flow's [version history](/concepts-flows#save-and-restore-flow-versions).
+   Edits made after the evaluation run starts do not change that run.
+
+10. Click **Create and run** to start one run of the flow.
+   If you added model versions with **Compare with other models**, the button is **Create & compare N** instead, where **N** is the number of flow versions, which Langflow runs one after another.
+   A run that calls a model spends tokens on your account.
+
+11. To view the results, open the evaluation.
+
+## Scoring {#scoring}
+
+**Exact match** is selected by default. Each method scores a row from 0 to 1, and the row passes when the average reaches the threshold. The default is `0.5`. An errored row fails. A row that no method can score is neither passed nor failed. A method that requires an **Expected output** is left out of the average when the row has none.
+
+| Method | Score |
+| --- | --- |
+| **Exact match** | `1` if the flow's answer is the same as the **Expected output**, ignoring case and extra spaces. Otherwise scores `0`. |
+| **Contains** | `1` if the flow's answer includes the **Expected output**. Otherwise scores `0`. |
+| **Similarity** | `0` to `1`, based on how close the flow's answer is to the **Expected output**. |
+| **LLM judge** | `0` to `1` from a model, plus a one-line reason. **Rubric** is optional, and an **Expected output** is optional. This method spends tokens. |
+
+**Safety checks** fail a row when the judge flags the answer as off topic, leaking personal data, obeying hidden instructions, or breaking its rules.
+
+## Configuration {#configuration}
+
+To delete a dataset, in the **Evaluations** pane, click <Icon name="EllipsisVertical" aria-hidden="true" /> **More actions**, and then click **Delete**.
+
+Deleting a dataset keeps the copies of the input and expected output already stored on each result.
+
+Deleting a flow keeps the evaluation's results, but **Re-run** will not work, because the flow is no longer saved.
+
+Deleting an evaluation deletes its runs and results.
+Deleting a project deletes the evaluations of the flows in that project.
+A flow moved to another project keeps its evaluations.
+
+Project export does _not_ include datasets or evaluations.
+
+## Evaluation environment variables
+
+| Setting | Default | Meaning |
+| --- | --- | --- |
+| `LANGFLOW_FEATURE_EVALS` | `true` | When `false`, hides **Evaluations** and **Evaluate** and does not mount the routes. |
+| `LANGFLOW_EVALS_MAX_ITEMS` | `1000` | Most items one run executes. A larger dataset is refused. |
+| `LANGFLOW_EVALS_ROW_TIMEOUT_S` | `300` | Seconds one row (the flow plus scoring) may take before it is recorded as a timeout. |
+| `LANGFLOW_EVALS_CSV_MAX_ROWS` | `5000` | Most rows one CSV import may add. |
+| `LANGFLOW_EVALS_CSV_MAX_BYTES` | `20971520` | Largest CSV upload, in bytes (20 MB). |
+| `LANGFLOW_EVALS_ABORT_AFTER_IDENTICAL_FAILURES` | `3` | Consecutive identical row failures that stop a run. `0` never stops early. |
+| `LANGFLOW_EVALS_ROW_CONCURRENCY` | `2` | Rows of one run that execute at the same time. |
+| `LANGFLOW_EVALS_MAX_CONCURRENCY` | `4` | Rows that execute at the same time across every run in this process. |
+
+## See also
+
+* [Test flows in the Playground](/concepts-playground)
+* [Human-in-the-Loop](/human-in-the-loop)
+* [Save and restore flow versions](/concepts-flows#save-and-restore-flow-versions)

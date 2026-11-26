@@ -15,6 +15,12 @@ from sqlmodel import col, false, func, select, update
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
+from langflow.services.deletion_hooks import (
+    RESOURCE_VARIABLE,
+    DeletionContext,
+    run_post_deletion_after_commit,
+    run_pre_deletion_hooks,
+)
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import (
     CREDENTIAL_TYPE,
@@ -24,6 +30,7 @@ from langflow.services.variable.constants import (
 )
 from langflow.services.variable.runtime_policy import (
     RuntimeVariable,
+    env_import_allowed,
     guard_variable_mutation,
     resolve_runtime_variable,
     resolve_runtime_variables,
@@ -136,6 +143,9 @@ class DatabaseVariableService(VariableService, Service):
         """Import allowed environment defaults without replacing user edits or exposing OAuth storage."""
         if not self.settings_service.settings.store_environment_variables:
             await logger.adebug("Skipping environment variable storage.")
+            return
+        if not await env_import_allowed(user_id):
+            await logger.adebug("Skipping environment variable import for account %s.", user_id)
             return
         await guard_variable_mutation(session=session, user_id=user_id)
 
@@ -744,7 +754,7 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
-        await session.delete(variable)
+        await self._delete_row(session, variable)
 
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
         """Delete an owned user-variable row only after checking its reserved storage name."""
@@ -759,7 +769,21 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{variable_id} variable not found."
             raise ValueError(msg)
         _ensure_user_variable(variable.name)
+        await self._delete_row(session, variable)
+
+    @staticmethod
+    async def _delete_row(session: AsyncSession, variable: Variable) -> None:
+        """The one place a variable row is deleted: deletion hooks see it before, and after the session commits."""
+        context = DeletionContext(
+            resource=RESOURCE_VARIABLE,
+            resource_id=variable.id,
+            owner_id=variable.user_id,
+            name=variable.name,
+            session=session,
+        )
+        await run_pre_deletion_hooks(context)
         await session.delete(variable)
+        run_post_deletion_after_commit(session, context)
 
     async def create_variable(
         self,

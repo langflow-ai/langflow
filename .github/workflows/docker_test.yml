@@ -9,33 +9,66 @@ permissions:
 
 jobs:
   test-docker-first:
-    name: Test Docker images (first attempt)
+    name: Test Docker images (${{ matrix.image }})
     runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+    # An ephemeral runner can shut down mid-build. The retry job below reruns
+    # only the images that did not pass here.
     continue-on-error: true
+    strategy:
+      fail-fast: false
+      # Cap each PR at two ARM runners so concurrent PRs share the pool.
+      max-parallel: 2
+      matrix:
+        image: [full, backend, base, frontend]
+    # Each leg sets only its own key, so all four values survive the matrix.
     outputs:
-      succeeded: ${{ steps.success.outputs.succeeded }}
+      full: ${{ steps.success.outputs.full }}
+      backend: ${{ steps.success.outputs.backend }}
+      base: ${{ steps.success.outputs.base }}
+      frontend: ${{ steps.success.outputs.frontend }}
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Build and test Docker images
-        run: bash scripts/ci/test_docker_images.sh
+      - name: Build and test Docker image
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: bash scripts/ci/test_docker_images.sh "$IMAGE"
 
-      - name: Mark first attempt successful
+      - name: Mark image successful
         id: success
-        run: |
-          echo "succeeded=true" >> "$GITHUB_OUTPUT"
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: echo "$IMAGE=true" >> "$GITHUB_OUTPUT"
 
   test-docker-retry:
-    name: Test Docker images (verify or retry)
+    name: Test Docker images (retry ${{ matrix.image }})
     needs: test-docker-first
-    if: ${{ always() && !cancelled() && needs.test-docker-first.outputs.succeeded != 'true' }}
+    if: >-
+      ${{ always() && !cancelled() && (
+        needs.test-docker-first.outputs.full != 'true' ||
+        needs.test-docker-first.outputs.backend != 'true' ||
+        needs.test-docker-first.outputs.base != 'true' ||
+        needs.test-docker-first.outputs.frontend != 'true') }}
     runs-on: [self-hosted, linux, ARM64, langflow-ai-arm64-40gb-ephemeral]
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix:
+        image: [full, backend, base, frontend]
+        # Skip the images that passed on the first attempt.
+        exclude:
+          - image: ${{ needs.test-docker-first.outputs.full == 'true' && 'full' || 'none' }}
+          - image: ${{ needs.test-docker-first.outputs.backend == 'true' && 'backend' || 'none' }}
+          - image: ${{ needs.test-docker-first.outputs.base == 'true' && 'base' || 'none' }}
+          - image: ${{ needs.test-docker-first.outputs.frontend == 'true' && 'frontend' || 'none' }}
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
 
-      - name: Build and test Docker images
-        run: bash scripts/ci/test_docker_images.sh
+      - name: Build and test Docker image
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: bash scripts/ci/test_docker_images.sh "$IMAGE"

@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 from langflow.services.database.models.flow.model import AccessTypeEnum, FlowCreate
 
 if TYPE_CHECKING:
-    from langflow.services.database.models.flow.model import Flow
+    from langflow.services.database.models.flow.model import FlowRead
 
 
 class FlowFork(BaseModel):
@@ -28,7 +28,7 @@ class FlowFork(BaseModel):
     data: dict | None = Field(default=None, description="Graph for the copy; the source graph when omitted")
 
 
-def build_fork_payload(source: Flow, fork: FlowFork) -> FlowCreate:
+def build_fork_payload(source: FlowRead, fork: FlowFork) -> FlowCreate:
     """Return the FlowCreate for an inert copy of *source*.
 
     ``_new_flow`` de-duplicates the name afterwards, so a fork can always be

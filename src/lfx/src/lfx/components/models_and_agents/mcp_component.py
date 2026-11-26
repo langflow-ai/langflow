@@ -596,6 +596,12 @@ class MCPToolsComponent(ComponentWithCache):
 
                 # Merge headers from component input with server config headers
                 # Component headers take precedence over server config headers
+                #
+                # The merge goes into ``discovery_config`` only. ``server_config`` is returned
+                # for write-back to ``mcp_server.value`` (and may be that inline config itself),
+                # so merging into it would save the override into the flow and keep it there
+                # after the component header is cleared.
+                discovery_config = server_config
                 component_headers = getattr(self, "headers", None) or []
                 if component_headers:
                     # Convert list of {"key": k, "value": v} to dict
@@ -617,7 +623,7 @@ class MCPToolsComponent(ComponentWithCache):
                                     existing_dict[item["key"]] = item["value"]
                             existing_headers = existing_dict
                         merged_headers = {**existing_headers, **component_headers_dict}
-                        server_config["headers"] = merged_headers
+                        discovery_config = {**server_config, "headers": merged_headers}
                 # Get request_variables from graph context for global variable resolution
                 request_variables = None
                 end_user_id = None
@@ -634,7 +640,7 @@ class MCPToolsComponent(ComponentWithCache):
                 # request that overrides one variable still needs every other referenced
                 # variable resolved from the database.
                 db_variables: dict[str, str] | None = bound_variables
-                if bound_variables is None and config_uses_global_variables(server_config):
+                if bound_variables is None and config_uses_global_variables(discovery_config):
                     try:
                         from lfx.services.deps import get_variable_service
 
@@ -669,8 +675,8 @@ class MCPToolsComponent(ComponentWithCache):
                 await logger.adebug(
                     "MCP update_tool_list: calling update_tools server=%r mode_headers=%s",
                     server_name,
-                    sorted((server_config.get("headers") or {}).keys())
-                    if isinstance(server_config.get("headers"), dict)
+                    sorted((discovery_config.get("headers") or {}).keys())
+                    if isinstance(discovery_config.get("headers"), dict)
                     else "list-or-empty",
                 )
 
@@ -687,7 +693,7 @@ class MCPToolsComponent(ComponentWithCache):
 
                 _, tool_list, tool_cache = await update_tools(
                     server_name=server_name,
-                    server_config=server_config,
+                    server_config=discovery_config,
                     mcp_stdio_client=self.stdio_client,
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
@@ -708,8 +714,9 @@ class MCPToolsComponent(ComponentWithCache):
                     server_name,
                 )
 
-                # Cache the result only if caching is enabled
-                if use_shared_cache and not config_uses_global_variables(server_config):
+                # Cache the result only if caching is enabled. The entry keeps ``server_config``
+                # (no component header overrides) because a cache hit returns it for write-back.
+                if use_shared_cache and not config_uses_global_variables(discovery_config):
                     cache_data = {
                         "tools": tool_list,
                         "tool_names": self.tool_names,
@@ -1262,7 +1269,8 @@ class MCPToolsComponent(ComponentWithCache):
         srv, server_config = self._normalize_mcp_server_value(mcp_server)
 
         bound_variables = await self._account_bound_variables()
-        ttl = self.TOOL_TTL_SECS if bound_variables is None else 0
+        has_component_headers = bool(self._normalized_headers_for_cache())
+        ttl = self.TOOL_TTL_SECS if bound_variables is None and not has_component_headers else 0
         ttl_key = self._mcp_servers_cache_key(srv or "", server_config) if ttl > 0 else ""
 
         # TTL cache lookup + expired-entry eviction.

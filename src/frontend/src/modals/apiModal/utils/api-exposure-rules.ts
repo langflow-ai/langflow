@@ -35,6 +35,8 @@ export const CODE_EXECUTION_COMPONENT_TYPES: ReadonlySet<string> = new Set([
   "LambdaFilterComponent",
   "OpenDsStar Agent",
   "OpenDsStarAgent",
+  "Policies",
+  "PoliciesComponent",
   "Python Code Structured",
   "PythonCodeStructuredTool",
   "Python Function",
@@ -46,6 +48,8 @@ export const CODE_EXECUTION_COMPONENT_TYPES: ReadonlySet<string> = new Set([
   "PythonREPLToolComponent",
   "PythonREPLTool",
   "Smart Transform",
+  "ext:toolguard:PoliciesComponent@official",
+  "policies",
 ]);
 
 /**
