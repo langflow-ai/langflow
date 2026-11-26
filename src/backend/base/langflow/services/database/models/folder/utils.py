@@ -1,5 +1,7 @@
 from uuid import UUID
 
+from fastapi import HTTPException
+from lfx.projects import DEFAULT_PROJECT_TYPE, registered_project_types
 from sqlmodel import and_, select, update
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -9,6 +11,22 @@ from langflow.services.database.models.flow.model import Flow
 
 from .constants import DEFAULT_FOLDER_DESCRIPTION, DEFAULT_FOLDER_NAME
 from .model import Folder
+
+
+def validate_project_type(value: str | None) -> str:
+    """Return a valid project type, or raise 422.
+
+    ``None`` means the caller did not ask for a type, so it takes the default. An empty
+    string is a value the caller did ask for, and it is not a valid one.
+    """
+    if value is None:
+        return DEFAULT_PROJECT_TYPE
+    if value not in registered_project_types():
+        raise HTTPException(
+            status_code=422,
+            detail=f"Unknown project_type {value!r}. Valid types: {', '.join(registered_project_types())}.",
+        )
+    return value
 
 
 async def create_default_folder_if_it_doesnt_exist(session: AsyncSession, user_id: UUID):

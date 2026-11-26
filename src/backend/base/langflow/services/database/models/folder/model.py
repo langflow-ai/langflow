@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 
 from pydantic import field_validator
 from pydantic_core import PydanticCustomError
-from sqlalchemy import Boolean, Text, UniqueConstraint, false
+from sqlalchemy import Boolean, Text, UniqueConstraint, false, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.project_auth import ProjectAuthSettings
@@ -42,6 +42,20 @@ class FolderBase(SQLModel):
         default=None,
         sa_column=Column(JSON, nullable=True),
         description="Authentication settings for the folder/project",
+    )
+    project_type: str = Field(
+        default="flows",
+        sa_column=Column(Text, nullable=False, server_default=text("'flows'")),
+        description=(
+            "Which project type this folder is. Per row: a child folder does not inherit its "
+            "parent's type. Stored as text rather than a DB enum so registering a new project "
+            "type never needs an ALTER TYPE migration."
+        ),
+    )
+    project_config: dict | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+        description="Values for the project type's form fields. Not encrypted; must hold no secrets.",
     )
 
 
@@ -113,3 +127,7 @@ class FolderUpdate(SQLModel):
         return validate_project_name(value)
 
     auth_settings: ProjectAuthSettings | None = None
+    # FolderUpdate subclasses SQLModel, not FolderBase, so new FolderBase fields do not
+    # reach it. Adding them here is required for PATCH and for the PUT upsert body.
+    project_type: str | None = None
+    project_config: dict | None = None
