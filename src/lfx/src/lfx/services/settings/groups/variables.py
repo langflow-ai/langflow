@@ -58,6 +58,16 @@ class VariablesSettings(BaseModel):
         if isinstance(value, str):
             value = value.split(",")
 
+        # The environment source already splits on commas without trimming, so "A, B" arrives as
+        # ["A", " B"] and "" as [""]. Names are looked up verbatim in os.environ, so strip them
+        # and drop the empty entries.
+        names = []
+        for name in value:
+            stripped = name.strip() if isinstance(name, str) else name
+            if stripped != "":
+                names.append(stripped)
+        value = names
+
         result = list(set(VARIABLES_TO_GET_FROM_ENVIRONMENT + value))
 
         if info.data.get("agentic_experience", True):
