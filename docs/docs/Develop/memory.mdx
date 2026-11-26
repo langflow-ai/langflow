@@ -120,7 +120,7 @@ To fine-tune your database connection pool and timeout settings, you can set the
     - `pool_size`: The base number of connections to keep open in the connection pool. Default: 20.
     - `max_overflow`: Maximum number of connections that can be created in excess of `pool_size` if needed. Default: 30.
     - `pool_timeout`: Number of seconds to wait for a connection from the pool before timing out. Default: 30.
-    - `pool_pre_ping`: If `true`, the pool tests connections for liveness upon each checkout. Default: `true`.
+    - `pool_pre_ping`: If `true`, the pool tests connections for liveness upon each checkout (see `LANGFLOW_POOL_PRE_PING_IDLE_SECONDS` to restrict probes to idle connections). Default: `true`.
     - `pool_recycle`: Number of seconds after which a connection is automatically recycled. Default: 1800 (30 minutes).
     - `echo`: If `true`, SQL queries are logged for debugging purposes. Default: `false`.
 
@@ -132,6 +132,8 @@ To fine-tune your database connection pool and timeout settings, you can set the
 
     Don't use the deprecated environment variables `LANGFLOW_DB_POOL_SIZE` or `LANGFLOW_DB_MAX_OVERFLOW`.
     Instead, use `pool_size` and `max_overflow` in `LANGFLOW_DB_CONNECTION_SETTINGS`.
+
+* `LANGFLOW_POOL_PRE_PING_IDLE_SECONDS`: Number of seconds a pooled connection must sit idle before pre-ping probes it on checkout (applies to non-SQLite databases when `pool_pre_ping` is `true` in `LANGFLOW_DB_CONNECTION_SETTINGS`). Default: `0` (probe on every checkout). Setting a positive value (for example, `10`) skips `SELECT 1` probes on recently active connections to reduce database round trips, with the trade-off that a database restart or failover occurring within that idle window is not detected before the next query executes.
 
 * `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace for PostgreSQL advisory locks used during database migrations. If unset, Alembic uses the static lock key `11223344`, which coordinates every Langflow instance on the same PostgreSQL server. If set, Alembic hashes the namespace to derive the lock key. Set this variable to isolate different Langflow deployments that share one PostgreSQL server, and use the same value on every instance in that deployment. This setting only applies when using PostgreSQL as your database backend.
 

@@ -297,10 +297,10 @@ def _configure_idle_pre_ping(engine: AsyncEngine, idle_seconds: float) -> None:
             ping_ok = sync_engine.dialect.do_ping(dbapi_conn)
         except Exception as err:
             if sync_engine.dialect.is_disconnect(err, dbapi_conn, None):
-                raise sa.exc.DisconnectionError from err
+                raise sa.exc.InvalidatePoolError from err
             raise
         if not ping_ok:
-            raise sa.exc.DisconnectionError
+            raise sa.exc.InvalidatePoolError
 
 
 class DatabaseService(Service):
@@ -467,7 +467,7 @@ class DatabaseService(Service):
                 logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
                 kwargs.pop("poolclass", None)
 
-        idle_seconds = float(getattr(self.settings_service.settings, "pool_pre_ping_idle_seconds", 0.0) or 0.0)
+        idle_seconds = self.settings_service.settings.pool_pre_ping_idle_seconds
         use_idle_probe = (
             bool(kwargs.get("pool_pre_ping")) and idle_seconds > 0 and not self.database_url.startswith("sqlite")
         )
@@ -580,19 +580,9 @@ class DatabaseService(Service):
         Reuses the main engine's ``connect_args`` so the driver behaves identically.
         """
         kwargs: dict = {}
-        idle_seconds = float(getattr(self.settings_service.settings, "pool_pre_ping_idle_seconds", 0.0) or 0.0)
-        use_idle_probe = idle_seconds > 0 and not self.database_url.startswith("sqlite")
         if not self.database_url.startswith("sqlite"):
-            kwargs = {
-                "pool_size": 3,
-                "max_overflow": 7,
-                "pool_timeout": 5,
-                "pool_pre_ping": not use_idle_probe,
-            }
-        engine = create_async_engine(self.database_url, connect_args=self._get_connect_args(), **kwargs)
-        if use_idle_probe:
-            _configure_idle_pre_ping(engine, idle_seconds)
-        return engine
+            kwargs = {"pool_size": 3, "max_overflow": 7, "pool_timeout": 5, "pool_pre_ping": True}
+        return create_async_engine(self.database_url, connect_args=self._get_connect_args(), **kwargs)
 
     async def _heartbeat_maker(self) -> async_sessionmaker:
         """Lazily build (once) the session maker bound to the dedicated heartbeat engine."""
