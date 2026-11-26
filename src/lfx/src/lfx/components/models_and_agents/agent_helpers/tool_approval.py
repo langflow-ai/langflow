@@ -230,5 +230,8 @@ class ToolApprovalMixin:
         following ``build_vertices``); returning the partial message lets this vertex finish.
         """
         self.graph.request_pause(reason=HUMAN_INPUT_REQUIRED, data=request)
+        # The graph's terminal event can mark the message complete before the
+        # interrupt is inspected. Downstream artifact writers must see a partial run.
+        agent_message.properties.state = "partial"
         self.status = "Awaiting human approval"
         return agent_message

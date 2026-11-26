@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_serializer, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator, model_serializer
 
 
 class Source(BaseModel):
@@ -34,6 +34,16 @@ class Properties(BaseModel):
     targets: list = []
     usage: Usage | None = None
     build_duration: float | None = None
+    # Canonical final answer and captured sources, independent of the streamed
+    # conversation and retained when the completed Agent message is reloaded.
+    agent_run_result: dict | None = None
+
+    @model_serializer(mode="wrap")
+    def serialize_agent_result(self, handler):
+        data = handler(self)
+        if self.agent_run_result is None:
+            data.pop("agent_run_result", None)
+        return data
 
     @field_validator("source", mode="before")
     @classmethod
