@@ -1,0 +1,12 @@
+[
+  {
+    "url": "https://research.example.test/checkpoints",
+    "title": "Offline checkpoint fixture",
+    "text": "This synthetic test source describes a checkpoint as saved graph state. A later execution can resume from that state. A checkpoint does not reverse an external side effect."
+  },
+  {
+    "url": "https://research.example.test/approval",
+    "title": "Offline approval fixture",
+    "text": "This synthetic test source describes an approval interrupt before an action. Resuming supplies a decision to that execution. Replayed external actions need their own idempotency strategy."
+  }
+]
