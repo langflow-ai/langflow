@@ -4,6 +4,7 @@ from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
 
+from lfx.base.tools import reviewed_flows
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 from lfx.base.tools.served_flows import served_flow
 from lfx.custom import Component
@@ -83,6 +84,8 @@ class RunFlowBaseComponent(Component):
         # save the run's outputs to avoid re-executing
         # the flow if it has multiple outputs.
         self._last_run_outputs: list[Data] | None = None
+        # child output values that bypass the transport result, keyed by (vertex id, output name)
+        self._declared_outputs: dict[tuple[str, str], Any] = {}
         # save the updated_at of the user's selected flow
         self._cached_flow_updated_at: str | None = None
 
@@ -424,10 +427,13 @@ class RunFlowBaseComponent(Component):
         Returns:
             The resolved output.
         """
+        reviewed_flows.check_instruction_output(self, vertex_id, output_name)
         run_outputs = await self._get_cached_run_outputs(
             user_id=self.user_id,
             output_type="any",
         )
+        if (vertex_id, output_name) in self._declared_outputs:
+            return self._declared_outputs[vertex_id, output_name]
         if not run_outputs:
             return None
 
@@ -548,7 +554,7 @@ class RunFlowBaseComponent(Component):
     ################################################################
     # Tool mode + formatting
     ################################################################
-    def _format_flow_outputs(self, graph: Graph) -> list[Output]:
+    def _format_flow_outputs(self, graph: Graph, *, selected_output: tuple[str, str] | None = None) -> list[Output]:
         """Generate Output objects from the graph's outputs.
 
         The Output objects modify the name and method of the graph's outputs.
@@ -559,11 +565,16 @@ class RunFlowBaseComponent(Component):
 
         Args:
             graph: The graph to generate outputs for.
+            selected_output: An explicitly bound leaf output, including ordinary Prompt components.
 
         Returns:
             A list of Output objects.
         """
-        output_vertices: list[Vertex] = [v for v in graph.vertices if v.is_output]
+        if selected_output is None and (binding := reviewed_flows.instruction_binding(self)) is not None:
+            selected_output = (binding.node_id, binding.output_name)
+        output_vertices: list[Vertex] = [
+            v for v in graph.vertices if (v.id == selected_output[0] if selected_output else v.is_output)
+        ]
         outputs: list[Output] = []
         vdisp_cts = Counter(v.display_name for v in output_vertices)
         for vertex in output_vertices:
@@ -572,6 +583,8 @@ class RunFlowBaseComponent(Component):
                 continue
             one_out = len(vertex.outputs) == 1
             for vertex_output in vertex.outputs:
+                if selected_output and vertex_output["name"] != selected_output[1]:
+                    continue
                 new_name = self._get_ioput_name(vertex.id, vertex_output.get("name"))
                 output = Output(**vertex_output)
                 output.name = new_name
@@ -643,7 +656,9 @@ class RunFlowBaseComponent(Component):
                 graph.end_user_id = getattr(parent_graph, "end_user_id", None)
                 graph.persist_messages = getattr(parent_graph, "persist_messages", True)
 
-            if tweaks := self._build_flow_tweak_data():
+            tweaks = self._build_flow_tweak_data()
+            reviewed_flows.prepare_instruction_run(self, graph, tweaks=tweaks)
+            if tweaks:
                 from lfx.processing.process import process_tweaks_on_graph
 
                 # These tweaks are this component's own declared inputs, not a
@@ -667,6 +682,7 @@ class RunFlowBaseComponent(Component):
                 # would deny every connection inside a Run Flow node.
                 execution_principal=getattr(self.graph, "execution_principal", None),
             )
+            self._declared_outputs = reviewed_flows.declared_outputs(self, graph)
 
         except Exception as exc:
             from lfx.exceptions.tweaks import TweakRefusedError
@@ -684,6 +700,8 @@ class RunFlowBaseComponent(Component):
             # it into RuntimeError would hide the reason and the HTTP 400 mapping.
             if isinstance(exc, CustomComponentValidationError):
                 raise
+            if reviewed_flows.instruction_binding(self) is not None and isinstance(exc, ValueError):
+                raise
             msg = f"Error running flow: {self.flow_name_selected}"
             raise RuntimeError(msg) from None
 
@@ -694,6 +712,8 @@ class RunFlowBaseComponent(Component):
     ################################################################
     def _flow_cache_call(self, action: str, *args, **kwargs):
         """Call a flow cache related method."""
+        if reviewed_flows.instruction_binding(self) is not None:
+            return None
         if not self.cache_flow:
             msg = "Cache flow is disabled"
             logger.warning(msg)
@@ -886,6 +906,7 @@ class RunFlowBaseComponent(Component):
     def _pre_run_setup(self) -> None:  # Note: overrides the base pre_run_setup method
         """Reset the last run's outputs upon new flow execution."""
         self._last_run_outputs = None
+        self._declared_outputs = {}
         self._cached_flow_updated_at = self._get_selected_flow_updated_at()
         if self._cached_flow_updated_at:
             self._attributes["flow_name_selected_updated_at"] = self._cached_flow_updated_at

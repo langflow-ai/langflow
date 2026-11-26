@@ -10,6 +10,12 @@ from typing import TYPE_CHECKING
 from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
+from lfx.projects.bindings import (
+    FlowBinding,
+    compose_instructions,
+    reject_recursive_binding,
+    validate_instruction_binding,
+)
 from lfx.projects.tools import agent_node_ids, compose_tools
 from sqlmodel import col, select
 
@@ -134,7 +140,8 @@ async def write_project_config_to_flows(
     session: AsyncSession, project: Folder, *, previous_config: dict | None = None
 ) -> ProjectConfigWrite:
     result = ProjectConfigWrite()
-    if not project.project_config:
+    clearing_config = project.project_config is None
+    if not project.project_config and not (previous_config or {}).get("flow_bindings"):
         return result
     try:
         project_type = get_project_type(project.project_type or DEFAULT_PROJECT_TYPE)
@@ -153,9 +160,14 @@ async def write_project_config_to_flows(
             )
         ).all()
     )
-    config = deepcopy(project.project_config)
+    config = deepcopy(project.project_config or {})
+    if not project.project_config and previous_config:
+        # Clearing configuration still removes its generated Instructions connection.
+        config["agent_flow_id"] = previous_config.get("agent_flow_id")
     targets = flows
     tools = []
+    instruction_target = None
+    instruction_binding = None
     if project_type.name == "agent-harness":
         agent = select_agent_flow(flows, config)
         targets = [agent] if agent else []
@@ -163,6 +175,27 @@ async def write_project_config_to_flows(
             tools = selected_tools(flows, agent, config["tools"])
         if agent is not None:
             config["agent_flow_id"] = str(agent.id)
+        bindings = config.get("flow_bindings", {})
+        if not isinstance(bindings, dict) or set(bindings) - {"system_prompt"}:
+            raise HTTPException(422, "Only Instructions currently supports a flow binding.")
+        if "system_prompt" in bindings:
+            try:
+                instruction_binding = FlowBinding.model_validate(bindings["system_prompt"])
+                instruction_target = next(
+                    (flow for flow in flows if str(flow.id) == instruction_binding.flow_id and not flow.is_component),
+                    None,
+                )
+                if instruction_target is None or agent is None:
+                    msg = "Choose an agent and an Instructions flow in this project."
+                    raise ValueError(msg)
+                reject_recursive_binding(
+                    [{"id": str(flow.id), "name": flow.name, "data": flow.data} for flow in flows],
+                    str(instruction_target.id),
+                    str(agent.id),
+                )
+                validate_instruction_binding(instruction_target.data, instruction_binding)
+            except (ValueError, KeyError, TypeError) as exc:
+                raise HTTPException(422, f"Could not bind Instructions: {exc}") from exc
 
     applied = config.get("_applied", {})
     applied = deepcopy(applied) if isinstance(applied, dict) else {}
@@ -180,10 +213,48 @@ async def write_project_config_to_flows(
         except LockedFlowError:
             result.flows_locked += 1
             continue
-        write = apply_project_config(flow.data, project_type, config, previous_values=applied.get(flow_id))
+        values = {key: value for key, value in config.items() if key != "system_prompt" or instruction_binding is None}
+        write = apply_project_config(flow.data, project_type, values, previous_values=applied.get(flow_id))
         result.fields_skipped += write.inputs_skipped
         applied[flow_id] = write.applied_values
         data = write.data
+        if project_type.name == "agent-harness":
+            if instruction_binding is not None:
+                # Preserve the exact source definition. A later source edit must be reviewed
+                # and rebound; execution checks the revision rather than silently drifting.
+                version = (
+                    await session.exec(
+                        select(FlowVersion)
+                        .where(
+                            FlowVersion.flow_id == instruction_target.id,
+                            FlowVersion.user_id == project.user_id,
+                        )
+                        .order_by(col(FlowVersion.version_number).desc())
+                        .limit(1)
+                    )
+                ).first()
+                if version is None or version.data != instruction_target.data:
+                    version = await create_flow_version_entry(
+                        session,
+                        instruction_target.id,
+                        project.user_id,
+                        data=deepcopy(instruction_target.data),
+                        description="Harness Instructions binding",
+                    )
+                instruction_binding = instruction_binding.model_copy(update={"version_id": str(version.id)})
+                config["flow_bindings"] = {"system_prompt": instruction_binding.model_dump()}
+            try:
+                data = compose_instructions(
+                    data,
+                    project_id=str(project.id),
+                    agent_id=agent_node_ids(data)[0],
+                    target={"name": instruction_target.name, "data": instruction_target.data}
+                    if instruction_target
+                    else None,
+                    binding=instruction_binding,
+                )
+            except (ValueError, KeyError, TypeError) as exc:
+                raise HTTPException(422, f"Could not bind Instructions: {exc}") from exc
         if project_type.name == "agent-harness" and "tools" in config:
             try:
                 data = compose_tools(
@@ -213,6 +284,6 @@ async def write_project_config_to_flows(
         result.flows.append(flow)
 
     config["_applied"] = applied
-    project.project_config = config
+    project.project_config = None if clearing_config else config
     session.add(project)
     return result
