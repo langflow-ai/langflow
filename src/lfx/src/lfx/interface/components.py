@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, Any, Optional
 import orjson
 
 from lfx.constants import BASE_COMPONENTS_PATH
+from lfx.custom.class_cache import clear_component_class_cache
 from lfx.custom.utils import abuild_custom_components, create_component_template
 from lfx.extension import (
     SLOT_EXTRA,
@@ -117,6 +118,7 @@ def _post_reload_refresh_cache(record: BundleRecord) -> None:
     forward reference is fine; the hook is fired only after first cache
     build).
     """
+    clear_component_class_cache()
     refresh_bundle_cache_from_record(record)
 
 
@@ -1558,6 +1560,7 @@ async def _initialize_component_cache(
                     cache.pending_bundle_updates.clear()
                 else:
                     type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = lookups
+                    clear_component_class_cache()
                     cache.all_types_dict = merged_types
                     cache.all_types_ready = True
                     cache.type_to_current_hash = type_to_hash

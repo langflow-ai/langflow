@@ -33,7 +33,8 @@ async def _call_public_tool(
     )
 
     monkeypatch.setattr(mcp_utils, "get_flow_snake_case", AsyncMock(return_value=flow))
-    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(None))
+    session = SimpleNamespace(get=AsyncMock(return_value=SimpleNamespace(is_active=True)))
+    monkeypatch.setattr(mcp_utils, "with_db_session", lambda operation: operation(session))
     monkeypatch.setattr(mcp_utils, "prepare_public_flow_build", AsyncMock(return_value=None))
     monkeypatch.setattr(mcp_utils.get_mcp_config(), "enable_progress_notifications", False)
     monkeypatch.setattr(endpoints, "prepare_flow_build_for_user", AsyncMock(return_value=None))

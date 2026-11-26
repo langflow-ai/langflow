@@ -77,6 +77,7 @@ from langflow.api.v2.workflow_reconstruction import reconstruct_workflow_respons
 from langflow.api.v2.workflow_validation import (
     _apply_flow_data_override_policy,
     _flow_not_found_privacy_exception,
+    _reject_hitl_outside_background,
     _reject_sync_only_fields,
     _reject_unsupported_sync_fields,
     _validate_flow_data_for_execution,
@@ -99,16 +100,20 @@ from langflow.services.background_execution.service import (
 )
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import Job, JobType
+from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import (
     get_background_execution_service,
     get_job_service,
     get_memory_base_service,
     get_task_service,
+    session_scope,
 )
 from langflow.services.jobs.exceptions import DuplicateJobError
+from langflow.services.triggers.constants import PINNED_TRIGGER_CANVAS, TRIGGER_FAMILIES
 from langflow.services.warm_registry.resolver import resolve_warm_flow_for_execution
 from langflow.utils.constants import LANGFLOW_GLOBAL_VAR_HEADER_PREFIX
+from langflow.utils.flow_secrets import strip_secret_field_values
 
 # Finished states a late /stop must not rewrite (CANCELLED is handled separately
 # with its own idempotent early return).
@@ -348,6 +353,7 @@ async def run_sync_with_mapping(
 ) -> WorkflowExecutionResponse:
     """Inline sync run with the langflow timeout/validation error mapping."""
     parsed = _apply_execution_gates(parsed, flow, current_user)
+    _reject_hitl_outside_background(parsed, flow)
     job_id = uuid4()
     try:
         return await execute_sync_workflow_with_timeout(
@@ -425,6 +431,7 @@ def build_stream_response(
     before the response is constructed so a bad request fails before streaming.
     """
     parsed = _apply_execution_gates(parsed, flow, current_user)
+    _reject_hitl_outside_background(parsed, flow)
     run_id = str(uuid4())
     adapter = get_stream_adapter(
         stream_protocol,
@@ -614,8 +621,6 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     user). Legacy rows that predate the fields fall back to persist=True /
     end_user_id=None, matching prior behavior.
     """
-    from langflow.services.triggers.constants import TRIGGER_FAMILIES
-
     # Only trusted server callers can add this internal field: the public
     # WorkflowRunRequest still forbids it. Persist it so workers and resumes
     # retain a trigger's non-interactive connection policy.
@@ -626,6 +631,8 @@ def _parse_persisted_workflow_request(request: dict) -> ParsedWorkflowRun:
     persist_messages = request.get("persist_messages", True)
     end_user_id = request.get("end_user_id")
     request_fields = {k: v for k, v in request.items() if k not in internal}
+    if request.get("execution_family") in TRIGGER_FAMILIES and PINNED_TRIGGER_CANVAS in request_fields:
+        request_fields["data"] = request_fields.pop(PINNED_TRIGGER_CANVAS)
     return replace(
         parse_workflow_run_request(WorkflowRunRequest(**request_fields)),
         persist_messages=persist_messages,
@@ -650,7 +657,37 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     terminal_error_type = adapter.terminal_error_type
 
     async def _source(*, job_id=None, resume=None, **_kwargs):
-        flow = await resolve_flow_for_execution(str(flow_id), user)
+        # Durable jobs carry only a user id. Read current privileges before
+        # validating the graph so demotions also affect queued and resumed jobs.
+        async with session_scope() as session:
+            owner = await get_user_by_id(session, user.id) if user is not None else None
+            if owner is None or not owner.is_active:
+                raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
+            current_user = UserRead.model_validate(owner, from_attributes=True)
+        flow = await resolve_flow_for_execution(str(flow_id), current_user)
+        # The build treats an empty override as absent. Validate the saved canvas
+        # in the same case so graph construction cannot pick a different revision.
+        validation_input = replace(parsed, data=None) if resume is None and parsed.data == {} else parsed
+        bound_trigger = request.get("execution_family") in TRIGGER_FAMILIES and current_user.id != flow.user_id
+        if bound_trigger:
+            # The dispatcher submits directly, outside the authenticated run route.
+            await authorize_flow_action(current_user, flow, WorkflowAction.EXECUTE)
+            # The dispatcher selected the snapshot and supplied the event. Check
+            # component policy against that snapshot using the job owner's privileges.
+            if validation_input.data is not None:
+                flow = flow.model_copy(update={"data": validation_input.data})
+            validation_input = replace(validation_input, data=strip_secret_field_values(flow.data), tweaks={})
+        if resume is None and validation_input.data is None and not flow.data:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Flow has no saved graph data.")
+        execution_parsed = _validate_flow_data_for_execution(
+            validation_input, flow, current_user, expose_error_details=caller_owns_flow(flow, current_user)
+        )
+        if bound_trigger:
+            execution_parsed = replace(execution_parsed, tweaks=parsed.tweaks)
+        if parsed.component_substitution_warning and not execution_parsed.component_substitution_warning:
+            execution_parsed = replace(
+                execution_parsed, component_substitution_warning=parsed.component_substitution_warning
+            )
         fresh_background_tasks = BackgroundTasks()
         errored = False
         try:
@@ -659,11 +696,11 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 flow_id=flow.id,
                 flow_name=flow.name,
                 background_tasks=fresh_background_tasks,
-                parsed=parsed,
-                current_user=user,
+                parsed=execution_parsed,
+                current_user=current_user,
                 provider_policy_flow=flow,
                 source_flow_owner_id=flow.user_id,
-                expose_error_details=caller_owns_flow(flow, user),
+                expose_error_details=caller_owns_flow(flow, current_user),
                 job_id=job_id,
                 resume=resume,
                 # Key the persisted vertex builds by the durable job_id so a completed run's GET
@@ -1253,7 +1290,12 @@ async def resume_workflow(
     if not _caller_owns_job_end_user(job, http_request, current_user):
         raise _not_found()
 
-    from langflow.api.v2.hitl import ensure_resume_execute_permission, is_decision_allowed, mark_card_answered
+    from langflow.api.v2.hitl import (
+        ensure_resume_execute_permission,
+        is_decision_allowed,
+        mark_card_answered,
+        record_resume_decision,
+    )
 
     await ensure_resume_execute_permission(current_user, job.flow_id)
 
@@ -1301,6 +1343,13 @@ async def resume_workflow(
                 "job_id": job_id,
             },
         )
+    await record_resume_decision(
+        parsed_job_id,
+        request_id=request.request_id,
+        decision=request.decision or {},
+        user_id=current_user.id,
+        end_user_id=resolve_serving_end_user_id(http_request=http_request),
+    )
     await mark_card_answered(parsed_job_id, request.request_id, request.decision or {}, card_message_id=card_message_id)
     return WorkflowResumeResponse(job_id=job_id, status="resuming", message="Resume accepted")
 

@@ -689,6 +689,51 @@ async def _default_superuser():
 
 
 @pytest.mark.asyncio
+async def test_bootstrap_keeps_default_retirement_when_admission_recovers_a_superuser(services_on, monkeypatch):  # noqa: ARG001
+    from langflow.services import utils
+    from langflow.services.creation_hooks import PreCreationDenied
+    from langflow.services.database.models.user import crud
+
+    await _default_superuser_owning_work()
+    settings = get_settings_service()
+    settings.auth_settings.SUPERUSER = "ADMIN"
+    settings.auth_settings.SUPERUSER_PASSWORD = SecretStr(token_urlsafe(24))
+    lookup = crud.get_user_by_username_case_insensitive
+
+    async def lookup_before_creation(session, username):
+        if username == "ADMIN":
+            return None
+        return await lookup(session, username)
+
+    lock = AsyncMock(wraps=utils.acquire_identity_mutation_lock)
+    retire_calls = 0
+
+    async def retire(settings_service, session):
+        nonlocal retire_calls
+        retire_calls += 1
+        assert lock.await_count == retire_calls
+        await teardown_superuser(settings_service, session)
+
+    monkeypatch.setattr(crud, "get_user_by_username_case_insensitive", lookup_before_creation)
+    monkeypatch.setattr(utils, "acquire_identity_mutation_lock", lock)
+    monkeypatch.setattr(utils, "teardown_superuser", retire)
+    monkeypatch.setattr(
+        "langflow.services.auth.service.admit_user_creation",
+        AsyncMock(side_effect=PreCreationDenied("User limit reached")),
+    )
+
+    async with session_scope() as session:
+        assert await setup_superuser(settings, session) == SetupSuperuserResult.SUPERUSER_CREATED
+
+    retired = await _default_superuser()
+    assert retired is not None
+    assert retired.is_active is False
+    assert retired.retired_at is not None
+    assert retire_calls == 2
+    assert settings.auth_settings.SUPERUSER == "admin"
+
+
+@pytest.mark.asyncio
 @pytest.mark.timeout(60)
 async def test_default_superuser_that_owns_work_is_kept_and_locked(services_on):  # noqa: ARG001
     """Another superuser is configured, so the old account keeps its data and loses its default password."""
@@ -928,6 +973,86 @@ async def test_configured_default_superuser_is_claimed_with_its_data(services_on
     assert verify_password("claimed-password", kept.password)
     assert await _work_owned_by(user_id) == (1, 1, 1)
     assert kept.is_active is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.timeout(60)
+@pytest.mark.parametrize("initial_state", ["active", "inactive", "already_retired", "signed_in"])
+async def test_setup_retires_default_again_after_recovered_creator_rollback(services_on, monkeypatch, initial_state):  # noqa: ARG001
+    """A creator recovery rollback must not discard retirement or existing teardown guards."""
+    settings = get_settings_service()
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER", "configured-admin")
+    monkeypatch.setattr(settings.auth_settings, "SUPERUSER_PASSWORD", SecretStr("configured-password"))
+
+    default_id = await _default_superuser_owning_work()
+    if initial_state == "inactive":
+        async with session_scope() as session:
+            default_user = await session.get(User, default_id)
+            default_user.is_active = False
+            session.add(default_user)
+    elif initial_state == "already_retired":
+        async with session_scope() as session:
+            await teardown_superuser(settings, session)
+    elif initial_state == "signed_in":
+        async with session_scope() as session:
+            default_user = await session.get(User, default_id)
+            default_user.last_login_at = datetime.now(timezone.utc)
+            session.add(default_user)
+
+    async with session_scope() as session:
+        winner = User(
+            username="configured-admin",
+            password=get_auth_service().get_password_hash("winner-password"),
+            is_superuser=True,
+            is_active=True,
+        )
+        session.add(winner)
+        await session.commit()
+        winner_id = winner.id
+
+    async def recover_after_rollback(*, session, **_kwargs):
+        await session.rollback()
+        events.append("recovered")
+        return await session.get(User, winner_id)
+
+    from langflow.services import utils
+
+    events = []
+    real_lock = utils.acquire_identity_mutation_lock
+    real_lookup = utils._get_superuser_by_username
+    real_teardown = utils.teardown_superuser
+
+    async def record_lock(*args, **kwargs):
+        events.append("lock")
+        return await real_lock(*args, **kwargs)
+
+    async def record_lookup(*args, **kwargs):
+        events.append("lookup")
+        return await real_lookup(*args, **kwargs)
+
+    async def record_teardown(*args, **kwargs):
+        events.append("teardown")
+        return await real_teardown(*args, **kwargs)
+
+    monkeypatch.setattr("langflow.services.utils.get_or_create_super_user", recover_after_rollback)
+    monkeypatch.setattr(utils, "acquire_identity_mutation_lock", record_lock)
+    monkeypatch.setattr(utils, "_get_superuser_by_username", record_lookup)
+    monkeypatch.setattr(utils, "teardown_superuser", record_teardown)
+
+    async with session_scope() as session:
+        assert await setup_superuser(settings, session) == SetupSuperuserResult.SUPERUSER_CREATED
+
+    retired = await _default_superuser()
+    assert retired is not None
+    assert retired.id == default_id
+    if initial_state != "signed_in":
+        assert retired.is_active is False
+        assert retired.retired_at is not None
+    else:
+        assert retired.is_active is True
+        assert retired.retired_at is None
+    recovery_index = events.index("recovered")
+    assert events[recovery_index + 1 :] == ["lock", "teardown", "lookup"]
 
 
 @pytest.mark.asyncio

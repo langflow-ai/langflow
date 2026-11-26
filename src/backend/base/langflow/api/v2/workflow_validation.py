@@ -8,10 +8,13 @@ route handlers can surface a structured error without running the graph.
 
 from __future__ import annotations
 
+import contextlib
+from copy import deepcopy
 from dataclasses import replace
 
 from fastapi import HTTPException, status
 from lfx.log.logger import logger
+from lfx.processing import process
 from lfx.utils.flow_validation import (
     CatalogPolicyIdentityUnavailableError,
     CustomComponentValidationError,
@@ -21,6 +24,7 @@ from lfx.utils.flow_validation import (
 from lfx.workflow.converters import ParsedWorkflowRun
 
 from langflow.api.utils.execution_errors import caller_owns_flow, error_for_client
+from langflow.api.v1.run_validation import flow_requires_hitl
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.flow_data_override import flow_data_override_allowed
 from langflow.services.database.models.flow.model import AccessTypeEnum, FlowRead
@@ -90,6 +94,39 @@ def _reject_sync_only_fields(parsed: ParsedWorkflowRun) -> None:
             "message": f"mode='{parsed.mode}' does not support request fields: {fields}. "
             "These apply to mode='sync' only.",
             "fields": sync_only,
+        },
+    )
+
+
+HITL_REQUIRES_BACKGROUND_MESSAGE = (
+    "This flow uses Human-in-the-Loop (a Human Input node or a tool that requires approval), which "
+    "mode='sync' and mode='stream' cannot execute because they cannot pause and resume. Run it with "
+    "mode='background', then resume via POST /api/v2/workflows/{job_id}/resume."
+)
+
+
+def _reject_hitl_outside_background(parsed: ParsedWorkflowRun, flow: FlowRead) -> None:
+    """Refuse a sync/stream run of a flow that pauses for a human decision.
+
+    Only background runs have a durable job to suspend into. Without one the pause
+    seam stays disarmed and every branch after the Human Input runs on an empty value.
+    """
+    graph_data = parsed.data if parsed.data is not None else getattr(flow, "data", None)
+    if parsed.tweaks and graph_data:
+        # The run applies tweaks before building, so a tweak can add an approval gate.
+        # A refused tweak raises TweakRefusedError here, as it would at run time; a graph
+        # process_tweaks cannot read is left for the run's own validation to report.
+        with contextlib.suppress(TypeError, ValueError):
+            graph_data = process.process_tweaks(deepcopy(graph_data), parsed.tweaks, stream=False)
+    if not flow_requires_hitl(graph_data or {}):
+        return
+    raise HTTPException(
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail={
+            "error": "Human-in-the-Loop requires background mode",
+            "code": "HITL_REQUIRES_BACKGROUND",
+            "message": HITL_REQUIRES_BACKGROUND_MESSAGE,
+            "flow_id": parsed.flow_id,
         },
     )
 

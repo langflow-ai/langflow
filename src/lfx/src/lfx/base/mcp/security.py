@@ -227,6 +227,8 @@ DANGEROUS_ENV_VAR_PREFIXES = (
     "rustup_",
     "deno_",
     "gem_",
+    # The Docker client reads its daemon, context, and TLS configuration from this family.
+    "docker_",
     # -- Interpreter option / module-path injection --
     "python",
     "node_",

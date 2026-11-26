@@ -268,6 +268,94 @@ async def test_should_reject_with_413_when_uploaded_file_is_oversize(
     assert save_file_spy == [], f"An oversize upload must not reach storage, but these were saved: {save_file_spy}"
 
 
+@pytest.fixture
+def langflow_local_storage(files_client):  # noqa: ARG001
+    """Use the Langflow local storage service, as the upload-race test does."""
+    from langflow.services.deps import get_session_service, get_settings_service
+    from langflow.services.storage.local import LocalStorageService
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    services = get_service_manager().services
+    usual = services[ServiceType.STORAGE_SERVICE]
+    services[ServiceType.STORAGE_SERVICE] = LocalStorageService(get_session_service(), get_settings_service())
+    yield
+    services[ServiceType.STORAGE_SERVICE] = usual
+
+
+@pytest.fixture
+def post_creation_registry():
+    from langflow.services import creation_hooks
+
+    saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+    yield creation_hooks
+    for resource, hooks in saved.items():
+        creation_hooks._post_creation_hooks[resource][:] = hooks
+
+
+async def test_upload_runs_post_creation_hooks_once_for_a_new_tracked_file(
+    files_client,
+    files_created_api_key,
+    post_creation_registry,
+    langflow_local_storage,  # noqa: ARG001
+):
+    from langflow.services.database.models.file.model import File as UserFile
+
+    seen = []
+
+    async def hook(context):
+        # The hook gets no session: the row has to be durable already.
+        async with session_scope() as session:
+            seen.append((context, await session.get(UserFile, context.resource_id)))
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_FILE, hook)
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    response = await files_client.post("api/v2/files", files={"file": ("hooked.txt", b"abc")}, headers=headers)
+    # An append to the file that now exists, and an ephemeral upload, create no row to hook.
+    appended = await files_client.post(
+        "api/v2/files", params={"append": True}, files={"file": ("hooked.txt", b"def")}, headers=headers
+    )
+    ephemeral = await files_client.post(
+        "api/v2/files", params={"ephemeral": True}, files={"file": ("gone.txt", b"x")}, headers=headers
+    )
+
+    assert response.status_code == 201, response.text
+    assert appended.status_code == 201, appended.text
+    assert ephemeral.status_code == 201, ephemeral.text
+    assert len(seen) == 1
+    context, row = seen[0]
+    assert row is not None
+    assert (context.resource, str(context.resource_id), context.owner_id) == (
+        "file",
+        response.json()["id"],
+        files_created_api_key.user_id,
+    )
+    assert context.name == response.json()["name"]
+
+
+async def test_an_upload_keeps_its_file_when_a_hook_fails_the_request(
+    files_client,
+    files_created_api_key,
+    post_creation_registry,
+    langflow_local_storage,  # noqa: ARG001
+):
+    from fastapi import HTTPException
+
+    async def hook(_context):
+        raise HTTPException(status_code=500, detail="follow-up failed")
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_FILE, hook)
+    headers = {"x-api-key": files_created_api_key.api_key}
+
+    failed = await files_client.post("api/v2/files", files={"file": ("kept.txt", b"abc")}, headers=headers)
+    listed = await files_client.get("api/v2/files", headers=headers)
+
+    assert failed.status_code == 500
+    assert failed.json()["detail"] == "follow-up failed"
+    assert "kept" in [item["name"] for item in listed.json()]
+
+
 async def test_an_upload_that_loses_its_name_gets_409_and_leaves_the_winners_file(files_client, files_created_api_key):
     """Before: both picked the name before either row existed, and the loser's cleanup deleted the file.
 
@@ -468,6 +556,101 @@ async def test_delete_file(files_client, files_created_api_key):
     response = await files_client.delete(f"api/v2/files/{upload_response['id']}", headers=headers)
     assert response.status_code == 200
     assert response.json() == {"detail": "File test deleted successfully"}
+
+
+async def _seed_file(user_id, name):
+    """A tracked file row (no bytes in storage: a missing object is a permanent failure and the row still goes)."""
+    from langflow.services.database.models.file.model import File as UserFile
+
+    async with session_scope() as session:
+        row = UserFile(user_id=user_id, name=name, path=f"{user_id}/{name}.txt", size=7)
+        session.add(row)
+        await session.commit()
+        return str(row.id)
+
+
+async def test_delete_file_runs_the_deletion_hooks(
+    deletion_registry, files_client, files_created_api_key, files_active_user
+):
+    headers = {"x-api-key": files_created_api_key.api_key}
+    file_id = await _seed_file(files_active_user.id, "hooked")
+    seen = []
+
+    async def pre(context):
+        seen.append(("pre", context))
+
+    async def post(context):
+        seen.append(("post", context))
+
+    deletion_registry.register_pre_deletion_hook("file", pre)
+    deletion_registry.register_post_deletion_hook("file", post)
+    response = await files_client.delete(f"api/v2/files/{file_id}", headers=headers)
+    assert response.status_code == 200
+    await deletion_registry.wait_for_post_deletion_runs()
+
+    assert [phase for phase, _ in seen] == ["pre", "post"]
+    for _, context in seen:
+        assert context.resource == "file"
+        assert str(context.resource_id) == file_id
+        assert context.name == "hooked"
+        assert context.owner_id == files_active_user.id
+
+
+async def test_a_pre_deletion_refusal_touches_neither_the_row_nor_the_storage(
+    deletion_registry, files_client, files_created_api_key, files_active_user
+):
+    from unittest.mock import patch
+
+    from fastapi import HTTPException
+    from langflow.services.storage.local import LocalStorageService
+
+    headers = {"x-api-key": files_created_api_key.api_key}
+    file_id = await _seed_file(files_active_user.id, "refused")
+    post_ran = []
+
+    async def refuse(_context):
+        raise HTTPException(status_code=409, detail="in use")
+
+    async def post(context):
+        post_ran.append(context)
+
+    deletion_registry.register_pre_deletion_hook("file", refuse)
+    deletion_registry.register_post_deletion_hook("file", post)
+    with patch.object(LocalStorageService, "delete_file", new=AsyncMock()) as storage_delete:
+        single = await files_client.delete(f"api/v2/files/{file_id}", headers=headers)
+        batch = await files_client.request("DELETE", "api/v2/files/batch/", json=[file_id], headers=headers)
+        everything = await files_client.delete("api/v2/files", headers=headers)
+    await deletion_registry.wait_for_post_deletion_runs()
+
+    assert (single.status_code, batch.status_code, everything.status_code) == (409, 409, 409)
+    storage_delete.assert_not_awaited()
+    listed = (await files_client.get("api/v2/files", headers=headers)).json()
+    assert file_id in [item["id"] for item in listed]
+    assert post_ran == []
+
+
+async def test_batch_and_delete_all_run_the_post_deletion_hooks_for_every_file(
+    deletion_registry, files_client, files_created_api_key, files_active_user
+):
+    headers = {"x-api-key": files_created_api_key.api_key}
+    first = await _seed_file(files_active_user.id, "one")
+    second = await _seed_file(files_active_user.id, "two")
+    third = await _seed_file(files_active_user.id, "three")
+    seen = []
+
+    async def post(context):
+        seen.append(str(context.resource_id))
+
+    deletion_registry.register_post_deletion_hook("file", post)
+    response = await files_client.request("DELETE", "api/v2/files/batch/", json=[first, second], headers=headers)
+    assert response.status_code == 200
+    await deletion_registry.wait_for_post_deletion_runs()
+    assert sorted(seen) == sorted([first, second])
+
+    seen.clear()
+    assert (await files_client.delete("api/v2/files", headers=headers)).status_code == 200
+    await deletion_registry.wait_for_post_deletion_runs()
+    assert seen == [third]
 
 
 async def test_edit_file(files_client, files_created_api_key):
@@ -1440,6 +1623,11 @@ class TestS3FileOperations:
 
 class TestStorageFailureHandling:
     """Test permanent vs transient storage failure handling in delete operations."""
+
+    @pytest.fixture(autouse=True)
+    def _no_post_deletion_listener(self, monkeypatch):
+        """These tests drive the routes with a mocked session, which has no commit to listen to."""
+        monkeypatch.setattr("langflow.api.v2.files.run_post_deletion_after_commit", MagicMock())
 
     def test_is_permanent_storage_failure_file_not_found_error(self):
         """Test that FileNotFoundError is recognized as permanent failure."""

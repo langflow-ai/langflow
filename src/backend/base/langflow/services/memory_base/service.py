@@ -42,6 +42,13 @@ from langflow.services.database.models.memory_base.model import (
     MessageIngestionRecord,
 )
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.deletion_hooks import (
+    RESOURCE_MEMORY_BASE,
+    VIA_CASCADE,
+    DeletionContext,
+    run_post_deletion_hooks,
+    run_pre_deletion_hooks,
+)
 from langflow.services.deps import session_scope
 from langflow.services.memory_base.embedding_helpers import infer_embedding_provider, infer_llm_provider
 from langflow.services.memory_base.ingestion import (
@@ -401,7 +408,7 @@ class MemoryBaseService(Service):
         from langflow.api.utils import knowledge_base_service
 
         try:
-            await knowledge_base_service.delete_record(kb_record_id)
+            await knowledge_base_service.discard_provisioned_record(kb_record_id)
         except Exception as exc:  # noqa: BLE001 — rollback is best-effort
             await logger.awarning("Create rollback: knowledge_base row cleanup failed for kb_name=%s: %s", kb_name, exc)
             return
@@ -507,8 +514,9 @@ class MemoryBaseService(Service):
 
     async def delete(self, memory_base_id: uuid.UUID, user_id: uuid.UUID) -> bool:
         """Keep the Memory identity and history until storage deletion succeeds."""
-        from sqlalchemy import and_
+        from sqlalchemy import and_, false, update
 
+        from langflow.api.utils.knowledge_base_service import prepare_record_deletion
         from langflow.services.database.models.knowledge_base import KnowledgeBaseRecord
         from langflow.services.knowledge_base_storage.runtime import delete_storage_for_record
 
@@ -531,6 +539,19 @@ class MemoryBaseService(Service):
             mb, kb_record = identity
             kb_name = mb.kb_name
             kb_record_id = kb_record.id if kb_record is not None else None
+            context = DeletionContext(
+                resource=RESOURCE_MEMORY_BASE,
+                resource_id=memory_base_id,
+                owner_id=user_id,
+                name=mb.name,
+                session=db,
+                extra={"flow_id": mb.flow_id},
+            )
+            # Before anything is cancelled or removed: a refusal leaves both resources whole.
+            await run_pre_deletion_hooks(context)
+            kb_context = (
+                await prepare_record_deletion(kb_record, via=VIA_CASCADE, session=db) if kb_record is not None else None
+            )
             kb_username = await resolve_kb_username(db, user_id)
             await cancel_active_jobs(memory_base_id=memory_base_id, db=db)
             # Commit job cancellation without removing the retryable identity.
@@ -542,16 +563,32 @@ class MemoryBaseService(Service):
             await delete_storage_for_record(kb_record)
 
         async with session_scope() as db:
-            mb = await db.get(MemoryBase, memory_base_id)
+            # SQLite does not support FOR UPDATE. Serialize the final read and
+            # delete so only the caller that removes a row emits its post hook.
+            if db.get_bind().dialect.name == "sqlite":
+                await db.exec(update(MemoryBase).where(false()).values(id=MemoryBase.id))
+            mb = await db.get(MemoryBase, memory_base_id, with_for_update=True)
             # Names may have been reused by a concurrent delete/create. Only
             # remove the immutable identity captured with this Memory Base.
-            kb = await db.get(KnowledgeBaseRecord, kb_record_id) if kb_record_id is not None else None
+            kb = (
+                await db.get(KnowledgeBaseRecord, kb_record_id, with_for_update=True)
+                if kb_record_id is not None
+                else None
+            )
             if mb is not None:
                 await db.delete(mb)
             if kb is not None:
                 await db.delete(kb)
             await db.commit()
-        await delete_kb(kb_name=kb_name, kb_username=kb_username)
+        if mb is not None:
+            await delete_kb(kb_name=kb_name, kb_username=kb_username)
+            try:
+                await run_post_deletion_hooks(context)
+            finally:
+                if kb is not None and kb_context is not None:
+                    await run_post_deletion_hooks(kb_context)
+        elif kb is not None and kb_context is not None:
+            await run_post_deletion_hooks(kb_context)
         return True
 
     # ------------------------------------------------------------------ #

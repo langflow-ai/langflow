@@ -10,6 +10,7 @@ from lfx.events.event_manager import (
     EventManager,
     create_default_event_manager,
     create_stream_tokens_event_manager,
+    emit_token,
 )
 
 
@@ -347,6 +348,24 @@ class TestEventManagerFactories:
 @pytest.mark.asyncio
 class TestEventManagerAsync:
     """Test async functionality related to EventManager."""
+
+    async def test_background_token_from_a_worker_loop_uses_the_queue_owner(self):
+        queue = asyncio.Queue(maxsize=1)
+        manager = create_default_event_manager(queue, await_token_capacity=True)
+        await emit_token(manager.on_token, data={"chunk": "first"})
+        owner = asyncio.get_running_loop()
+        started = asyncio.Event()
+
+        async def send_from_worker():
+            owner.call_soon_threadsafe(started.set)
+            await emit_token(manager.on_token, data={"chunk": "second"})
+
+        worker = asyncio.create_task(asyncio.to_thread(asyncio.run, send_from_worker()))
+        await asyncio.wait_for(started.wait(), timeout=2)
+        assert not worker.done()
+        assert json.loads((await queue.get())[1])["data"] == {"chunk": "first"}
+        await asyncio.wait_for(worker, timeout=2)
+        assert json.loads((await queue.get())[1])["data"] == {"chunk": "second"}
 
     @pytest.mark.asyncio
     async def test_event_manager_with_asyncio_queue(self):
