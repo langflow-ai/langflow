@@ -1,4 +1,5 @@
 # Add helper functions for each event type
+import json
 from collections.abc import AsyncIterator, Awaitable, Callable
 from time import perf_counter
 from typing import Any, Protocol
@@ -7,7 +8,7 @@ from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
 
 from lfx.events.event_manager import emit_token
-from lfx.schema.content_types import TextContent, ToolContent
+from lfx.schema.content_types import ContentBlock, TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
 
@@ -543,7 +544,26 @@ async def process_agent_events(
         start_time = perf_counter()
 
         async for event in agent_executor:
-            if event["event"] in TOOL_EVENT_HANDLERS:
+            if event["event"] == "on_custom_event" and event.get("name") == "harness_runtime":
+                evidence = event.get("data") or {}
+                kind = evidence.get("kind")
+                title = {
+                    "context_prepared": "Context prepared",
+                    "compacted": "Conversation compacted",
+                    "permission_decision": "Tool permission decided",
+                }.get(kind)
+                if title:
+                    if agent_message.content_blocks is None:
+                        agent_message.content_blocks = []
+                    agent_message.content_blocks.append(
+                        ContentBlock(
+                            title=title,
+                            header={"title": title, "icon": "Layers"},
+                            contents=[TextContent(text=json.dumps(evidence, ensure_ascii=False, indent=2))],
+                        )
+                    )
+                    agent_message = await publish(message=agent_message, skip_db_update=True)
+            elif event["event"] in TOOL_EVENT_HANDLERS:
                 tool_handler = TOOL_EVENT_HANDLERS[event["event"]]
                 tool_key = f"{event.get('name', '')}_{event.get('run_id', '')}"
                 # Use skip_db_update=True during streaming to avoid DB round-trips

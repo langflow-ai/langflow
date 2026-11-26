@@ -16,6 +16,14 @@ def _node(node_id: str, node_type: str, template: dict | None = None) -> dict:
 
 
 class TestFlowRequiresHitl:
+    def test_harness_ask_policy_requires_a_resumable_endpoint(self):
+        data = {"nodes": [_node("agent", "Agent", {"tool_policy": {"value": "ask"}})], "edges": []}
+        assert flow_requires_hitl(data) is True
+
+    def test_harness_deny_policy_does_not_itself_need_a_pause(self):
+        data = {"nodes": [_node("agent", "Agent", {"tool_policy": {"value": "deny"}})], "edges": []}
+        assert flow_requires_hitl(data) is False
+
     def test_connected_human_input_requires_hitl(self):
         data = {
             "nodes": [_node("hi", "HumanInput")],
