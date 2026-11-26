@@ -92,7 +92,7 @@ jobs:
         env:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
         run: |
-          uv run pytest -c pyproject.toml src/backend/tests/unit/services/jobs/test_jobs_dedupe_concurrency.py -x -v
+          uv run pytest -c pyproject.toml src/backend/tests/unit/services/jobs/test_jobs_dedupe_concurrency.py src/backend/tests/unit/services/database/test_independent_update.py -x -v
 
       # Unit-test jobs have no database URI, so they run only the SQLite arm of
       # backend-parametrized migration tests. Partial unique indexes are written

@@ -24,7 +24,6 @@ from sqlalchemy.exc import DataError, DBAPIError, IntegrityError, OperationalErr
 from sqlmodel import col, func, select
 
 from langflow.services.base import Service
-from langflow.services.database.autocommit import execute_independent_update
 from langflow.services.database.models.jobs.crud import (
     get_latest_jobs_by_asset_ids,
     update_job_status,
@@ -521,9 +520,13 @@ class JobService(Service):
         conditions = [Job.job_id == job_id, col(Job.status).in_((JobStatus.QUEUED, JobStatus.IN_PROGRESS))]
         if owner is not None:
             conditions.append(or_(owner_expr.is_(None), owner_expr == owner))
-        # The status and owner predicates are checked by the same atomic UPDATE.
-        # This write has no other statements whose failure must roll it back.
-        return await execute_independent_update(update(Job).where(*conditions).values(**{field: value})) == 1
+        async with session_scope() as session:
+            if session.get_bind().dialect.name == "postgresql":
+                # This fresh scope owns exactly one atomic, guarded write. Keep
+                # session_scope's database binding and pooled connection cleanup.
+                await session.connection(execution_options={"isolation_level": "AUTOCOMMIT"})
+            result = await session.exec(update(Job).where(*conditions).values(**{field: value}))
+            return result.rowcount == 1
 
     async def save_checkpoint(self, job_id: UUID, kind: str, blob: str) -> None:
         """Upsert the durable checkpoint blob for ``(job_id, kind)``.

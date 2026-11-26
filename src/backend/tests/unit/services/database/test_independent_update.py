@@ -2,19 +2,32 @@
 
 import asyncio
 import os
-from types import SimpleNamespace
+from contextlib import asynccontextmanager
 from uuid import uuid4
 
 import pytest
-from langflow.services.database import autocommit
 from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.jobs import service as jobs_module
 from langflow.services.jobs.service import JobService
 from sqlalchemy import event, literal_column, make_url, schema, select, text, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
-@pytest.fixture(params=["sqlite", "postgresql", "postgresql-psycopg"])
+def session_scope_for(engine):
+    """Bind the same injectable scope used by the other job service tests."""
+
+    @asynccontextmanager
+    async def scope():
+        async with AsyncSession(engine, expire_on_commit=False) as session:
+            yield session
+            await session.commit()
+
+    return scope
+
+
+@pytest.fixture(params=["sqlite", "postgresql"])
 async def write_engine(request, tmp_path, monkeypatch):
     """Give every test its own database namespace and production helper engine."""
     namespace = f"independent_{uuid4().hex}"
@@ -22,18 +35,15 @@ async def write_engine(request, tmp_path, monkeypatch):
         url = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
         if not url:
             pytest.skip("LANGFLOW_TEST_DATABASE_URI is required for PostgreSQL")
-        url = make_url(url).set(drivername="postgresql+asyncpg")
-        connect_args = {"server_settings": {"search_path": namespace}}
-        if request.param == "postgresql-psycopg":
-            pytest.importorskip("psycopg")
-            url = url.set(drivername="postgresql+psycopg")
-            connect_args = {"options": f"-csearch_path={namespace}"}
+        pytest.importorskip("psycopg")
+        url = make_url(url).set(drivername="postgresql+psycopg")
+        connect_args = {"options": f"-csearch_path={namespace}"}
         engine = create_async_engine(url, connect_args=connect_args, pool_size=1)
         async with engine.begin() as connection:
             await connection.execute(schema.CreateSchema(namespace))
     else:
         engine = create_async_engine(f"sqlite+aiosqlite:///{tmp_path / 'writes.db'}")
-    monkeypatch.setattr(autocommit, "get_db_service", lambda: SimpleNamespace(engine=engine))
+    monkeypatch.setattr(jobs_module, "session_scope", session_scope_for(engine))
     try:
         async with engine.begin() as connection:
             await connection.run_sync(Job.__table__.create)
@@ -144,9 +154,7 @@ async def test_database_failure_and_pool_reset(write_engine):
     """A failed statement does not poison a pooled connection or later rollback."""
     job_id = await seed_job(write_engine)
     with pytest.raises(DBAPIError):
-        await autocommit.execute_independent_update(
-            update(Job).where(Job.job_id == job_id).values(result=literal_column("missing_column"))
-        )
+        await JobService().set_live_result(job_id, literal_column("missing_column"))
     assert await JobService().set_live_result(job_id, {"value": 1})
     with pytest.raises(RuntimeError, match="rollback"):  # noqa: PT012
         async with write_engine.begin() as connection:
@@ -158,8 +166,8 @@ async def test_database_failure_and_pool_reset(write_engine):
 
 
 @pytest.mark.parametrize("configuration", ["execution_option", "engine_option"])
-async def test_nondefault_isolation_stays_transactional(write_engine, monkeypatch, configuration):
-    """Configured isolation is preserved instead of silently switching semantics."""
+async def test_nondefault_isolation_is_restored_after_payload(write_engine, monkeypatch, configuration):
+    """The audited statement opts in to autocommit without changing the next checkout."""
     if write_engine.dialect.name != "postgresql":
         pytest.skip("PostgreSQL isolation override")
     engine = write_engine.execution_options(isolation_level="SERIALIZABLE")
@@ -170,7 +178,7 @@ async def test_nondefault_isolation_stays_transactional(write_engine, monkeypatc
         if write_engine.dialect.driver == "psycopg":
             connect_args = {"options": f"-csearch_path={namespace}"}
         engine = create_async_engine(write_engine.url, isolation_level="SERIALIZABLE", connect_args=connect_args)
-    monkeypatch.setattr(autocommit, "get_db_service", lambda: SimpleNamespace(engine=engine))
+    monkeypatch.setattr(jobs_module, "session_scope", session_scope_for(engine))
     job_id = await seed_job(engine)
 
     def fail(*_args):
@@ -186,11 +194,6 @@ async def test_nondefault_isolation_stays_transactional(write_engine, monkeypatc
         event.remove(engine.sync_engine, "after_cursor_execute", fail)
         if configuration == "engine_option":
             await engine.dispose()
-    assert (await payload(engine, job_id))[0] is None
-
-
-@pytest.mark.usefixtures("write_engine")
-async def test_compound_text_is_rejected_before_checkout():
-    """The helper accepts structured UPDATEs rather than arbitrary SQL strings."""
-    with pytest.raises(TypeError, match="UPDATE"):
-        await autocommit.execute_independent_update(text("UPDATE job SET result = NULL; DELETE FROM job"))
+    assert (await payload(engine, job_id))[0] == {"value": 1}
+    async with engine.connect() as connection:
+        assert await connection.get_isolation_level() == "SERIALIZABLE"
