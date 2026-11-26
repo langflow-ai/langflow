@@ -253,6 +253,27 @@ class TestRunFlowBaseComponentFlowRetrieval:
         mock_cache_call.assert_not_called()
 
     @pytest.mark.asyncio
+    async def test_reviewed_instructions_child_gets_the_parents_extra_file_scopes(self, target_flow):  # noqa: ARG002
+        """A reviewed Instructions snapshot reads files with the run's extra scopes, like any child flow."""
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component._vertex = SimpleNamespace(
+            data={}, graph=SimpleNamespace(authorized_extra_file_scopes=frozenset({"user-d"}))
+        )
+        flow_id = str(uuid4())
+        instruction = SimpleNamespace(flow_id=flow_id, model_dump_json=lambda: "binding")
+        snapshot = {"data": {"nodes": [], "edges": []}, "name": "Instructions"}
+
+        with (
+            patch("lfx.base.tools.reviewed_flows.instruction_binding", return_value=instruction),
+            patch("lfx.projects.invocation.reviewed_flow_source", return_value=snapshot),
+            patch("lfx.base.tools.run_flow.Graph.from_payload", return_value=MagicMock(spec=Graph)) as from_payload,
+        ):
+            await component.get_graph(flow_name_selected="Instructions", flow_id_selected=flow_id)
+
+        assert from_payload.call_args.kwargs["authorized_extra_file_scopes"] == frozenset({"user-d"})
+
+    @pytest.mark.asyncio
     async def test_get_graph_deletes_stale_cache_and_refetches(self, target_flow):
         """Test that get_graph deletes stale cached graph and fetches fresh one."""
         component = RunFlowBaseComponent()
