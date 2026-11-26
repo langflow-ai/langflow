@@ -22,6 +22,11 @@ class SupportDeskType(ProjectTypeDefinition):
         ),
     )
 
+    def starters(self):
+        from lfx.projects.starters import ProjectStarter
+
+        return (ProjectStarter("support-inbox", "Support inbox", "Start a support project.", build_support_inbox),)
+
     async def save_config(self, request, ctx):
         from uuid import UUID
 
@@ -82,3 +87,23 @@ class SupportDeskType(ProjectTypeDefinition):
 
 class OperatorSupportDeskType(SupportDeskType):
     display_name = "Operator's support desk"
+
+
+def build_support_inbox():
+    from uuid import UUID
+
+    from lfx.projects.archives import ArchivedProject, ProjectComposition
+
+    project_id = UUID("50b2718f-aae3-46e0-b782-6e35bcd9c943")
+    return ProjectComposition(
+        root_project_id=project_id,
+        projects=[
+            ArchivedProject(
+                id=project_id,
+                name="Support inbox",
+                project_type=SupportDeskType.name,
+                project_config={"instructions": "Help the customer."},
+                flows=[],
+            )
+        ],
+    )
