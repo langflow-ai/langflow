@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useMigrationPauseQuery } from "@/controllers/API/queries/migration";
+import { CustomLink } from "@/customization/components/custom-link";
+import useAuthStore from "@/stores/authStore";
 import { cn } from "@/utils/utils";
 
 /** Tells every signed-in user, on every page, that this instance refuses changes while it moves to a new one. */
@@ -12,6 +14,7 @@ export function ChangesPausedNotice({
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const { data } = useMigrationPauseQuery();
+  const isAdmin = useAuthStore((state) => state.userData?.is_superuser);
   // Its own banner covers the file pause, while database maintenance needs this notice too.
   const showNotice =
     data?.paused &&
@@ -23,6 +26,12 @@ export function ChangesPausedNotice({
       : data?.maintenance
         ? "settings.maintenance.notice"
         : "settings.migration.pause.notice";
+  const showManage =
+    isAdmin &&
+    data?.maintenance &&
+    !data.migration &&
+    !data.externalAuthenticationPaused &&
+    !pathname.includes("/settings/upgrade-reports");
   return (
     <section
       aria-label={t("settings.maintenance.statusLabel")}
@@ -38,6 +47,17 @@ export function ChangesPausedNotice({
         {showNotice && (
           <p className="rounded-lg border border-accent-amber-foreground bg-accent-amber px-4 py-2 text-sm shadow-lg">
             {t(messageKey)}
+            {showManage && (
+              <>
+                {" "}
+                <CustomLink
+                  to="/settings/upgrade-reports#upgrade-maintenance"
+                  className="pointer-events-auto font-medium underline"
+                >
+                  {t("settings.upgrade.maintenance.manage")}
+                </CustomLink>
+              </>
+            )}
           </p>
         )}
       </div>

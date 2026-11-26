@@ -10,6 +10,7 @@ import {
 import { CustomNavigate } from "@/customization/components/custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { reportAssessment, reportTime } from "./format";
+import MaintenanceControls from "./MaintenanceControls";
 import ReportView from "./ReportView";
 import RunCheck from "./RunCheck";
 
@@ -93,6 +94,7 @@ function UpgradeReports() {
           </code>
         </pre>
       </details>
+      <MaintenanceControls />
       <RunCheck
         onSelectReport={(reportId, focus) => {
           setOffset(0);
