@@ -15,6 +15,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from langchain_core.tools import Tool
 from langgraph.graph.state import CompiledStateGraph
 
 
@@ -33,6 +34,10 @@ def _fake_graph(astream_events_impl):
     graph = MagicMock(spec=CompiledStateGraph)
     graph.astream_events = astream_events_impl
     return graph
+
+
+def _connected_tool(name: str, metadata: dict | None = None):
+    return Tool(name=name, description="Return the supplied query.", func=lambda query: query, metadata=metadata)
 
 
 def _build_component():
@@ -102,7 +107,7 @@ async def test_should_apply_tool_retry_middleware_when_handle_parsing_errors_set
         return MagicMock(name="compiled_state_graph")
 
     component = _build_component()  # handle_parsing_errors=True
-    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
+    component.set_attributes({"tools": [_connected_tool("some_tool")]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
@@ -125,7 +130,7 @@ async def test_should_apply_tool_call_id_middleware_when_tools_are_attached() ->
         return MagicMock(name="compiled_state_graph")
 
     component = _build_component()
-    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
+    component.set_attributes({"tools": [_connected_tool("some_tool")]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
@@ -448,7 +453,7 @@ async def test_should_recover_when_llm_emits_malformed_tool_args() -> None:
         return MagicMock(name="compiled_state_graph")
 
     component = _build_component()  # handle_parsing_errors=True
-    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
+    component.set_attributes({"tools": [_connected_tool("some_tool")]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
@@ -458,9 +463,17 @@ async def test_should_recover_when_llm_emits_malformed_tool_args() -> None:
     middleware = captured.get("middleware") or []
     retry = next((m for m in middleware if isinstance(m, ToolRetryMiddleware)), None)
     assert retry is not None, "ToolRetryMiddleware must be wired when handle_parsing_errors=True"
-    # Defaults: retry_on=(Exception,), on_failure='continue'.
-    # Both are required for recovery from Pydantic ValidationError on tool args.
-    assert Exception in retry.retry_on, "Must retry on Exception (covers ValidationError)"
+    # Providers may represent the retry policy as a predicate or exception types.
+    # Verify that malformed arguments remain recoverable through either contract.
+    from pydantic import BaseModel, ValidationError
+
+    class ToolArguments(BaseModel):
+        urls: list[str]
+
+    with pytest.raises(ValidationError) as invalid_args:
+        ToolArguments.model_validate({"urls": "http://example.test"})
+    error = invalid_args.value
+    assert retry.retry_on(error) if callable(retry.retry_on) else isinstance(error, retry.retry_on)
     assert retry.on_failure == "continue", "Must convert exhausted retries into a retry-message, not crash"
 
 
@@ -1592,7 +1605,7 @@ async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_tru
 
 def _gated_tool(name: str):
     """A connected tool whose action was marked 'Require approval' on the tool."""
-    return SimpleNamespace(name=name, metadata={"approval_actions": ["approve", "reject"]})
+    return _connected_tool(name, metadata={"approval_actions": ["approve", "reject"]})
 
 
 def test_should_attach_hitl_middleware_when_a_tool_is_gated() -> None:
@@ -1614,7 +1627,7 @@ def test_should_omit_hitl_middleware_when_no_tools_gated() -> None:
     from langchain.agents.middleware import HumanInTheLoopMiddleware
 
     component = _build_component()
-    component.set_attributes({"tools": [SimpleNamespace(name="search", metadata={})]})
+    component.set_attributes({"tools": [_connected_tool("search")]})
 
     middleware = component._build_middleware(MagicMock(name="fake_llm"))
 
@@ -1654,9 +1667,7 @@ async def test_should_pass_durable_checkpointer_when_gated_with_run_context() ->
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes(
-        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
-    )
+    component.set_attributes({"tools": [_gated_tool("transfer")]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
@@ -1672,7 +1683,7 @@ async def test_should_omit_checkpointer_when_no_tools_gated() -> None:
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes({"tools": [SimpleNamespace(name="transfer", metadata={})]})
+    component.set_attributes({"tools": [_connected_tool("transfer")]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
@@ -1688,9 +1699,7 @@ async def test_should_reject_gated_tools_when_allow_interrupts_false() -> None:
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
-    component.set_attributes(
-        {"tools": [SimpleNamespace(name="transfer", metadata={"approval_actions": ["approve", "reject"]})]}
-    )
+    component.set_attributes({"tools": [_gated_tool("transfer")]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),

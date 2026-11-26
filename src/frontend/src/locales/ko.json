@@ -4402,5 +4402,21 @@
   "toolPacks.callCount_other": "완료된 호출 {{count}}개",
   "toolPacks.nestedRecordedHelp": "이 Tool에서 쓸 수 있는 검토된 정의입니다. 실행에서는 이 Flow 중 일부만 쓸 수도 있습니다.",
   "toolPacks.nestedDependencies": "중첩 Flow 의존성",
-  "toolPacks.nestedReviewHelp": "이 Flow가 바뀌면 검토한 Tool 리비전도 바뀝니다."
+  "toolPacks.nestedReviewHelp": "이 Flow가 바뀌면 검토한 Tool 리비전도 바뀝니다.",
+  "runConfig.parameters": "Model 세부 정보",
+  "runConfig.prompt": "최종 지침",
+  "runConfig.record": "설정 {{number}}",
+  "runConfig.history": "기록 메시지 한도",
+  "runConfig.empty": "없음",
+  "runConfig.help": "실행 중인 Agent에서 수집한 값입니다. Model 인증 정보와 연결 객체는 뺐습니다.",
+  "runConfig.toolContract": "Tool 계약",
+  "runConfig.select": "기록된 설정",
+  "runConfig.toolRetries": "Tool 재시도 횟수",
+  "runConfig.title": "실행 설정",
+  "runConfig.identity": "기록된 식별 정보",
+  "runConfig.inspect": "설정 보기",
+  "runConfig.bindings": "설정된 Flow 바인딩",
+  "runConfig.runtime": "런타임 제어",
+  "runConfig.loadedHistory": "불러온 기록 메시지",
+  "runConfig.legacy": "이 보고서에는 기록된 설정이 없습니다. 현재 프로젝트 설정으로는 이 실행에 쓰인 값을 알 수 없습니다."
 }
