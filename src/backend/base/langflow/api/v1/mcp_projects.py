@@ -59,6 +59,7 @@ from langflow.api.v1.mcp_utils import (
     current_request_headers_ctx,
     current_request_variables_ctx,
     current_user_ctx,
+    ensure_project_reachable,
     filter_mcp_flows,
     get_active_project_owner,
     handle_call_tool,
@@ -212,11 +213,11 @@ async def verify_project_auth(
             raise HTTPException(status_code=401, detail="Invalid API key")
         user = api_key_result.user
 
-        # Verify user has access to the project
-        if project_user_id != user.id:
-            raise HTTPException(status_code=404, detail="Project not found")
-
+        # The credential context goes first: the reachability check below may consult the
+        # authorization plugin, which reads it for API-key scopes.
         set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+        await ensure_project_reachable(user, project_id, project_user_id)
+
         set_authenticated_telemetry_user(user)
         authenticated_caller_ctx.set(user.id)
         return user
@@ -311,8 +312,7 @@ async def verify_project_auth_conditional(
             db=session,
         )
 
-    if project_user_id != user.id:
-        raise HTTPException(status_code=404, detail="Project not found")
+    await ensure_project_reachable(user, project_id, project_user_id)
 
     if project_auth_type == "apikey":
         credential = get_current_auth_context()

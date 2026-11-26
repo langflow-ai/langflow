@@ -50,10 +50,11 @@ from langflow.services.auth.context import (
 )
 from langflow.services.authorization import FileAction, FlowAction, ensure_file_permission, ensure_flow_permission
 from langflow.services.authorization.credentials import ensure_mcp_credential_file_access, is_mcp_credential_file
+from langflow.services.authorization.fetch import cross_user_fetch_enabled
 from langflow.services.authorization.guards import _resolve_flow_domain
 from langflow.services.authorization.listing import filter_visible_resources
 from langflow.services.authorization.public_access import public_execution_user
-from langflow.services.database.models import Flow
+from langflow.services.database.models import Flow, Folder
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
@@ -222,7 +223,9 @@ def protect_mcp_operation_handlers(server: Any) -> None:
         server.request_handlers[request_type] = protect(handler)
 
 
-async def filter_mcp_flows(user: User | UserRead, flows: list[Flow]) -> list[Flow]:
+async def filter_mcp_flows(
+    user: User | UserRead, flows: list[Flow], *, act: FlowAction = FlowAction.READ
+) -> list[Flow]:
     return await filter_visible_resources(
         user,
         resource_type="flow",
@@ -231,7 +234,53 @@ async def filter_mcp_flows(user: User | UserRead, flows: list[Flow]) -> list[Flo
             getattr(flow, "workspace_id", None), getattr(flow, "folder_id", None)
         ),
         owner_extractor=lambda flow: getattr(flow, "user_id", None),
+        act=act,
     )
+
+
+async def project_flow_owner(session: "AsyncSession", project_id: UUID, caller_id: UUID) -> UUID:
+    """Whose flows a project's MCP server lists and runs for this caller.
+
+    The caller's own id unless the project is someone else's and the authorization plugin
+    loads resources across owners. On a deployer plane the deployer owns the project and
+    holds no API key, so a service account reaches its tools only this way; the per-flow
+    ``execute`` check then decides what it may run.
+    """
+    # Asked first so the pass-through path runs exactly the queries it always ran.
+    if not await cross_user_fetch_enabled():
+        return caller_id
+    owner_id = (await session.exec(select(Folder.user_id).where(Folder.id == project_id))).first()
+    return owner_id if owner_id is not None else caller_id
+
+
+async def ensure_project_reachable(user: User | UserRead, project_id: UUID, project_user_id: UUID | None) -> None:
+    """Refuse a caller that neither owns the project nor may run any of its exposed flows.
+
+    Answered 404 either way, so a caller cannot tell a project it may not use from one that
+    does not exist. Without a plugin that loads across owners this is the owner check it
+    always was.
+    """
+    not_found = HTTPException(status_code=404, detail="Project not found")
+    if project_user_id == user.id:
+        return
+    if project_user_id is None or not await cross_user_fetch_enabled():
+        raise not_found
+    async with session_scope() as session:
+        flows = [
+            snapshot_mcp_metadata(flow)
+            for flow in (
+                await session.exec(
+                    select(Flow).where(
+                        Flow.folder_id == project_id,
+                        Flow.user_id == project_user_id,
+                        Flow.mcp_enabled == True,  # noqa: E712
+                        Flow.is_component == False,  # noqa: E712
+                    )
+                )
+            ).all()
+        ]
+    if not await filter_mcp_flows(user, flows, act=FlowAction.EXECUTE):
+        raise not_found
 
 
 def snapshot_mcp_metadata(row: T) -> T:
@@ -557,9 +606,14 @@ async def handle_call_tool(
 
         # Scoping in the query, not after it: post-filtering let an unexposed flow run by
         # name and let one project win a name shared with another, silencing the second.
+        flow_owner_id = (
+            await project_flow_owner(session, project_id, current_user.id)
+            if project_id is not None
+            else current_user.id
+        )
         flow = await get_flow_snake_case(
             name,
-            current_user.id,
+            flow_owner_id,
             session,
             is_action=is_action,
             project_id=project_id,
@@ -748,6 +802,7 @@ async def _collect_tools(
     """
     tools: list[types.Tool] = []
     excluded: list[dict[str, str]] = []
+    flow_owner_id: UUID | None = None
     try:
         # SECURITY: tools returned from the global server previously included every
         # user's flows (PVR0754098). Always scope to the authenticated caller.
@@ -759,10 +814,10 @@ async def _collect_tools(
         async with session_scope() as session:
             # Build query based on parameters
             if project_id:
-                # SECURITY (defense-in-depth): Filter by both folder_id AND user_id.
-                # While verify_project_auth_conditional already ensures the user owns the project,
-                # this query-level filter provides an additional safety layer and maintains
-                # consistency with handle_list_resources() and handle_read_resource().
+                # SECURITY (defense-in-depth): Filter by both folder_id AND the project owner.
+                # verify_project_auth_conditional already admits only the owner, or (with a
+                # cross-user authorization plugin) a caller that may run one of its flows;
+                # the owner filter keeps another account's rows in the folder out either way.
                 if current_user is None:
                     await logger.awarning(
                         "handle_list_tools called with project_id but no current user; returning empty list"
@@ -771,11 +826,12 @@ async def _collect_tools(
                 # Ordered for the same reason the call path is: build_mcp_tool_name_map
                 # hands the bare name to the first flow it sees and the _1 suffix to the
                 # next, so without an order that can flip between a list and a call.
+                flow_owner_id = await project_flow_owner(session, project_id, current_user.id)
                 flows_query = (
                     select(Flow)
                     .where(
                         Flow.folder_id == project_id,
-                        Flow.user_id == current_user.id,
+                        Flow.user_id == flow_owner_id,
                         Flow.is_component == False,  # noqa: E712
                     )
                     .order_by(Flow.id)
@@ -805,7 +861,9 @@ async def _collect_tools(
             [flow for flow in flows if flow.user_id is not None],
             is_action=bool(project_id),
         )
-        visible = await filter_mcp_flows(current_user, list(name_map.values()))
+        # Someone else's project is reached through flows the caller may run, so list those.
+        act = FlowAction.EXECUTE if project_id and flow_owner_id != current_user.id else FlowAction.READ
+        visible = await filter_mcp_flows(current_user, list(name_map.values()), act=act)
         visible_ids = {flow.id for flow in visible}
         for name, flow in name_map.items():
             if flow.id not in visible_ids:
