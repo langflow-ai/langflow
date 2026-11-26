@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import Any
 
 
+class PauseConflictError(ValueError):
+    """Two steps asked for a human decision at once. User guidance: wrappers surface it verbatim."""
+
+
 class GraphPausedException(Exception):  # noqa: N818
     """Raised when a run suspends at a safe boundary after persisting a checkpoint.
 

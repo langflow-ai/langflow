@@ -20,7 +20,7 @@ from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
-from lfx.graph.exceptions import GraphPausedException
+from lfx.graph.exceptions import GraphPausedException, PauseConflictError
 from lfx.graph.graph.constants import Finish, lazy_load_vertex_dict
 from lfx.graph.graph.runnable_vertices_manager import RunnableVerticesManager
 from lfx.graph.graph.schema import GraphData, GraphDump, StartConfigDict, VertexBuildResult
@@ -911,6 +911,17 @@ class Graph:
 
             # Nothing suspends a loop iteration, so the step would carry on undecided and run every branch.
             raise NestedHITLUnsupportedError(LOOP_BODY_HITL_UNSUPPORTED)
+        # A checkpoint holds one pending decision, so a second one would be silently dropped.
+        pending = (self.pause_info or {}).get("data", {}).get("request_id") if self.pause_requested else None
+        request_id = (data or {}).get("request_id")
+        if pending is not None and pending != request_id:
+            if request_id is None:
+                return  # An operator pause: the pending decision already pauses the run.
+            msg = (
+                "Two steps in this run asked for a decision at the same time, and only one can wait. "
+                "Connect them so they run one after the other."
+            )
+            raise PauseConflictError(msg)
         self.pause_requested = True
         self.pause_info = {"reason": reason, "data": data or {}}
 
