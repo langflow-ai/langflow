@@ -2,6 +2,7 @@ from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Literal
 
+from pandas import DataFrame as PandasDataFrame
 from pandas import Series
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypedDict
@@ -74,6 +75,10 @@ def get_type(payload):
 def get_message(payload):
     # Importing here to avoid circular imports
     from lfx.schema.data import Data
+
+    # A table may have a column named "data". It is a column, not a Data envelope.
+    if isinstance(payload, PandasDataFrame):
+        return payload
 
     message = None
     if hasattr(payload, "data"):
