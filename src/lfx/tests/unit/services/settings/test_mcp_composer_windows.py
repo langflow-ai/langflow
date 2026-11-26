@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from lfx.services.mcp_composer.service import MCPComposerService, MCPComposerStartupError
+from lfx.services.mcp_composer.service import MCPComposerService, MCPComposerStartupError, logger
 
 
 @pytest.fixture
@@ -191,6 +191,7 @@ class TestWindowsTempFileHandling:
         with (
             patch("platform.system", return_value="Windows"),
             patch("subprocess.Popen") as mock_popen,
+            patch("subprocess.run", return_value=subprocess.CompletedProcess([], 0, b"", b"")),
             patch("tempfile.NamedTemporaryFile") as mock_tempfile,
         ):
             # Mock temp file creation
@@ -233,7 +234,7 @@ class TestWindowsTempFileHandling:
                 # Verify temp files were created
                 assert mock_tempfile.call_count == 2
                 # Verify Popen was called with file handles, not PIPE
-                popen_call = mock_popen.call_args_list[0]
+                popen_call = mock_popen.call_args
                 assert popen_call[1]["stdout"] == mock_stdout_file
                 assert popen_call[1]["stderr"] == mock_stderr_file
 
@@ -491,6 +492,30 @@ class TestWindowsTempLogCleanupOnAbort:
             task.cancel()
             with pytest.raises(asyncio.CancelledError):
                 await task
+
+        assert windows_tree.tree_kills == 1
+        self._assert_logs_cleaned(tmp_path, handles)
+
+    @pytest.mark.asyncio
+    async def test_should_kill_process_tree_when_cancelled_right_after_popen(
+        self, mcp_service, created_logs, windows_tree
+    ):
+        tmp_path, handles = created_logs
+        real_adebug = logger.adebug
+
+        async def cancel_on_started_log(message, *args, **kwargs):
+            if "process started with PID" in message:
+                raise asyncio.CancelledError
+            return await real_adebug(message, *args, **kwargs)
+
+        with (
+            patch("platform.system", return_value="Windows"),
+            patch("subprocess.Popen", side_effect=windows_tree.popen),
+            patch("subprocess.run", side_effect=windows_tree.run),
+            patch.object(logger, "adebug", side_effect=cancel_on_started_log),
+            pytest.raises(asyncio.CancelledError),
+        ):
+            await self._start(mcp_service)
 
         assert windows_tree.tree_kills == 1
         self._assert_logs_cleaned(tmp_path, handles)

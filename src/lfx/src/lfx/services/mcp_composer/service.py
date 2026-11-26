@@ -561,6 +561,7 @@ class MCPComposerService(Service):
                     [taskkill_cmd, "/F", "/T", "/PID", str(process.pid)],
                     capture_output=True,
                     check=False,
+                    timeout=10,
                 )
                 tree_killed = result.returncode == 0
             except (OSError, subprocess.SubprocessError) as e:
@@ -573,7 +574,7 @@ class MCPComposerService(Service):
         try:
             await asyncio.wait_for(asyncio.to_thread(process.wait), timeout=2.0)
         except asyncio.TimeoutError:
-            await logger.adebug(f"Process {process.pid} did not terminate gracefully, force killing")
+            await logger.aerror(f"Process {process.pid} did not terminate gracefully, force killing")
             await asyncio.to_thread(process.kill)
             await asyncio.to_thread(process.wait)
 
@@ -1518,11 +1519,11 @@ class MCPComposerService(Service):
             process_running = False
             port_bound = False
 
-            await logger.adebug(
-                f"MCP Composer process started with PID {process.pid}, monitoring startup for project {project_id}..."
-            )
-
             try:
+                await logger.adebug(
+                    f"MCP Composer process started with PID {process.pid}, "
+                    f"monitoring startup for project {project_id}..."
+                )
                 for check in range(max_startup_checks):
                     await asyncio.sleep(startup_delay)
 
