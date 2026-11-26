@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.inputs.inputs import DropdownInput, IntInput, ModelInput, MultilineInput, StrInput
+from lfx.projects.builtin_slots import COMPACTOR, CONTEXT_MANAGER, INSTRUCTIONS, TOOL
 from lfx.projects.registry import register_project_type
 from lfx.projects.schema import FieldTarget, ProjectType, ProjectTypeField
 
@@ -37,6 +38,8 @@ AGENT_HARNESS = register_project_type(
             ProjectTypeField(
                 name="system_prompt",
                 section="Instructions",
+                slot_definition=INSTRUCTIONS,
+                supports_flow_binding=True,
                 # The canvas renders a multiline field as one line plus a modal, which suits a
                 # node. Instructions are the main thing written here, so the page gives them a
                 # real editor instead.
@@ -70,11 +73,11 @@ AGENT_HARNESS = register_project_type(
                 name="tools",
                 section="Tools",
                 renders="project_flows",
+                slot_definition=TOOL,
                 # No write-through target on purpose. The Agent's ``tools`` input holds tool
                 # objects built from what the graph connects to it, so putting flow ids there
-                # would break the run rather than configure it. Turning the picked flows into
-                # tool nodes wired to the agent is graph surgery, and it is not this field's
-                # job; the picked ids are recorded in project_config until that lands.
+                # would break the run rather than configure it. The project config writer
+                # composes the selected flows through lfx.projects.tools instead.
                 input=StrInput(
                     name="tools",
                     display_name="Tools",
@@ -86,6 +89,7 @@ AGENT_HARNESS = register_project_type(
             ProjectTypeField(
                 name="n_messages",
                 section="Runtime",
+                slot_definition=CONTEXT_MANAGER,
                 writes_to=FieldTarget("Agent", "n_messages"),
                 input=IntInput(
                     name="n_messages",
@@ -97,6 +101,7 @@ AGENT_HARNESS = register_project_type(
             ProjectTypeField(
                 name="compaction",
                 section="Runtime",
+                slot_definition=COMPACTOR,
                 # No write-through target: nothing in the runtime consumes this yet.
                 # langchain ships SummarizationMiddleware unused, so the only honest option
                 # today is off. See the harness notes in the design docs.
