@@ -581,18 +581,13 @@ class MCPComposerService(Service):
         """Delete Windows temp logs, retrying while a just-killed child still releases its handles."""
         attempts = 5
         for path in paths:
-            for attempt in range(1, attempts + 1):
-                try:
-                    path.unlink(missing_ok=True)
+            for attempt in range(attempts):
+                if self._try_unlink(path):
                     break
-                except PermissionError as e:
-                    if attempt == attempts:
-                        await logger.awarning(f"Could not delete MCP Composer temp log {path}: {e}")
-                        break
+                if attempt < attempts - 1:
                     await asyncio.sleep(0.2)
-                except OSError as e:
-                    await logger.awarning(f"Could not delete MCP Composer temp log {path}: {e}")
-                    break
+            else:
+                await logger.awarning(f"Could not delete MCP Composer temp log {path}")
 
     async def _wait_for_process_exit(self, process):
         """Wait for a process to exit."""
