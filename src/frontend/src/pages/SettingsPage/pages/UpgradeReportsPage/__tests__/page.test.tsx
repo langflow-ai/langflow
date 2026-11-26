@@ -1398,3 +1398,30 @@ it("keeps a report the admin picks while the next history page loads", async () 
   expect(screen.getByLabelText("Choose a report")).not.toHaveValue("r20");
   expect(screen.queryByText("21 of 25")).not.toBeInTheDocument();
 });
+
+it("shows maintenance as on when external sign-in is paused for it", async () => {
+  jest.spyOn(api, "get").mockImplementation(async (url) => {
+    if (url.endsWith("/maintenance/status"))
+      throw {
+        isAxiosError: true,
+        response: {
+          status: 503,
+          data: {
+            detail: {
+              code: "external_auth_maintenance",
+              message: "External authentication paused",
+            },
+          },
+        },
+      };
+    return { data: { items: [], total: 0 } };
+  });
+  open();
+  const section = maintenanceSection();
+  expect(await section.findByText("Maintenance on")).toBeVisible();
+  expect(section.getByText(/External SSO sign-in is paused/)).toBeVisible();
+  expect(section.queryByText("Status unknown")).not.toBeInTheDocument();
+  expect(
+    section.queryByRole("button", { name: "Retry status check" }),
+  ).not.toBeInTheDocument();
+});

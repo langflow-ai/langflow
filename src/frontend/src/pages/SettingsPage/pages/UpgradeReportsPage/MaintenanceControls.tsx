@@ -100,7 +100,9 @@ export default function MaintenanceControls({
   const phase = !status
     ? query.isPending
       ? "loading"
-      : "unknown"
+      : query.data?.externalAuthenticationPaused
+        ? "external"
+        : "unknown"
     : !status.maintenance
       ? "off"
       : status.running_jobs > 0
@@ -149,6 +151,12 @@ export default function MaintenanceControls({
   );
   const rows = {
     loading: <p role="status">{t("common.loading")}</p>,
+    external: (
+      <StateRow
+        tone="warning"
+        detail={t("settings.maintenance.externalAuthNotice")}
+      />
+    ),
     unknown: (
       <StateRow
         tone="error"
@@ -180,6 +188,7 @@ export default function MaintenanceControls({
   };
   const statusText = {
     loading: "—",
+    external: t("settings.upgrade.maintenance.on"),
     unknown: t("settings.upgrade.maintenance.unknown"),
     off: t("settings.upgrade.maintenance.off"),
     running: t("settings.upgrade.maintenance.on"),
