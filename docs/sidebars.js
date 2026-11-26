@@ -632,6 +632,7 @@ module.exports = {
             "Components/bundles-pinecone",
             "Components/bundles-plivo",
             "Components/bundles-popnow",
+            "Components/bundles-publora",
             "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-salesforce",
