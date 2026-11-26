@@ -58,8 +58,11 @@ This component reads one or more web pages through WebRouter and returns their m
 It returns a [`Table`](/data-types#table) with one row per URL.
 A page that was read has its `url`, `title`, `content`, and `provider`.
 A URL that could not be read has its `url` and an `error` with the reason.
+If setup fails (for example, the optional WebRouter package is missing), or no page can be read, each validated URL gets an error row with the batch-level reason.
+Invalid input, such as an empty URL list or a non-HTTP URL, returns a single error-only row without a `url`.
 
 The extraction provider fetches the pages on its own servers, so Langflow only sends the URLs to the provider and never connects to the pages itself.
+The local `obscura` backend is not supported by this component.
 
 When the component is used as a [tool](/agents-tools), the agent can set the URLs.
 
@@ -69,7 +72,7 @@ When the component is used as a [tool](/agents-tools), the agent can set the URL
 
 | Name | Type | Description |
 |------|------|-------------|
-| URLs (`urls`) | String | Input parameter. One to ten `http://` or `https://` URLs to read, separated by commas or new lines. |
+| URLs (`urls`) | String | Input parameter. One to ten `http://` or `https://` URLs to read, separated by whitespace or new lines. Commas are preserved within a URL. |
 | Provider (`provider`) | String | Input parameter. A provider to send every call to, such as `firecrawl` or `tavily`. Leave empty to let WebRouter pick and fall back. |
 | Provider API Key (`api_key`) | SecretString | Input parameter. Optional. An API key for the provider named in **Provider**. |
 | Timeout (seconds) (`timeout`) | Float | Input parameter. How long to wait for the pages, including fallbacks. Default: `30`. |

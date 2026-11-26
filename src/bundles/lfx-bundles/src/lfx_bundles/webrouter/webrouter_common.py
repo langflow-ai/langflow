@@ -53,6 +53,12 @@ def split_list(value: Any) -> list[str]:
     return [part for item in items for part in _LIST_SEPARATORS.split(str(item or "")) if part]
 
 
+def redact_error(detail: str, api_key: Any) -> str:
+    """Remove the component's provider key from an error message."""
+    key = secret_value(api_key)
+    return detail.replace(key, "***") if key else detail
+
+
 def call_router(provider: Any, api_key: Any, action: Callable[[WebRouter, str | None], T]) -> T:
     """Open a ``WebRouter``, run ``action(router, provider)`` and close the router.
 
@@ -78,6 +84,6 @@ def call_router(provider: Any, api_key: Any, action: Callable[[WebRouter, str | 
         with WebRouter(provider_config=provider_config) as router:
             return action(router, name)
     except WebRouterError as exc:
-        detail = str(exc).replace(key, "***") if key else str(exc)
+        detail = redact_error(str(exc), key)
         msg = f"WebRouter call failed: {detail}"
         raise WebRouterComponentError(msg) from exc

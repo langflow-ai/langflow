@@ -86,7 +86,7 @@ class WebRouterSearchComponent(Component):
         query = str(self.query or "").strip()
         max_results = min(max(int(self.max_results or 1), 1), MAX_RESULTS_LIMIT)
         include_domains = split_list(self.include_domains) or None
-        timeout = float(self.timeout or DEFAULT_TIMEOUT_SECONDS)
+        timeout = float(DEFAULT_TIMEOUT_SECONDS if self.timeout is None else self.timeout)
         try:
             if not query:
                 msg = "Enter a search query."

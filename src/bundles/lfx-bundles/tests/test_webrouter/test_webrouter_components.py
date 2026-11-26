@@ -128,6 +128,11 @@ def test_metadata(component_class: type[Component]) -> None:
 
 @pytest.mark.unit
 class TestWebRouterSearch:
+    def test_zero_timeout_is_passed(self, fake_router) -> None:
+        _search(timeout=0).search()
+
+        assert _only_call(fake_router)[2]["timeout"] == 0.0
+
     def test_keyless_search_lets_webrouter_pick(self, fake_router) -> None:
         data = _search().search()
 
@@ -204,6 +209,67 @@ class TestWebRouterSearch:
 
 @pytest.mark.unit
 class TestWebRouterExtract:
+    @pytest.mark.parametrize(
+        "urls",
+        [
+            "https://example.com/report?a=1,2\nhttps://example.com/other",
+            "https://example.com/report?a=1,2 https://example.com/other",
+        ],
+    )
+    def test_commas_in_urls_are_preserved(self, fake_router, urls) -> None:
+        _extract(urls=urls).extract()
+
+        assert _only_call(fake_router)[1] == (["https://example.com/report?a=1,2", "https://example.com/other"],)
+
+    @pytest.mark.parametrize("provider", ["obscura", " OBSCURA ", "extract:obscura"])
+    def test_local_provider_is_refused_before_any_call(self, fake_router, provider: str) -> None:
+        data = _extract(provider=provider).extract()
+
+        assert fake_router.instances == []
+        assert "local" in data[0].data["error"].lower()
+
+    def test_zero_timeout_is_passed(self, fake_router) -> None:
+        _extract(timeout=0).extract()
+
+        assert _only_call(fake_router)[2]["timeout"] == 0.0
+
+    def test_missing_package_has_a_row_for_each_valid_url(self, fake_router) -> None:
+        urls = ["https://example.com/one", "https://example.com/two"]
+        with patch.dict(sys.modules, {"web_router": None}):
+            data = _extract(urls="\n".join(urls)).extract()
+
+        assert fake_router.instances == []
+        assert [row.data["url"] for row in data] == urls
+        assert all("lfx-bundles[webrouter]" in row.data["error"] for row in data)
+
+    @pytest.mark.parametrize("count", [1, 2])
+    def test_all_failed_urls_keep_their_url_and_redact_the_key(self, fake_router, count: int) -> None:
+        urls = [f"https://example.com/{i}" for i in range(count)]
+        fake_router.raises = web_router.WebRouterError(f"every provider rejected {API_KEY}")
+        component = _extract(urls="\n".join(urls), provider="tavily", api_key=API_KEY)
+
+        data = component.extract()
+
+        _only_call(fake_router)
+        assert [row.data["url"] for row in data] == urls
+        assert all("***" in row.data["error"] for row in data)
+        assert API_KEY not in str(data)
+        assert API_KEY not in str(component.status)
+
+    def test_partial_failure_redacts_the_key(self, monkeypatch) -> None:
+        response = EXTRACT_RESPONSE.model_copy(
+            update={"failures": [ExtractFailure(url="https://example.com/missing", error=f"rejected {API_KEY}")]},
+        )
+        monkeypatch.setattr(sys.modules[__name__], "EXTRACT_RESPONSE", response)
+        component = _extract(provider="tavily", api_key=API_KEY)
+
+        data = component.extract()
+
+        assert data[0].text == "# Langflow"
+        assert data[1].data["error"] == "rejected ***"
+        assert data[1].text == "rejected ***"
+        assert API_KEY not in str(component.status)
+
     def test_extract_returns_documents_and_failures(self, fake_router) -> None:
         data = _extract(urls="https://www.langflow.org/\nhttps://example.com/missing").extract()
 
@@ -240,7 +306,7 @@ class TestWebRouterExtract:
         assert "error" in data[0].data
 
     def test_too_many_urls_makes_no_call(self, fake_router) -> None:
-        urls = ",".join(f"https://example.com/{i}" for i in range(MAX_URLS + 1))
+        urls = "\n".join(f"https://example.com/{i}" for i in range(MAX_URLS + 1))
 
         data = _extract(urls=urls).extract()
 

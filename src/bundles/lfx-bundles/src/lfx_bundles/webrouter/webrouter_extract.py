@@ -17,7 +17,7 @@ from lfx_bundles.webrouter.webrouter_common import (
     PROVIDER_INFO,
     WebRouterComponentError,
     call_router,
-    split_list,
+    redact_error,
 )
 
 MAX_URLS = 10
@@ -52,7 +52,7 @@ class WebRouterExtractComponent(Component):
         MessageTextInput(
             name="urls",
             display_name="URLs",
-            info=f"One to {MAX_URLS} http(s) URLs to read, separated by commas or new lines.",
+            info=f"One to {MAX_URLS} http(s) URLs to read, separated by whitespace or new lines. Commas stay in URLs.",
             required=True,
             tool_mode=True,
         ),
@@ -84,8 +84,9 @@ class WebRouterExtractComponent(Component):
 
     def extract(self) -> list[Data]:
         """Return one ``Data`` per URL: the page as ``text``, or an ``error`` for a URL that could not be read."""
-        urls = split_list(self.urls)
-        timeout = float(self.timeout or DEFAULT_TIMEOUT_SECONDS)
+        urls = str(self.urls or "").split()
+        timeout = float(DEFAULT_TIMEOUT_SECONDS if self.timeout is None else self.timeout)
+        error_urls = []
         try:
             if not urls:
                 msg = "Enter at least one URL."
@@ -97,15 +98,27 @@ class WebRouterExtractComponent(Component):
             if invalid:
                 msg = f"Enter absolute http(s) URLs, such as https://example.com; got {invalid[0]!r}."
                 raise WebRouterComponentError(msg)
+            error_urls = urls
+            provider = str(self.provider or "").strip().lower().removeprefix("extract:").split(":", 1)[0]
+            if provider == "obscura":
+                msg = (
+                    "The local obscura backend is not supported. "
+                    "Choose a remote extraction provider or leave Provider empty."
+                )
+                raise WebRouterComponentError(msg)
             response = call_router(
                 self.provider,
                 self.api_key,
                 lambda router, provider: router.extract(urls, provider=provider, format="markdown", timeout=timeout),
             )
         except WebRouterComponentError as exc:
-            logger.error(str(exc))
-            self.status = str(exc)
-            return [Data(text=str(exc), data={"error": str(exc)})]
+            detail = redact_error(str(exc), self.api_key)
+            logger.error(detail)
+            data = [Data(text=detail, data={"url": url, "error": detail}) for url in error_urls]
+            if not data:
+                data = [Data(text=detail, data={"error": detail})]
+            self.status = data
+            return data
 
         data = [
             Data(
@@ -119,9 +132,9 @@ class WebRouterExtractComponent(Component):
             )
             for document in response.documents
         ]
-        data.extend(
-            Data(text=failure.error, data={"url": failure.url, "error": failure.error}) for failure in response.failures
-        )
+        for failure in response.failures:
+            detail = redact_error(failure.error, self.api_key)
+            data.append(Data(text=detail, data={"url": failure.url, "error": detail}))
         self.status = data
         return data
 
