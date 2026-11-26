@@ -10,7 +10,7 @@ from langflow.services.database.models.transactions.model import TransactionTabl
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
 from langflow.services.utils import clean_transactions, clean_vertex_builds
 from sqlalchemy import make_url, schema
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -23,8 +23,9 @@ async def retention_session(request, tmp_path):
         url = os.environ.get("LANGFLOW_TEST_DATABASE_URI")
         if not url:
             pytest.skip("LANGFLOW_TEST_DATABASE_URI is required for PostgreSQL")
-        url = make_url(url).set(drivername="postgresql+asyncpg")
-        engine = create_async_engine(url, connect_args={"server_settings": {"search_path": namespace}})
+        pytest.importorskip("psycopg")
+        url = make_url(url).set(drivername="postgresql+psycopg")
+        engine = create_async_engine(url, connect_args={"options": f"-csearch_path={namespace}"})
         async with engine.begin() as connection:
             await connection.execute(schema.CreateSchema(namespace))
     else:
@@ -78,7 +79,7 @@ async def test_startup_transaction_retention_is_per_flow_and_repeatable(retentio
             assert set(remaining) == set(expected)
 
 
-@pytest.mark.parametrize("limit", [0, 1, 3, 6])
+@pytest.mark.parametrize("limit", [-1, 0, 1, 3, 6])
 async def test_startup_build_retention_uses_build_id(retention_session, limit):
     """Deleting an old build must not delete newer builds of the same component."""
     async_session = retention_session
@@ -90,7 +91,7 @@ async def test_startup_build_retention_uses_build_id(retention_session, limit):
     async_session.add_all(rows)
     await async_session.commit()
     settings = SimpleNamespace(settings=SimpleNamespace(max_vertex_builds_to_keep=limit))
-    expected = {row.build_id for row in rows[-limit:]} if limit else set()
+    expected = {row.build_id for row in (rows if limit < 0 else rows[-limit:])} if limit else set()
     for _ in range(2):
         await clean_vertex_builds(settings, async_session)
         await async_session.commit()
@@ -151,3 +152,42 @@ async def test_startup_cleanup_preserves_concurrent_new_flow(retention_session):
         row_id = row.id
     await session.commit()
     assert (await session.exec(select(TransactionTable.id))).all() == [row_id]
+
+
+@pytest.mark.parametrize("path", ["startup", "sweeper", "direct"])
+async def test_transaction_retention_tie_breaking_matches_runtime(retention_session, monkeypatch, path):
+    """All three retention paths keep the same IDs when cutoff timestamps tie."""
+    from langflow.services.database.models.transactions import crud
+    from langflow.services.telemetry_writer import service as writer_module
+
+    from tests.unit.services.telemetry_writer.test_service import _build_writer
+
+    session = retention_session
+    flow_id = uuid4()
+    timestamp = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    settings = SimpleNamespace(settings=SimpleNamespace(max_transactions_to_keep=3))
+    rows = [
+        TransactionTable(id=UUID(int=i), flow_id=flow_id, vertex_id="v", status="success", timestamp=timestamp)
+        for i in range(1, 7)
+    ]
+    session.add_all(rows if path != "direct" else rows[:-1])
+    await session.commit()
+    if path == "startup":
+        await clean_transactions(settings, session)
+        await session.commit()
+    elif path == "direct":
+        monkeypatch.setattr(crud, "get_settings_service", lambda: settings)
+        await crud.log_transaction(session, rows[-1])
+    else:
+
+        async def not_paused():
+            """Permit this isolated writer's retention pass."""
+            return False
+
+        monkeypatch.setattr(writer_module, "writes_paused", not_paused)
+        writer = _build_writer({"max_transactions_to_keep": 3})
+        writer._session_maker = async_sessionmaker(session.bind, class_=AsyncSession, expire_on_commit=False)
+        writer._dirty_tx_flows = {str(flow_id)}
+        await writer._run_retention_pass()
+    remaining = (await session.exec(select(TransactionTable.id))).all()
+    assert set(remaining) == {UUID(int=i) for i in (4, 5, 6)}

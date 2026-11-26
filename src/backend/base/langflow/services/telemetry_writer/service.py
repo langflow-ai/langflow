@@ -845,7 +845,7 @@ class TelemetryWriterService(Service):
                     keep_subq = (
                         select(TransactionTable.id)
                         .where(TransactionTable.flow_id == flow_id)
-                        .order_by(col(TransactionTable.timestamp).desc())
+                        .order_by(col(TransactionTable.timestamp).desc(), col(TransactionTable.id).desc())
                         .limit(max_transactions)
                     )
                     await session.execute(

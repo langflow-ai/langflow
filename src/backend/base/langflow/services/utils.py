@@ -658,12 +658,16 @@ async def clean_vertex_builds(settings_service: SettingsService, session: AsyncS
         session: The database session to use for the deletion
     """
     try:
+        max_entries = settings_service.settings.max_vertex_builds_to_keep
+        if max_entries < 0:
+            logger.warning("Skipping vertex build cleanup: max_vertex_builds_to_keep must not be negative")
+            return
         # Delete vertex builds using bulk delete
         delete_stmt = delete(VertexBuildTable).where(
             col(VertexBuildTable.build_id).in_(
                 select(VertexBuildTable.build_id)
                 .order_by(col(VertexBuildTable.timestamp).desc(), col(VertexBuildTable.build_id).desc())
-                .offset(settings_service.settings.max_vertex_builds_to_keep)
+                .offset(max_entries)
             )
         )
 
