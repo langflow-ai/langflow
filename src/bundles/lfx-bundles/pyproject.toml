@@ -34,6 +34,7 @@ aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 altk = []  # Retired in 1.13.0. Saved nodes retain migration guidance.
 apify = ["apify-client>=1.8.1"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
+atomicmail = []
 azure = ["lfx-azure>=0.1.0,<1.0.0"]
 baidu = ["qianfan==0.3.5", "langchain-community>=0.4.1,<1.0.0"]
 bing = ["langchain-community>=0.4.1,<1.0.0"]
@@ -115,6 +116,7 @@ all = [
     "lfx-bundles[altk]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
+    "lfx-bundles[atomicmail]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
     "lfx-bundles[cleanlab]",
@@ -192,6 +194,7 @@ all-no-torch = [
     "lfx-bundles[altk]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
+    "lfx-bundles[atomicmail]",
     "lfx-bundles[baidu]",
     "lfx-bundles[bing]",
     "lfx-bundles[cleanlab]",

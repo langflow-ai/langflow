@@ -568,6 +568,7 @@ module.exports = {
             "Components/bundles-apify",
             "Components/bundles-arxiv",
             "Components/bundles-assemblyai",
+            "Components/bundles-atomicmail",
             "Components/bundles-azure",
             "Components/bundles-baidu",
             "Components/bundles-bing",
