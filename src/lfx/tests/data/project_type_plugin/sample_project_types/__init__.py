@@ -22,6 +22,25 @@ class SupportDeskType(ProjectTypeDefinition):
         ),
     )
 
+    async def save_config(self, request, ctx):
+        from uuid import UUID
+
+        from lfx.projects.lifecycle import FlowSelector, PreparedSave, ProjectConfigError
+
+        if request.config is None:
+            return PreparedSave(None)
+        config = dict(request.config)
+        if "instructions" in config:
+            config["instructions"] = config["instructions"].strip()
+            if not config["instructions"]:
+                msg = "Write support instructions before saving."
+                raise ProjectConfigError(msg, field_path="instructions")
+        if config.get("source_id"):
+            source = await ctx.read_flow(FlowSelector(id=UUID(config["source_id"])), access="execute")
+            (snapshot,) = await ctx.pin_sources((source.token,), label="support reference")
+            config["source_version"] = str(snapshot.reference.version_id)
+        return PreparedSave(config, tuple(flow.id for flow in request.flows))
+
 
 class OperatorSupportDeskType(SupportDeskType):
     display_name = "Operator's support desk"

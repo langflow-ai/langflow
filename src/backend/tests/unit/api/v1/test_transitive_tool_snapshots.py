@@ -228,7 +228,7 @@ async def test_invalid_nested_reference_has_a_safe_review_error(client, logged_i
         session.add(flow)
     response = await client.get(f"api/v1/projects/{pack}/tool-pack", headers=logged_in_headers)
     assert response.status_code == 409
-    assert response.json() == {"detail": "The tool pack has invalid dependencies. Review its configuration."}
+    assert response.json() == {"detail": "The tool pack has invalid exports or dependencies. Review its configuration."}
 
 
 @pytest.mark.parametrize("duplicate", [False, True], ids=["missing-snapshot", "duplicate-snapshot"])

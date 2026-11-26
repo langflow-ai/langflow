@@ -162,7 +162,7 @@ async def test_pack_save_and_execution_require_execute_permission(
         if action.value == "execute":
             raise HTTPException(403)
 
-    monkeypatch.setattr("langflow.services.database.models.folder.tool_packs.ensure_flow_permission", deny_execute)
+    monkeypatch.setattr("langflow.services.database.models.folder.save_context.ensure_flow_permission", deny_execute)
     response = await client.patch(
         f"/api/v1/projects/{project}", headers=logged_in_headers, json={"project_config": config}
     )
