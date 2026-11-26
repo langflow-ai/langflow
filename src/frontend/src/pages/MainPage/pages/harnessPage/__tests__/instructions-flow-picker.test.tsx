@@ -125,6 +125,66 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+it("requires review when only a nested definition changes and preserves the draft when opening it", () => {
+  const dependency = {
+    flow_id: "nested",
+    name: "Shared rules",
+    revision: "before",
+    version_id: "snapshot-before",
+  };
+  choices[0].dependencies = [
+    { ...dependency, revision: "after", version_id: undefined },
+  ];
+  const onOpen = jest.fn();
+  const onChange = setup({
+    value: { ...binding, dependencies: [dependency] },
+    onOpen,
+  });
+  expect(screen.getByText(/flow has changes/i)).toBeInTheDocument();
+  fireEvent.click(screen.getByText(/Nested flow dependencies/i));
+  expect(screen.getByText("before")).toBeInTheDocument();
+  expect(screen.getAllByText("after").length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("link", { name: "Shared rules" }));
+  expect(onOpen).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole("button", { name: /Update binding/i }));
+  expect(onChange.mock.lastCall[0].dependencies).toEqual(
+    choices[0].dependencies,
+  );
+  expect(onChange.mock.lastCall[0].version_id).toBeUndefined();
+});
+
+it("does not report a change merely because a saved nested definition has a snapshot ID", () => {
+  const dependency = {
+    flow_id: "nested",
+    name: "Shared rules",
+    revision: "unchanged",
+  };
+  choices[0].dependencies = [dependency];
+  setup({
+    value: {
+      ...binding,
+      dependencies: [{ ...dependency, version_id: "snapshot" }],
+    },
+  });
+  expect(
+    screen.queryByRole("button", { name: /Update binding/i }),
+  ).not.toBeInTheDocument();
+});
+
+it("shows removed nested definitions during review", () => {
+  const dependency = {
+    flow_id: "removed",
+    name: "Removed rules",
+    revision: "before",
+  };
+  setup({ value: { ...binding, dependencies: [dependency] } });
+  fireEvent.click(screen.getByText(/Nested flow dependencies/i));
+  expect(
+    screen.getByRole("link", { name: "Removed rules" }),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Removed", { exact: true })).toBeInTheDocument();
+});
+
 it("requires selecting an explicit output and strips presentation metadata", () => {
   choices.push({
     ...choices[0],

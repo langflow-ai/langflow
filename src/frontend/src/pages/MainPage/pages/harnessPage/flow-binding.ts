@@ -12,12 +12,33 @@ export const bindingOf = ({
   node_id,
   output_name,
   revision,
+  dependencies,
 }: FlowOutputChoice): FlowBinding => ({
   flow_id,
   node_id,
   output_name,
   revision,
+  ...(dependencies?.length ? { dependencies } : {}),
 });
+
+export const sameBindingDefinition = (
+  first: FlowBinding,
+  second: FlowBinding,
+) => {
+  const dependencies = (binding: FlowBinding) =>
+    (binding.dependencies ?? [])
+      .map(({ flow_id, name, description, revision }) => [
+        flow_id,
+        name,
+        description ?? "",
+        revision,
+      ])
+      .sort(([first], [second]) => first.localeCompare(second));
+  return (
+    first.revision === second.revision &&
+    JSON.stringify(dependencies(first)) === JSON.stringify(dependencies(second))
+  );
+};
 
 export const orderedHooks = (hooks: HookBinding[]) =>
   hooks

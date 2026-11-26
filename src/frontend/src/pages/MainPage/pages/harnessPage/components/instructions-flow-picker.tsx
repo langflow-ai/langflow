@@ -21,9 +21,11 @@ import type {
 import {
   bindingOf,
   outputKey,
+  sameBindingDefinition,
   validCompactionThreshold,
   validFlowTimeout,
 } from "../flow-binding";
+import { FlowBindingDependencies } from "./flow-binding-dependencies";
 
 export function HarnessFlowPicker({
   projectId,
@@ -292,7 +294,7 @@ export function HarnessFlowPicker({
               {t("harness.bindingUnavailableHelp")}
             </p>
           )}
-          {value && selected && value.revision !== selected.revision && (
+          {value && selected && !sameBindingDefinition(value, selected) && (
             <div
               className="flex flex-wrap items-center gap-2 text-sm"
               role="status"
@@ -309,6 +311,15 @@ export function HarnessFlowPicker({
             </div>
           )}
         </>
+      )}
+      {value && (
+        <FlowBindingDependencies
+          dependencies={
+            selected ? (selected.dependencies ?? []) : value.dependencies
+          }
+          reviewed={selected ? (value.dependencies ?? []) : undefined}
+          onOpen={onOpen}
+        />
       )}
       {isCompaction && value && (
         <div className="flex flex-col gap-1.5">

@@ -8,7 +8,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from lfx.projects.bindings import FlowBinding
+from lfx.projects.bindings import FlowBinding, FlowSourceChangedError
 
 HookEvent = Literal["before_llm_call", "after_llm_call", "before_tool_call", "after_tool_call"]
 
@@ -51,7 +51,7 @@ class HookBlockedError(HookExecutionError):
     """A controlling hook blocked a model call."""
 
 
-class HookSourceChangedError(ValueError):
+class HookSourceChangedError(FlowSourceChangedError):
     """A reviewed flow definition no longer matches its saved binding."""
 
 
@@ -103,7 +103,7 @@ class HookExecutor:
                 # Flow errors may contain source code, credentials, or tool arguments.
                 # Publish the exception type, never its rendered payload.
                 evidence.update(kind="hook_failed", error_type=type(exc).__name__, on_failure=binding.on_failure)
-                if isinstance(exc, HookSourceChangedError):
+                if isinstance(exc, FlowSourceChangedError):
                     evidence["reason"] = "The Hook flow changed. Review it and update the binding."
                 elif isinstance(exc, (TimeoutError, asyncio.TimeoutError)):
                     evidence["reason"] = "The Hook flow exceeded its configured timeout."

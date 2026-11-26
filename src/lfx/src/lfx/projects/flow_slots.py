@@ -110,7 +110,9 @@ def flow_runtime_bindings(data: dict) -> list[tuple[str, FlowBinding]]:
     ]
 
 
-def remap_runtime_bindings(flows: dict[str, dict], id_map: dict[str, str], project_id: str) -> None:
+def remap_runtime_bindings(
+    flows: dict[str, dict], id_map: dict[str, str], project_id: str, *, flow_names: dict[str, str] | None = None
+) -> None:
     """Remap all runtime contracts children first, after ordinary Run Flow links.
 
     A flow can contain Context, Compaction, Permission, and Hook references. One traversal ensures that each
@@ -118,6 +120,7 @@ def remap_runtime_bindings(flows: dict[str, dict], id_map: dict[str, str], proje
     Callers must validate original reviewed definitions before this mutates imported flows.
     """
     visited = set()
+    original_ids = {new: old for old, new in id_map.items()}
 
     def visit(flow_id, active):
         if flow_id in active:
@@ -126,6 +129,26 @@ def remap_runtime_bindings(flows: dict[str, dict], id_map: dict[str, str], proje
         if flow_id in visited:
             return
         data = flows[flow_id]
+
+        def remap_dependencies(dependencies):
+            from lfx.projects.bindings import BoundFlowDependency
+
+            updated = []
+            for item in dependencies:
+                dependency = BoundFlowDependency.model_validate(item)
+                target = dependency.flow_id
+                visit(target, active | {flow_id})
+                updated.append(
+                    dependency.model_copy(
+                        update={
+                            "flow_id": id_map[target],
+                            "name": (flow_names or {}).get(target, dependency.name),
+                            "revision": flow_revision(flows[target]),
+                            "version_id": None,
+                        }
+                    )
+                )
+            return updated
 
         def remap(field_name, value):
             bindings = ProjectFlowBindings.model_validate({field_name: value}).entries()
@@ -142,6 +165,11 @@ def remap_runtime_bindings(flows: dict[str, dict], id_map: dict[str, str], proje
                             "flow_id": id_map[target],
                             "revision": flow_revision(flows[target]),
                             "version_id": None,
+                            **(
+                                {"dependencies": remap_dependencies(binding.dependencies)}
+                                if binding.dependencies
+                                else {}
+                            ),
                         }
                     ).model_dump()
                 )
@@ -149,6 +177,20 @@ def remap_runtime_bindings(flows: dict[str, dict], id_map: dict[str, str], proje
 
         for node in data.get("nodes", []):
             node_data = node.get("data", {})
+            if node_data.get("type") in {"RunFlow", "SubFlow"}:
+                template = node_data.get("node", {}).get("template", {})
+                selected = template.get("flow_id_selected", {}).get("value")
+                if selected in original_ids:
+                    target = original_ids[selected]
+                    visit(target, active | {flow_id})
+                    instruction = node_data.get("_harness_binding")
+                    if isinstance(instruction, dict):
+                        instruction["revision"] = flow_revision(flows[target])
+                        instruction["version_id"] = None
+                        if instruction.get("dependencies"):
+                            instruction["dependencies"] = [
+                                item.model_dump() for item in remap_dependencies(instruction["dependencies"])
+                            ]
             if node_data.get("type") != "Agent":
                 continue
             values = _runtime_values(node_data)

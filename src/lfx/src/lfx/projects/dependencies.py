@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
+from lfx.projects.bindings import BINDING_ORIGIN, BoundFlowDependency, FlowSourceChangedError, flow_revision
 
 
 @dataclass(frozen=True)
@@ -72,3 +72,25 @@ def dependency_ids(root_id: str, flows: list[dict]) -> tuple[str, ...]:
 
     visit(root_id, set())
     return tuple(sorted(visited - {root_id}))
+
+
+def binding_dependencies(root_id: str, flows: list[dict]) -> list[BoundFlowDependency]:
+    """Describe the nested definitions included in a customization's review."""
+    available = {str(flow["id"]): flow for flow in flows}
+    return [
+        BoundFlowDependency(
+            flow_id=flow_id,
+            name=available[flow_id]["name"],
+            description=available[flow_id].get("description") or "",
+            revision=flow_revision(available[flow_id]["data"]),
+        )
+        for flow_id in dependency_ids(root_id, flows)
+    ]
+
+
+def validate_binding_dependencies(binding, flows: list[dict]) -> None:
+    expected = [item.definition() for item in binding_dependencies(binding.flow_id, flows)]
+    actual = sorted((item.definition() for item in binding.dependencies), key=lambda item: item["flow_id"])
+    if actual != expected:
+        msg = "The flow dependencies changed. Review the customization and save its binding before running."
+        raise FlowSourceChangedError(msg)

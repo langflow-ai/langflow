@@ -9,6 +9,7 @@ it always has.
 from copy import deepcopy
 
 from lfx.helpers import get_tool_pack_flow
+from lfx.template.field.base import UNDEFINED
 
 
 def _origin(component, key: str) -> dict | None:
@@ -58,18 +59,43 @@ async def reviewed_source(component, flow_id, flow_name) -> dict | None:
     definition is resolved once per run; every invocation still builds a fresh graph from it.
     """
     pack = tool_pack_binding(component)
+    instruction = instruction_binding(component)
     if pack is not None and str(pack.tool.flow_id) != str(flow_id):
         msg = "The Tool Pack adapter points to a different flow. Restore its reviewed reference."
         raise ValueError(msg)
     if (frozen := frozen_flow(component, flow_id, flow_name)) is not None:
         return {**frozen, "dependencies": component.graph.frozen_tool_flows}
-    if pack is None:
+    binding = instruction or pack
+    if binding is None:
         return None
-    key = (getattr(component.graph, "_run_id", None), pack)
+    if binding is instruction and instruction.flow_id != str(flow_id):
+        msg = "The bound Instructions flow was changed on the canvas. Update the harness binding."
+        raise ValueError(msg)
+    key = (getattr(component.graph, "_run_id", None), binding.model_dump_json())
     cached = getattr(component, "_reviewed_source", None)
     if cached is None or cached[0] != key:
-        component._reviewed_source = (key, await _resolve_tool_pack(component, pack))  # noqa: SLF001
+        if binding is pack:
+            resolved = await _resolve_tool_pack(component, pack)
+        else:
+            resolved = await _resolve_instructions(component, instruction)
+        component._reviewed_source = (key, resolved)  # noqa: SLF001
     return component._reviewed_source[1]  # noqa: SLF001
+
+
+async def _resolve_instructions(component, binding) -> dict:
+    from lfx.projects.bindings import validate_instruction_binding
+    from lfx.projects.invocation import reviewed_flow_source
+
+    snapshot = await reviewed_flow_source(
+        component, binding, field_name="system_prompt", validate=validate_instruction_binding
+    )
+    return {
+        "data": snapshot["data"],
+        "id": binding.flow_id,
+        "name": snapshot.get("name"),
+        "description": None,
+        "dependencies": snapshot.get("dependencies"),
+    }
 
 
 async def _resolve_tool_pack(component, binding) -> dict:
@@ -124,21 +150,35 @@ def prepare_instruction_run(component, graph, *, tweaks) -> None:
 def declared_outputs(component, graph) -> dict:
     """Return the declared values a child run produced, keyed by ``(vertex id, output name)``.
 
-    A bound Instructions child reports its selected output, read from the edge rather than the
-    transport result. Any other Run Flow node keeps the transport result it always had.
+    The transport result may replace values with display artifacts (for example
+    ``{repr, raw, type}`` for text), while a flow edge needs the declared value, just like an
+    edge within the child graph. A stored flow in Langflow keeps the transport result it always
+    had, so existing downstream edges see the same values; this applies only to reviewed
+    definitions and to flows served from a folder.
     """
-    if (binding := instruction_binding(component)) is None:
-        return {}
-    from lfx.projects.bindings import validate_instruction_result
+    if (binding := instruction_binding(component)) is not None:
+        from lfx.projects.bindings import validate_instruction_result
 
-    terminal = graph.get_vertex(binding.node_id)
-    if not terminal.built or terminal.custom_component is None:
-        msg = "The bound Instructions flow did not produce its selected output."
-        raise ValueError(msg)
-    # Display artifacts can stringify a list or object, which must never satisfy this
-    # runtime text contract, so read the edge value.
-    value = terminal.custom_component.get_output(binding.output_name).value
-    return {(binding.node_id, binding.output_name): validate_instruction_result(value)}
+        terminal = graph.get_vertex(binding.node_id)
+        if not terminal.built or terminal.custom_component is None:
+            msg = "The bound Instructions flow did not produce its selected output."
+            raise ValueError(msg)
+        # Display artifacts can stringify a list or object, which must never satisfy this
+        # runtime text contract, so read the edge value.
+        value = terminal.custom_component.get_output(binding.output_name).value
+        return {(binding.node_id, binding.output_name): validate_instruction_result(value)}
+    parent = component.graph
+    served = bool((getattr(parent, "context", None) or {}).get("project_dir"))
+    reviewed = getattr(parent, "frozen_tool_flows", None) is not None or bool(tool_metadata(component))
+    if not (served or reviewed):
+        return {}
+    return {
+        (vertex.id, name): output.value
+        for vertex in graph.vertices
+        if vertex.built and vertex.custom_component is not None
+        for name, output in vertex.custom_component.get_outputs_map().items()
+        if output.value is not UNDEFINED
+    }
 
 
 def check_instruction_output(component, vertex_id: str, output_name: str) -> None:

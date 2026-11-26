@@ -9,6 +9,7 @@ import type {
 
 export type RecordedFlowBinding = {
   flow_id: string;
+  dependencies?: import("@/pages/MainPage/entities").BoundFlowDependency[];
   node_id: string;
   output_name: string;
   revision: string;

@@ -304,6 +304,11 @@ async def write_project_config_to_flows(
                 "Invalid flow bindings. Choose compatible harness outputs and valid binding settings.",
             ) from exc
         sources = {str(flow.id): flow for flow in flows if not flow.is_component}
+        from lfx.projects.dependencies import validate_binding_dependencies
+
+        from langflow.services.database.models.folder.flow_bindings import flow_definitions, resolve_binding_flows
+
+        binding_sources = {}
         for field_name, binding in bindings.entries():
             try:
                 source = sources.get(binding.flow_id)
@@ -316,11 +321,18 @@ async def write_project_config_to_flows(
                     str(agent.id),
                 )
                 validate_project_binding(field_name, source.data, binding)
+                resolved_sources = await resolve_binding_flows(session, current_user, source, action=FlowAction.EXECUTE)
+                validate_binding_dependencies(binding, flow_definitions(resolved_sources.values()))
+                binding_sources[binding.flow_id] = resolved_sources
             except (ValueError, KeyError, TypeError) as exc:
                 raise HTTPException(422, f"Could not bind {BINDING_LABELS[field_name]}: {exc}") from exc
         # Validate the entire set before creating any required source snapshots.
         for field_name, binding in bindings.entries():
             binding.version_id = await _binding_version(session, sources[binding.flow_id], field_name)
+            for dependency in binding.dependencies:
+                dependency.version_id = await _binding_version(
+                    session, binding_sources[binding.flow_id][dependency.flow_id], field_name
+                )
         if "flow_bindings" in config:
             config["flow_bindings"] = bindings.model_dump(exclude_unset=True, exclude_none=True)
         instruction_binding = bindings.system_prompt
