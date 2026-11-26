@@ -153,12 +153,12 @@ async def test_snapshot_rejects_forged_missing_and_wrong_flow_versions(active_us
 async def test_pack_save_and_execution_require_execute_permission(
     client, logged_in_headers, active_user, pack_harness, monkeypatch
 ):
-    project, agent, _pack, _source, config = pack_harness
+    project, agent, _pack, source, config = pack_harness
     binding = ToolPackToolBinding.model_validate(pack_node(await stored_flow(agent))["data"][TOOL_ORIGIN]["tool_pack"])
     actions = []
 
     async def deny_execute(_user, action, **_scope):
-        actions.append(action.value)
+        actions.append((str(_scope["flow_id"]), action.value))
         if action.value == "execute":
             raise HTTPException(403)
 
@@ -170,4 +170,4 @@ async def test_pack_save_and_execution_require_execute_permission(
     with pytest.raises(HTTPException) as error:
         await get_tool_pack_flow(user_id=str(active_user.id), binding=binding)
     assert error.value.status_code == 404
-    assert actions == ["read", "execute", "read", "execute"]
+    assert [action for flow_id, action in actions if flow_id == source] == ["read", "execute", "read", "execute"]
