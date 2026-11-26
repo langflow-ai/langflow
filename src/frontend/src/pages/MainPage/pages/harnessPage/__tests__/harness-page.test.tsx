@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
-import type { ProjectTypeType } from "@/pages/MainPage/entities";
+import type { HookBinding, ProjectTypeType } from "@/pages/MainPage/entities";
 import type { FlowType } from "@/types/flow";
 import { editorDraft } from "../editor-draft";
 import HarnessPage from "../harness-page";
@@ -22,6 +22,45 @@ const instructionsBinding = {
   output_name: "instructions",
   revision: "reviewed",
 };
+const hookBinding: HookBinding = {
+  flow_id: "hook-source",
+  node_id: "hook",
+  output_name: "decision",
+  revision: "reviewed",
+  on_event: "before_tool_call",
+};
+jest.mock("../components/hook-flow-picker", () => ({
+  HookFlowPicker: ({
+    value,
+    onChange,
+    onOpen,
+  }: {
+    value: HookBinding[];
+    onChange: (next: HookBinding[]) => void;
+    onOpen: () => void;
+  }) => (
+    <>
+      <button
+        data-testid="bind-hook"
+        onClick={() => onChange([...value, hookBinding])}
+      >
+        Add hook
+      </button>
+      <button data-testid="remove-hooks" onClick={() => onChange([])}>
+        Remove hooks
+      </button>
+      <button data-testid="open-hook" onClick={onOpen}>
+        Open hook
+      </button>
+      <button
+        data-testid="invalidate-hook"
+        onClick={() => onChange([{ ...hookBinding, timeout_seconds: NaN }])}
+      >
+        Invalid timeout
+      </button>
+    </>
+  ),
+}));
 
 jest.mock("../components/instructions-flow-picker", () => ({
   InstructionsFlowPicker: ({
@@ -649,6 +688,86 @@ it("restores the explicit editor draft and consumes it once", () => {
     "Unsaved research instructions",
   );
   expect(editorDraft.get("project-1")).toEqual({});
+});
+
+const enableHookFields = () => {
+  projectTypes = [
+    {
+      ...HARNESS,
+      template: {
+        ...HARNESS.template,
+        system_prompt: {
+          ...HARNESS.template.system_prompt,
+          supports_flow_binding: true,
+          renders: "long_text",
+        },
+        hooks: {
+          name: "hooks",
+          display_name: "Hooks",
+          section: "Hooks",
+          renders: "hook_flows",
+          value: [],
+        },
+      },
+    },
+  ];
+  projectFlows = [agentFlow("main")];
+};
+
+it("edits Hook and Instructions bindings together and summarizes the hook count", () => {
+  enableHookFields();
+  renderPage({
+    projectConfig: { flow_bindings: { system_prompt: instructionsBinding } },
+  });
+  fireEvent.click(screen.getByTestId("bind-hook"));
+  expect(screen.getByText("1 hook")).toBeVisible();
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config.flow_bindings).toEqual({
+    system_prompt: instructionsBinding,
+    hooks: [hookBinding],
+  });
+  fireEvent.click(screen.getByTestId("bind-instructions"));
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config.flow_bindings).toEqual({
+    hooks: [hookBinding],
+  });
+  fireEvent.click(screen.getByTestId("bind-instructions"));
+  fireEvent.click(screen.getByTestId("remove-hooks"));
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config.flow_bindings).toEqual({
+    system_prompt: instructionsBinding,
+    hooks: [],
+  });
+});
+
+it("keeps the Hook editor draft while visiting the source canvas", () => {
+  enableHookFields();
+  const first = renderPage({
+    projectConfig: { flow_bindings: { system_prompt: instructionsBinding } },
+  });
+  fireEvent.click(screen.getByTestId("bind-hook"));
+  fireEvent.change(screen.getByTestId("input-n_messages"), {
+    target: { value: "27" },
+  });
+  fireEvent.click(screen.getByTestId("open-hook"));
+  first.unmount();
+  renderPage();
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch.mock.lastCall[0].data.project_config).toMatchObject({
+    n_messages: "27",
+    flow_bindings: { system_prompt: instructionsBinding, hooks: [hookBinding] },
+  });
+});
+
+it("blocks a save with an invalid Hook timeout and recovers when it is removed", () => {
+  enableHookFields();
+  renderPage();
+  fireEvent.click(screen.getByTestId("invalidate-hook"));
+  expect(screen.getByTestId("harness-save-btn")).toBeDisabled();
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByTestId("remove-hooks"));
+  expect(screen.getByTestId("harness-save-btn")).toBeEnabled();
 });
 
 it("reveals mode settings and preserves them when a mode is turned off", () => {
