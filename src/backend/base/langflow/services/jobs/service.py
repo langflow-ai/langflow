@@ -245,6 +245,7 @@ class JobService(Service):
         status: JobStatus = JobStatus.QUEUED,
         *,
         heartbeat: bool = False,
+        initial_checkpoints: dict[str, str] | None = None,
     ) -> Job:
         """Create a new job record, QUEUED unless ``status`` says otherwise.
 
@@ -274,6 +275,8 @@ class JobService(Service):
             heartbeat: Insert the row already heartbeated by this process, so it is live
                 before ``start_keep_alive`` takes over. For a run this process starts
                 right away and keeps alive itself.
+            initial_checkpoints: Opaque blobs committed in that same transaction. Candidate
+                runs retain their executable archive before any worker can claim the job.
 
         Returns:
             Created Job object
@@ -367,6 +370,8 @@ class JobService(Service):
                 job_metadata=inject_trace_carrier(metadata) or None,
             )
             session.add(job)
+            for kind, blob in (initial_checkpoints or {}).items():
+                session.add(JobCheckpoint(job_id=job_id, kind=kind, blob=blob))
             await session.flush()
             return job
 

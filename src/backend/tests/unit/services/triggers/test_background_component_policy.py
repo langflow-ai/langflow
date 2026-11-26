@@ -235,3 +235,19 @@ async def test_trigger_worker_rechecks_demoted_owner(component_context):
 
     assert exc_info.value.status_code == 400
     assert context.builds == []
+
+
+async def test_trigger_worker_refuses_deactivated_owner(component_context):
+    context = component_context
+    stale_owner = UserRead.model_construct(id=context.owner_id, is_superuser=True, is_active=True)
+    source, _ = await _source(context, is_superuser=True, user=stale_owner)
+    async with session_scope() as session:
+        owner = await session.get(User, context.owner_id)
+        owner.is_active = False
+        session.add(owner)
+
+    with pytest.raises(HTTPException) as exc_info:
+        _ = [frame async for frame in source(job_id=uuid4())]
+
+    assert exc_info.value.status_code == 403
+    assert context.builds == []

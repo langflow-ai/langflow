@@ -305,6 +305,7 @@ EXPECTED_FIELDS = {
     "background_backend",
     "background_poll_interval_s",
     "background_claim_candidates",
+    "harness_candidate_mounts",
     "background_retention_days",
     "data_subject_response_days",
     "data_subject_auto_erase_on_expiry",

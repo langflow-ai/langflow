@@ -1,8 +1,18 @@
+from pathlib import Path
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from lfx.log.logger import logger
+
+
+class HarnessCandidateMount(BaseModel):
+    """Operator-owned immutable candidate selection; never a request override."""
+
+    path: Path
+    digest: str = Field(pattern=r"^[0-9a-f]{64}$")
+    enabled: bool = True
 
 
 class RuntimeSettings(BaseModel):
@@ -11,6 +21,13 @@ class RuntimeSettings(BaseModel):
     Note: ``event_delivery`` is validated here but reads ``workers`` from
     :class:`ServerSettings`. The composition order in :class:`Settings`
     guarantees ``workers`` is in ``info.data`` when this validator runs.
+    """
+
+    harness_candidate_mounts: dict[UUID, HarnessCandidateMount] = Field(default_factory=dict)
+    """LANGFLOW_HARNESS_CANDIDATE_MOUNTS maps existing workflow UUIDs to path/digest.
+
+    Files are trusted operator inputs. All replicas must use the same configuration.
+    Background jobs retain their own verified bytes in the durable job database.
     """
 
     warm_registry_enabled: bool = False
