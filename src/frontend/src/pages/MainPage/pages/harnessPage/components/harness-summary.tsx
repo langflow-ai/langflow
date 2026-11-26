@@ -10,6 +10,7 @@ interface HarnessSummaryProps {
   icon?: string;
   /** The model value as the model widget stores it: a list holding the picked model. */
   model?: unknown;
+  showModel?: boolean;
   toolFlows: FlowType[];
   /** Every other field the form holds, already formatted for reading. */
   details: { name: string; label: string; value: string }[];
@@ -44,6 +45,7 @@ export const HarnessSummary = ({
   details,
   className,
   agentFlow,
+  showModel = true,
 }: HarnessSummaryProps) => {
   const { t } = useTranslation();
   const pickedModel = modelLabel(model);
@@ -90,24 +92,26 @@ export const HarnessSummary = ({
         </div>
       )}
 
-      <div className="flex flex-col gap-1.5">
-        <Eyebrow>{t("harness.summaryModel")}</Eyebrow>
-        {pickedModel ? (
-          <span
-            className="truncate text-sm font-medium"
-            data-testid="harness-summary-model"
-          >
-            {pickedModel}
-          </span>
-        ) : (
-          <span
-            className="text-sm text-muted-foreground"
-            data-testid="harness-summary-model-empty"
-          >
-            {t("harness.summaryModelEmpty")}
-          </span>
-        )}
-      </div>
+      {showModel && (
+        <div className="flex flex-col gap-1.5">
+          <Eyebrow>{t("harness.summaryModel")}</Eyebrow>
+          {pickedModel ? (
+            <span
+              className="truncate text-sm font-medium"
+              data-testid="harness-summary-model"
+            >
+              {pickedModel}
+            </span>
+          ) : (
+            <span
+              className="text-sm text-muted-foreground"
+              data-testid="harness-summary-model-empty"
+            >
+              {t("harness.summaryModelEmpty")}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-2">

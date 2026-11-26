@@ -205,9 +205,11 @@ const HarnessPage = ({
 
   const flows = projectFlows ?? [];
   const selectedAgentId =
-    typeof values.agent_flow_id === "string"
-      ? values.agent_flow_id
-      : defaultAgent(flows)?.id;
+    projectType !== "agent-harness"
+      ? undefined
+      : typeof values.agent_flow_id === "string"
+        ? values.agent_flow_id
+        : defaultAgent(flows)?.id;
   const candidates = agentCandidates(flows);
   const selectedAgent = candidates.find((flow) => flow.id === selectedAgentId);
   const agentSelectionRequired =
@@ -363,7 +365,9 @@ const HarnessPage = ({
           <div className="flex min-w-0 flex-col">
             <h1 className="text-lg font-semibold">{type.display_name}</h1>
             <p className="text-sm text-muted-foreground">
-              {t("harness.configureAgent")}
+              {projectType === "agent-harness"
+                ? t("harness.configureAgent")
+                : type.description}
             </p>
           </div>
         </div>
@@ -517,6 +521,9 @@ const HarnessPage = ({
                   ) : (field as { renders?: string })?.renders ===
                     PROJECT_FLOWS_WIDGET ? (
                     <ProjectFlowPicker
+                      helpText={
+                        projectType === "tool-pack" ? field.info : undefined
+                      }
                       flows={flows.filter(
                         (flow) => flow.id !== selectedAgentId,
                       )}
@@ -633,10 +640,13 @@ const HarnessPage = ({
             toolFlows={toolFlows}
             details={summaryDetails}
             agentFlow={selectedAgent}
+            showModel={Boolean(modelFieldName)}
           />
-          <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
-            {t("harness.canvasEditsKept")}
-          </div>
+          {projectType === "agent-harness" && (
+            <div className="rounded-lg bg-muted/50 p-4 text-sm text-muted-foreground">
+              {t("harness.canvasEditsKept")}
+            </div>
+          )}
           {lastSave && (
             <div
               role="status"
