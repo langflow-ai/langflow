@@ -4138,5 +4138,6 @@
   "settings.upgrade.check.error.unsupported_upgrade_report_format": "The check finished, but the target release wrote a report format this server cannot import. Run langflow upgrade-check by hand to get the report file.",
   "settings.upgrade.check.error.subprocess_unavailable": "This server cannot start the check from this page. Run langflow upgrade-check from a terminal and import the report.",
   "settings.upgrade.check.error.connection_lost": "The connection closed before the check finished. Run it again.",
-  "settings.upgrade.check.error.refused": "The server did not start the check. Try again later."
+  "settings.upgrade.check.error.refused": "The server did not start the check. Try again later.",
+  "playground.sharedRunFailedHint": "This shared playground can't use the flow owner's credentials or knowledge bases. If the flow needs them, ask its owner."
 }

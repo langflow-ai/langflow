@@ -472,7 +472,11 @@ export async function runFlowAGUI(opts: RunFlowOptions): Promise<void> {
       terminalEventSeen = true;
       markRunningAsError = true;
       flowStore.setBuildInfo({ error: [message], success: false });
-      setErrorData({ title: i18n.t("humanInput.runFailed"), list: [message] });
+      // A shared-playground visitor gets a sanitized error, so say what they can act on.
+      const list = flowStore.playgroundPage
+        ? [message, i18n.t("playground.sharedRunFailedHint")]
+        : [message];
+      setErrorData({ title: i18n.t("humanInput.runFailed"), list });
     },
   };
 

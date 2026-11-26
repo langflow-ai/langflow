@@ -4138,5 +4138,6 @@
   "settings.upgrade.check.error.unsupported_upgrade_report_format": "확인은 끝났지만 대상 릴리스가 작성한 보고서 형식을 이 서버에서 가져올 수 없습니다. langflow upgrade-check를 직접 실행하여 보고서 파일을 받으세요.",
   "settings.upgrade.check.error.subprocess_unavailable": "이 서버는 이 페이지에서 확인을 시작할 수 없습니다. 터미널에서 langflow upgrade-check를 실행한 뒤 보고서를 가져오세요.",
   "settings.upgrade.check.error.connection_lost": "확인이 끝나기 전에 연결이 닫혔습니다. 다시 실행하세요.",
-  "settings.upgrade.check.error.refused": "서버가 확인을 시작하지 않았습니다. 나중에 다시 시도하세요."
+  "settings.upgrade.check.error.refused": "서버가 확인을 시작하지 않았습니다. 나중에 다시 시도하세요.",
+  "playground.sharedRunFailedHint": "이 공유 플레이그라운드에서는 플로우 소유자의 자격 증명이나 지식 베이스를 사용할 수 없습니다. 플로우에 필요한 경우 소유자에게 문의하세요."
 }

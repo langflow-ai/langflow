@@ -4139,5 +4139,6 @@
   "settings.upgrade.check.error.unsupported_upgrade_report_format": "確認は完了しましたが、対象リリースが書き出したレポート形式をこのサーバーはインポートできません。langflow upgrade-checkを手動で実行して、レポートファイルを取得してください。",
   "settings.upgrade.check.error.subprocess_unavailable": "このサーバーはこのページから確認を開始できません。ターミナルでlangflow upgrade-checkを実行し、レポートをインポートしてください。",
   "settings.upgrade.check.error.connection_lost": "確認が終わる前に接続が閉じられました。もう一度実行してください。",
-  "settings.upgrade.check.error.refused": "サーバーが確認を開始しませんでした。後でもう一度お試しください。"
+  "settings.upgrade.check.error.refused": "サーバーが確認を開始しませんでした。後でもう一度お試しください。",
+  "playground.sharedRunFailedHint": "この共有プレイグラウンドでは、フロー所有者の認証情報やナレッジベースを使用できません。フローにそれらが必要な場合は、所有者に問い合わせてください。"
 }

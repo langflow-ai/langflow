@@ -62,6 +62,17 @@ class _BufferedMessage:
         return self.final_text if self.final_text is not None else "".join(self.chunks)
 
 
+def _vertex_error_message(build_data: dict) -> str:
+    """The error a failed vertex reports, already filtered by the run's error policy."""
+    outputs = (build_data.get("data") or {}).get("outputs") or {}
+    for output in outputs.values() if isinstance(outputs, dict) else ():
+        message = output.get("message") if isinstance(output, dict) else None
+        error = message.get("errorMessage") if isinstance(message, dict) else None
+        if isinstance(error, str) and error.strip():
+            return error.strip()
+    return "Workflow execution failed."
+
+
 class AGUITranslator:
     """Translates Langflow ``EventManager`` events into AG-UI protocol events.
 
@@ -111,6 +122,9 @@ class AGUITranslator:
         # loop's trailing ``end``, a cancel, a second error) are dropped. A pause
         # still passes, because the runners detect a suspend from that frame.
         self._errored = False
+        # First failed component's client-facing error, used to close a
+        # conversation-only stream as failed (see the ``end`` branch).
+        self._failed_vertex_message: str | None = None
 
     def start(self) -> list[BaseEvent]:
         """Open the run.
@@ -164,6 +178,11 @@ class AGUITranslator:
         # split into multiple START/END pairs reusing an already-ended id.
         if event_type == "end":
             events = self._drain_messages()
+            if self._failed_vertex_message is not None and not self.expose_graph_state:
+                # Without node status this client has no other sign of the failure.
+                events.append(RunErrorEvent(message=self._failed_vertex_message))
+                self._errored = True
+                return events
             events.append(RunFinishedEvent(run_id=self.run_id, thread_id=self.thread_id))
             return events
         if event_type == "error":
@@ -275,9 +294,11 @@ class AGUITranslator:
 
     def _translate_end_vertex(self, data: dict) -> list[BaseEvent]:
         """Map ``end_vertex`` to a ``STEP_FINISHED`` + a ``STATE_DELTA`` for status and output."""
+        build_data = data.get("build_data") or {}
+        if build_data.get("valid") is False and self._failed_vertex_message is None:
+            self._failed_vertex_message = _vertex_error_message(build_data)
         if not self.expose_graph_state:
             return []
-        build_data = data.get("build_data") or {}
         node_id = build_data.get("id")
         if not node_id:
             return []
