@@ -18,6 +18,8 @@ from uuid import UUID, uuid4
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from lfx.projects.tool_packs import ToolDependencyUse
+
 if TYPE_CHECKING:
     from lfx.services.storage.service import StorageService
 
@@ -103,6 +105,7 @@ class CollectedEvidence(BaseModel):
 
     sources: tuple[SourceRecord, ...] = ()
     uses: tuple[SourceUse, ...] = ()
+    tool_dependencies: tuple[ToolDependencyUse, ...] = ()
 
     @model_validator(mode="after")
     def validate_references(self) -> CollectedEvidence:
@@ -132,6 +135,7 @@ class SourcedReport(BaseModel):
     execution: ArtifactExecution
     sources: tuple[SourceRecord, ...] = ()
     source_uses: tuple[SourceUse, ...] = ()
+    tool_dependencies: tuple[ToolDependencyUse, ...] = ()
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     claim_support: Literal["not_evaluated"] = "not_evaluated"
 

@@ -237,7 +237,9 @@ class TestRunFlowBaseComponentFlowRetrieval:
         component = RunFlowBaseComponent()
         component._user_id = str(uuid4())
         component.cache_flow = True
-        component._vertex = SimpleNamespace(graph=SimpleNamespace(authorized_extra_file_scopes=frozenset({"user-d"})))
+        component._vertex = SimpleNamespace(
+            data={}, graph=SimpleNamespace(authorized_extra_file_scopes=frozenset({"user-d"}))
+        )
         flow_data = Data(data={"data": {"nodes": [], "edges": []}, "description": "Test flow"})
 
         with (
