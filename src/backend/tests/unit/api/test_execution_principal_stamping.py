@@ -467,6 +467,7 @@ async def _principal_from_a_build(monkeypatch: pytest.MonkeyPatch, **kwargs) -> 
     graph.sort_vertices.return_value = []
     graph.set_run_id.side_effect = lambda value: setattr(graph, "run_id", value)
     graph.end_all_traces = AsyncMock()
+    graph.check_and_handle_pause = AsyncMock()
 
     @contextlib.asynccontextmanager
     async def _fake_session_scope():

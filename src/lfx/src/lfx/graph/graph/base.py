@@ -2795,6 +2795,8 @@ class Graph:
             to_process.extend(next_runnable_vertices)
             layer_index += 1
 
+        # A pause requested in the last layer has no next layer to suspend it.
+        await self.check_and_handle_pause()
         await logger.adebug("Graph processing complete")
         return self
 

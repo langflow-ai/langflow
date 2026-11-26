@@ -1180,6 +1180,8 @@ async def _generate_flow_events(
             tasks.append(task)
         try:
             await asyncio.gather(*tasks)
+            # A pause requested by the last vertex to build has no next build_vertices to suspend it.
+            await graph.check_and_handle_pause()
         except asyncio.CancelledError:
             # Callers drain background_tasks on their own schedule, and a
             # cancelled v2 stream relies on a response queue that may never
