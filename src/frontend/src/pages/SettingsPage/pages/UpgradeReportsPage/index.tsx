@@ -60,6 +60,7 @@ function UpgradeReports() {
     if (pick) setParams({ report: pick.id });
   }, [pickAfterPageLoad, history.isFetching, history.data]);
   const select = (reportId: string, focus = false) => {
+    setPickAfterPageLoad(null);
     setFocusReport(focus ? reportId : null);
     setParams({ report: reportId });
   };

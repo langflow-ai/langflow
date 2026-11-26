@@ -1363,3 +1363,38 @@ it("holds the chosen file while an import is in flight", async () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
   );
 });
+
+it("keeps a report the admin picks while the next history page loads", async () => {
+  const all = Array.from({ length: 25 }, (_, i) => ({
+    ...report,
+    id: `r${i}`,
+  }));
+  let releaseSecondPage: () => void = () => {};
+  jest.spyOn(api, "get").mockImplementation(async (url, config) => {
+    if (url.endsWith("/maintenance/status"))
+      return {
+        data: { maintenance: false, migration: false, running_jobs: 0 },
+      };
+    if (url.endsWith("/repairs")) return { data: { items: [], total: 0 } };
+    const id = /\/(r\d+)$/.exec(url)?.[1];
+    if (id) return { data: { ...report, id } };
+    const offset =
+      (config as { params?: { offset?: number } })?.params?.offset ?? 0;
+    if (offset)
+      await new Promise<void>((resolve) => {
+        releaseSecondPage = resolve;
+      });
+    return {
+      data: { ...history, items: all.slice(offset, offset + 20), total: 25 },
+    };
+  });
+  open(true, "/settings/upgrade-reports?report=r19");
+  await screen.findByText("20 of 25");
+  await userEvent.click(screen.getByRole("button", { name: "Next report" }));
+  await userEvent.selectOptions(screen.getByLabelText("Choose a report"), "r3");
+  await act(async () => releaseSecondPage());
+  await screen.findByRole("option", { name: /r20$/ });
+  await act(async () => {});
+  expect(screen.getByLabelText("Choose a report")).not.toHaveValue("r20");
+  expect(screen.queryByText("21 of 25")).not.toBeInTheDocument();
+});
