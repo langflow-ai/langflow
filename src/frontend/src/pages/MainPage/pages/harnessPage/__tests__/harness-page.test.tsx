@@ -363,6 +363,45 @@ const defaultProps = {
 const renderPage = (props: Partial<ComponentProps<typeof HarnessPage>> = {}) =>
   render(<HarnessPage {...defaultProps} {...props} />);
 
+it("renders a tool pack's exports without an agent target or model requirement", () => {
+  const pack = {
+    name: "tool-pack",
+    display_name: "Tool Pack",
+    icon: "Package",
+    description: "Reusable tools supplied by this project.",
+    template: {
+      tools: {
+        ...HARNESS.template.tools,
+        section: "Exported tools",
+        display_name: "Exported tools",
+      },
+    },
+  };
+  projectTypes = [FLOWS, HARNESS, pack];
+  projectFlows = [agentFlow("callable-agent"), ...projectFlows!];
+  renderPage({ projectType: "tool-pack" });
+  expect(screen.getByText(pack.description)).toBeInTheDocument();
+  expect(screen.getByTestId("flow-picker")).toHaveAttribute("data-flows", "3");
+  expect(
+    screen.queryByTestId("harness-summary-model-empty"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(
+      "Choose the flow that receives these settings. Other flows keep their own configuration.",
+    ),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("flow-picker"));
+  fireEvent.click(screen.getByTestId("harness-save-btn"));
+  expect(mockPatch).toHaveBeenCalledWith(
+    expect.objectContaining({
+      data: expect.objectContaining({
+        project_config: expect.objectContaining({ tools: ["f2"] }),
+      }),
+    }),
+    expect.anything(),
+  );
+});
+
 beforeEach(() => {
   mockPending = false;
   mockRealNumericControls = false;

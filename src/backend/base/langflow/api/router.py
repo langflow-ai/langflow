@@ -57,6 +57,7 @@ from langflow.api.v1.data_subjects_self import router as data_subjects_self_rout
 from langflow.api.v1.knowledge_base_storage import router as knowledge_base_storage_router
 from langflow.api.v1.maintenance import router as maintenance_router
 from langflow.api.v1.project_reports import router as project_reports_router
+from langflow.api.v1.project_tool_packs import router as project_tool_packs_router
 from langflow.api.v1.upgrade_repairs import router as upgrade_repairs_router
 from langflow.api.v1.upgrade_reports import router as upgrade_reports_router
 from langflow.api.v1.voice_mode import router as voice_mode_router
@@ -133,6 +134,7 @@ router_v1.include_router(folders_router)
 router_v1.include_router(projects_audits_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(project_reports_router)
+router_v1.include_router(project_tool_packs_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(knowledge_bases_router)
 router_v1.include_router(memories_router)

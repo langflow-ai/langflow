@@ -1,5 +1,6 @@
 from collections import Counter
 from contextlib import nullcontext
+from copy import deepcopy
 from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
@@ -209,6 +210,20 @@ class RunFlowBaseComponent(Component):
             # parent graph). A graph built with them is for this run's user only, so it never enters the shared cache.
             extra_scopes = self._parent_extra_file_scopes()
             uncacheable = admin_only or bool(extra_scopes)
+            if (source := await reviewed_flows.reviewed_source(self, flow_id_selected, flow_name_selected)) is not None:
+                # A fresh graph per invocation prevents tool arguments and build state
+                # leaking between calls. Its definition is fixed for this compiled run.
+                payload = deepcopy(source["data"])
+                sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
+                graph = Graph.from_payload(
+                    payload=sanitized_payload if sanitized_payload is not None else payload,
+                    flow_id=source["id"],
+                    flow_name=source["name"],
+                    user_id=self.user_id,
+                    authorized_extra_file_scopes=extra_scopes,
+                )
+                graph.description = source.get("description")
+                return graph
             if (
                 not uncacheable
                 and flow_id_selected
@@ -388,7 +403,7 @@ class RunFlowBaseComponent(Component):
 
         # convert list of dicts to list of dotdicts
         tool_mode_inputs = [dotdict(field) for field in tool_mode_inputs]
-        return component_toolkit(component=self).get_tools(
+        tools = component_toolkit(component=self).get_tools(
             tool_name=f"{self.flow_name_selected}_tool",
             tool_description=(
                 f"Tool designed to execute the flow '{self.flow_name_selected}'. Flow details: {flow_description}."
@@ -396,6 +411,10 @@ class RunFlowBaseComponent(Component):
             callbacks=self.get_langchain_callbacks(),
             flow_mode_inputs=tool_mode_inputs,
         )
+        if metadata := reviewed_flows.tool_metadata(self):
+            for tool in tools:
+                tool.metadata = {**(tool.metadata or {}), **metadata}
+        return tools
 
     ################################################################
     # Flow output resolution
@@ -469,6 +488,8 @@ class RunFlowBaseComponent(Component):
         # timestamp over; without it the copy reads every cached graph as stale.
         new_component._cached_flow_updated_at = self._cached_flow_updated_at  # noqa: SLF001
         new_component._ensure_flow_output_methods()  # noqa: SLF001
+        if hasattr(self, "_reviewed_source"):
+            new_component._reviewed_source = deepcopy(self._reviewed_source)  # noqa: SLF001
         return new_component
 
     def _clear_dynamic_flow_output_methods(self) -> None:
