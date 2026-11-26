@@ -14,10 +14,16 @@ import {
 import { useCreateInstructionsFlow } from "@/controllers/API/queries/folders/use-create-instructions-flow";
 import { useGetProjectFlowOutputsQuery } from "@/controllers/API/queries/folders/use-get-project-flow-outputs";
 import type {
+  CompactionBinding,
   ContextBinding,
   FlowOutputChoice,
 } from "@/pages/MainPage/entities";
-import { bindingOf, outputKey, validFlowTimeout } from "../flow-binding";
+import {
+  bindingOf,
+  outputKey,
+  validCompactionThreshold,
+  validFlowTimeout,
+} from "../flow-binding";
 
 export function HarnessFlowPicker({
   projectId,
@@ -33,38 +39,60 @@ export function HarnessFlowPicker({
   projectId: string;
   fieldName: string;
   agentId?: string;
-  value?: ContextBinding;
+  value?: ContextBinding | CompactionBinding;
   disabled: boolean;
   initialValue?: string;
   initialConfig?: Record<string, unknown>;
   onOpen?: () => void;
-  onChange: (value: ContextBinding | undefined) => void;
+  onChange: (value: ContextBinding | CompactionBinding | undefined) => void;
 }) {
   const { t } = useTranslation();
   const isContext = fieldName === "context_strategy";
-  const copy = isContext
-    ? {
-        title: "contextFromFlow",
-        choose: "chooseContextFlow",
-        create: "createContextFlow",
-        creating: "creatingContextFlow",
-        failed: "createContextFailed",
-        baseline: "contextBaselineHelp",
-        empty: "noContextOutputs",
-        open: "openContextFlow",
-        version: "contextBindingVersionHelp",
-      }
-    : {
-        title: "instructionsFromFlow",
-        choose: "chooseInstructionsFlow",
-        create: "createInstructionsFlow",
-        creating: "creatingInstructionsFlow",
-        failed: "createInstructionsFailed",
-        baseline: "instructionsBaselineHelp",
-        empty: "noInstructionOutputs",
-        open: "openInstructionsFlow",
-        version: "bindingVersionHelp",
-      };
+  const isCompaction = fieldName === "compaction";
+  const kind = isCompaction
+    ? "compaction"
+    : isContext
+      ? "context"
+      : "instructions";
+  const timeout = value?.timeout_seconds ?? (isCompaction ? 60 : 30);
+  const threshold = value
+    ? ((value as CompactionBinding).trigger_tokens ?? 8000)
+    : Number(initialConfig?.compaction_trigger_tokens ?? 8000);
+  const copy = {
+    context: {
+      title: "contextFromFlow",
+      choose: "chooseContextFlow",
+      create: "createContextFlow",
+      creating: "creatingContextFlow",
+      failed: "createContextFailed",
+      baseline: "contextBaselineHelp",
+      empty: "noContextOutputs",
+      open: "openContextFlow",
+      version: "contextBindingVersionHelp",
+    },
+    compaction: {
+      title: "compactionFromFlow",
+      choose: "chooseCompactionFlow",
+      create: "createCompactionFlow",
+      creating: "creatingCompactionFlow",
+      failed: "createCompactionFailed",
+      baseline: "compactionBaselineHelp",
+      empty: "noCompactionOutputs",
+      open: "openCompactionFlow",
+      version: "compactionBindingVersionHelp",
+    },
+    instructions: {
+      title: "instructionsFromFlow",
+      choose: "chooseInstructionsFlow",
+      create: "createInstructionsFlow",
+      creating: "creatingInstructionsFlow",
+      failed: "createInstructionsFailed",
+      baseline: "instructionsBaselineHelp",
+      empty: "noInstructionOutputs",
+      open: "openInstructionsFlow",
+      version: "bindingVersionHelp",
+    },
+  }[kind];
   const createFlow = useCreateInstructionsFlow();
   const [creating, setCreating] = useState(false);
   const [creationError, setCreationError] = useState(false);
@@ -92,7 +120,8 @@ export function HarnessFlowPicker({
   const bind = (choice: FlowOutputChoice) =>
     onChange({
       ...bindingOf(choice),
-      ...(isContext ? { timeout_seconds: value?.timeout_seconds ?? 30 } : {}),
+      ...(isContext || isCompaction ? { timeout_seconds: timeout } : {}),
+      ...(isCompaction ? { trigger_tokens: threshold } : {}),
     });
   if (!expanded)
     return (
@@ -109,9 +138,7 @@ export function HarnessFlowPicker({
   return (
     <div
       className="flex min-w-0 flex-col gap-4 rounded-xl bg-muted/40 p-4"
-      data-testid={
-        isContext ? "context-flow-picker" : "instructions-flow-picker"
-      }
+      data-testid={`${kind}-flow-picker`}
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium">{t(`harness.${copy.title}`)}</p>
@@ -267,29 +294,64 @@ export function HarnessFlowPicker({
           )}
         </>
       )}
-      {isContext && value && (
+      {isCompaction && value && (
         <div className="flex flex-col gap-1.5">
           <label
-            htmlFor={`context-timeout-${projectId}`}
+            htmlFor={`compaction-threshold-${projectId}`}
+            className="text-xs font-medium"
+          >
+            {t("harness.compactionThreshold")}
+          </label>
+          <Input
+            id={`compaction-threshold-${projectId}`}
+            type="number"
+            min={1}
+            max={10_000_000}
+            step={1}
+            className="h-9 w-36"
+            value={Number.isFinite(threshold) ? threshold : ""}
+            disabled={disabled}
+            aria-invalid={!validCompactionThreshold(threshold)}
+            aria-describedby={`compaction-threshold-help-${projectId}`}
+            onChange={(event) =>
+              onChange({
+                ...value,
+                trigger_tokens: event.currentTarget.valueAsNumber,
+              })
+            }
+          />
+          <p
+            id={`compaction-threshold-help-${projectId}`}
+            className="text-xs text-muted-foreground"
+          >
+            {t("harness.compactionThresholdHelp")}
+          </p>
+          {!validCompactionThreshold(threshold) && (
+            <p role="alert" className="text-sm text-destructive">
+              {t("harness.compactionThresholdInvalid")}
+            </p>
+          )}
+        </div>
+      )}
+      {(isContext || isCompaction) && value && (
+        <div className="flex flex-col gap-1.5">
+          <label
+            htmlFor={`${kind}-timeout-${projectId}`}
             className="text-xs font-medium"
           >
             {t("harness.contextTimeout")}
           </label>
           <Input
-            id={`context-timeout-${projectId}`}
+            id={`${kind}-timeout-${projectId}`}
             type="number"
             min={0}
             max={300}
             step="any"
             className="h-9 w-28"
-            value={
-              Number.isFinite(value.timeout_seconds ?? 30)
-                ? (value.timeout_seconds ?? 30)
-                : ""
-            }
+            value={Number.isFinite(timeout) ? timeout : ""}
             disabled={disabled}
-            aria-invalid={!validFlowTimeout(value.timeout_seconds ?? 30)}
-            aria-describedby={`context-timeout-help-${projectId}`}
+            aria-invalid={!validFlowTimeout(timeout)}
+            aria-describedby={`${kind}-timeout-help-${projectId}`}
             onChange={(event) =>
               onChange({
                 ...value,
@@ -298,12 +360,12 @@ export function HarnessFlowPicker({
             }
           />
           <p
-            id={`context-timeout-help-${projectId}`}
+            id={`${kind}-timeout-help-${projectId}`}
             className="text-xs text-muted-foreground"
           >
-            {t("harness.contextTimeoutHelp")}
+            {t(`harness.${kind}TimeoutHelp`)}
           </p>
-          {!validFlowTimeout(value.timeout_seconds ?? 30) && (
+          {!validFlowTimeout(timeout) && (
             <p role="alert" className="text-sm text-destructive">
               {t("harness.contextTimeoutInvalid")}
             </p>
