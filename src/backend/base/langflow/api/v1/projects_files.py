@@ -157,7 +157,7 @@ async def download_project_flows(
         ) from e
 
 
-def _imported_project_config(value: object) -> dict | None:
+def _imported_project_config(value: object, *, strict: bool = False) -> dict | None:
     """Resolve the project config from an uploaded payload.
 
     ``FolderCreate.project_config`` is a ``dict | None``, so a scalar or a list reaches pydantic
@@ -167,6 +167,8 @@ def _imported_project_config(value: object) -> dict | None:
     if value is None:
         return None
     if not isinstance(value, dict):
+        if strict:
+            raise HTTPException(422, "Project configuration must be an object or null.")
         logger.warning(
             "Ignoring project_config of type %s in uploaded project; expected an object", type(value).__name__
         )
@@ -264,18 +266,22 @@ async def upload_project_flows(
 
     data["folder_name"] = project_name
 
+    project_type = _imported_project_type(data.get("folder_project_type"))
+    definition = get_project_type(project_type)
     try:
         project = FolderCreate(
             name=data["folder_name"],
             description=data.get("folder_description", ""),
-            project_type=_imported_project_type(data.get("folder_project_type")),
-            project_config=_imported_project_config(data.get("folder_project_config")),
+            project_type=project_type,
+            project_config=_imported_project_config(
+                data.get("folder_project_config"), strict=definition.archive_format == "composition"
+            ),
         )
     except ValidationError as e:
         # The imported name is validated like a typed one; report why rather than 500
         raise HTTPException(status_code=422, detail=e.errors()[0]["msg"]) from e
 
-    if get_project_type(project.project_type).archive_format == "composition":
+    if definition.archive_format == "composition":
         from lfx.projects.archives import ArchivedProject, ProjectComposition
 
         try:
