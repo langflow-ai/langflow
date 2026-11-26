@@ -163,3 +163,38 @@ describe("ProjectFlowPicker", () => {
     expect(screen.getByText("Looks things up")).toBeInTheDocument();
   });
 });
+
+it("selects filtered results while preserving selections outside the search", () => {
+  const { onChange } = setup({
+    flows: [
+      ...FLOWS,
+      flow("f4", "Read logs"),
+      flow("f5", "Read tickets"),
+      flow("f6", "Read reports"),
+    ],
+    value: ["f2"],
+  });
+  fireEvent.change(
+    screen.getByRole("textbox", { name: "harness.searchTools" }),
+    { target: { value: "Read" } },
+  );
+  expect(screen.queryByTestId("flow-picker-row-f1")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("flow-picker-toggle-all"));
+  expect(onChange).toHaveBeenCalledWith(["f2", "f4", "f5", "f6"]);
+});
+
+it("keeps unavailable selections until they are explicitly removed", () => {
+  const { onChange } = setup({ value: ["f1", "moved"] });
+  fireEvent.click(screen.getByTestId("flow-picker-switch-f2"));
+  expect(onChange).toHaveBeenLastCalledWith(["f1", "f2", "moved"]);
+  fireEvent.click(
+    screen.getByRole("button", { name: "harness.removeUnavailable" }),
+  );
+  expect(onChange).toHaveBeenLastCalledWith(["f1"]);
+});
+
+it("disables changes while a save is pending", () => {
+  setup({ disabled: true });
+  expect(screen.getByTestId("flow-picker-switch-f1")).toBeDisabled();
+  expect(screen.getByTestId("flow-picker-toggle-all")).toBeDisabled();
+});

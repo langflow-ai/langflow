@@ -1,4 +1,7 @@
-import type { AddFolderType } from "@/pages/MainPage/entities";
+import type {
+  AddFolderType,
+  ProjectSaveResult,
+} from "@/pages/MainPage/entities";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -15,13 +18,14 @@ interface IPatchPatchFolders {
 
 export const usePatchFolders: useMutationFunctionType<
   undefined,
-  IPatchPatchFolders
+  IPatchPatchFolders,
+  ProjectSaveResult
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
   const patchFoldersFn = async (
     newFolder: IPatchPatchFolders,
-  ): Promise<void> => {
+  ): Promise<ProjectSaveResult> => {
     // A key left out of the payload leaves the stored value alone. An explicit null
     // project_config is a real value (it clears the config), which is why that one checks for
     // the key rather than for a truthy value.
@@ -60,6 +64,7 @@ export const usePatchFolders: useMutationFunctionType<
       // The open project is read through its own query, so a saved form has to invalidate it
       // too or the page keeps rendering the config it had before the save.
       queryClient.refetchQueries({ queryKey: ["useGetFolder"] });
+      queryClient.invalidateQueries({ queryKey: ["useGetProjectFlows"] });
       // A rename re-registers the project's MCP server under a new name, so the MCP tab
       // would otherwise keep showing the old one.
       queryClient.invalidateQueries({ queryKey: ["useGetFlowsMCP"] });

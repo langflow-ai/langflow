@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import type { FlowType } from "@/types/flow";
@@ -12,6 +14,7 @@ interface ProjectFlowPickerProps {
   /** Ids of the flows currently picked. */
   value: string[];
   onChange: (value: string[]) => void;
+  disabled?: boolean;
 }
 
 /**
@@ -27,9 +30,17 @@ export const ProjectFlowPicker = ({
   isLoading,
   value,
   onChange,
+  disabled = false,
 }: ProjectFlowPickerProps) => {
   const { t } = useTranslation();
+  const [search, setSearch] = useState("");
   const picked = new Set(value);
+  const filteredFlows = flows.filter((flow) =>
+    `${flow.name} ${flow.description ?? ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase()),
+  );
+  const missing = value.filter((id) => !flows.some((flow) => flow.id === id));
 
   const toggle = (flowId: string) => {
     const next = new Set(picked);
@@ -39,7 +50,10 @@ export const ProjectFlowPicker = ({
       next.add(flowId);
     }
     // Keep the project's own order rather than click order, so the saved list is stable.
-    onChange(flows.filter((flow) => next.has(flow.id)).map((flow) => flow.id));
+    onChange([
+      ...flows.filter((flow) => next.has(flow.id)).map((flow) => flow.id),
+      ...missing,
+    ]);
   };
 
   if (isLoading) {
@@ -63,7 +77,7 @@ export const ProjectFlowPicker = ({
     );
   }
 
-  if (flows.length === 0) {
+  if (flows.length === 0 && !missing.length) {
     return (
       <div
         className="flex flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 px-6 py-8 text-center"
@@ -84,10 +98,42 @@ export const ProjectFlowPicker = ({
     );
   }
 
-  const allPicked = flows.every((flow) => picked.has(flow.id));
+  const allPicked =
+    filteredFlows.length > 0 &&
+    filteredFlows.every((flow) => picked.has(flow.id));
 
   return (
     <div className="flex flex-col gap-2" data-testid="flow-picker">
+      <p className="text-sm text-muted-foreground">{t("harness.toolsHelp")}</p>
+      {flows.length > 5 && (
+        <Input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder={t("harness.searchTools")}
+          aria-label={t("harness.searchTools")}
+          disabled={disabled}
+        />
+      )}
+      {missing.length > 0 && (
+        <div
+          className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-muted p-3 text-sm"
+          role="status"
+        >
+          <span>
+            {t("harness.toolsUnavailable", { count: missing.length })}
+          </span>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={disabled}
+            onClick={() =>
+              onChange(value.filter((id) => !missing.includes(id)))
+            }
+          >
+            {t("harness.removeUnavailable")}
+          </Button>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <span className="text-xs text-muted-foreground">
           {t("harness.toolsPickedCount", {
@@ -100,31 +146,43 @@ export const ProjectFlowPicker = ({
           data-testid="flow-picker-toggle-all"
           className="text-xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
           onClick={() =>
-            onChange(allPicked ? [] : flows.map((flow) => flow.id))
+            onChange(
+              allPicked
+                ? value.filter(
+                    (id) => !filteredFlows.some((flow) => flow.id === id),
+                  )
+                : [
+                    ...flows
+                      .filter(
+                        (flow) =>
+                          picked.has(flow.id) || filteredFlows.includes(flow),
+                      )
+                      .map((flow) => flow.id),
+                    ...missing,
+                  ],
+            )
           }
+          disabled={disabled || !filteredFlows.length}
         >
           {allPicked ? t("harness.toolsClearAll") : t("harness.toolsSelectAll")}
         </Button>
       </div>
 
       <div className="flex flex-col gap-1">
-        {flows.map((flow) => {
+        {filteredFlows.map((flow) => {
           const isPicked = picked.has(flow.id);
           return (
             <div
               key={flow.id}
               data-testid={`flow-picker-row-${flow.id}`}
               className={cn(
-                "flex w-full items-center gap-3 rounded-lg p-3 text-left transition-colors",
+                "flex w-full min-w-0 items-center gap-3 rounded-lg px-3 py-3 text-left",
                 isPicked ? "bg-muted" : "hover:bg-muted/60",
               )}
             >
               <div
                 className={cn(
-                  "flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg border",
-                  isPicked
-                    ? "border-transparent bg-primary/10 text-primary"
-                    : "border-border bg-muted text-muted-foreground",
+                  "flex h-6 w-6 flex-shrink-0 items-center justify-center text-muted-foreground",
                 )}
               >
                 <ForwardedIconComponent
@@ -146,6 +204,7 @@ export const ProjectFlowPicker = ({
               <Switch
                 data-testid={`flow-picker-switch-${flow.id}`}
                 checked={isPicked}
+                disabled={disabled}
                 onCheckedChange={() => toggle(flow.id)}
                 aria-label={t("harness.toolToggleLabel", { name: flow.name })}
               />
@@ -153,6 +212,11 @@ export const ProjectFlowPicker = ({
           );
         })}
       </div>
+      {!filteredFlows.length && search && (
+        <p className="py-4 text-sm text-muted-foreground">
+          {t("harness.noMatchingTools")}
+        </p>
+      )}
     </div>
   );
 };

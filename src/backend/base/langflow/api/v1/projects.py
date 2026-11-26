@@ -37,7 +37,7 @@ from langflow.api.v1.flows import (
     _handle_unique_constraint_error,
     _validate_catalog_policy_for_write,
 )
-from langflow.api.v1.flows_helpers import _new_flow, _update_existing_flow
+from langflow.api.v1.flows_helpers import _new_flow, _save_flow_to_fs, _update_existing_flow
 from langflow.api.v1.mappers.deployments.sync import (
     retry_flow_operation_on_deployment_guard,
     retry_project_operation_on_deployment_guard,
@@ -115,6 +115,7 @@ from langflow.services.database.models.deployment.exceptions import (
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
 from langflow.services.database.models.flow.model import Flow, FlowRead, is_virtual_flow_id
+from langflow.services.database.models.folder.config_writer import ProjectConfigWrite, config_from_request
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
     Folder,
@@ -122,10 +123,11 @@ from langflow.services.database.models.folder.model import (
     FolderListRead,
     FolderRead,
     FolderReadWithFlows,
+    FolderSaveRead,
     FolderUpdate,
 )
 from langflow.services.database.models.folder.pagination_model import FolderWithPaginatedFlows
-from langflow.services.database.models.folder.utils import validate_project_type
+from langflow.services.database.models.folder.utils import validate_project_type, write_project_config_to_flows
 from langflow.services.database.models.project_replacement_operation import ProjectReplacementOperation
 from langflow.services.database.models.user.model import User
 from langflow.services.deletion_hooks import DeletionContext, run_post_deletion_after_commit, run_pre_deletion_hooks
@@ -229,6 +231,22 @@ async def _stage_flow_moves(session: DbSession, moved: dict[UUID, tuple[UUID | N
         )
 
 
+async def _write_config_through(
+    session: DbSession, project: Folder, *, previous_config: dict | None = None
+) -> ProjectConfigWrite:
+    """Apply the project's form to its flows, and keep any file-backed copy in step.
+
+    A flow with an ``fs_path`` is also a file on disk, and that file is what lfx loads. Leaving
+    it behind would defeat the point of writing through at all.
+    """
+    changed = await write_project_config_to_flows(session, project, previous_config=previous_config)
+    if changed.flows:
+        storage_service = get_storage_service()
+        for flow in changed.flows:
+            await _save_flow_to_fs(flow, project.user_id, storage_service)
+    return changed
+
+
 async def _new_project(
     *,
     session: DbSession,
@@ -275,6 +293,7 @@ async def _new_project(
 
     new_project = Folder.model_validate(project, from_attributes=True)
     new_project.project_type = validate_project_type(new_project.project_type)
+    new_project.project_config = config_from_request(new_project.project_config)
     new_project.user_id = current_user.id
     # Apply the stable id: an explicit ``project_id`` (PUT upsert) overrides the uuid4 default.
     if project_id is not None:
@@ -438,11 +457,18 @@ async def _new_project(
             **written,
         )
 
+    flows_updated = await _write_config_through(session, new_project)
+
     # Convert to FolderRead while session is still active to avoid detached instance errors
-    return FolderRead.model_validate(new_project, from_attributes=True)
+    saved = FolderSaveRead.model_validate(new_project, from_attributes=True)
+    saved.flows_updated = len(flows_updated.flows)
+    saved.fields_skipped = flows_updated.fields_skipped
+    saved.flows_locked = flows_updated.flows_locked
+    saved.restore_version_ids = flows_updated.restore_version_ids
+    return saved
 
 
-@router.post("/", response_model=FolderRead, status_code=201)
+@router.post("/", response_model=FolderSaveRead, status_code=201)
 @audited_route(
     audit_vocab.AuditResourceType.PROJECT,
     audit_vocab.PROJECT_CREATE,
@@ -2033,8 +2059,9 @@ async def _apply_project_update(
 
     # project_config uses model_fields_set, not a None check: clearing the config and leaving
     # it untouched are different requests, and a None check cannot tell them apart.
+    previous_config = existing_project.project_config
     if "project_config" in project.model_fields_set:
-        existing_project.project_config = project.project_config
+        existing_project.project_config = config_from_request(project.project_config, existing_project.project_config)
 
     if project.parent_id is not None:
         # Validate the supplied parent references a folder owned by the project owner, so
@@ -2214,8 +2241,21 @@ async def _apply_project_update(
         **membership,
     )
 
+    # Last, after the flow moves, so whatever set of flows the project ends this request with
+    # is the set the form is written into.
+    flows_updated = (
+        await _write_config_through(session, existing_project, previous_config=previous_config)
+        if "project_config" in project.model_fields_set
+        else ProjectConfigWrite()
+    )
+
     # Convert to FolderRead while session is still active to avoid detached instance errors
-    return FolderRead.model_validate(existing_project, from_attributes=True)
+    saved = FolderSaveRead.model_validate(existing_project, from_attributes=True)
+    saved.flows_updated = len(flows_updated.flows)
+    saved.fields_skipped = flows_updated.fields_skipped
+    saved.flows_locked = flows_updated.flows_locked
+    saved.restore_version_ids = flows_updated.restore_version_ids
+    return saved
 
 
 def _folder_create_to_update(project: FolderCreate) -> FolderUpdate:
@@ -2234,7 +2274,7 @@ def _folder_create_to_update(project: FolderCreate) -> FolderUpdate:
     return FolderUpdate(**data)
 
 
-@router.patch("/{project_id}", response_model=FolderRead, status_code=200)
+@router.patch("/{project_id}", response_model=FolderSaveRead, status_code=200)
 @audited_route(
     audit_vocab.AuditResourceType.PROJECT,
     audit_vocab.PROJECT_WRITE,
