@@ -7,7 +7,7 @@ from lfx.inputs.inputs import StrInput
 from lfx.projects import (
     Cardinality,
     FireTiming,
-    ProjectType,
+    ProjectTypeDefinition,
     ProjectTypeField,
     SlotDefinition,
     all_slots,
@@ -17,29 +17,23 @@ from lfx.projects import (
     register_slot,
     registered_project_types,
     registered_slots,
-    registry,
 )
 
 
-@pytest.fixture(autouse=True)
-def isolated_registries(monkeypatch):
-    monkeypatch.setattr(registry, "_PROJECT_TYPES", dict(registry._PROJECT_TYPES))
-    monkeypatch.setattr(registry, "_SLOT_DEFINITIONS", dict(registry._SLOT_DEFINITIONS))
-
-
 def project_using(definition, *, name="test-project", field_name="custom"):
-    return ProjectType(
-        name=name,
-        display_name="Test project",
-        icon="Box",
-        fields=(
+    class TestProjectType(ProjectTypeDefinition):
+        display_name = "Test project"
+        icon = "Box"
+        fields = (
             ProjectTypeField(
                 name=field_name,
                 input=StrInput(name=field_name, display_name=field_name),
                 slot_definition=definition,
             ),
-        ),
-    )
+        )
+
+    TestProjectType.name = name
+    return TestProjectType
 
 
 def test_two_projects_reuse_one_contract_with_different_forms():
@@ -49,8 +43,8 @@ def test_two_projects_reuse_one_contract_with_different_forms():
 
     harness_tools = next(field for field in harness.fields if field.name == "tools")
     assert pack.fields[0].slot_definition is harness_tools.slot_definition
-    assert pack.to_template()["exports"]["flow_contract"] == harness.to_template()["tools"]["flow_contract"]
-    assert pack.to_template()["exports"]["display_name"] == "exports"
+    assert pack().to_template()["exports"]["flow_contract"] == harness.to_template()["tools"]["flow_contract"]
+    assert pack().to_template()["exports"]["display_name"] == "exports"
     assert harness.to_template()["tools"]["display_name"] == "Tools"
 
 
@@ -112,7 +106,7 @@ def test_all_contracts_are_available_in_stable_order():
 
 def test_type_registration_rejects_fields_that_would_overwrite_each_other():
     project = project_using(get_slot("Tool"))
-    project = replace(project, fields=project.fields + project.fields)
+    project.fields += project.fields
 
     with pytest.raises(ValueError, match="field 'custom' more than once"):
         register_project_type(project)
@@ -160,7 +154,7 @@ def test_custom_contract_can_be_registered_before_a_component_cache_exists():
 
     project = register_project_type(project_using(definition))
 
-    assert project.to_template()["custom"]["flow_contract"]["default_flow_ref"] == "research/evidence-check"
+    assert project().to_template()["custom"]["flow_contract"]["default_flow_ref"] == "research/evidence-check"
 
 
 def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
