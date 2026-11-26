@@ -4452,5 +4452,7 @@
   "components.sourcedreport.inputs.sources.display_name.96bb9ca3": "Additional Source Evidence",
   "components.sourcedreport.inputs.sources.info.f6f9c6d1": "Optional Record Source outputs. Sources collected by the connected Agent are included automatically.",
   "components.sourcedreport.inputs.title.display_name.09c955d5": "Report Title",
-  "components.sourcedreport.outputs.artifact.display_name.8e0791aa": "Report Artifact"
+  "components.sourcedreport.outputs.artifact.display_name.8e0791aa": "Report Artifact",
+  "components.agent.inputs.skill_bindings.display_name.bd482b81": "Reviewed skills",
+  "components.agent.inputs.skill_bindings.info.512f5fce": "Reviewed Skill Pack content and tool scopes managed by the harness."
 }
