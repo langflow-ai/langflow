@@ -60,7 +60,7 @@ describe("useFetchDataOnMount", () => {
     { selected: "greet", options: [], toolMode: false, refreshes: true },
     { selected: "greet", options: ["greet"], toolMode: true, refreshes: true },
   ])(
-    "retains saved MCP selection on mount with $selected, $options, tool mode $toolMode",
+    "refreshes a saved MCP selection on mount only when it is unusable: $selected, $options, tool mode $toolMode",
     ({ selected, options, toolMode, refreshes }) => {
       const node = {
         tool_mode: toolMode,

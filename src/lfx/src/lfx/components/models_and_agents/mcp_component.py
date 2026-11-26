@@ -775,7 +775,13 @@ class MCPToolsComponent(ComponentWithCache):
                 build_config["tool_placeholder"]["tool_mode"] = True
 
                 current_server_name = normalized_server_name
-                build_config_server_value = build_config.get("mcp_server", {}).get("value")
+                previous_server_context = build_config.get("_frontend_node_previous_mcp_server")
+                has_previous_server = isinstance(previous_server_context, dict) and "value" in previous_server_context
+                build_config_server_value = (
+                    previous_server_context["value"]
+                    if has_previous_server
+                    else build_config.get("mcp_server", {}).get("value")
+                )
                 build_config_server_name = (
                     build_config_server_value.get("name")
                     if isinstance(build_config_server_value, dict)
@@ -787,7 +793,7 @@ class MCPToolsComponent(ComponentWithCache):
                 # Cold cache (_last_selected_server="") on initial flow load is NOT a server change —
                 # the user didn't switch anything, the backend just hasn't seen this component yet.
                 server_changed = bool(
-                    (_last_selected_server and current_server_name != _last_selected_server)
+                    (not has_previous_server and _last_selected_server and current_server_name != _last_selected_server)
                     or (build_config_server_name and current_server_name != build_config_server_name)
                 )
 

@@ -169,3 +169,35 @@ class TestMCPComponentFlowReload(ComponentTestBaseWithoutClient):
             "Error on MCP Server",
             "Timeout on MCP server",
         )
+
+    @pytest.mark.asyncio
+    async def test_should_reset_tool_when_request_names_a_different_previous_server_on_cold_cache(
+        self, component_class, default_kwargs, saved_flow_build_config
+    ):
+        """A switch is detected from the request even when no mount refresh seeded the cache."""
+        component = await self.component_setup(component_class, default_kwargs)
+        safe_cache_set(component._shared_component_cache, "last_selected_server", "")
+        build_config = saved_flow_build_config.copy()
+        # The editor writes the new server into the template before posting.
+        build_config["mcp_server"] = {"value": {"name": "new_server"}}
+        build_config["_frontend_node_previous_mcp_server"] = {"value": "test_server"}
+        build_config["category"] = {"name": "category", "type": "str", "value": ""}
+
+        updated_config = await component.update_build_config(build_config, {"name": "new_server"}, "mcp_server")
+
+        assert isinstance(updated_config["tool"]["value"], UUID)
+        assert "category" not in updated_config
+
+    @pytest.mark.asyncio
+    async def test_should_keep_tool_when_previous_server_is_unchanged_although_another_node_used_a_different_one(
+        self, component_class, default_kwargs, saved_flow_build_config
+    ):
+        """Another node's server in the process-wide cache must not count as this node's change."""
+        component = await self.component_setup(component_class, default_kwargs)
+        safe_cache_set(component._shared_component_cache, "last_selected_server", "other_server")
+        build_config = saved_flow_build_config.copy()
+        build_config["_frontend_node_previous_mcp_server"] = {"value": "test_server"}
+
+        updated_config = await component.update_build_config(build_config, {"name": "test_server"}, "mcp_server")
+
+        assert updated_config["tool"]["value"] == "saved_tool"
