@@ -167,6 +167,7 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         definition.name: definition.default_flow_ref for definition in all_slots() if definition.default_flow_ref
     } == {
         "Instructions": "builtin:instructions",
+        "Hook": "builtin:hook",
     }
     # These contracts are ready for runtime adapters; no inert fields are added to the form.
     assert set(get_project_type("agent-harness").field_names()) == {
@@ -174,6 +175,7 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         "model",
         "tools",
         "n_messages",
+        "hooks",
         "tool_policy",
         "context_strategy",
         "context_turns",

@@ -203,6 +203,9 @@ class ToolApprovalMixin:
             # or resolving any tool. The existing pause handler renders the current card.
             return None
         resume = {"decisions": self._build_resume_decisions(decision, value.get("action_requests") or [])}
+        actions = value.get("action_requests") or []
+        if len(actions) == 1 and actions[0].get("tool_call_id"):
+            resume["reviewed_action"] = actions[0]
         return Command(resume={interrupt_id: resume} if interrupt_id else resume)
 
     def _build_resume_decisions(

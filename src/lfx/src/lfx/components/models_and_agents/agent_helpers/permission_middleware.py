@@ -64,6 +64,18 @@ class ToolApprovalMiddleware(HumanInTheLoopMiddleware):
         action, review = self._create_action_and_config(request.tool_call, config, request.state, request.runtime)
         action["tool_call_id"] = request.tool_call["id"]
         response = interrupt({"action_requests": [action], "review_configs": [review]})
+        reviewed = response.get("reviewed_action")
+        if reviewed and any(reviewed.get(key) != action.get(key) for key in ("name", "args", "tool_call_id")):
+            # A replayed before-tool hook may return different arguments. The old
+            # approval cannot authorize those newly computed arguments.
+            msg = "Tool arguments changed after review. The tool was not executed; run again for a fresh approval."
+            return (
+                request,
+                ToolMessage(
+                    content=msg, name=request.tool_call["name"], tool_call_id=request.tool_call["id"], status="error"
+                ),
+                permission_evidence(request.tool_call, "reject_changed_arguments", self.policy),
+            )
         decisions = response.get("decisions", [])
         if len(decisions) != 1:
             msg = "Exactly one decision is required for this pending tool call."
