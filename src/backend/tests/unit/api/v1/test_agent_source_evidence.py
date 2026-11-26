@@ -230,7 +230,7 @@ async def test_saved_agent_collects_flow_tool_evidence_and_downloads_report(
             assert graph.pause_requested
             request = graph.pause_info["data"]
             assert request["action_requests"][0]["tool_call_id"] == call_id
-            assert await jobs.load_checkpoint(job_id, "agent")
+            assert await jobs.load_checkpoint(job_id, f"agent:{job_id}:Agent-research")
             checkpoint = None
             if nested:
                 from lfx.graph.checkpoint.builder import build_checkpoint

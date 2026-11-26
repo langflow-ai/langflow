@@ -33,7 +33,7 @@ class CheckpointStore(ABC):
     async def save_blob(self, job_id: str, kind: str, blob: str) -> None:
         """Persist an opaque per-run blob keyed by ``(job_id, kind)``.
 
-        Used by the agent tool-approval saver (LE-1447, kind='agent'), separate from
+        Used by the agent tool-approval saver (LE-1447, one kind per Agent), separate from
         the graph checkpoint. The default is in-memory (standalone/CLI); the durable
         store overrides it to write the job-scoped table.
         """
