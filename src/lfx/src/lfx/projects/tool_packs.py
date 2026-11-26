@@ -10,6 +10,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from lfx.projects.bindings import flow_revision
+from lfx.projects.dependencies import dependency_ids
 
 
 class ToolPackReference(BaseModel):
@@ -22,6 +23,22 @@ class ToolPackReference(BaseModel):
     revision: str = Field(pattern=r"^[a-f0-9]{64}$")
 
 
+class FlowDependency(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    flow_id: UUID
+    name: str
+    description: str = ""
+    revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+
+
+class FlowDependencyVersion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    flow: FlowDependency
+    version_id: UUID
+
+
 class ToolExport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
@@ -29,6 +46,7 @@ class ToolExport(BaseModel):
     name: str
     description: str = ""
     revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+    dependencies: tuple[FlowDependency, ...] = ()
 
 
 class ToolPackManifest(BaseModel):
@@ -47,6 +65,20 @@ class ToolPackToolBinding(BaseModel):
     reference: ToolPackReference
     tool: ToolExport
     version_id: UUID
+    dependency_versions: tuple[FlowDependencyVersion, ...] = ()
+
+    def dependency_snapshots(self) -> dict[str, FlowDependencyVersion]:
+        """Require one executable snapshot for every reviewed nested definition."""
+        expected = {str(item.flow_id): item for item in self.tool.dependencies}
+        recorded = {str(item.flow.flow_id): item for item in self.dependency_versions}
+        if (
+            len(expected) != len(self.tool.dependencies)
+            or len(recorded) != len(self.dependency_versions)
+            or expected != {key: item.flow for key, item in recorded.items()}
+        ):
+            msg = "The reviewed tool dependency snapshots are incomplete. Review and save the Tool Pack reference."
+            raise ValueError(msg)
+        return recorded
 
 
 class ToolDependencyUse(BaseModel):
@@ -76,17 +108,20 @@ def exported_flow_ids(config: dict | None) -> tuple[UUID, ...]:
     return tuple(dict.fromkeys(UUID(item) for item in value))
 
 
-def tool_pack_manifest(*, project_id: UUID, name: str, config: dict | None, flows: list[dict]) -> ToolPackManifest:
+def tool_pack_manifest(
+    *, project_id: UUID, name: str, config: dict | None, flows: list[dict], dependency_flows: list[dict] | None = None
+) -> ToolPackManifest:
     """Describe the selected exports from already-authorized, project-scoped flows.
 
     Revisions cover export membership, order, executable flow definitions, and tool
     names/descriptions. Pack labels, unexported flows, canvas positions, and MCP
-    publication do not alter the tools a consumer reviewed. Nested dependencies
-    are not represented by this direct-export manifest.
+    publication do not alter the tools a consumer reviewed. Reachable nested flow
+    definitions are part of the reviewed export, including runtime flow bindings.
     """
     from lfx.projects.tools import validate_tool_flow
 
     available = {UUID(str(flow["id"])): flow for flow in flows if not flow.get("is_component", False)}
+    definitions = {UUID(str(flow["id"])): flow for flow in [*(dependency_flows or []), *flows]}
     exports = []
     for flow_id in exported_flow_ids(config):
         if flow_id not in available:
@@ -100,12 +135,25 @@ def tool_pack_manifest(*, project_id: UUID, name: str, config: dict | None, flow
                 name=flow["name"],
                 description=flow.get("description") or "",
                 revision=flow_revision(flow["data"]),
+                dependencies=tuple(
+                    FlowDependency(
+                        flow_id=UUID(dependency_id),
+                        name=definitions[UUID(dependency_id)]["name"],
+                        description=definitions[UUID(dependency_id)].get("description") or "",
+                        revision=flow_revision(definitions[UUID(dependency_id)]["data"]),
+                    )
+                    for dependency_id in dependency_ids(str(flow_id), list(definitions.values()))
+                ),
             )
         )
     definition = {
         "project_id": str(project_id),
         "expected_type": "tool-pack",
-        "tools": [export.model_dump(mode="json") for export in exports],
+        # Keep existing revisions stable for exports that have no nested dependencies.
+        "tools": [
+            export.model_dump(mode="json", exclude={"dependencies"} if not export.dependencies else set())
+            for export in exports
+        ],
     }
     revision = hashlib.sha256(json.dumps(definition, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
     return ToolPackManifest(

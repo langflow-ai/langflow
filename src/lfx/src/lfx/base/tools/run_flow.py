@@ -164,6 +164,8 @@ class RunFlowBaseComponent(Component):
     ################################################################
     async def get_flow(self, flow_name_selected: str | None = None, flow_id_selected: str | None = None) -> Data:
         """Get a flow's data by name or id."""
+        if (frozen := reviewed_flows.frozen_flow(self, flow_id_selected, flow_name_selected)) is not None:
+            return Data(data=deepcopy(frozen))
         if (served := served_flow(self.graph, flow_name_selected, flow_id_selected)) is not None:
             return served
         flow = await get_flow_by_id_or_name(
@@ -187,9 +189,10 @@ class RunFlowBaseComponent(Component):
         if not (flow_name_selected or flow_id_selected):
             msg = "Flow name or id is required"
             raise ValueError(msg)
+        frozen = reviewed_flows.frozen_flow(self, flow_id_selected, flow_name_selected)
         async with _model_provider_policy(
             user_id=self.user_id,
-            flow_id=flow_id_selected,
+            flow_id=frozen["id"] if frozen else flow_id_selected,
             flow_name=flow_name_selected,
         ) as target_flow:
             # The stored child payload is caller-controlled: a regular user can persist
@@ -222,6 +225,7 @@ class RunFlowBaseComponent(Component):
                     user_id=self.user_id,
                     authorized_extra_file_scopes=extra_scopes,
                 )
+                graph.frozen_tool_flows = source["dependencies"]
                 graph.description = source.get("description")
                 return graph
             if (

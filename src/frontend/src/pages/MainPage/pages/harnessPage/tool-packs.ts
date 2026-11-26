@@ -1,4 +1,5 @@
 import type {
+  FlowDependency,
   ToolExport,
   ToolPackBinding,
   ToolPackReference,
@@ -34,6 +35,39 @@ export function exportChanges(
   previous: ToolExport[] | undefined,
   current: ToolExport[],
 ) {
+  return definitionChanges(
+    previous,
+    current,
+    (before, tool) =>
+      before.revision !== tool.revision ||
+      before.name !== tool.name ||
+      before.description !== tool.description ||
+      dependencyChanges(
+        before.dependencies ?? [],
+        tool.dependencies ?? [],
+      ).some(({ status }) => status !== "unchanged"),
+  );
+}
+
+export function dependencyChanges(
+  previous: FlowDependency[] | undefined,
+  current: FlowDependency[],
+) {
+  return definitionChanges(
+    previous,
+    current,
+    (before, flow) =>
+      before.revision !== flow.revision ||
+      before.name !== flow.name ||
+      (before.description ?? "") !== (flow.description ?? ""),
+  );
+}
+
+function definitionChanges<T extends FlowDependency>(
+  previous: T[] | undefined,
+  current: T[],
+  changed: (before: T, current: T) => boolean,
+) {
   const old = new Map(previous?.map((tool) => [tool.flow_id, tool]));
   const next = new Set(current.map((tool) => tool.flow_id));
   return [
@@ -43,9 +77,7 @@ export function exportChanges(
         ? undefined
         : !before
           ? "added"
-          : before.revision !== tool.revision ||
-              before.name !== tool.name ||
-              before.description !== tool.description
+          : changed(before, tool)
             ? "updated"
             : "unchanged";
       return { tool, before, status };
