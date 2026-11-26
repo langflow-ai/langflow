@@ -10,6 +10,7 @@ if TYPE_CHECKING:
     from lfx.components.data_source.json_to_data import JSONToDataComponent
     from lfx.components.data_source.mock_data import MockDataGeneratorComponent
     from lfx.components.data_source.news_search import NewsSearchComponent
+    from lfx.components.data_source.record_source import RecordSourceComponent
     from lfx.components.data_source.rss import RSSReaderComponent
     from lfx.components.data_source.sql_executor import SQLComponent
     from lfx.components.data_source.url import URLComponent
@@ -21,6 +22,7 @@ _dynamic_imports = {
     "JSONToDataComponent": "json_to_data",
     "MockDataGeneratorComponent": "mock_data",
     "NewsSearchComponent": "news_search",
+    "RecordSourceComponent": "record_source",
     "RSSReaderComponent": "rss",
     "URLComponent": "url",
     "WebSearchComponent": "web_search",
@@ -34,6 +36,7 @@ __all__ = [
     "MockDataGeneratorComponent",
     "NewsSearchComponent",
     "RSSReaderComponent",
+    "RecordSourceComponent",
     "SQLComponent",
     "URLComponent",
     "WebSearchComponent",
