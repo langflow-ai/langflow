@@ -473,7 +473,7 @@ export async function runFlowAGUI(opts: RunFlowOptions): Promise<void> {
       markRunningAsError = true;
       flowStore.setBuildInfo({ error: [message], success: false });
       // A shared-playground visitor gets a sanitized error, so say what they can act on.
-      const list = flowStore.playgroundPage
+      const list = usePublicEndpoint
         ? [message, i18n.t("playground.sharedRunFailedHint")]
         : [message];
       setErrorData({ title: i18n.t("humanInput.runFailed"), list });
