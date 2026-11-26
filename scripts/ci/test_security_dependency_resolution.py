@@ -87,7 +87,7 @@ def test_fixed_dependencies_resolve_on_every_supported_python_line(python: str, 
         "msgpack": "1.2.3",
         "nltk": "3.10.4",
         "pyasn1": "0.6.5",
-        "pymongo": "4.18.3",
+        "pymongo": "4.20.1",
         "python-multipart": "0.0.31",
         "setuptools": "84.1.0",
     }.items():

@@ -37,6 +37,7 @@ from langflow.api.utils import (
     validate_is_component,
 )
 from langflow.api.utils.core import strip_secret_field_values
+from langflow.api.utils.flow_utils import begin_flow_deletion_transaction
 from langflow.api.utils.mcp.flow_secrets import (
     MCPSecretTarget,
     extract_and_strip_mcp_secrets,
@@ -126,6 +127,7 @@ from langflow.services.database.models.flow.model import (
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User, UserRead
+from langflow.services.deletion_hooks import VIA_REQUEST
 from langflow.services.deps import get_catalog_policy_service, get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
@@ -1154,7 +1156,9 @@ async def delete_flow(
             )
             flow_owner_ids[retry_target.id] = retry_target.user_id
             deleted_name, deleted_folder_id = retry_target.name, retry_target.folder_id
-            if not await cascade_delete_flow(session, target_flow_id, memory_base_cleanups=memory_base_cleanups):
+            if not await cascade_delete_flow(
+                session, target_flow_id, memory_base_cleanups=memory_base_cleanups, via=VIA_REQUEST
+            ):
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Flow not found")
             await stage_flow_succeeded(
                 session,
@@ -1165,6 +1169,7 @@ async def delete_flow(
                 project_before=deleted_folder_id,
             )
 
+        await begin_flow_deletion_transaction(session)
         await retry_flow_operation_on_deployment_guard(
             db=session,
             flow_owner_ids=flow_owner_ids,
@@ -1520,7 +1525,9 @@ async def delete_multiple_flows(
             targets = [(flow.id, flow.name, flow.folder_id) for flow in flows_to_delete]
             deleted = 0
             for flow_id, flow_name, folder_id in targets:
-                if not await cascade_delete_flow(db, flow_id, memory_base_cleanups=memory_base_cleanups):
+                if not await cascade_delete_flow(
+                    db, flow_id, memory_base_cleanups=memory_base_cleanups, via=VIA_REQUEST
+                ):
                     continue
                 deleted += 1
                 await stage_flow_succeeded(
@@ -1535,6 +1542,7 @@ async def delete_multiple_flows(
             return deleted
 
         async def _delete_attempt(_attempt: int) -> int:
+            await begin_flow_deletion_transaction(db)
             return await retry_flow_operation_on_deployment_guard(
                 db=db,
                 flow_owner_ids=authorized_flow_owner_ids,

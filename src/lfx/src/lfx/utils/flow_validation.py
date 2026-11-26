@@ -46,6 +46,8 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
         "LambdaFilterComponent",
         "OpenDsStar Agent",
         "OpenDsStarAgent",  # OpenDsStar data-science agent executes model-generated Python
+        "Policies",  # ToolGuard loads Python from generated CodeInput fields
+        "PoliciesComponent",
         "Python Code Structured",
         "PythonCodeStructuredTool",
         "Python Function",
@@ -57,6 +59,8 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
         "PythonREPLToolComponent",
         "PythonREPLTool",
         "Smart Transform",
+        "ext:toolguard:PoliciesComponent@official",
+        "policies",
     }
 )
 

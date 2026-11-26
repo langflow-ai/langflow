@@ -55,14 +55,15 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 
 Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
 
-### Deployment variables
+### Breaking changes
 
-Set `LANGFLOW_DEPLOYMENT_TYPED_VARIABLES_ENABLED=true` to include secret and plain variable declarations in version 7 deployment artifacts.
-The destination must support this format. Packages carry names and kinds without source values, and packaging refuses unresolved kinds.
-For details, see [Deployment variable declarations](/environment-variables#deployment-variable-declarations).
+- Python 3.10 support is discontinued
 
-When an extension binds a deployment to an execution account, unresolved MCP variable placeholders fail before an outbound connection.
-Restarting an instance also preserves existing empty assistant variables instead of adding duplicate default rows.
+    Python 3.10 is end of life, and Langflow 1.14 no longer supports it.
+    Install Langflow with Python 3.11 through 3.14.
+    Python 3.15 support remains in preview.
+
+    For installation requirements, see [Install Langflow](/get-started-installation#install-and-run-the-langflow-oss-python-package).
 
 ### New features
 
@@ -79,112 +80,19 @@ Restarting an instance also preserves existing empty assistant variables instead
 - Evaluations
 
     Langflow 1.14 can run a flow against a dataset of test cases and return a score for every answer.
-    The feature is off until you set `LANGFLOW_FEATURE_EVALS=true`.
+    The feature is on by default. To turn it off, set `LANGFLOW_FEATURE_EVALS=false`.
     For more information, see [Evaluate flows](./evaluations).
+
+- Decision models
+
+    A decision model answers one fixed question about text and returns probabilities instead of generated text.
+    The **Smart Router** component can call the same decision models in **Decision Model** mode, and uses the probabilities to choose a route.
+    Enable a model under **Decision Models** in **Model Providers** before either component can select it.
+    For more information, see [Decision Model](./decision-model) and [Decision Model mode](./smart-router#decision-model-mode).
 
 ## 1.13.x
 
-Highlights of this release include the following changes. For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
-
-### Breaking changes
-
-- Official packages require authentication by default
-
-    Official Python packages, tagged source archives, and Docker images now set `LANGFLOW_AUTO_LOGIN=false`.
-    Set `LANGFLOW_SUPERUSER_PASSWORD`, then sign in as `langflow` or the username in `LANGFLOW_SUPERUSER`.
-
-    Before upgrading an auto-login installation, [prepare that account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
-
-    If you already upgraded and can't sign in, see [recover access](/troubleshoot#recover-access-after-upgrading).
-
-    For more information, see [API keys and authentication](/api-keys-and-authentication#langflow-auto-login).
-
-- Project MCP and A2A endpoints require authentication by default
-
-    In 1.13.2, new projects default to API-key authentication, including auto-login installations.
-    Existing projects with unset authentication settings adopt that default at startup.
-    When `LANGFLOW_AUTO_LOGIN=false`, startup also changes projects set to **None** to API-key authentication.
-
-    Update existing MCP clients with the configuration from the project's **MCP Server** tab.
-    For protected A2A requests, send the flow owner's Langflow API key in the `x-api-key` header.
-    Public A2A agent-card discovery remains available without credentials.
-
-    See [MCP authentication](/mcp-server#authentication) and [A2A authentication](/a2a-server#authentication) for client setup and the supported public-project and superuser exceptions.
-
-- MCP shell wrappers require a separate inline command
-
-    Stored MCP shell configurations must place the inline command in the argument following `-c`.
-    Replace `["-cuvx mcp-proxy"]` with `["-c", "uvx mcp-proxy"]`.
-    Direct script operands and shells without an inline command are rejected even when interpreter hardening is disabled.
-    Login, interactive, verbose, and xtrace modes are also rejected.
-
-- Chroma and Local DB components are removed
-
-    Langflow 1.13 stores local Knowledge and Memory in SQLite, instead of a local Chroma database.
-    The [**Chroma DB**](/components-bundle-components#legacy-bundles) and [**Local DB**](/components-bundle-components#legacy-bundles) components are legacy.
-
-    Replace **Chroma** and **Local DB** with a [knowledge base](/knowledge#knowledge-bases), or with a supported remote vector store.
-
-    For more information, see [Upgrade Knowledge and Memory storage](/knowledge-storage-upgrade).
-
-- Python components require keyword class patterns
-
-    Positional class patterns such as `case Point(x, y)` are no longer accepted in Python Interpreter, Python REPL, or Lambda Filter code, including saved flows.
-    Use keyword patterns such as `case Point(x=x, y=y)`.
-    This restriction also applies to builtin positional patterns such as `case int(n)`.
-
-- Repeated ingestion uses stable chunk IDs
-
-    In 1.13.2, repeated ingestion uses stable chunk IDs.
-    The first re-ingestion of data created before this fix can add one stable-ID copy per chunk.
-    Updating a document's content leaves its previous chunks in place.
-
-### New features
-
-- Audit logging
-
-    Set `LANGFLOW_AUDIT_ENABLED=true` to record an append-only history of flow and project operations, including who attempted a change, on which resource, when, how it completed, and a description of what was written.
-    Query events with `GET /api/v1/flows/audits` and `GET /api/v1/projects/audits`.
-
-    For more information, see [Audit logging](./audit-logging).
-
-- Connections
-
-    Langflow stores Google Workspace, Microsoft 365, and Slack accounts as persistent connections.
-    For more information, see [Connections](./connections).
-
-- Concurrent editing
-
-    Langflow now protects a flow that is open by more than one user.
-    For more information, see [Concurrent editing](./concurrent-editing).
-
-- Instance migration
-
-    Langflow provides a guided workflow to migrate users, projects, flows, settings, local files, and local knowledge bases to a new instance.
-    The workflow checks the source instance, pauses writes, creates a backup, copies applicable data to the target instance's storage, verifies the copy, and provides recovery steps.
-
-    For more information, see [Migrate a Langflow instance](/instance-migration).
-
-- Administration API and CLI
-
-    Superusers can manage users, teams, and roles with the API or the `langflow admin` command.
-    For more information, see [Administer users and teams with the API and CLI](./admin-api-cli).
-
-## Component changes
-
-- The ALTK component is removed
-
-    The [**ALTK**](/components-bundle-components) component is removed.
-
-    Replace **ALTK** with the [**Agent**](/components-agents) component.
-
-- MrScraper components are removed
-
-    The [**MrScraper**](/bundles-mrscraper) bundle now provides three components.
-
-    Instead, use the **Scraper API** or **Web Search** components.
-
-    For more information, see [Update existing flows](/bundles-mrscraper#updating-existing-flows).
+For 1.13.x release notes, see the [1.13.x documentation](@site/versioned_docs/version-1.13.0/Support/release-notes.mdx).
 
 ## 1.12.x
 
