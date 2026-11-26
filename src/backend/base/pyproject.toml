@@ -149,7 +149,7 @@ dependencies = [
     "opik>=2.0.0,<3.0.0",
     # Opik installs LiteLLM even without the optional litellm extra.
     # Block the compromised 1.107.0 release in published wheel metadata.
-    "litellm>=1.109.0,<1.110.0,!=1.104.0rc1,!=1.107.0",
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0",
     # Newer Opik releases cap LiteLLM below its security floor on Python 3.10.
     # Publish the compatible version constraint so fresh wheel installs stay valid.
     "opik==2.2.7; python_version < '3.11'",
@@ -360,7 +360,7 @@ pgvector = [
     "psycopg[binary]>=3.1,<4.0",
 ]
 litellm = [
-    "litellm>=1.109.0,<1.110.0,!=1.104.0rc1,!=1.107.0",
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
     # Pull in only the modules Langflow uses from litellm[proxy] rather than
@@ -449,8 +449,8 @@ cuga = [
     # Temporary compatibility valve: newer langchain-litellm releases require cryptography<49.
     "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
     "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
-    "litellm>=1.109.0,<1.110.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
-    "litellm>=1.109.0,<1.110.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
+    "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",
 ]
 mlx = [
     # mlx ships no cp315 wheels (and no sdist) yet.
