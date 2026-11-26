@@ -67,6 +67,7 @@ from langflow.api.v1.mcp_utils import (
     handle_list_tools_result,
     handle_mcp_errors,
     handle_read_resource,
+    project_flow_owner,
     protect_mcp_operation_handlers,
     raise_if_sse_disabled,
     snapshot_mcp_metadata,
@@ -478,8 +479,11 @@ async def handle_project_sse(
 ):
     """Handle SSE connections for a specific project."""
     async with session_scope() as session:
+        # The same owner scope tools/list uses: the caller's own, or the project owner's
+        # when auth admitted a non-owner through a cross-user authorization plugin.
+        owner_id = await project_flow_owner(session, project_id, current_user.id)
         project = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == owner_id))
         ).first()
 
     if not project:
