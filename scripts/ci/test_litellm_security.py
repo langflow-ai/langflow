@@ -67,6 +67,7 @@ def offline_resolver(tmp_path: Path):
             ("litellm", "1.103.10", []),
             ("litellm", "1.109.0", []),
             ("litellm", "1.109.5", []),
+            ("litellm", "1.110.0", []),
             ("litellm", "1.107.0", []),
             ("upstream", "1.0.0", ["litellm>=1.103.1"]),
             ("consumer", "1.0.0", dependencies),
@@ -116,7 +117,8 @@ def test_published_requirement_protects_transitive_install_without_lockfile(
     unprotected = offline_resolver(None)
     assert unprotected.returncode == 0, unprotected.stdout + unprotected.stderr
     before = json.loads((tmp_path / "resolved.json").read_text())
-    assert any(item["metadata"]["name"] == "litellm" for item in before["install"])
+    before_versions = {item["metadata"]["name"]: item["metadata"]["version"] for item in before["install"]}
+    assert before_versions["litellm"] == "1.110.0"
 
     protected = offline_resolver(litellm_guard)
     assert protected.returncode == 0, protected.stdout + protected.stderr
