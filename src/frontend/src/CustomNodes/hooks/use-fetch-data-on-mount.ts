@@ -1,6 +1,6 @@
-import type { UseMutationResult } from "@tanstack/react-query";
 import { useEffect } from "react";
-import type { APIClassType, ResponseErrorDetailAPI } from "@/types/api";
+import type { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import type { APIClassType } from "@/types/api";
 import useAlertStore from "../../stores/alertStore";
 import { mutateTemplate } from "../helpers/mutate-template";
 
@@ -9,11 +9,7 @@ const useFetchDataOnMount = (
   nodeId: string,
   setNodeClass: (node: APIClassType) => void,
   name: string,
-  postTemplateValue: UseMutationResult<
-    APIClassType | undefined,
-    ResponseErrorDetailAPI,
-    any
-  >,
+  postTemplateValue: ReturnType<typeof usePostTemplateValue>,
 ) => {
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -22,16 +18,26 @@ const useFetchDataOnMount = (
       const template = node.template[name];
       if (!template) return;
 
+      const tool = node.template.tool;
+      // Refreshing a configured MCP server on mount can remove the saved
+      // tool's argument fields and disconnect their edges.
+      if (
+        name === "mcp_server" &&
+        template.type === "mcp" &&
+        !node.tool_mode &&
+        typeof tool?.value === "string" &&
+        tool.value.length > 0 &&
+        tool.options?.includes(tool.value)
+      ) {
+        return;
+      }
+
       const isRealtimeOrRefresh =
         template.real_time_refresh ||
         template.refresh_button ||
         (node.tool_mode && name === "tools_metadata");
 
       const hasOptions = (template.options?.length ?? 0) > 0;
-      // Only consider empty options as a trigger if the field actually supports
-      // options (e.g., dropdowns). Fields like McpInput have no options property
-      // and should not trigger a fetch on mount — their real_time_refresh is
-      // meant for user-initiated value changes, not initial load.
       const fieldSupportsOptions = template.options !== undefined;
 
       const needApiKeyPrefill =
