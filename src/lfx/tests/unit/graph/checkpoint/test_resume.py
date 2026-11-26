@@ -15,12 +15,12 @@ from lfx.graph.checkpoint.schema import _WIRE_KIND
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
 
 
-async def _paused_checkpoint():
+async def _paused_checkpoint(snapshot_history_limit=None):
     chat_input = ChatInput(_id="chat_input", input_value="hello")
     chat_input.set(should_store_message=False)
     chat_output = ChatOutput(_id="chat_output")
     chat_output.set(input_value=chat_input.message_response, should_store_message=False)
-    graph = Graph(chat_input, chat_output)
+    graph = Graph(chat_input, chat_output, snapshot_history_limit=snapshot_history_limit)
     graph.session_id = "sess-1"
     graph.set_run_id()
     graph.checkpointing_enabled = True
@@ -298,3 +298,44 @@ async def test_resume_keeps_a_legitimately_none_result_restored():
     assert "mid" not in resumed.checkpoint_opaque_dropped_ids
     assert resumed.get_vertex("mid").built is True
     assert resumed.get_vertex("mid").results == {"message": None}
+
+
+@pytest.mark.parametrize("limit", [None, 0, 1, 3])
+async def test_resume_snapshot_history_policy_preserves_complete_call_order(limit):
+    from unittest.mock import patch
+
+    original, checkpoint = await _paused_checkpoint()
+    control = Graph.resume_from_checkpoint(checkpoint)
+    await control.process(fallback_to_env_vars=False)
+    if limit == 0:
+        with patch.object(Graph, "get_snapshot", side_effect=AssertionError("automatic copy")):
+            resumed = Graph.resume_from_checkpoint(checkpoint, snapshot_history_limit=limit)
+            await resumed.process(fallback_to_env_vars=False)
+    else:
+        resumed = Graph.resume_from_checkpoint(checkpoint, snapshot_history_limit=limit)
+        if limit is not None:
+            assert len(resumed._snapshots) <= limit
+        await resumed.process(fallback_to_env_vars=False)
+    assert resumed.snapshot_history_limit == limit
+    assert resumed._call_order == control._call_order
+    assert resumed._call_order[: len(original._call_order)] == original._call_order
+    assert resumed.get_vertex("chat_output").results == control.get_vertex("chat_output").results
+    if limit is not None:
+        assert len(resumed._snapshots) <= limit
+
+
+async def test_disabled_source_checkpoint_and_decision_resume_no_automatic_snapshot():
+    from unittest.mock import patch
+
+    with patch.object(Graph, "get_snapshot", side_effect=AssertionError("automatic copy")):
+        original, checkpoint = await _paused_checkpoint(snapshot_history_limit=0)
+        resumed = resume_graph_with_decision(
+            checkpoint,
+            InMemoryCheckpointStore(),
+            "chat_output:request",
+            {"action_id": "approve"},
+            snapshot_history_limit=0,
+        )
+    assert resumed.snapshot_history_limit == 0
+    assert resumed._snapshots == original._snapshots == []
+    assert resumed._call_order == original._call_order == checkpoint.call_order

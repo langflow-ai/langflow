@@ -15,15 +15,14 @@ dependencies = [
     # Previously satisfied only transitively via docling-slim; declared here so the
     # xlsx path survives torch/docling becoming opt-in.
     "openpyxl>=3.1.5,<4.0.0",
-    # pydantic-core ships cp315 wheels from 2.48 on, which only pydantic 2.14 pins.
-    "pydantic>=2.0.0,<2.14; python_version < '3.15'",
-    "pydantic>=2.14.1,<2.15; python_version >= '3.15'",
+    # CVE-2026-133276 family is fixed from pydantic 2.14.2 onward.
+    "pydantic>=2.14.2,<2.15",
     # Pillow 13 dropped Python 3.10 support.
     "pillow>=12.3.0,<13.0.0; python_version < '3.11'",
     "pillow>=13.0.0,<14.0.0; python_version >= '3.11'",
     "fastapi>=0.135.0,<1.0.0",
     # [standard] adds uvloop + httptools (fast loop + HTTP parser) for the `lfx serve` worker path.
-    "uvicorn[standard]>=0.34.3,<1.0.0",
+    "uvicorn[standard]>=0.45.0,<1.0.0",
     # gunicorn powers `lfx serve --workers N` on Unix; Windows falls back to uvicorn and rejects gunicorn-only flags.
     "gunicorn>=22.0; sys_platform != 'win32'",
     # a2wsgi bridges the ASGI app onto gunicorn's sync worker for `lfx serve --use-sync-workers` (Unix).
@@ -55,14 +54,15 @@ dependencies = [
     "orjson>=3.11.6,<4.0.0",
     "asyncer>=0.0.8,<1.0.0",
     "structlog>=25.4.0,<26.0.0",
-    "loguru>=0.7.3,<1.0.0",
+    "loguru>=0.7.3,<1.0.0; python_version < '3.14'",
+    "loguru>=0.8.0,<1.0.0; python_version >= '3.14'",
     "langchain~=1.3.0",
     "langchain-classic~=1.0.7",
     "sqlalchemy>=2.0.38,<2.1.0",
     "validators>=0.34.0,<1.0.0",
     "filelock>=4.1.0,<4.2.0; python_version < '3.11'",
     "filelock>=4.2.1,<5.0.0; python_version >= '3.11'",
-    "pypdf>=6.21.2,<7.0.0",
+    "pypdf>=7.0.0,<8.0.0",
     "cryptography>=50.0.0",
     "pyjwt>=2.15.1,<3.0.0",  # CVE-2026-102266, CVE-2026-102267, CVE-2026-102271, CVE-2026-102272, CVE-2026-102274
     "ag-ui-protocol>=0.1.10",
@@ -103,7 +103,7 @@ sandbox = [
 # install degrades to a clear "pip install ..." error, not an import-time crash).
 # Relocated out of langflow-base[complete], where they were the de-facto provider
 # for these components after the bundle split.
-cassandra = ["lfx-datastax>=0.1.3,<1.0.0"]  # Compatibility alias for the Cassandra extension
+cassandra = ["lfx-datastax>=0.3.2,<1.0.0"]  # First 1.14-compatible bundle with Dotenv retired
 toolguard = ["lfx-toolguard>=0.3.0,<1.0.0"]  # Compatibility alias for the Policies extension
 # Application observability: OTLP export of traces, metrics and logs for ``lfx serve`` / ``lfx
 # run``. lfx.observability guards every import, so a bare ``pip install lfx`` skips these and
@@ -127,7 +127,7 @@ otel = [
 #
 # Documented as a headless/serverless deployment footnote, not a
 # getting-started headline.  There is intentionally NO ``lfx[all]``.
-bundles = ["lfx-bundles[all]>=1.1.41,<2.0"]
+bundles = ["lfx-bundles[all]>=1.3.10,<2.0"]
 
 [project.scripts]
 lfx = "lfx.__main__:main"

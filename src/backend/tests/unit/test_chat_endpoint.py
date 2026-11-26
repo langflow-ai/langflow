@@ -1245,8 +1245,11 @@ async def test_build_public_tmp_rejects_custom_component(client, json_memory_cha
         headers={"Content-Type": "application/json"},
     )
 
+    from lfx.utils.flow_validation import PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE
+
     assert response.status_code == codes.BAD_REQUEST
-    assert response.json()["detail"] == "This flow cannot be executed."
+    assert response.json()["detail"] == PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE
+    assert "Evil Custom" not in response.text
 
 
 @pytest.mark.benchmark

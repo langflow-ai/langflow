@@ -193,14 +193,20 @@ async def warm_deepcopy(
     validate_flow_for_current_settings(hit[0])
 
     run_user_id = str(user_id) if user_id is not None else None
+    # The template is user-agnostic: this run's extra file scopes are asked for here, never read from it.
+    from langflow.api.utils.flow_utils import get_authorized_extra_file_scopes
+
+    extra_file_scopes = await get_authorized_extra_file_scopes(flow_id_str, run_user_id)
     copy_for_run = getattr(hit[0], "copy_for_run", None)
     if callable(copy_for_run):
         graph = copy_for_run(
             user_id=run_user_id,
             before_instantiate=lambda run_graph: _apply_implicit_stream_tweak(run_graph, stream=stream),
+            **({"authorized_extra_file_scopes": extra_file_scopes} if extra_file_scopes else {}),
         )
     else:
         graph = deepcopy(hit[0])
+        graph.authorized_extra_file_scopes = extra_file_scopes
         _apply_implicit_stream_tweak(graph, stream=stream)
     # Thread this run's identity onto the copy (the template is user-agnostic). This is
     # what lets explicit load_from_db fields resolve for the calling user, exactly like a

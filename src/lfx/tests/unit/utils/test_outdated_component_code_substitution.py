@@ -246,6 +246,27 @@ def test_mismatched_trusted_code_is_neither_substituted_nor_exempted():
         )
 
 
+def test_authored_custom_component_is_not_swapped_for_the_template():
+    """User-authored components share the template's type; their code must be refused, not replaced."""
+    template_code = "# Custom Component template"
+    type_to_hash = {"CustomComponent": {_hash(template_code)}}
+    type_to_code = {"CustomComponent": template_code}
+    substitutable_types = SubstitutableComponentTypes(type_to_hash, type_to_code)
+    nodes = [_node("a", "CustomComponent", "class FormatAnswer(Component): ...", display_name="Format Answer")]
+
+    assert "CustomComponent" not in substitutable_types
+    assert fv._substitute_outdated_node_code(nodes, type_to_code, substitutable_types) == []
+    assert _code_of(nodes[0]) == "class FormatAnswer(Component): ..."
+
+    with pytest.raises(CustomComponentValidationError):
+        check_flow_and_raise(
+            {"nodes": nodes},
+            allow_custom_components=False,
+            type_to_current_hash=type_to_hash,
+            substitutable_types=substitutable_types,
+        )
+
+
 # --- substitute_outdated_component_code_in_place (settings-aware) -------------------
 
 

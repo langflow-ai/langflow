@@ -149,6 +149,9 @@ class BaseVectorStoreBackend(ABC):
     """
 
     backend_type: BackendType
+    #: Whether ``staging`` gives a store of its own. Only a backend that resolves its storage
+    #: name from ``staging_token`` may say so; any other would write staged chunks into live.
+    supports_staging: bool = False
 
     @property
     def distance_metric(self) -> str | None:
@@ -173,6 +176,52 @@ class BaseVectorStoreBackend(ABC):
         self.embedding_function = embedding_function
         self.user_id = user_id
         self._vector_store: VectorStore | None = None
+        # Set on the copy ``staging`` returns: the store a deploy fills before it commits.
+        self.staging_token: str | None = None
+
+    # ---- deploy staging ----------------------------------------------------
+
+    def staging(self, token: str) -> BaseVectorStoreBackend:
+        """This knowledge base's hidden store for one deploy, which no retrieval reads.
+
+        A deploy copies a knowledge base's new chunks here and ``merge_staging`` moves them
+        into the live store when the deploy commits, so a cancelled deploy shows nothing.
+        """
+        if not self.supports_staging:
+            msg = f"{type(self).__name__} cannot stage a deploy's chunks"
+            raise NotImplementedError(msg)
+        if not token:
+            msg = "A staging store needs a token"
+            raise ValueError(msg)
+        staged = type(self)(
+            self.kb_name,
+            kb_path=self.kb_path,
+            backend_config=self.backend_config,
+            embedding_function=self.embedding_function,
+            user_id=self.user_id,
+        )
+        staged.staging_token = token
+        return staged
+
+    def _staging_name(self) -> str:
+        """The physical name of this staging store. Only valid on a ``staging`` copy."""
+        from lfx.base.knowledge_bases.backends.naming import staging_storage_name
+
+        owner_id = self._coerce_user_uuid()
+        if owner_id is None or not self.staging_token:
+            msg = f"{type(self).__name__} staging needs an owner and a token"
+            raise ValueError(msg)
+        return staging_storage_name(owner_id, self.kb_name, self.staging_token)
+
+    async def merge_staging(self, token: str, *, limit: int | None = None) -> int:
+        """Move one deploy's staged chunks into this live store and drop the staging store.
+
+        Safe to repeat: chunks keep their ids, so a second run upserts what is there, and a
+        run after the staging store is gone does nothing. Returns how many chunks it moved.
+        With ``limit``, moves at most that many and drops staging only once it is empty.
+        """
+        msg = f"{type(self).__name__} does not support deploy staging"
+        raise NotImplementedError(msg)
 
     # ---- credential resolution ------------------------------------------
 
@@ -430,6 +479,32 @@ class BaseVectorStoreBackend(ABC):
         """Default implementation yields nothing; subclasses override."""
         if False:  # pragma: no cover — keeps this an async generator
             yield []
+
+    async def iter_job_documents(
+        self,
+        job_id: str | None,  # noqa: ARG002 — subclass override signature
+        *,
+        batch_size: int = 5000,  # noqa: ARG002 — subclass override signature
+        after_id: str | None = None,  # noqa: ARG002 — subclass override signature
+    ) -> AsyncIterator[list[IngestedDocument]]:
+        """Stream one job's chunks with their vectors, in id order; ``None`` reads every chunk.
+
+        ``after_id`` resumes after the last chunk already handled: a copy gets a
+        short window per request, so restarting from the first chunk each time
+        would never finish a job larger than one window.
+
+        There is deliberately no fallback: yielding nothing would read as a job
+        with no chunks, and a deploy would report success without them.
+        """
+        msg = f"{type(self).__name__} does not support reading chunks by ingestion job"
+        raise NotImplementedError(msg)
+        if False:  # pragma: no cover — keeps this an async generator
+            yield []
+
+    async def count_job(self, job_id: str) -> int:
+        """How many chunks one ingestion job has in this store. Backends override this."""
+        msg = f"{type(self).__name__} does not support counting chunks by ingestion job"
+        raise NotImplementedError(msg)
 
     async def storage_size_bytes(self) -> int:  # pragma: no cover
         """Default: unknown. Subclasses override where meaningful."""

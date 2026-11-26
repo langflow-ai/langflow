@@ -49,7 +49,9 @@ MIGRATION_RELEASE = "1.11.0"
 # that introduced them (one ``bare_class_name`` row per component).  They stay in
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
-PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset({"figranium", "keenable", "mrscraper", "olostep"})
+PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset(
+    {"figranium", "keenable", "mrscraper", "olostep", "socialscrape"}
+)
 
 # Shared spec for providers whose components go through langchain_community
 # wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
@@ -77,7 +79,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
     "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
     "milvus": ["langchain-milvus~=0.3.2"],
-    "mongodb": ["pymongo>=4.18.3,<5.0.0", "langchain-mongodb>=0.11.0"],
+    "mongodb": ["pymongo>=4.20.1,<5.0.0", "langchain-mongodb>=0.11.0"],
     "pgvector": ["pgvector>=0.4.2", _LC_COMMUNITY],
     # Marker preserved from langflow-base: no py3.14 wheel yet; on 3.14 the
     # component degrades exactly as it does in today's published images.
@@ -145,6 +147,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "figranium": [],  # httpx REST only (lfx core); new in 1.13.0, never lived under lfx.components
     "keenable": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
     "olostep": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
+    "socialscrape": [],  # httpx REST only (lfx core); new in 1.14.0, never lived under lfx.components
     # --- tranche 7: google family + agent SDKs (markers preserved from base) ---
     # "google" graduated to the standalone lfx-google bundle so Gemini is
     # available in every default Langflow install.
@@ -164,6 +167,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     ],
     "nvidia": [
         "langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0",
+        "requests>=2.33.0",
         "nv-ingest-client>=26.1.0,<26.3.0 ; python_version >= '3.12'",
         "gassist>=0.0.1; sys_platform == 'win32'",
     ],

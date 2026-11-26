@@ -46,6 +46,8 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
         "LambdaFilterComponent",
         "OpenDsStar Agent",
         "OpenDsStarAgent",  # OpenDsStar data-science agent executes model-generated Python
+        "Policies",  # ToolGuard loads Python from generated CodeInput fields
+        "PoliciesComponent",
         "Python Code Structured",
         "PythonCodeStructuredTool",
         "Python Function",
@@ -57,6 +59,8 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
         "PythonREPLToolComponent",
         "PythonREPLTool",
         "Smart Transform",
+        "ext:toolguard:PoliciesComponent@official",
+        "policies",
     }
 )
 
@@ -74,6 +78,19 @@ class CustomComponentValidationError(ValueError):
     Subclasses ValueError so existing ``except ValueError`` handlers
     still catch it, but callers can catch this specifically to
     distinguish policy errors from other ValueErrors.
+    """
+
+
+PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE = (
+    "This flow contains custom components, which can't run in a shared playground."
+)
+
+
+class PublicCustomComponentBlockedError(CustomComponentValidationError):
+    """Raised when an unauthenticated public build refuses a flow's custom components.
+
+    The message names the blocked nodes for server logs; anonymous visitors receive
+    ``PUBLIC_CUSTOM_COMPONENTS_BLOCKED_MESSAGE`` instead.
     """
 
 
@@ -1155,11 +1172,14 @@ def _substitute_trusted_node_code(nodes: list, type_to_code: dict[str, str]) -> 
     vector only through a non-empty ``template.code.value`` — for those nodes:
     * known component type → its stored code is overwritten with the server's trusted code, so
       version drift cannot break the build and a relabelled node cannot smuggle in its own bytes;
-    * unknown component type → recorded as blocked (no trusted code exists to run).
+    * unknown component type, or a user-authored Custom Component → recorded as blocked (no
+      trusted code exists to run).
 
     Nodes without executable code (group/note/container nodes) are left untouched. Recurses into
     inlined sub-flow definitions. Returns ``display_name (id)`` labels for blocked nodes.
     """
+    from lfx.upgrade.checker import COMPONENTS_TO_IGNORE_UPDATE
+
     blocked: list[str] = []
     for node in nodes:
         if not isinstance(node, dict):
@@ -1179,8 +1199,13 @@ def _substitute_trusted_node_code(nodes: list, type_to_code: dict[str, str]) -> 
 
         component_type = node_data.get("type")
         if code_field is not None and code_field.get("value"):
-            if isinstance(component_type, str) and component_type in type_to_code:
-                code_field["value"] = type_to_code[component_type]
+            trusted_code = type_to_code.get(component_type) if isinstance(component_type, str) else None
+            # The editor saves every user-authored component under the Custom Component template's
+            # type; swapping in the template's code would run a different component, not refuse it.
+            if trusted_code is not None and (
+                component_type not in COMPONENTS_TO_IGNORE_UPDATE or code_field["value"] == trusted_code
+            ):
+                code_field["value"] = trusted_code
             else:
                 display_name = (node_info.get("display_name") if node_info else None) or component_type
                 node_id = node_data.get("id") or node.get("id", "unknown")
@@ -1239,7 +1264,10 @@ class SubstitutableComponentTypes(Container[str]):
     type_to_code: Mapping[str, str]
 
     def __contains__(self, component_type: object) -> bool:
-        if not isinstance(component_type, str):
+        from lfx.upgrade.checker import COMPONENTS_TO_IGNORE_UPDATE
+
+        # User-authored components share the template's type, so a hash mismatch is custom code.
+        if not isinstance(component_type, str) or component_type in COMPONENTS_TO_IGNORE_UPDATE:
             return False
         current_hashes = self.type_to_current_hash.get(component_type)
         if current_hashes is None or len(current_hashes) != 1:
@@ -1824,7 +1852,7 @@ async def prepare_public_flow_build(target: Mapping[str, Any] | Any | None) -> d
                 "Public flows cannot be built without authentication when they contain custom components: "
                 f"{blocked_names}"
             )
-            raise CustomComponentValidationError(message)
+            raise PublicCustomComponentBlockedError(message)
 
     # Validate what the executor will actually receive, not only the stale stored bytes checked
     # by route-level defense in depth. This central guarantee covers v1, v2, A2A start, and A2A
@@ -1864,7 +1892,7 @@ def revalidate_public_executable_flow(flow_data: dict[str, Any]) -> None:
                 "Public flows cannot be built without authentication when they contain custom components: "
                 f"{blocked_names}"
             )
-            raise CustomComponentValidationError(message)
+            raise PublicCustomComponentBlockedError(message)
     else:
         prepared = prepare_flow_build_for_user_from_cache(flow_data, is_superuser=False)
         if prepared is not None:

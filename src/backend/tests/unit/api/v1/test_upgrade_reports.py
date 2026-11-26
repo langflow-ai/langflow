@@ -162,6 +162,10 @@ async def test_pagination_target_filter_and_missing_report(client, admin_headers
     document["target"]["langflow"] = "1.14.1"
     newest = await client.post(URL, json=document, headers=admin_headers)
     result = (await client.get(URL, params={"limit": 1}, headers=admin_headers)).json()
+    assert result["items"][0]["source_database"] == document["source"]["identity"]["locator"]["path"]
+    assert result["items"][0]["incomplete"] == (
+        bool(document["errors"]) or len(document["flows"]) < sum(document["summary"]["flows"].values())
+    )
     assert result["total"] == 2
     assert [entry["id"] for entry in result["items"]] == [newest.json()["id"]]
     second = (await client.get(URL, params={"offset": 1, "limit": 1}, headers=admin_headers)).json()
@@ -180,7 +184,7 @@ async def test_admin_reports_work_during_database_maintenance(client, logged_in_
     exported = await client.get(f"{URL}/{response.json()['id']}/export", headers=admin_headers)
     assert exported.status_code == 200, exported.text
     assert exported.content == FIXTURE.read_bytes()
-    assert (await client.post(URL, content=FIXTURE.read_bytes(), headers=logged_in_headers)).status_code == 503
+    assert (await client.post(URL, content=FIXTURE.read_bytes(), headers=logged_in_headers)).status_code == 403
 
 
 def test_report_api_does_not_import_checker_engine():

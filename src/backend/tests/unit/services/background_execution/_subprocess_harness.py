@@ -97,9 +97,11 @@ class WorkerHarness:
         from langflow.services.database.models.flow.model import Flow
         from langflow.services.database.models.user.model import User
         from langflow.services.deps import session_scope
+        from lfx.utils.flow_validation import prepare_public_flow_build
 
         data_path = Path(__file__).parents[3] / "data" / "MemoryChatbotNoLLM.json"
-        flow_data = json.loads(data_path.read_text(encoding="utf-8"))["data"]
+        # Seed current built-in code for a regular user running this older fixture.
+        flow_data = await prepare_public_flow_build(json.loads(data_path.read_text(encoding="utf-8"))["data"])
         user_id = uuid.uuid4()
         flow_id = uuid.uuid4()
         async with session_scope() as session:
@@ -205,8 +207,6 @@ class WorkerHarness:
             if path is None:
                 continue
             with contextlib.suppress(Exception):
-                if proc.poll() is None:
-                    proc.terminate()
                 out = Path(path).read_bytes()
                 if out:
                     chunks.append(f"--- worker pid={proc.pid} output ---\n{out.decode(errors='replace')[-4000:]}")
