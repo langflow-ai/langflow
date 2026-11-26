@@ -16,6 +16,7 @@ import { useGetProjectFlowOutputsQuery } from "@/controllers/API/queries/folders
 import type {
   CompactionBinding,
   ContextBinding,
+  FlowContract,
   FlowOutputChoice,
 } from "@/pages/MainPage/entities";
 import {
@@ -30,6 +31,7 @@ import { FlowBindingDependencies } from "./flow-binding-dependencies";
 export function HarnessFlowPicker({
   projectId,
   fieldName,
+  contract,
   agentId,
   value,
   disabled,
@@ -40,6 +42,7 @@ export function HarnessFlowPicker({
 }: {
   projectId: string;
   fieldName: string;
+  contract?: FlowContract;
   agentId?: string;
   value?: ContextBinding | CompactionBinding;
   disabled: boolean;
@@ -49,22 +52,25 @@ export function HarnessFlowPicker({
   onChange: (value: ContextBinding | CompactionBinding | undefined) => void;
 }) {
   const { t } = useTranslation();
-  const isContext = fieldName === "context_strategy";
-  const isCompaction = fieldName === "compaction";
-  const isPermission = fieldName === "tool_policy";
-  const kind = isCompaction
-    ? "compaction"
-    : isPermission
-      ? "permission"
-      : isContext
-        ? "context"
-        : "instructions";
-  const timed = isContext || isCompaction || isPermission;
+  const options = contract?.binding;
+  const kind =
+    options?.kind === "compaction" ||
+    options?.kind === "permission" ||
+    options?.kind === "context"
+      ? options.kind
+      : "instructions";
+  const isCompaction = options?.defaults.trigger_tokens !== undefined;
+  const timed = options?.defaults.timeout_seconds !== undefined;
   const timeout =
-    value?.timeout_seconds ?? (isCompaction ? 60 : isPermission ? 10 : 30);
+    value?.timeout_seconds ?? options?.defaults.timeout_seconds ?? NaN;
   const threshold = value
-    ? ((value as CompactionBinding).trigger_tokens ?? 8000)
-    : Number(initialConfig?.compaction_trigger_tokens ?? 8000);
+    ? ((value as CompactionBinding).trigger_tokens ??
+      options?.defaults.trigger_tokens ??
+      NaN)
+    : Number(
+        initialConfig?.compaction_trigger_tokens ??
+          options?.defaults.trigger_tokens,
+      );
   const copy = {
     permission: {
       title: "permissionFromFlow",

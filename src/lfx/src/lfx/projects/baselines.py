@@ -31,19 +31,14 @@ def instructions_baseline(initial_value: str | None = None) -> dict:
 def build_slot_baseline(
     reference: str, initial_value: str | None = None, *, initial_config: dict | None = None
 ) -> dict:
-    """Resolve only shipped, executable baselines. References never import arbitrary code."""
-    if reference == "builtin:instructions":
-        return instructions_baseline(initial_value)
-    if reference == "builtin:hook":
-        return hook_baseline()
-    if reference == "builtin:context":
-        return context_baseline(initial_config)
-    if reference == "builtin:compaction":
-        return compaction_baseline(initial_config)
-    if reference == "builtin:permission":
-        return permission_baseline(initial_config)
-    msg = "This contract does not yet provide a working baseline."
-    raise ValueError(msg)
+    """Resolve registered factories only. A reference never imports arbitrary code."""
+    from lfx.projects.registry import all_slots
+
+    matches = [slot for slot in all_slots() if slot.default_flow_ref == reference]
+    if len(matches) != 1:
+        msg = "This contract does not yet provide a working baseline."
+        raise ValueError(msg)
+    return matches[0].build_baseline(initial_value, initial_config=initial_config)
 
 
 def hook_baseline() -> dict:

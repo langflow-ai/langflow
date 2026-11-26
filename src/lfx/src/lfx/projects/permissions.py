@@ -5,10 +5,11 @@ from pydantic import Field
 
 from lfx.base.agents.permissions import Permission, PermissionSourceChangedError
 from lfx.projects.bindings import FlowBinding, compose_single_binding, contract_outputs, flow_revision
+from lfx.projects.builtin_slots import PERMISSION_GATE
 from lfx.projects.invocation import ReviewedFlowRunner
 
 PERMISSION_INPUT = "harness_permission_request"
-PERMISSION_ORIGIN = "_harness_permission"
+PERMISSION_ORIGIN = PERMISSION_GATE.origin_key
 
 
 class PermissionBinding(FlowBinding):
@@ -25,7 +26,7 @@ def compose_permission(data: dict, *, project_id: str, agent_id: str, binding: P
         project_id=project_id,
         agent_id=agent_id,
         binding=binding,
-        input_name="permission_binding",
+        input_name=PERMISSION_GATE.agent_input_name,
         origin_name=PERMISSION_ORIGIN,
         label="Permissions",
     )
@@ -58,7 +59,9 @@ class PermissionFlowRunner:
     def __init__(self, component, binding: PermissionBinding):
         self.component = component
         self.binding = binding
-        self.runner = ReviewedFlowRunner(component, validate=validate_permission_binding, label="permission")
+        self.runner = ReviewedFlowRunner(
+            component, validate=validate_permission_binding, label="permission", field_name="tool_policy"
+        )
 
     async def __call__(self, payload: dict) -> Permission:
         async def invoke(request):

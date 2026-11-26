@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import HTTPException
 from lfx.projects.bindings import flow_revision
 from lfx.projects.dependencies import binding_dependencies, flow_references, validate_binding_dependencies
-from lfx.projects.flow_slots import validate_project_binding
+from lfx.projects.flow_slots import binding_slot
 from lfx.projects.tool_packs import ToolPackToolBinding
 from lfx.schema.data import Data
 from sqlmodel import select
@@ -87,12 +87,8 @@ async def resolve_binding_snapshot(session, user, binding, field_name, *, requir
     """Check current access and review, then read required versions rather than live code."""
     root = await _authorize(session, user, binding.flow_id, FlowAction.EXECUTE)
     if require_current or not binding.version_id:
-        if field_name == "tools":
-            from lfx.projects.local_tools import validate_local_tool_source
-
-            validate_local_tool_source(flow_definitions([root])[0], binding)
-        else:
-            validate_project_binding(field_name, root.data or {}, binding)
+        slot = binding_slot(field_name)
+        slot.validate_binding(slot.validation_source(flow_definitions([root])[0]), binding)
         current = await resolve_binding_flows(session, user, root, action=FlowAction.EXECUTE)
         validate_binding_dependencies(binding, flow_definitions(current.values()))
     definitions = {}

@@ -16,9 +16,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from lfx.projects.bindings import BINDING_ORIGIN, flow_revision
 from lfx.projects.dependencies import binding_dependencies, validate_binding_dependencies
 from lfx.projects.flow_slots import (
-    _RUNTIME_FIELDS,
     ProjectFlowBindings,
     flow_runtime_bindings,
+    runtime_binding_fields,
     validate_project_binding,
 )
 from lfx.projects.local_tools import (
@@ -371,7 +371,7 @@ class CompositionGraph:
                     if isinstance(data.get(SKILLS_ORIGIN), dict):
                         data[SKILLS_ORIGIN]["project_id"] = project_id
                         data[SKILLS_ORIGIN]["binding"] = skill_value(data[SKILLS_ORIGIN]["binding"])
-                    for field_name, (input_name, origin_name, origin_key, _) in _RUNTIME_FIELDS.items():
+                    for field_name, (input_name, origin_name, origin_key, _) in runtime_binding_fields().items():
                         raw = template.get(input_name, {}).get("value")
                         if raw and raw.strip() not in {"null", "{}", "[]"}:
                             template[input_name]["value"] = json.dumps(binding_value(field_name, json.loads(raw)))

@@ -5,10 +5,11 @@ from copy import deepcopy
 
 from lfx.base.agents.hooks import HookBinding, HookDecision, HookSourceChangedError
 from lfx.projects.bindings import contract_outputs, flow_revision
+from lfx.projects.builtin_slots import HOOK
 from lfx.projects.invocation import ReviewedFlowRunner
 
 HOOK_EVENT_CONTEXT = "harness_hook_event"
-HOOK_ORIGIN = "_harness_hooks"
+HOOK_ORIGIN = HOOK.origin_key
 
 
 def compose_hooks(data: dict, *, project_id: str, agent_id: str, bindings: list[HookBinding]) -> dict:
@@ -20,7 +21,7 @@ def compose_hooks(data: dict, *, project_id: str, agent_id: str, bindings: list[
     owned = isinstance(origin, dict) and origin.get("project_id") == project_id
     if not bindings and not owned:
         return data
-    entry = node_data["node"]["template"].get("hook_bindings")
+    entry = node_data["node"]["template"].get(HOOK.agent_input_name)
     if not isinstance(entry, dict):
         msg = "Update the Agent component on its canvas before configuring hooks."
         raise TypeError(msg)
@@ -28,7 +29,7 @@ def compose_hooks(data: dict, *, project_id: str, agent_id: str, bindings: list[
     baseline = origin.get("bindings", []) if owned else []
     connected = any(
         edge.get("target") == agent_id
-        and edge.get("data", {}).get("targetHandle", {}).get("fieldName") == "hook_bindings"
+        and edge.get("data", {}).get("targetHandle", {}).get("fieldName") == HOOK.agent_input_name
         for edge in data.get("edges", [])
     )
     if current != baseline or connected or (origin and not owned):
@@ -72,7 +73,7 @@ class HookFlowRunner:
 
     def __init__(self, component):
         self.component = component
-        self.runner = ReviewedFlowRunner(component, validate=validate_hook_binding, label="Hook")
+        self.runner = ReviewedFlowRunner(component, validate=validate_hook_binding, label="Hook", field_name="hooks")
 
     async def __call__(self, binding: HookBinding, payload: dict) -> HookDecision:
         parent = self.component.graph

@@ -1,0 +1,84 @@
+{
+  "system_prompt": {
+    "name": "Instructions",
+    "terminal_output_type": "Message",
+    "fire_timing": "once_per_run",
+    "cardinality": "single",
+    "default_flow_ref": "builtin:instructions",
+    "binding": {
+      "kind": "instructions",
+      "label": "Instructions",
+      "validation_hint": "Configure required inputs and connect a terminal text output.",
+      "initial_config_fields": [],
+      "defaults": {}
+    }
+  },
+  "hooks": {
+    "name": "Hook",
+    "terminal_output_type": "HookDecision",
+    "fire_timing": "on_event",
+    "cardinality": "multi",
+    "default_flow_ref": "builtin:hook",
+    "binding": {
+      "kind": "hook",
+      "label": "Hooks",
+      "validation_hint": "Connect one Hook Event to a terminal Hook decision and configure required inputs.",
+      "initial_config_fields": [],
+      "defaults": {
+        "timeout_seconds": 10
+      }
+    }
+  },
+  "context_strategy": {
+    "name": "ContextManager",
+    "terminal_output_type": "DataFrame",
+    "fire_timing": "per_llm_call",
+    "cardinality": "single",
+    "default_flow_ref": "builtin:context",
+    "binding": {
+      "kind": "context",
+      "label": "Context",
+      "validation_hint": "Connect one Agent Context to a terminal message Table and configure required inputs.",
+      "initial_config_fields": ["context_strategy", "context_turns"],
+      "defaults": {
+        "timeout_seconds": 30
+      }
+    }
+  },
+  "compaction": {
+    "name": "Compactor",
+    "terminal_output_type": "CompactionResult",
+    "fire_timing": "on_threshold",
+    "cardinality": "single",
+    "default_flow_ref": "builtin:compaction",
+    "binding": {
+      "kind": "compaction",
+      "label": "Compaction",
+      "validation_hint": "Connect one Compaction Input to a terminal CompactionResult and configure required inputs.",
+      "initial_config_fields": [
+        "compaction_trigger_tokens",
+        "compaction_keep_messages"
+      ],
+      "defaults": {
+        "timeout_seconds": 60,
+        "trigger_tokens": 8000
+      }
+    }
+  },
+  "tool_policy": {
+    "name": "PermissionGate",
+    "terminal_output_type": "Permission",
+    "fire_timing": "per_tool_call",
+    "cardinality": "single",
+    "default_flow_ref": "builtin:permission",
+    "binding": {
+      "kind": "permission",
+      "label": "Permissions",
+      "validation_hint": "Connect one Permission Request to a terminal Permission output and configure required inputs.",
+      "initial_config_fields": ["tool_policy"],
+      "defaults": {
+        "timeout_seconds": 10
+      }
+    }
+  }
+}

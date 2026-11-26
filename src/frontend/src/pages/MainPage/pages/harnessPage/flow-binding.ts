@@ -1,7 +1,10 @@
 import type {
+  CompactionBinding,
   FlowBinding,
   FlowOutputChoice,
   HookBinding,
+  ProjectFlowBindings,
+  ProjectTypeType,
 } from "../../entities";
 
 export const outputKey = (value: FlowBinding) =>
@@ -66,3 +69,22 @@ export const validFlowTimeout = (value: number) =>
 
 export const validCompactionThreshold = (value: number) =>
   Number.isInteger(value) && value >= 1 && value <= 10_000_000;
+
+export function validProjectBindings(
+  bindings: ProjectFlowBindings,
+  template: ProjectTypeType["template"] = {},
+) {
+  return Object.entries(bindings).every(([field, binding]) => {
+    const defaults = template[field]?.flow_contract?.binding?.defaults;
+    return (Array.isArray(binding) ? binding : [binding]).every((item) => {
+      if (!item) return true;
+      const values = item as CompactionBinding;
+      const timeout = values.timeout_seconds ?? defaults?.timeout_seconds;
+      const threshold = values.trigger_tokens ?? defaults?.trigger_tokens;
+      return (
+        (timeout === undefined || validFlowTimeout(timeout)) &&
+        (threshold === undefined || validCompactionThreshold(threshold))
+      );
+    });
+  });
+}

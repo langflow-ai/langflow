@@ -13,7 +13,16 @@ from lfx.projects import all_project_types
 @pytest.fixture
 def custom_project_type(monkeypatch):
     from lfx.inputs.inputs import StrInput
-    from lfx.projects import ProjectTypeDefinition, ProjectTypeField, register_project_type, registry
+    from lfx.projects import (
+        FireTiming,
+        ProjectTypeDefinition,
+        ProjectTypeField,
+        SlotDefinition,
+        get_slot,
+        register_project_type,
+        register_slot,
+        registry,
+    )
 
     original = registry._PROJECT_TYPES
     isolated = type(original)(
@@ -24,6 +33,30 @@ def custom_project_type(monkeypatch):
     for name in original.list_keys():
         isolated.register_class(name, original.get_class(name))
     monkeypatch.setattr(registry, "_PROJECT_TYPES", isolated)
+    monkeypatch.setattr(registry, "_SLOT_DEFINITIONS", dict(registry._SLOT_DEFINITIONS))
+
+    class SupportInstructions(SlotDefinition):
+        def binding_contract(self):
+            return get_slot("Instructions").binding_contract()
+
+        def binding_outputs(self, data):
+            # This plugin chooses only the first compatible output.
+            return super().binding_outputs(data)[:1]
+
+        def build_baseline(self, initial_value=None, *, initial_config=None):
+            return get_slot("Instructions").build_baseline(initial_value, initial_config=initial_config)
+
+    instructions = register_slot(
+        SupportInstructions(
+            "SupportInstructions",
+            "Message",
+            FireTiming.ONCE_PER_RUN,
+            default_flow_ref="test:support-instructions",
+            binding_kind="instructions",
+            binding_label="Briefing",
+            validation_hint="Connect a support briefing output.",
+        )
+    )
 
     @register_project_type
     class CustomProjectType(ProjectTypeDefinition):
@@ -31,9 +64,66 @@ def custom_project_type(monkeypatch):
         display_name = "Custom project"
         icon = "Box"
         description = "A plugin-defined form."
-        fields = (ProjectTypeField(name="team", input=StrInput(name="team", display_name="Team")),)
+        fields = (
+            ProjectTypeField(name="team", input=StrInput(name="team", display_name="Team")),
+            ProjectTypeField(
+                name="briefing",
+                input=StrInput(name="briefing", display_name="Briefing"),
+                slot_definition=instructions,
+                supports_flow_binding=True,
+            ),
+        )
 
     return CustomProjectType, original
+
+
+async def test_plugin_slot_drives_baseline_discovery_and_draft_validation(
+    client, logged_in_headers, custom_project_type
+):
+    from copy import deepcopy
+
+    from lfx.projects.bindings import instruction_outputs
+
+    definition, _ = custom_project_type
+    created = await client.post(
+        "api/v1/projects/",
+        headers=logged_in_headers,
+        json={"name": "Support project", "project_type": definition.name},
+    )
+    assert created.status_code == 201
+    project_id = created.json()["id"]
+    endpoint = f"api/v1/projects/{project_id}"
+    baseline = await client.post(
+        f"{endpoint}/flow-baseline?field_name=briefing",
+        headers=logged_in_headers,
+        json={"initial_value": "Cite the support guide."},
+    )
+    assert baseline.status_code == 200
+    flow = baseline.json()
+    assert flow["data"]["harness_contract"] == {"slot": "SupportInstructions", "field_name": "briefing"}
+    second = deepcopy(flow["data"]["nodes"][0])
+    second["id"] += "-second"
+    flow["data"]["nodes"].append(second)
+    assert len(instruction_outputs(flow["data"])) == 2
+    saved = await client.post("api/v1/flows/", headers=logged_in_headers, json=flow)
+    assert saved.status_code == 201
+    choices = await client.get(f"{endpoint}/flow-outputs?field_name=briefing", headers=logged_in_headers)
+    assert choices.status_code == 200
+    assert len(choices.json()) == 1
+    checked = await client.post(
+        f"{endpoint}/flow-outputs/validate?field_name=briefing",
+        headers=logged_in_headers,
+        json={"data": flow["data"]},
+    )
+    assert checked.status_code == 200
+    assert checked.json()["valid"] is True
+    assert len(checked.json()["outputs"]) == 1
+    invalid = await client.post(
+        f"{endpoint}/flow-outputs/validate?field_name=briefing",
+        headers=logged_in_headers,
+        json={"data": {"nodes": [], "edges": []}},
+    )
+    assert invalid.json() == {"valid": False, "outputs": [], "reason": "Connect a support briefing output."}
 
 
 async def test_custom_type_form_and_config_use_existing_api(client, logged_in_headers, custom_project_type):
@@ -174,6 +264,13 @@ async def test_the_form_exposes_shared_contracts_without_changing_config_keys(
         "fire_timing": "once_per_run",
         "cardinality": "single",
         "default_flow_ref": "builtin:instructions",
+        "binding": {
+            "kind": "instructions",
+            "label": "Instructions",
+            "validation_hint": "Configure required inputs and connect a terminal text output.",
+            "initial_config_fields": [],
+            "defaults": {},
+        },
     }
     assert template["tools"]["flow_contract"]["name"] == "Tool"
     assert template["tools"]["flow_contract"]["cardinality"] == "multi"
