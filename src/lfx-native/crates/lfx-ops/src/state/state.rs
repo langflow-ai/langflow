@@ -15,14 +15,15 @@ use std::sync::{Arc, Mutex, PoisonError, TryLockError, Weak};
 
 use crate::json::serialize::{self, Ascii};
 use crate::json::{FlowObj, FlowStr, FlowValue};
-use crate::map::patched::PatchedMap;
+use crate::map::ordered::OrderedMap;
+use crate::map::pending::{PendingMap, Write};
 
 use crate::compare;
 use crate::flow::deserialize::DeserializeError;
 use crate::flow::edge::Edge;
 use crate::flow::node::Node;
 use crate::rule::edge::{EdgeIndex, GraphRead};
-use crate::state::field_write::{self, PathWrites};
+use crate::state::field_write::{self, PendingFieldWrites};
 use crate::validate::{Numbers, validate_flow_data};
 use crate::violation::error::{Error, Result};
 
@@ -95,7 +96,7 @@ impl GraphState {
         let nodes = by_id(take_list(&mut root, "nodes"), "node", Node::try_from)?;
         let edges = by_id(take_list(&mut root, "edges"), "edge", Edge::try_from)?;
         let mut edges_at = EdgesAt::new();
-        for edge in edges.values() {
+        for edge in values(&edges.base) {
             edges_at.attach(edge.id(), edge);
         }
         edges_at.commit();
@@ -105,6 +106,7 @@ impl GraphState {
             graph: Graph {
                 nodes,
                 edges,
+                fields: PendingFieldWrites::default(),
                 edges_at,
             },
             edge_index: EdgeIndex::default(),
@@ -120,7 +122,7 @@ impl GraphState {
     /// [`Self::to_json`].
     #[must_use]
     pub fn item_count(&self) -> usize {
-        self.graph.nodes.len() + self.graph.edges.len()
+        self.graph.nodes.base.len() + self.graph.edges.base.len()
     }
 
     /// The graph as a JSON value.
@@ -130,16 +132,12 @@ impl GraphState {
         for (key, value) in &self.root {
             let value = match key.as_str() {
                 "nodes" => FlowValue::Array(
-                    self.graph
-                        .nodes
-                        .values()
+                    values(&self.graph.nodes.base)
                         .map(|node| node.as_value().clone())
                         .collect(),
                 ),
                 "edges" => FlowValue::Array(
-                    self.graph
-                        .edges
-                        .values()
+                    values(&self.graph.edges.base)
                         .map(|edge| FlowValue::Object(edge.as_map().clone()))
                         .collect(),
                 ),
@@ -158,8 +156,8 @@ impl GraphState {
             write_graph(
                 out,
                 &self.root,
-                self.graph.nodes.values().map(Node::as_map),
-                self.graph.edges.values().map(Edge::as_map),
+                values(&self.graph.nodes.base).map(Node::as_map),
+                values(&self.graph.edges.base).map(Edge::as_map),
                 |out, node| serialize::write_map(out, node, Ascii::Escape),
             );
         })
@@ -177,22 +175,24 @@ impl GraphState {
                 out,
                 &self.root,
                 self.staged_nodes(),
-                self.graph
-                    .edges
-                    .pending_values()
-                    .map(|(edge, _)| edge.as_map()),
+                staged_entries(&self.graph.edges).map(|(_, edge)| edge.as_map()),
                 |out, node| serialize::write_value(out, &node, Ascii::Escape),
             );
         }))
     }
 
     /// The nodes with the staged batch, in the order
-    /// [`PatchedMap::commit`] gives them. A written node is a
+    /// [`PendingMap::commit`] gives them. A written node is a
     /// copy with its writes made.
     fn staged_nodes(&self) -> impl Iterator<Item = Cow<'_, FlowValue>> {
-        self.graph.nodes.pending_values().map(|(node, writes)| {
+        staged_entries(&self.graph.nodes).map(|(id, node)| {
             let value = node.as_value();
-            let Some(writes) = writes.filter(|writes| !writes.is_empty()) else {
+            let Some(writes) = self
+                .graph
+                .fields
+                .node(id)
+                .filter(|writes| !writes.is_empty())
+            else {
                 return Cow::Borrowed(value);
             };
 
@@ -211,12 +211,10 @@ impl GraphState {
     pub fn graph_hash(&self) -> Result<String> {
         Ok(compare::loaded_graph_hash(
             &self.root,
-            self.graph
-                .nodes
-                .values()
+            values(&self.graph.nodes.base)
                 .map(|node| Cow::Borrowed(node.as_value()))
                 .collect(),
-            self.graph.edges.values().map(Edge::as_map).collect(),
+            values(&self.graph.edges.base).map(Edge::as_map).collect(),
         )?)
     }
 
@@ -233,10 +231,8 @@ impl GraphState {
         }
         let graph = &self.graph;
         let nodes = self.staged_nodes().collect();
-        let edges = graph
-            .edges
-            .pending_values()
-            .map(|(edge, _)| edge.as_map())
+        let edges = staged_entries(&graph.edges)
+            .map(|(_, edge)| edge.as_map())
             .collect();
         Some(compare::loaded_graph_hash(&self.root, nodes, edges).map_err(Error::from))
     }
@@ -246,8 +242,8 @@ impl GraphState {
     pub fn entries(&self) -> impl Iterator<Item = (&str, Entry<'_>)> {
         self.root.iter().map(|(key, value)| {
             let entry = match key.as_str() {
-                "nodes" => Entry::Nodes(Nodes(&self.graph.nodes)),
-                "edges" => Entry::Edges(Edges(&self.graph.edges)),
+                "nodes" => Entry::Nodes(Nodes(&self.graph.nodes.base)),
+                "edges" => Entry::Edges(Edges(&self.graph.edges.base)),
                 _ => Entry::Value(value),
             };
             (key.as_str(), entry)
@@ -261,18 +257,25 @@ impl GraphState {
         let Self {
             mut root, graph, ..
         } = self;
-        root.insert(
-            "nodes".into(),
-            FlowValue::Array(graph.nodes.into_items(Node::into_value)),
+        debug_assert!(graph.nodes.pending.is_empty() && graph.edges.pending.is_empty());
+        let mut nodes = Vec::with_capacity(graph.nodes.base.len());
+        nodes.extend(
+            graph
+                .nodes
+                .base
+                .into_entries()
+                .map(|(_, node)| node.into_value()),
         );
-        root.insert(
-            "edges".into(),
-            FlowValue::Array(
-                graph
-                    .edges
-                    .into_items(|edge| FlowValue::Object(edge.into_map())),
-            ),
+        let mut edges = Vec::with_capacity(graph.edges.base.len());
+        edges.extend(
+            graph
+                .edges
+                .base
+                .into_entries()
+                .map(|(_, edge)| FlowValue::Object(edge.into_map())),
         );
+        root.insert("nodes".into(), FlowValue::Array(nodes));
+        root.insert("edges".into(), FlowValue::Array(edges));
         FlowValue::Object(root)
     }
 
@@ -289,23 +292,32 @@ impl GraphState {
             .snapshot_cache
             .get_mut()
             .unwrap_or_else(PoisonError::into_inner) = Weak::new();
-        self.graph
+        self.released
             .nodes
-            .commit(&mut self.released.nodes, |id, node, writes| {
-                if writes.is_empty() {
-                    return;
-                }
-
-                let lists = if self.lists.by_node.contains_key(id) {
-                    Some((&mut self.lists, id))
-                } else {
-                    None
-                };
-                field_write::make_writes(node.as_value_mut(), writes, &mut Vec::new(), lists);
-            });
-        self.graph
+            .extend(removed_values(&self.graph.nodes));
+        self.graph.nodes.commit();
+        for (id, writes) in self.graph.fields.drain() {
+            if writes.is_empty() {
+                continue;
+            }
+            let node = self
+                .graph
+                .nodes
+                .base
+                .get_mut(id.as_str())
+                .expect("the node exists");
+            let lists = if self.lists.by_node.contains_key(&id) {
+                Some((&mut self.lists, id.as_str()))
+            } else {
+                None
+            };
+            field_write::make_writes(node.as_value_mut(), writes, &mut Vec::new(), lists);
+        }
+        self.graph.fields.finish();
+        self.released
             .edges
-            .commit(&mut self.released.edges, |_, _, ()| {});
+            .extend(removed_values(&self.graph.edges));
+        self.graph.edges.commit();
         self.graph.edges_at.commit();
         self.edge_index.commit();
     }
@@ -362,7 +374,7 @@ impl GraphState {
 
     /// Whether the node existed when the batch started.
     pub(crate) fn is_base_node(&self, id: &str) -> bool {
-        self.graph.nodes.is_based(id)
+        self.graph.nodes.base.contains_key(id)
     }
 
     // --- Changes ---------------------------------------------
@@ -387,6 +399,7 @@ impl GraphState {
     /// caller removes them.
     pub(crate) fn remove_node(&mut self, id: &str) {
         self.graph.nodes.remove(id);
+        self.graph.fields.forget_node(id);
         self.edge_index.forget_node(id);
         self.lists.forget_node(id);
     }
@@ -415,6 +428,33 @@ impl GraphState {
     }
 }
 
+fn values<V>(map: &OrderedMap<V>) -> impl Iterator<Item = &V> {
+    map.iter().map(|(_, value)| value)
+}
+
+fn staged_entries<V>(map: &PendingMap<V>) -> impl Iterator<Item = (&FlowStr, &V)> {
+    let kept = map
+        .base
+        .iter()
+        .filter_map(|(key, value)| match map.pending.get(key.as_str()) {
+            Some(Write::Set(value)) => Some((key, value)),
+            Some(Write::Delete) => None,
+            None => Some((key, value)),
+        });
+    let added = map.pending.iter().filter_map(|(key, write)| match write {
+        Write::Set(value) if !map.base.contains_key(key.as_str()) => Some((key, value)),
+        _ => None,
+    });
+    kept.chain(added)
+}
+
+fn removed_values<V: Clone>(map: &PendingMap<V>) -> impl Iterator<Item = V> {
+    map.pending.iter().filter_map(|(id, write)| match write {
+        Write::Delete => map.base.get(id.as_str()).cloned(),
+        Write::Set(_) => None,
+    })
+}
+
 fn id_key(item: &FlowObj) -> FlowStr {
     let Some(FlowValue::String(id)) = item.get("id") else {
         unreachable!("a checked graph item has a string id");
@@ -423,12 +463,15 @@ fn id_key(item: &FlowObj) -> FlowStr {
 }
 
 /// Nodes or edges by id, in their order, each made by `make`.
-fn by_id<T, P>(
+fn by_id<T>(
     items: Vec<FlowValue>,
     root: &str,
     make: fn(FlowObj) -> Result<T, DeserializeError>,
-) -> Result<PatchedMap<T, P>> {
-    items
+) -> Result<PendingMap<T>>
+where
+    T: Clone,
+{
+    let base = items
         .into_iter()
         .map(|item| {
             let FlowValue::Object(item) = item else {
@@ -438,7 +481,11 @@ fn by_id<T, P>(
             let value = make(item).map_err(|error| error.into_error(root))?;
             Ok((id, value))
         })
-        .collect()
+        .collect::<Result<_>>()?;
+    Ok(PendingMap {
+        base,
+        ..PendingMap::new()
+    })
 }
 
 /// A top-level entry of a [`GraphState`], borrowed from it
@@ -455,23 +502,23 @@ pub enum Entry<'s> {
 
 /// The nodes of a [`GraphState`], borrowed from it.
 #[derive(Debug, Clone, Copy)]
-pub struct Nodes<'s>(&'s PatchedMap<Node, PathWrites>);
+pub struct Nodes<'s>(&'s OrderedMap<Node>);
 
 impl<'s> Nodes<'s> {
     /// Each node's JSON object.
     pub fn iter(self) -> impl Iterator<Item = &'s FlowValue> {
-        self.0.values().map(Node::as_value)
+        values(self.0).map(Node::as_value)
     }
 }
 
 /// The edges of a [`GraphState`], borrowed from it.
 #[derive(Debug, Clone, Copy)]
-pub struct Edges<'s>(&'s PatchedMap<Edge>);
+pub struct Edges<'s>(&'s OrderedMap<Edge>);
 
 impl<'s> Edges<'s> {
     /// Each edge's JSON object.
     pub fn iter(self) -> impl Iterator<Item = &'s FlowObj> {
-        self.0.values().map(Edge::as_map)
+        values(self.0).map(Edge::as_map)
     }
 }
 
@@ -514,10 +561,14 @@ impl GraphState {
         if let Some(data) = cache.upgrade() {
             return GraphSnapshot { data };
         }
+        let mut nodes = Vec::with_capacity(self.graph.nodes.base.len());
+        nodes.extend(values(&self.graph.nodes.base).cloned());
+        let mut edges = Vec::with_capacity(self.graph.edges.base.len());
+        edges.extend(values(&self.graph.edges.base).cloned());
         let data = Arc::new(SnapshotData {
             root: self.root.clone(),
-            nodes: self.graph.nodes.snapshot(),
-            edges: self.graph.edges.snapshot(),
+            nodes,
+            edges,
             text_len: Arc::clone(&self.text_len),
         });
         // The last reader releases the lists, without deferring
@@ -693,7 +744,7 @@ mod tests {
             state.drop_pending();
             assert_snapshot_matches_state(&state);
         }
-        let ids: Vec<_> = state.graph.nodes.values().map(Node::id).collect();
+        let ids: Vec<_> = values(&state.graph.nodes.base).map(Node::id).collect();
         let expected: Vec<_> = (0..128)
             .filter(|i| ![32, 64].contains(i))
             .chain([64, 32])
@@ -715,7 +766,8 @@ mod tests {
             state
                 .graph
                 .nodes
-                .base_get("n0")
+                .base
+                .get("n0")
                 .unwrap()
                 .as_map()
                 .get("id")
@@ -729,7 +781,8 @@ mod tests {
             state
                 .graph
                 .nodes
-                .base_get("n0")
+                .base
+                .get("n0")
                 .unwrap()
                 .as_map()
                 .get("id")
@@ -745,12 +798,12 @@ mod tests {
         // A cached snapshot must not keep a deleted node
         // either.
         drop(state.snapshot());
-        let deleted = state.graph.nodes.base_get("a").unwrap().as_map().clone();
+        let deleted = state.graph.nodes.base.get("a").unwrap().as_map().clone();
         state.remove_node("a");
         state.commit();
         drop(state.take_released());
         assert!(deleted.into_unshared_entries().is_some());
-        let replaced = state.graph.nodes.base_get("b").unwrap().as_map().clone();
+        let replaced = state.graph.nodes.base.get("b").unwrap().as_map().clone();
         state.remove_node("b");
         state.insert_node(snapshot_node("b"));
         state.commit();

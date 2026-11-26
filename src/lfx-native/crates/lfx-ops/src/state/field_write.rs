@@ -6,6 +6,7 @@ use std::sync::OnceLock;
 use crate::json::FlowValue;
 use crate::map::hash::HashMap;
 use crate::map::path_tree::{InvalidPath, Node, NodeValue, drop_path};
+use crate::map::pending::PENDING_MAP_MAX_CAPACITY;
 
 use crate::flow::list::{ListIndex, find_item, remove_item};
 use crate::flow::model::FLOW_MODEL;
@@ -31,6 +32,44 @@ impl From<FlowValue> for FieldWrite {
 
 type FieldTree = Node<Segment, FieldWrite>;
 type ObjectWrites = HashMap<Path, OnceLock<FieldWrite>>;
+
+/// The field edits of a batch, grouped by node id.
+#[derive(Debug, Default)]
+pub(crate) struct PendingFieldWrites {
+    by_node: HashMap<String, PathWrites>,
+}
+
+impl PendingFieldWrites {
+    pub(super) fn node(&self, id: &str) -> Option<&PathWrites> {
+        self.by_node.get(id)
+    }
+
+    pub(super) fn node_mut(&mut self, id: &str) -> &mut PathWrites {
+        if !self.by_node.contains_key(id) {
+            self.by_node.insert(id.to_owned(), PathWrites::default());
+        }
+        self.by_node.get_mut(id).expect("the writes exist")
+    }
+
+    pub(super) fn forget_node(&mut self, id: &str) {
+        self.by_node.remove(id);
+    }
+
+    pub(super) fn drain(&mut self) -> impl Iterator<Item = (String, PathWrites)> + '_ {
+        self.by_node.drain()
+    }
+
+    pub(super) fn finish(&mut self) {
+        if self.by_node.capacity() > PENDING_MAP_MAX_CAPACITY {
+            self.by_node.shrink_to_fit();
+        }
+    }
+
+    pub(super) fn drop_pending(&mut self) {
+        self.by_node.clear();
+        self.finish();
+    }
+}
 
 #[derive(Debug, Clone, Default)]
 pub(crate) struct PathWrites {

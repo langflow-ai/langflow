@@ -8,7 +8,7 @@
 use std::hash::Hash;
 
 use super::ordered::OrderedMap;
-use crate::{types::{FlowStr, FlowValue}};
+use crate::types::{FlowStr, FlowValue};
 
 /// A tree node. It's `value` is
 /// either a scalar or a collection
@@ -53,7 +53,7 @@ impl<K, D> Default for Node<K, D> {
     }
 }
 
-impl<K: Clone + Eq + Hash + From<FlowStr>, D: From<FlowValue>> From<FlowValue> for Node<K, D> {
+impl<K: Eq + Hash + From<FlowStr>, D: From<FlowValue>> From<FlowValue> for Node<K, D> {
     /// Build a subtree, preserving object key order.
     fn from(value: FlowValue) -> Self {
         let FlowValue::Object(object) = value else {
@@ -63,7 +63,7 @@ impl<K: Clone + Eq + Hash + From<FlowStr>, D: From<FlowValue>> From<FlowValue> f
         };
         let mut children = OrderedMap::new();
         for (key, value) in object {
-            *children.get_or_insert_default(&K::from(key)) = Self::from(value);
+            children.insert(K::from(key), Self::from(value));
         }
         Self {
             value: NodeValue::Children(children),
@@ -136,7 +136,7 @@ impl<K: Clone + Eq + Hash, D> Node<K, D> {
         let NodeValue::Children(children) = &mut parent.value else {
             return Err(InvalidPath);
         };
-        *children.get_or_insert_default(key) = subtree;
+        children.insert(key.clone(), subtree);
         Ok(())
     }
 
@@ -197,9 +197,6 @@ pub(crate) fn drop_path<K: Hash + Eq, D>(node: &mut Node<K, D>, path: &[K]) {
         children.remove(next_key);
     }
 }
-
-
-
 
 #[cfg(test)]
 mod tests {

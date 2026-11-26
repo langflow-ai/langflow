@@ -1,5 +1,15 @@
 //! [`OrderedMap`]: a map that preserves insert order.
-
+//! We considered using the
+//! well known `IndexMap` crate
+//! but deletions that preserve
+//! order are O(n) so we
+//! build a simplified version
+//! of such order-preserving map
+//! which can delete entries
+//! in O(1) time on average
+//! and preserve order
+//! by retaining deleted entries
+//! until they outnumber live ones.
 use std::borrow::Borrow;
 use std::hash::Hash;
 
@@ -9,22 +19,17 @@ use hashbrown::hash_table;
 use crate::map::hash::State;
 use crate::types::FlowStr;
 
-// Small maps use a dense list and defer hashing until they
-// grow.
-const LINEAR_LIMIT: usize = 2;
-
 /// Map preserving insert order.
-/// Indexed maps mark deleted entries as `None`.
-/// They stay in `data` until they
-/// outnumber non-deleted keys.
+/// Deleted `Entry`s stay in `data`
+/// until they outnumber non-deleted `Entry`s.
 #[derive(Debug, Clone)]
 pub(crate) struct OrderedMap<V, K = FlowStr> {
     /// The map's actual data
     data: Vec<Entry<V, K>>,
-    /// This table stores values
+    /// Stores values
     /// by finding where the hashed
     /// key points to and finding the
-    /// 'next' available slot.
+    /// "next" available slot.
     /// The Values we store in
     /// this table are `usize` integers
     /// pointing to an index in `data`
@@ -33,15 +38,13 @@ pub(crate) struct OrderedMap<V, K = FlowStr> {
     /// The random state used to compute hashes.
     state: State,
 }
-/// key and value are the
-/// caller-supplied key and value.
-/// hash is the hash of the key.
-/// This hash is stored
-/// to avoid re-computing
-/// it in [`OrderedMap::clear_garbage`]
 #[derive(Debug, Clone)]
 struct Entry<V, K> {
-    /// The cached hash of the key once the map is indexed.
+    /// The hash of the key.
+    /// Used to rebuild the table
+    /// after clearing garbage in
+    /// [`OrderedMap::clear_garbage`]
+    /// without re-computing the hashes again.
     hash: u64,
     /// The actual key
     key: K,
@@ -75,17 +78,13 @@ impl<V, K> OrderedMap<V, K> {
 
     /// The number of values.
     pub fn len(&self) -> usize {
-        if self.data.len() <= LINEAR_LIMIT {
-            self.data.len()
-        } else {
-            self.index.len()
-        }
+        self.index.len()
     }
 
     pub fn is_empty(&self) -> bool {
         self.len() == 0
     }
-
+    /// Get the data held under `key`
     pub fn get<Q: Hash + Eq + ?Sized>(&self, key: &Q) -> Option<&V>
     where
         K: Borrow<Q>,
@@ -94,6 +93,7 @@ impl<V, K> OrderedMap<V, K> {
         self.data[i].value.as_ref()
     }
 
+    /// Get a mutable reference to the data held under `key`.
     pub fn get_mut<Q: Hash + Eq + ?Sized>(&mut self, key: &Q) -> Option<&mut V>
     where
         K: Borrow<Q>,
@@ -101,7 +101,7 @@ impl<V, K> OrderedMap<V, K> {
         let i = self.get_index_of(key)?;
         self.data[i].value.as_mut()
     }
-
+    /// Whether the map contains `key`.
     pub fn contains_key<Q: Hash + Eq + ?Sized>(&self, key: &Q) -> bool
     where
         K: Borrow<Q>,
@@ -114,86 +114,40 @@ impl<V, K> OrderedMap<V, K> {
     where
         K: Borrow<Q>,
     {
-        if self.data.len() <= LINEAR_LIMIT {
-            return self.data.iter().position(|entry| entry.key.borrow() == key);
-        }
-
         let hash = self.state.hash_one(key);
         self.index.find(hash, has_key(&self.data, key)).copied()
     }
 
-    /// Locate the value's slot, appending the key if needed.
-    fn slot<I, Q: Hash + Eq + ?Sized>(
-        &mut self,
-        key: I,
-        borrowed: impl FnOnce(&I) -> &Q,
-        owned: impl FnOnce(I) -> K,
-    ) -> &mut Option<V>
+    /// Add a key or replace its value in place.
+    pub(super) fn insert(&mut self, key: K, value: V)
     where
-        K: Borrow<Q> + Hash,
+        K: Hash + Eq,
     {
-        let key_ref = borrowed(&key);
-        // Most path branches are small enough to keep as a
-        // dense list.
-        if self.data.len() <= LINEAR_LIMIT {
-            if let Some(position) = self.get_index_of(key_ref) {
-                return &mut self.data[position].value;
-            }
-            let position = self.data.len();
-            let entry = Entry {
-                hash: 0,
-                key: owned(key),
-                value: None,
-            };
-            if position == 0 {
-                self.data.reserve_exact(1);
-            }
-            self.data.push(entry);
-            if position == LINEAR_LIMIT {
-                for entry in &mut self.data {
-                    entry.hash = self.state.hash_one(&entry.key);
-                }
-                self.reindex();
-            }
-            return &mut self.data[position].value;
-        }
-        let hash = self.state.hash_one(key_ref);
+        let hash = self.state.hash_one(&key);
         let entry = self
             .index
-            .entry(hash, has_key(&self.data, key_ref), hash_at(&self.data));
+            .entry(hash, has_key(&self.data, &key), hash_at(&self.data));
         match entry {
-            hash_table::Entry::Occupied(slot) => &mut self.data[*slot.get()].value,
+            hash_table::Entry::Occupied(slot) => {
+                self.data[*slot.get()].value = Some(value);
+            }
             hash_table::Entry::Vacant(slot) => {
                 let position = self.data.len();
                 self.data.push(Entry {
                     hash,
-                    key: owned(key),
-                    value: None,
+                    key,
+                    value: Some(value),
                 });
                 slot.insert(position);
-                &mut self.data[position].value
             }
         }
     }
 
-    pub(super) fn get_or_insert_default(&mut self, key: &K) -> &mut V
-    where
-        K: Clone + Eq + Hash,
-        V: Default,
-    {
-        self.slot(key, |key| *key, K::clone)
-            .get_or_insert_with(V::default)
-    }
-
-    /// Remove `key`. Indexed maps leave its position empty.
+    /// Remove `key` and leave its position empty.
     pub fn remove<Q: Hash + Eq + ?Sized>(&mut self, key: &Q) -> Option<V>
     where
         K: Borrow<Q>,
     {
-        if self.data.len() <= LINEAR_LIMIT {
-            let position = self.get_index_of(key)?;
-            return self.data.remove(position).value;
-        }
         let hash = self.state.hash_one(key);
         let entry = self.index.find_entry(hash, has_key(&self.data, key)).ok()?;
         let (position, _) = entry.remove();
@@ -207,20 +161,15 @@ impl<V, K> OrderedMap<V, K> {
         }
         // clear the garbage
         self.data.retain(|entry| entry.value.is_some());
-        // reduce allocated capacity if 4x larger than current
+        // reduce allocated capacity
+        // if 4x larger than current
         // number of stored items
         if self.data.capacity() > 4 * self.data.len().max(4) {
             self.data.shrink_to_fit();
         }
-        self.reindex();
-    }
-
-    fn reindex(&mut self) {
         self.index.clear();
-        if self.data.len() > LINEAR_LIMIT {
-            for (i, entry) in self.data.iter().enumerate() {
-                self.index.insert_unique(entry.hash, i, hash_at(&self.data));
-            }
+        for (i, entry) in self.data.iter().enumerate() {
+            self.index.insert_unique(entry.hash, i, hash_at(&self.data));
         }
     }
 
@@ -231,7 +180,7 @@ impl<V, K> OrderedMap<V, K> {
             .filter_map(|entry| Some((&entry.key, entry.value.as_ref()?)))
     }
 
-    pub(super) fn into_entries(self) -> impl Iterator<Item = (K, V)> {
+    pub(crate) fn into_entries(self) -> impl Iterator<Item = (K, V)> {
         self.data
             .into_iter()
             .filter_map(|entry| Some((entry.key, entry.value?)))
@@ -263,19 +212,6 @@ impl<V, K> OrderedMap<V, K> {
     }
 }
 
-impl<V> OrderedMap<V> {
-    /// Add or replace a string-keyed value, taking ownership of
-    /// an owned key.
-    pub fn insert<K: AsRef<str> + Into<FlowStr>>(&mut self, key: K, value: V) {
-        *self.slot(key, K::as_ref, K::into) = Some(value);
-    }
-
-    pub(super) fn get_or_insert_with(&mut self, key: &str, value: impl FnOnce() -> V) -> &mut V {
-        self.slot(key, |key| *key, FlowStr::from)
-            .get_or_insert_with(value)
-    }
-}
-
 impl<V> FromIterator<(FlowStr, V)> for OrderedMap<V> {
     fn from_iter<I: IntoIterator<Item = (FlowStr, V)>>(entries: I) -> Self {
         let mut positions = Self::new();
@@ -291,36 +227,20 @@ mod tests {
     use super::*;
 
     #[test]
-    fn promotion_and_compaction_preserve_insertion_order() {
+    fn compaction_keeps_small_maps_indexed_and_preserves_insertion_order() {
         let mut map = OrderedMap::new();
-        for i in 0..LINEAR_LIMIT {
-            map.insert(i.to_string(), i);
-        }
-        assert!(map.index.is_empty());
-        assert_eq!(map.remove("0"), Some(0));
-        map.insert("0", 0);
-        map.insert("extra", LINEAR_LIMIT);
-        assert_eq!(map.index.len(), LINEAR_LIMIT + 1);
-        let order = map.iter().map(|(_, value)| *value).collect::<Vec<_>>();
-        assert_eq!(
-            order,
-            (1..LINEAR_LIMIT)
-                .chain([0, LINEAR_LIMIT])
-                .collect::<Vec<_>>()
-        );
+        map.insert(FlowStr::from("a"), 1);
+        assert_eq!(map.index.len(), 1);
+        map.insert(FlowStr::from("b"), 2);
+        assert_eq!(map.remove("a"), Some(1));
+        map.insert(FlowStr::from("a"), 3);
+        assert!(map.iter().map(|(_, value)| *value).eq([2, 3]));
 
-        for i in 1..LINEAR_LIMIT {
-            assert_eq!(map.remove(i.to_string().as_str()), Some(i));
-        }
-        assert_eq!(map.remove("extra"), Some(LINEAR_LIMIT));
+        assert_eq!(map.remove("b"), Some(2));
         map.clear_garbage();
-        assert!(map.index.is_empty());
-        assert_eq!(map.get("0"), Some(&0));
-        for i in 1..=LINEAR_LIMIT {
-            map.insert(i.to_string(), i);
-        }
-        assert_eq!(map.index.len(), LINEAR_LIMIT + 1);
-        assert_eq!(map.get("0"), Some(&0));
+        assert_eq!(map.data.len(), 1);
+        assert_eq!(map.index.len(), 1);
+        assert_eq!(map.get("a"), Some(&3));
     }
 
     #[test]
@@ -340,7 +260,7 @@ mod tests {
                 let position = reference.iter().position(|(k, _)| *k == key);
                 assert_eq!(removed, position.map(|at| reference.remove(at).1));
             } else {
-                positions.insert(key.as_str(), step);
+                positions.insert(FlowStr::from(key.as_str()), step);
                 match reference.iter_mut().find(|(k, _)| *k == key) {
                     Some(entry) => entry.1 = step,
                     None => reference.push((key, step)),

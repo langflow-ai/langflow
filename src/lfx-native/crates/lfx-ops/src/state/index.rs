@@ -7,7 +7,6 @@ use std::fmt;
 
 use crate::json::{FlowObj, FlowStr, FlowValue};
 use crate::map::hash::{HashMap, IndexSet};
-use crate::map::patched::PatchedMap;
 use crate::map::pending::PendingMap;
 
 use crate::flow::edge::Edge;
@@ -16,7 +15,7 @@ use crate::flow::model::{FLOW_MODEL, KeyedList};
 use crate::flow::node::Node;
 use crate::flow::path::{AsKey, PathExt, Segment};
 use crate::rule::edge::GraphRead;
-use crate::state::field_write::{self, PathWrites};
+use crate::state::field_write::{self, PathWrites, PendingFieldWrites};
 use crate::violation::error::Result;
 
 /// The ids of the edges at each node.
@@ -76,8 +75,9 @@ fn ends(edge: &Edge) -> impl Iterator<Item = &str> {
 /// Nodes and edges by id, and edges by the nodes they touch.
 #[derive(Debug)]
 pub(crate) struct Graph {
-    pub(super) nodes: PatchedMap<Node, PathWrites>,
-    pub(super) edges: PatchedMap<Edge>,
+    pub(super) nodes: PendingMap<Node>,
+    pub(super) edges: PendingMap<Edge>,
+    pub(super) fields: PendingFieldWrites,
     pub(super) edges_at: EdgesAt,
 }
 
@@ -102,7 +102,7 @@ impl Graph {
     /// batch did not replace it. Only a stored node's lists are
     /// indexed.
     pub fn is_stored_node(&self, id: &str) -> bool {
-        self.nodes.is_stored(id)
+        self.nodes.base.contains_key(id) && !self.nodes.pending.contains_key(id)
     }
 
     /// Follow `path` in node `id`
@@ -118,20 +118,21 @@ impl Graph {
         path: &[Segment],
         step: impl FnMut(&'g FlowValue, usize, bool) -> Result<Option<&'g FlowValue>>,
     ) -> Result<Option<field_write::ReadThrough<'g>>> {
-        let Some((node, writes)) = self.nodes.read(id) else {
+        let Some(node) = self.nodes.get(id) else {
             return Ok(None);
         };
-        field_write::read_through(node.as_value(), writes, path, step).map(Some)
+        field_write::read_through(node.as_value(), self.fields.node(id), path, step).map(Some)
     }
 
     /// The batch's writes to node `id`, to add one.
     pub fn writes_mut(&mut self, id: &str) -> &mut PathWrites {
-        self.nodes.patch_mut(id)
+        self.fields.node_mut(id)
     }
 
     pub(super) fn drop_pending(&mut self) {
         self.nodes.drop_pending();
         self.edges.drop_pending();
+        self.fields.drop_pending();
         self.edges_at.by_node.drop_pending();
     }
 }
@@ -142,8 +143,8 @@ impl GraphRead for Graph {
     }
 
     fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, FlowValue>> {
-        let (node, writes) = self.nodes.read(id)?;
-        if let Some(writes) = writes.filter(|writes| !writes.is_empty()) {
+        let node = self.nodes.get(id)?;
+        if let Some(writes) = self.fields.node(id).filter(|writes| !writes.is_empty()) {
             let path: Vec<Segment> = path.iter().map(|key| Segment::Key((*key).into())).collect();
             let step = |value, index: usize, _| {
                 Ok(field_write::child(value, &path[..index], &path[index]))
@@ -183,7 +184,7 @@ pub(crate) fn field_value<'g>(
     path: &[Segment],
     context: &dyn fmt::Display,
 ) -> Result<Option<Cow<'g, FlowValue>>> {
-    let Some((node, writes)) = graph.nodes.read(id) else {
+    let Some(node) = graph.nodes.get(id) else {
         return Ok(None);
     };
     let stored = graph.is_stored_node(id);
@@ -203,7 +204,7 @@ pub(crate) fn field_value<'g>(
         let item_index = lists.index(id, parent, keyed, items).find(key, context)?;
         Ok(item_index.map(|item_index| &items[item_index]))
     };
-    field_write::read(node.as_value(), writes, path, step)
+    field_write::read(node.as_value(), graph.fields.node(id), path, step)
 }
 
 /// The keyed lists indexed so far, by node and by the path of

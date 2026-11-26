@@ -3,9 +3,11 @@
 use super::ordered::OrderedMap;
 use crate::types::FlowStr;
 
-/// The most pending changes a map keeps allocated between
-/// batches.
-pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
+/// When `GraphState` commits or discards a batch of node and edge
+/// operations, [`PendingMap`] empties `pending` and `PendingFieldWrites`
+/// empties `by_node`. Each shrinks its empty map to zero capacity
+/// if its capacity exceeds this many entries.
+pub(crate) const PENDING_MAP_MAX_CAPACITY: usize = 256;
 
 /// A map that stages every
 /// write to its stored values.
@@ -18,14 +20,14 @@ pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
 #[derive(Debug)]
 pub(crate) struct PendingMap<V> {
     /// original base values
-    base: OrderedMap<V>,
+    pub(crate) base: OrderedMap<V>,
     /// pending writes
-    pending: OrderedMap<Write<V>>,
+    pub(crate) pending: OrderedMap<Write<V>>,
 }
 
 /// A pending write to a key.
 #[derive(Debug)]
-enum Write<V> {
+pub(crate) enum Write<V> {
     /// The key was created,
     /// or its value was updated.
     Set(V),
@@ -78,7 +80,7 @@ impl<V: Clone> PendingMap<V> {
     pub fn update<R>(&mut self, key: &str, writer: impl FnOnce(&mut V) -> R) -> Option<R> {
         if !self.pending.contains_key(key) {
             let copy = self.base.get(key)?.clone();
-            self.pending.insert(key, Write::Set(copy));
+            self.pending.insert(key.into(), Write::Set(copy));
         }
         // if the second get_mut returns None
         // it means the key was deleted.
@@ -89,7 +91,7 @@ impl<V: Clone> PendingMap<V> {
     }
     /// [`Self::update`] only if
     /// `cond` holds for the value of `key`.
-    /// Returns whether `f` ran.
+    /// Returns whether `writer` ran.
     pub fn update_if(
         &mut self,
         key: &str,
@@ -108,18 +110,21 @@ impl<V: Clone> PendingMap<V> {
 
     /// Add a value, or replace the value of the same key.
     pub fn insert<K: AsRef<str> + Into<FlowStr>>(&mut self, key: K, value: V) {
-        self.pending.insert(key, Write::Set(value));
+        self.pending.insert(key.into(), Write::Set(value));
     }
 
     /// Remove `key`. Returns whether it had a value.
     pub fn remove(&mut self, key: &str) -> bool {
-        let existed = self.contains(key);
-        if self.base.contains_key(key) {
-            self.pending.insert(key, Write::Delete);
-        } else {
-            self.pending.remove(key);
+        if !self.base.contains_key(key) {
+            return self.pending.remove(key).is_some();
         }
-        existed
+        if let Some(write) = self.pending.get_mut(key) {
+            let existed = write.get().is_some();
+            *write = Write::Delete;
+            return existed;
+        }
+        self.pending.insert(key.into(), Write::Delete);
+        true
     }
 
     /// Make the batch's changes part of the base map.
@@ -137,7 +142,7 @@ impl<V: Clone> PendingMap<V> {
     }
 
     fn shrink_large_pending(&mut self) {
-        if self.pending.capacity() > MAX_RETAINED_BATCH_ENTRIES {
+        if self.pending.capacity() > PENDING_MAP_MAX_CAPACITY {
             self.pending.shrink_to_fit();
         }
     }
@@ -178,13 +183,13 @@ mod tests {
     #[test]
     fn large_batch_maps_are_not_retained_after_success_or_rollback() {
         let mut layer = PendingMap::new();
-        for i in 0..=MAX_RETAINED_BATCH_ENTRIES {
+        for i in 0..=PENDING_MAP_MAX_CAPACITY {
             layer.insert(i.to_string(), Arc::new(()));
         }
         layer.commit();
         assert_eq!(layer.pending.capacity(), 0);
-        assert_eq!(layer.base.len(), MAX_RETAINED_BATCH_ENTRIES + 1);
-        for i in 0..=MAX_RETAINED_BATCH_ENTRIES {
+        assert_eq!(layer.base.len(), PENDING_MAP_MAX_CAPACITY + 1);
+        for i in 0..=PENDING_MAP_MAX_CAPACITY {
             layer.remove(&i.to_string());
         }
         layer.commit();
@@ -193,7 +198,7 @@ mod tests {
         let payload = Arc::new(());
         let weak = Arc::downgrade(&payload);
         layer.insert("refused", payload);
-        for i in 0..=MAX_RETAINED_BATCH_ENTRIES {
+        for i in 0..=PENDING_MAP_MAX_CAPACITY {
             layer.insert(i.to_string(), Arc::new(()));
         }
         layer.drop_pending();
