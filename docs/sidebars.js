@@ -653,6 +653,7 @@ module.exports = {
             "Components/bundles-weaviate",
             "Components/bundles-whatsapp",
             "Components/bundles-wikipedia",
+            "Components/bundles-worldrouter",
             "Components/bundles-xai",
           ],
         },
