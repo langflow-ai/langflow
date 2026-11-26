@@ -2,7 +2,9 @@
 
 Implemented on `feat/harness-runtime-artifacts`, the first capability branch in
 [the production plan](harness-production-plan.md). This is the portable sync/stream
-boundary; durable releases and approval reconstruction remain the next branch.
+boundary. [The following reliability branch](harness-workflow-reliability.md) adds
+retention and approval reconstruction on the authenticated Langflow Workflows host;
+release promotion remains later work.
 
 ## Use
 
@@ -51,14 +53,15 @@ caches and Skill activation remain isolated. Agent configuration records include
 
 Candidate mounts use startup paths, not the mutable flow store. Each new worker
 loads the archive again. Keep that path immutable for a deployment; retained
-artifact storage and durable job identity are part of the next branch.
+artifact storage and durable job identity are available on the Langflow host in
+[the reliability branch](harness-workflow-reliability.md).
 
 ## Host limits and production gates
 
 - Standalone supports sync and both SSE formats. Approval policy, permission flows
   (conservatively, because they can return `ask`), tool approval metadata, and Human
-  Input require a durable host and are rejected at preflight. Candidate checkpoints
-  also fail explicitly until retained-artifact reconstruction is implemented.
+  Input require a durable host and are rejected at preflight. Candidate checkpoint
+  restoration requires matching retained bytes supplied by that host.
 - This initial mount requires destination variables/connections in the server
   environment. Request-only credential provisioning is not a supported mount
   profile yet. `--no-env-fallback` does not bypass missing-resource checks.

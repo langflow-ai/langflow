@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from lfx.graph.checkpoint.schema import GraphCheckpoint
     from lfx.graph.checkpoint.store import CheckpointStore
     from lfx.graph.graph.base import Graph
+    from lfx.projects.runtime_artifacts import RuntimeCandidate
 
 
 def compute_resume_layer(graph: Graph) -> list[str]:
@@ -181,15 +182,30 @@ def restore_graph_from_checkpoint(
     *,
     store: CheckpointStore | None = None,
     snapshot_history_limit: int | None = None,
+    runtime_candidate: RuntimeCandidate | None = None,
 ) -> Graph:
     from lfx.graph.graph.base import Graph
 
+    payload = checkpoint.flow_payload
+    if checkpoint.candidate_digest is not None:
+        if runtime_candidate is None or runtime_candidate.digest != checkpoint.candidate_digest:
+            msg = "The retained Harness candidate is missing or does not match this checkpoint."
+            raise ValueError(msg)
+        if checkpoint.flow_id not in runtime_candidate.manifest["entrypoints"]:
+            msg = "The Harness checkpoint does not belong to this candidate entrypoint."
+            raise ValueError(msg)
+        payload = runtime_candidate.definitions[checkpoint.flow_id]["data"]
+    elif runtime_candidate is not None:
+        msg = "Cannot attach a Harness candidate to a legacy checkpoint."
+        raise ValueError(msg)
     graph = Graph.from_payload(
-        checkpoint.flow_payload,
+        payload,
         flow_id=checkpoint.flow_id,
         user_id=checkpoint.user_id,
         snapshot_history_limit=snapshot_history_limit,
     )
+    if runtime_candidate is not None:
+        runtime_candidate.bind(graph)
     graph.source_flow_id = checkpoint.source_flow_id
     # Retain only provenance for the restored identity; the runner still checks
     # explicit identities and host principals before enabling shared storage.

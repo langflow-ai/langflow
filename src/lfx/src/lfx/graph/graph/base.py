@@ -916,11 +916,15 @@ class Graph:
         *,
         checkpoint_store: CheckpointStore | None = None,
         snapshot_history_limit: int | None = None,
+        runtime_candidate: RuntimeCandidate | None = None,
     ):
         from lfx.graph.checkpoint.resume import restore_graph_from_checkpoint
 
         return restore_graph_from_checkpoint(
-            checkpoint, store=checkpoint_store, snapshot_history_limit=snapshot_history_limit
+            checkpoint,
+            store=checkpoint_store,
+            snapshot_history_limit=snapshot_history_limit,
+            runtime_candidate=runtime_candidate,
         )
 
     def resume_first_layer(self) -> list[str]:

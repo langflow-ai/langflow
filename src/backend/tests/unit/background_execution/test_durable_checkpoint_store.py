@@ -330,3 +330,51 @@ async def test_e2e_save_restart_resume_matches_never_paused_control(real_service
     output_vertex = resumed.get_vertex("chat_output")
     assert output_vertex.built is True
     assert output_vertex.results["message"].text == control_text
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_candidate_and_queued_job_are_committed_together(real_services_job_service):
+    import base64
+
+    from langflow.services.jobs.service import JobService
+    from lfx.projects.runtime_artifacts import build_candidate, read_candidate
+
+    flow_id, job_id = uuid4(), uuid4()
+    candidate = build_candidate(
+        str(flow_id), [{"id": str(flow_id), "name": "Retained", "data": {"nodes": [], "edges": []}}]
+    )
+    blob = base64.b64encode(candidate.archive()).decode("ascii")
+    await real_services_job_service.create_job(
+        job_id=job_id,
+        flow_id=flow_id,
+        user_id=uuid4(),
+        initial_metadata={"candidate_digest": candidate.digest},
+        initial_checkpoints={"harness-candidate": blob},
+    )
+    restarted = JobService()
+    stored = await restarted.get_job_by_job_id(job_id)
+    loaded = read_candidate(
+        base64.b64decode(await restarted.load_checkpoint(job_id, "harness-candidate")),
+        expected_digest=stored.job_metadata["candidate_digest"],
+    )
+    assert loaded.digest == candidate.digest
+
+
+@pytest.mark.real_services
+@pytest.mark.no_blockbuster
+async def test_candidate_write_failure_cannot_leave_a_claimable_job(real_services_job_service):
+    from sqlalchemy.exc import IntegrityError
+
+    job_id = uuid4()
+    # Force the database's NOT NULL failure after the job is staged in the same
+    # transaction. No worker may ever see that job without its candidate bytes.
+    with pytest.raises(IntegrityError):
+        await real_services_job_service.create_job(
+            job_id=job_id,
+            flow_id=uuid4(),
+            user_id=uuid4(),
+            initial_metadata={"candidate_digest": "a" * 64},
+            initial_checkpoints={"harness-candidate": None},
+        )
+    assert await real_services_job_service.get_job_by_job_id(job_id) is None

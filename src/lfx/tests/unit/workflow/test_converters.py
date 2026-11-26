@@ -750,7 +750,7 @@ class TestRunResponseToWorkflowResponse:
     def test_run_response_basic_output_node(self):
         """Test conversion with basic output node."""
         # Create mock graph
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         vertex = Mock()
         vertex.id = "output-123"
         vertex.display_name = "ChatOutput"
@@ -790,7 +790,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_preserves_globals(self):
         """Test conversion echoes body globals for debugging."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         graph.vertices = []
         graph.get_terminal_nodes = Mock(return_value=[])
 
@@ -809,7 +809,7 @@ class TestRunResponseToWorkflowResponse:
     def test_run_response_non_output_terminal_node(self):
         """Test conversion with non-output terminal node."""
         # Create mock graph
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         vertex = Mock()
         vertex.id = "llm-123"
         vertex.display_name = "LLM"
@@ -847,7 +847,7 @@ class TestRunResponseToWorkflowResponse:
     def test_run_response_duplicate_display_names(self):
         """Test handling of duplicate display names."""
         # Create mock graph with duplicate display names
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         vertex1 = Mock()
         vertex1.id = "output-1"
         vertex1.display_name = "Output"
@@ -885,7 +885,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_data_type_non_output(self):
         """Test that data type non-output nodes show content."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         vertex = Mock()
         vertex.id = "data-123"
         vertex.display_name = "DataNode"
@@ -918,7 +918,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_fallback_terminal_detection(self):
         """Test fallback terminal node detection when get_terminal_nodes fails."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         vertex = Mock()
         vertex.id = "output-123"
         vertex.display_name = "Output"
@@ -945,7 +945,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_preserves_inputs(self):
         """Test that inputs are preserved in response."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         graph.vertices = []
         graph.get_terminal_nodes = Mock(return_value=[])
         _setup_graph_get_vertex(graph, [])
@@ -963,7 +963,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_vector_store_terminal(self):
         """Test vector store as terminal node."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         vertex = Mock()
         vertex.id = "pinecone-123"
         vertex.display_name = "Vector Store"
@@ -998,7 +998,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_retriever_with_metadata(self):
         """Test retriever with search metadata."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         vertex = Mock()
         vertex.id = "retriever-456"
         vertex.display_name = "Retriever"
@@ -1040,7 +1040,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_empty_outputs(self):
         """Test handling of empty outputs."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         graph.vertices = []
         graph.get_terminal_nodes = Mock(return_value=[])
         _setup_graph_get_vertex(graph, [])
@@ -1059,7 +1059,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_corrupted_vertex_data(self):
         """Test handling of corrupted/malformed vertex data."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
 
         # Create vertex with missing/corrupted attributes
         vertex = Mock()
@@ -1089,7 +1089,7 @@ class TestRunResponseToWorkflowResponse:
 
     def test_run_response_missing_required_fields(self):
         """Test handling when result_data is missing required fields."""
-        graph = Mock()
+        graph = Mock(runtime_candidate=None)
         vertex = Mock()
         vertex.id = "output-123"
         vertex.display_name = "Output"
@@ -1390,7 +1390,7 @@ def _text_result_data(component_id: str, text: str) -> Mock:
 
 
 def _graph_for(vertices: list[Mock]) -> Mock:
-    graph = Mock()
+    graph = Mock(runtime_candidate=None)
     graph.vertices = vertices
     graph.get_terminal_nodes = Mock(return_value=[v.id for v in vertices])
     _setup_graph_get_vertex(graph, vertices)

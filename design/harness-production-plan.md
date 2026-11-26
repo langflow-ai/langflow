@@ -17,8 +17,14 @@ The first branch now implements an explicit v5 candidate writer/reader and LFX
 mount through the Workflows API. See [the implementation and verification record](harness-runtime-artifacts.md)
 for the shipped contract, reader refusal evidence, clean-process acceptance, and
 host restrictions. The assessment below is the pre-implementation baseline.
-The next branch remains `feat/harness-workflow-reliability`: retained candidate
-identity in durable Langflow jobs/checkpoints and approval/restart coverage.
+The second branch, `feat/harness-workflow-reliability`, now adds operator-mounted
+candidates on the authenticated Workflows host, atomic job-owned retention, and
+approval/service/fresh-process restart coverage. See [its host and rollout
+contract](harness-workflow-reliability.md). **Current priority is the production
+verification gates, before Eval Suite implementation.** Local PostgreSQL verification
+now passes (133 background-execution tests and all 10 candidate API cases);
+live-provider and intended deployed-topology acceptance remain open.
+`feat/harness-eval-suites` remains the next capability branch after that verification.
 Files, memory/knowledge services, and request-only credential provisioning remain
 blocked by the initial standalone mount; their production host provisioning still
 needs verification. Existing Control Plane deployment is not candidate-aware.

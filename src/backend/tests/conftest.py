@@ -590,8 +590,10 @@ async def client_fixture(
         from langflow.services import utils as service_utils
         from langflow.services.database.utils import initialize_database
 
+        backend = getattr(request, "param", "sqlite")
         use_template = (
-            "full_database_init" not in request.keywords
+            backend == "sqlite"
+            and "full_database_init" not in request.keywords
             and os.getenv("LANGFLOW_TEST_DATABASE_TEMPLATE", "1") != "0"
             and service_utils.initialize_database is initialize_database
         )
@@ -600,11 +602,12 @@ async def client_fixture(
         schema_key = tuple((name, id(table)) for name, table in sorted(SQLModel.metadata.tables.items()))
         template = database_templates(schema_key) if use_template else None
 
-        def init_app():
+        def init_app(database_url):
             db_dir = tempfile.mkdtemp()
             db_path = Path(db_dir) / "test.db"
             restored = template.restore(db_path) if template else False
-            monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
+            database_url = database_url or f"sqlite:///{db_path}"
+            monkeypatch.setenv("LANGFLOW_DATABASE_URL", database_url)
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
             monkeypatch.setenv("LANGFLOW_KNOWLEDGE_BASES_DIR", str(db_path.parent / "knowledge"))
             monkeypatch.setenv("LANGFLOW_SUPERUSER", "langflow")
@@ -629,11 +632,10 @@ async def client_fixture(
             get_service_manager().services.clear()  # Clear the services cache
             app = create_app()
             db_service = get_db_service()
-            db_service.database_url = f"sqlite:///{db_path}"
+            db_service.database_url = database_url
             db_service.reload_engine()
+            assert db_service.engine.dialect.name == ("postgresql" if backend == "postgres" else "sqlite")
             return app, db_path, restored
-
-        app, db_path, restored = await asyncio.to_thread(init_app)
 
         async def initialize_test_database(*, fix_migration=False):
             if not restored:
@@ -642,6 +644,14 @@ async def client_fixture(
                     await asyncio.to_thread(template.capture, db_path)
 
         async with AsyncExitStack() as stack:
+            # Tests opt into the real PostgreSQL variant with indirect parametrization.
+            # Each invocation gets a new database; no shared database is truncated.
+            database_url = None
+            if backend == "postgres":
+                from tests.api_database import api_test_database
+
+                database_url = await stack.enter_async_context(api_test_database())
+            app, db_path, restored = await asyncio.to_thread(init_app, database_url)
             with monkeypatch.context() as startup_patch:
                 # Each fixture has its own database, so another worker's
                 # starter-project lock must not make this app skip its seeds.

@@ -329,6 +329,9 @@ async def authorize_flow_action(
 
 def _apply_execution_gates(parsed, flow, current_user: UserRead):
     """Run request gates and return any server-sanitized execution payload."""
+    from langflow.services.deployment_artifacts.harness_runtime import validate_candidate_request
+
+    validate_candidate_request(parsed, flow)
     expose_error_details = caller_owns_flow(flow, current_user)
     _reject_unsupported_sync_fields(parsed)
     _reject_sync_only_fields(parsed)
@@ -657,6 +660,8 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
     terminal_error_type = adapter.terminal_error_type
 
     async def _source(*, job_id=None, resume=None, **_kwargs):
+        from langflow.services.deployment_artifacts.harness_runtime import bind_flow, retained_candidate
+
         # Durable jobs carry only a user id. Read current privileges before
         # validating the graph so demotions also affect queued and resumed jobs.
         async with session_scope() as session:
@@ -665,6 +670,19 @@ def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
             current_user = UserRead.model_validate(owner, from_attributes=True)
         flow = await resolve_flow_for_execution(str(flow_id), current_user)
+        try:
+            job = await get_job_service().get_job_by_job_id(job_id) if job_id is not None else None
+            candidate = await retained_candidate(job) if job is not None else None
+            if candidate is not None:
+                await authorize_flow_action(current_user, flow, WorkflowAction.EXECUTE)
+                flow = await bind_flow(flow, candidate, current_user)
+        except Exception:  # noqa: BLE001 -- errors before graph construction still need a terminal event
+            from fastapi.sse import format_sse_event
+
+            await logger.aexception("Background workflow preparation failed for %s", job_id)
+            for event in adapter.error_events(RuntimeError("Workflow candidate or execution access is unavailable.")):
+                yield format_sse_event(data_str=event.data_json), event.type
+            return
         # The build treats an empty override as absent. Validate the saved canvas
         # in the same case so graph construction cannot pick a different revision.
         validation_input = replace(parsed, data=None) if resume is None and parsed.data == {} else parsed
@@ -805,8 +823,38 @@ async def execute_workflow_background(
             # Sanitized code no longer reveals the substitution when the worker rebuilds it.
             "component_substitution_warning": parsed.component_substitution_warning,
         }
-        job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
-        return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)
+        candidate_kwargs = {}
+        if getattr(flow, "runtime_candidate", None) is not None:
+            candidate_kwargs["runtime_candidate"] = flow.runtime_candidate
+            # The retained archive supplies the executable payload on the worker.
+            request_dict["data"] = None
+        job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user, **candidate_kwargs)
+        candidate_digest = None
+        if candidate_kwargs:
+            # An idempotent retry can return an older job under a newer mount.
+            persisted_job = await get_job_service().get_job_by_job_id(job_id_new)
+            metadata = persisted_job.job_metadata or {}
+            persisted_request = metadata.get("request") or {}
+            if (
+                persisted_job.flow_id != flow.id
+                or not _end_user_matches(parsed.end_user_id, metadata)
+                or (persisted_request.get("session_id") or str(persisted_job.flow_id))
+                != (parsed.session_id or str(flow.id))
+            ):
+                raise HTTPException(
+                    409,
+                    detail={
+                        "code": "IDEMPOTENCY_KEY_CONFLICT",
+                        "message": "Use a key unique to this execution context.",
+                    },
+                )
+            candidate_digest = metadata.get("candidate_digest")
+        return WorkflowJobResponse(
+            job_id=str(job_id_new),
+            flow_id=parsed.flow_id,
+            status=JobStatus.QUEUED,
+            candidate_digest=candidate_digest,
+        )
 
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
         raise
@@ -924,6 +972,11 @@ async def get_workflow_status(
     # Store context for exception handling scope
     flow_id_str = str(job.flow_id)
     job_id_str = str(job_id)
+    candidate_digest = (job.job_metadata if isinstance(job.job_metadata, dict) else {}).get("candidate_digest")
+
+    def stamp_candidate(response, warnings):
+        return response.model_copy(update={"candidate_digest": candidate_digest, "warnings": warnings})
+
     try:
         # If job is completed, reconstruct full workflow response from vertex_builds
         if job.status == JobStatus.COMPLETED:
@@ -965,13 +1018,16 @@ async def get_workflow_status(
             partial_stored_response: WorkflowExecutionResponse | None = None
             if isinstance(output_events, list) and output_events:
                 try:
-                    return workflow_response_from_output_events(
-                        output_events,
-                        flow_id=flow_id_str,
-                        job_id=job_id_str,
-                        session_id=effective_session_id,
-                        fail_on_rejected=True,
-                    ).model_copy(update={"warnings": warnings})
+                    return stamp_candidate(
+                        workflow_response_from_output_events(
+                            output_events,
+                            flow_id=flow_id_str,
+                            job_id=job_id_str,
+                            session_id=effective_session_id,
+                            fail_on_rejected=True,
+                        ),
+                        warnings,
+                    )
                 except ValueError:
                     # Preserve every decodable capture in case the legacy
                     # vertex-build fallback is also unavailable.
@@ -986,6 +1042,12 @@ async def get_workflow_status(
             # contains rejected/version-skewed entries, or predates capture.
             # Reconstruct from ``vertex_build`` rows keyed by job_id when present.
             try:
+                if candidate_digest is not None:
+                    from langflow.services.deployment_artifacts.harness_runtime import retained_candidate
+
+                    historical = await retained_candidate(job, check_enabled=False)
+                    root = historical.definitions[str(job.flow_id)]
+                    flow = flow.model_copy(update={"data": root["data"], "name": root["name"]})
                 reconstructed = await reconstruct_workflow_response_from_job_id(
                     session=session,
                     flow=flow,
@@ -995,17 +1057,20 @@ async def get_workflow_status(
                 )
             except ValueError:
                 if partial_stored_response is not None:
-                    return partial_stored_response
-                return workflow_response_from_output_events(
-                    [],
-                    flow_id=flow_id_str,
-                    job_id=job_id_str,
-                    session_id=effective_session_id,
-                ).model_copy(update={"warnings": warnings})
+                    return stamp_candidate(partial_stored_response, warnings)
+                return stamp_candidate(
+                    workflow_response_from_output_events(
+                        [],
+                        flow_id=flow_id_str,
+                        job_id=job_id_str,
+                        session_id=effective_session_id,
+                    ),
+                    warnings,
+                )
             else:
                 if reconstructed.session_id is None:
                     reconstructed = reconstructed.model_copy(update={"session_id": effective_session_id})
-                return reconstructed.model_copy(update={"warnings": warnings})
+                return stamp_candidate(reconstructed, warnings)
 
         if job.status == JobStatus.FAILED:
             # Surface the durable error JSON the runner persisted, additively.
@@ -1039,6 +1104,7 @@ async def get_workflow_status(
             flow_id=flow_id_str,
             job_id=job_id_str,
             status=job.status,
+            candidate_digest=candidate_digest,
         )
 
     except HTTPException:

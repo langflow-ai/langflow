@@ -41,6 +41,8 @@ class GraphCheckpoint(BaseModel):
     # Runner-owned provenance, separate from the user-supplied flow payload.
     headless_filesystem_user_id: str | None = None
     job_id: str | None = None
+    # Server-retained executable identity. Old checkpoints have no candidate.
+    candidate_digest: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
     flow_payload: dict[str, Any] = Field(default_factory=dict)
     reviewed_tool_packs: dict[str, dict] = Field(default_factory=dict)
     reviewed_harness_flows: dict[str, dict] = Field(default_factory=dict)

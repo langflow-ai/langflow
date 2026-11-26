@@ -73,12 +73,16 @@ class RuntimeCandidate:
     def bind(self, graph) -> None:
         graph.runtime_candidate = self
         graph.frozen_tool_flows = self.definitions
+        # The candidate, not the saved flow, holds this run's tool settings.
+        graph.runs_stored_flow = False
 
     def inherit(self, parent, child) -> None:
         from copy import deepcopy
 
         self.bind(child)
         child.execution_principal = parent.execution_principal
+        child.persist_messages = parent.persist_messages
+        child.end_user_id = parent.end_user_id
         for key in ("no_env_fallback", "request_variables"):
             if key in parent.context:
                 child.context[key] = deepcopy(parent.context[key])

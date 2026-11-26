@@ -11,7 +11,7 @@ from emoji import purely_emoji
 from lfx.log.logger import logger
 from lfx.schema.validators import ensure_utc
 from lfx.utils.flow_code import normalize_code_for_import
-from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
+from pydantic import BaseModel, PrivateAttr, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Boolean, String, Text, UniqueConstraint, cast, false, func, or_, text
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
@@ -19,6 +19,8 @@ from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 from langflow.schema.data import Data
 
 if TYPE_CHECKING:
+    from lfx.projects.runtime_artifacts import RuntimeCandidate
+
     from langflow.services.database.models.folder.model import Folder
     from langflow.services.database.models.user.model import User
 
@@ -319,6 +321,12 @@ class FlowCreate(FlowBase):
 
 
 class FlowRead(FlowBase):
+    _runtime_candidate: "RuntimeCandidate | None" = PrivateAttr(default=None)
+
+    @property
+    def runtime_candidate(self) -> "RuntimeCandidate | None":
+        return self._runtime_candidate
+
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()

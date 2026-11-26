@@ -604,6 +604,8 @@ async def _generate_flow_events(
     persist_messages: bool = True,
     end_user_id: str | None = None,
     execution_family: str = FAMILY_INTERACTIVE_CHAT,
+    runtime_candidate=None,
+    request_variables: dict | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -661,12 +663,16 @@ async def _generate_flow_events(
             # Why: re-dispatching here (resume/job_id still set) recurses to RecursionError; a missing
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
+        if checkpoint.candidate_digest is not None and (
+            checkpoint.job_id != str(job_id) or checkpoint.user_id != str(current_user.id)
+        ):
+            raise HTTPException(status_code=409, detail="Checkpoint identity does not match this run.")
         sanitized_payload = await prepare_flow_build_for_user(
             checkpoint.flow_payload, is_superuser=current_user.is_superuser
         )
         if sanitized_payload is not None:
             checkpoint = checkpoint.model_copy(update={"flow_payload": sanitized_payload})
-        graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store, runtime_candidate=runtime_candidate)
         # A background checkpoint holds the untweaked flow, so re-apply the run's tweaks as the fresh path does.
         if tweaks:
             process_tweaks_on_graph(graph, tweaks)
@@ -674,6 +680,8 @@ async def _generate_flow_events(
         # execution principal, so a restored graph carries ``unknown()`` and would deny
         # every connection. Re-stamp from the principal admitted for THIS resume request.
         stamp_execution_principal(graph, execution_principal)
+        if runtime_candidate is not None and request_variables:
+            graph.context["request_variables"] = dict(request_variables)
         if not graph.user_id:
             graph.user_id = str(current_user.id)
         # F5: the in-memory end_user_id is lost when the graph is rebuilt from the durable
@@ -725,6 +733,10 @@ async def _generate_flow_events(
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
+            if runtime_candidate is not None:
+                runtime_candidate.bind(graph)
+                if request_variables:
+                    graph.context["request_variables"] = dict(request_variables)
 
             # Apply request tweaks to the built graph. The sync path applies
             # tweaks before Graph construction; the streaming/background path
@@ -1119,18 +1131,30 @@ async def _generate_flow_events(
             _build_job_svc = get_job_service()
             # Background path already created the job; re-creating it = UNIQUE violation.
             if await _build_job_svc.get_job_by_job_id(_build_run_id) is None:
+                candidate_kwargs = {}
+                if runtime_candidate is not None:
+                    from langflow.services.deployment_artifacts.harness_runtime import (
+                        CANDIDATE_KIND,
+                        candidate_checkpoint,
+                    )
+
+                    candidate_kwargs = {
+                        "initial_metadata": {"candidate_digest": runtime_candidate.digest},
+                        "initial_checkpoints": {CANDIDATE_KIND: await candidate_checkpoint(runtime_candidate)},
+                    }
                 await _build_job_svc.create_job(
                     job_id=_build_run_id,
                     flow_id=flow_id,
                     user_id=current_user.id,
                     job_type=JobType.WORKFLOW,
+                    **candidate_kwargs,
                     # Live from insert, then kept alive by execute_with_status, so an orphan
                     # sweep cannot fail it mid-run. The pause path writes job_metadata only
                     # for a runner-owned job, never for this one.
                     heartbeat=True,
                 )
     except Exception:
-        if _requires_api_key_admission():
+        if runtime_candidate is not None or _requires_api_key_admission():
             raise
         await logger.awarning(
             "Failed to create workflow job for /build — memory base tracking disabled for flow %s",
