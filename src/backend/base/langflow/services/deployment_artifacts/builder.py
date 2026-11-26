@@ -1296,6 +1296,7 @@ def _snapshot_rows(
             max_bytes=limits.max_flow_bytes,
             max_items=_MAX_JSON_ITEMS,
         )
+        _validate_harness_packaging(graph, flow_id=flow.id)
         # The graph that ships is validated as the live one always was; a picked
         # flow's live graph is never validated or copied.
         try:
@@ -1339,6 +1340,41 @@ def _model_entry(model: ProjectArtifactRequiredModel) -> dict[str, str]:
 def _mcp_project_entry(project: ProjectArtifactRequiredMcpProject) -> dict[str, str]:
     """One sibling project as the manifest carries it, name first for readability."""
     return {"server_name": project.server_name, "project_id": project.project_id}
+
+
+def _validate_harness_packaging(data: dict | None, *, flow_id: UUID) -> None:
+    """Do not ship Tool Pack references that the standalone host cannot resolve.
+
+    Composition ZIPs import reviewed projects and versions into Langflow storage.
+    Deployment packages currently carry flow files, knowledge and memory resources;
+    they do not provision the project/version storage used by Tool Pack adapters.
+    """
+    from lfx.projects.skills import parse_harness_skills
+    from lfx.projects.tools import TOOL_ORIGIN
+
+    # Grouped nodes ship too, so walk into them like the other packaging checks.
+    nodes = list((data or {}).get("nodes", []))
+    while nodes:
+        node = nodes.pop()
+        node_data = node.get("data", {})
+        nested = (node_data.get("node", {}).get("flow") or {}).get("data") or {}
+        nodes.extend(nested.get("nodes", []))
+        pack = (node_data.get(TOOL_ORIGIN) or {}).get("tool_pack")
+        if node_data.get("type") == "Agent":
+            raw = node_data.get("node", {}).get("template", {}).get("skill_bindings", {}).get("value") or ""
+            try:
+                skills = parse_harness_skills(raw)
+            except (ValueError, TypeError, AttributeError) as exc:
+                msg = f"Flow {flow_id} has invalid reviewed skills. Review and save the Harness before packaging."
+                raise ProjectArtifactError(msg) from exc
+            pack = pack or any(skill.tool_packs for item in skills.packs for skill in item.skills)
+        if pack:
+            msg = (
+                f"Flow {flow_id} uses reviewed Tool Packs, which standalone deployment packages cannot resolve yet. "
+                "Export the project composition, import it into a Langflow host with project storage, "
+                "and execute it through /api/v2/workflows."
+            )
+            raise ProjectArtifactError(msg)
 
 
 def _build_archive(
