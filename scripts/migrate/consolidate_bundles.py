@@ -79,7 +79,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "milvus": ["langchain-milvus~=0.3.2"],
     "mongodb": [
         "pymongo>=4.18.3,<5.0.0; python_version < '3.11'",
-        "pymongo>=4.20.1,<5.0.0; python_version >= '3.11'",
+        "pymongo>=4.20.2,<5.0.0; python_version >= '3.11'",
         "langchain-mongodb>=0.11.0",
     ],
     "pgvector": ["pgvector>=0.4.2", _LC_COMMUNITY],
@@ -178,8 +178,8 @@ PROVIDER_DEPS: dict[str, list[str]] = {
         # Temporary compatibility valve: newer releases require cryptography<49.
         "langchain-litellm==0.5.1; sys_platform != 'darwin' and python_version < '3.14'",
         "langchain-litellm==0.5.1; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
-        "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
-        "litellm>=1.103.10,<1.104.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
+        "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0; sys_platform != 'darwin' and python_version < '3.14'",
+        "litellm>=1.109.1,<1.110.0,!=1.104.0rc1,!=1.107.0; sys_platform == 'darwin' and platform_machine == 'arm64' and python_version < '3.14'",  # noqa: E501
     ],
     # --- tranche 9: langwatch evaluator (pure httpx REST; the langwatch SDK extra
     # is for the tracing service, not this component) ---

@@ -33,8 +33,8 @@ def litellm_guard(request: pytest.FixtureRequest) -> Requirement:
     for guard in guards:
         assert "1.107.0" not in guard.specifier
         assert "1.103.0" not in guard.specifier
-        assert "1.103.10" in guard.specifier
-        assert "1.103.11" in guard.specifier, "Do not freeze installs to the current lockfile version"
+        assert "1.109.1" in guard.specifier
+        assert "1.109.5" in guard.specifier, "Do not freeze installs below the compatible security line"
         if project["name"] != "lfx-bundles":
             assert guard.marker is None
     # Exercise CUGA's version restriction independently of its platform markers.
@@ -50,6 +50,7 @@ def test_workspace_excludes_compromised_release_without_overriding_upstream_caps
         Requirement(value) for value in settings["constraint-dependencies"] if Requirement(value).name == "litellm"
     )
     assert "1.107.0" not in guard.specifier
+    assert "1.109.0" not in guard.specifier
     lock = tomllib.loads((ROOT / "uv.lock").read_text())
     versions = {package["version"] for package in lock["package"] if package["name"] == "litellm"}
     assert versions
@@ -60,12 +61,16 @@ def test_workspace_excludes_compromised_release_without_overriding_upstream_caps
 def offline_resolver(tmp_path: Path):
     """Resolve harmless metadata-only wheels with pip; never download or execute the malicious artifact."""
 
-    def resolve(guard: Requirement | None, *, force_compromised: bool = False) -> subprocess.CompletedProcess[str]:
+    def resolve(guard: Requirement | None, *, pinned_version: str | None = None) -> subprocess.CompletedProcess[str]:
         """Resolve harmless local wheels to exercise the published version guard."""
         dependencies = ["upstream"] + ([str(guard)] if guard else [])
         for name, version, requirements in (
             ("litellm", "1.103.10", []),
             ("litellm", "1.103.11", []),
+            ("litellm", "1.109.0", []),
+            ("litellm", "1.109.1", []),
+            ("litellm", "1.109.5", []),
+            ("litellm", "1.110.0", []),
             ("litellm", "1.107.0", []),
             ("upstream", "1.0.0", ["litellm>=1.103.1"]),
             ("consumer", "1.0.0", dependencies),
@@ -95,7 +100,7 @@ def offline_resolver(tmp_path: Path):
                 "--report",
                 str(tmp_path / "resolved.json"),
                 "consumer",
-                *(["litellm==1.107.0"] if force_compromised else []),
+                *([f"litellm=={pinned_version}"] if pinned_version else []),
             ],
             cwd=tmp_path,
             env=env,
@@ -115,18 +120,20 @@ def test_published_requirement_protects_transitive_install_without_lockfile(
     unprotected = offline_resolver(None)
     assert unprotected.returncode == 0, unprotected.stdout + unprotected.stderr
     before = json.loads((tmp_path / "resolved.json").read_text())
-    assert any(item["metadata"]["version"] == "1.107.0" for item in before["install"])
+    before_versions = {item["metadata"]["name"]: item["metadata"]["version"] for item in before["install"]}
+    assert before_versions["litellm"] == "1.110.0"
 
     protected = offline_resolver(litellm_guard)
     assert protected.returncode == 0, protected.stdout + protected.stderr
     after = json.loads((tmp_path / "resolved.json").read_text())
     versions = {item["metadata"]["name"]: item["metadata"]["version"] for item in after["install"]}
-    assert versions["litellm"] == "1.103.11"
+    assert versions["litellm"] == "1.109.5"
 
 
-def test_published_requirement_rejects_explicit_compromised_release(
-    litellm_guard: Requirement, offline_resolver
+@pytest.mark.parametrize("pinned_version", ["1.107.0", "1.109.0"])
+def test_published_requirement_rejects_explicit_unsafe_release(
+    litellm_guard: Requirement, offline_resolver, pinned_version: str
 ) -> None:
-    result = offline_resolver(litellm_guard, force_compromised=True)
+    result = offline_resolver(litellm_guard, pinned_version=pinned_version)
     assert result.returncode != 0
     assert "ResolutionImpossible" in result.stderr
