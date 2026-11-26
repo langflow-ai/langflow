@@ -3,19 +3,22 @@
 from __future__ import annotations
 
 import asyncio
+from copy import deepcopy
 from typing import TYPE_CHECKING, Any
 
-from langchain.agents.middleware import AgentMiddleware, SummarizationMiddleware
+from langchain.agents.middleware import AgentMiddleware
 from langchain_core.callbacks.manager import adispatch_custom_event, dispatch_custom_event
-from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage, get_buffer_string
+from langchain_core.messages import HumanMessage, RemoveMessage, SystemMessage
 from langchain_core.messages.utils import count_tokens_approximately
+from langgraph.graph.message import REMOVE_ALL_MESSAGES
+
+from lfx.base.agents.compaction import SUMMARY_MARKER, ConversationSummarizer
+from lfx.base.agents.context_messages import messages_from_table
 
 if TYPE_CHECKING:
     from lfx.base.agents.harness import HarnessRuntimeConfig
 
 HARNESS_EVENT = "harness_runtime"
-SUMMARY_TAG = "harness:compaction"
-SUMMARY_MARKER = "harness_compaction_summary"
 
 
 def prepare_context(messages: list, turns: int) -> list:
@@ -104,10 +107,10 @@ class HarnessContextMiddleware(AgentMiddleware):
         return await handler(prepared)
 
 
-class HarnessCompactionMiddleware(SummarizationMiddleware):
+class HarnessCompactionMiddleware(ConversationSummarizer):
     """Use LangChain's pair-safe partitioning; stop on summary failure without losing history."""
 
-    def __init__(self, model: Any, policy: HarnessRuntimeConfig):
+    def __init__(self, model: Any, policy: HarnessRuntimeConfig, *, compaction_flow=None):
         super().__init__(
             model=model,
             trigger=("tokens", policy.compaction_trigger_tokens),
@@ -115,45 +118,7 @@ class HarnessCompactionMiddleware(SummarizationMiddleware):
             trim_tokens_to_summarize=None,
         )
         self.policy = policy
-
-    def _prompt(self, messages):
-        return self.summary_prompt.format(messages=get_buffer_string(messages, format="xml")).rstrip() + (
-            "\nPreserve source identifiers, URLs, and unresolved questions. Distinguish evidence from inference."
-        )
-
-    @staticmethod
-    def _summary_text(response):
-        text = response.text
-        if not isinstance(text, str) or not text.strip():
-            msg = "Compaction returned no summary. No context was removed."
-            raise ValueError(msg)
-        return text.strip()
-
-    def _create_summary(self, messages_to_summarize):
-        try:
-            return self._summary_text(
-                self.model.invoke(self._prompt(messages_to_summarize), config={"tags": [SUMMARY_TAG]})
-            )
-        except Exception as exc:
-            msg = "Compaction failed. No context was removed; retry or turn compaction off."
-            raise ValueError(msg) from exc
-
-    async def _acreate_summary(self, messages_to_summarize):
-        try:
-            return self._summary_text(
-                await self.model.ainvoke(self._prompt(messages_to_summarize), config={"tags": [SUMMARY_TAG]})
-            )
-        except Exception as exc:
-            msg = "Compaction failed. No context was removed; retry or turn compaction off."
-            raise ValueError(msg) from exc
-
-    @staticmethod
-    def _build_new_messages(summary):
-        return [
-            HumanMessage(
-                content=f"Summary of earlier conversation:\n{summary}", additional_kwargs={SUMMARY_MARKER: True}
-            )
-        ]
+        self.compaction_flow = compaction_flow
 
     def _evidence(self, before, update):
         after = [message for message in update["messages"] if not isinstance(message, RemoveMessage)]
@@ -167,13 +132,72 @@ class HarnessCompactionMiddleware(SummarizationMiddleware):
         }
 
     def before_model(self, state, runtime):
+        if self.compaction_flow:
+            from lfx.projects.compaction import CompactionFlowError
+
+            msg = "Compaction flows require asynchronous Agent execution. Use the flow runtime or ainvoke."
+            raise CompactionFlowError(msg)
         update = super().before_model(state, runtime)
         if update:
             dispatch_custom_event(HARNESS_EVENT, self._evidence(state["messages"], update))
         return update
 
     async def abefore_model(self, state, runtime):
+        if self.compaction_flow:
+            return await self._compact_with_flow(state["messages"])
         update = await super().abefore_model(state, runtime)
         if update:
             await adispatch_custom_event(HARNESS_EVENT, self._evidence(state["messages"], update))
         return update
+
+    async def _compact_with_flow(self, messages):
+        from lfx.projects.compaction import CompactionFlowError, CompactionSourceChangedError
+
+        binding = self.compaction_flow.binding
+        estimated = count_tokens_approximately(messages)
+        if not messages or estimated < binding.trigger_tokens:
+            return None
+        evidence = {
+            "kind": "compacted",
+            "strategy": "flow",
+            **binding.model_dump(),
+            "trigger_reason": "proactive",
+            "messages_before": len(messages),
+            "estimated_tokens_before": estimated,
+        }
+        try:
+            result = await asyncio.wait_for(
+                self.compaction_flow(deepcopy(messages), estimated_tokens=estimated), timeout=binding.timeout_seconds
+            )
+            replacement = result.apply(messages)
+        except Exception as exc:
+            reason = (
+                str(exc)
+                if isinstance(exc, CompactionSourceChangedError)
+                else "Compaction flow timed out. No context was removed; review the flow or its timeout."
+                if isinstance(exc, TimeoutError)
+                else "Compaction flow failed. No context was removed; review its result before retrying."
+            )
+            await adispatch_custom_event(
+                HARNESS_EVENT,
+                {
+                    **evidence,
+                    "kind": "compaction_failed",
+                    "error_type": type(exc).__name__,
+                    "reason": reason,
+                },
+            )
+            raise CompactionFlowError(reason) from exc
+        evidence.update(
+            messages_after=len(replacement),
+            dropped_count=result.dropped_count,
+            retained_messages=len(result.kept_messages),
+            estimated_tokens_after=count_tokens_approximately(replacement),
+            retained_message_ids=[m.id for m in messages_from_table(result.kept_messages) if m.id],
+            summary=result.summary_message.text if result.summary_message else None,
+        )
+        if result.dropped_count == 0:
+            await adispatch_custom_event(HARNESS_EVENT, {**evidence, "kind": "compaction_skipped"})
+            return None
+        await adispatch_custom_event(HARNESS_EVENT, evidence)
+        return {"messages": [RemoveMessage(id=REMOVE_ALL_MESSAGES), *replacement]}

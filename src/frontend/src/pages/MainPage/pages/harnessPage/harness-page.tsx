@@ -12,6 +12,7 @@ import { getCustomParameterTitle } from "@/customization/components/custom-param
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import type {
+  CompactionBinding,
   ContextBinding,
   ProjectConfig,
   ProjectFlowBindings,
@@ -32,7 +33,7 @@ import { ProjectFlowPicker } from "./components/project-flow-picker";
 
 import { editorDraft } from "./editor-draft";
 import { isProjectFieldVisible } from "./field-visibility";
-import { validFlowTimeout } from "./flow-binding";
+import { validCompactionThreshold, validFlowTimeout } from "./flow-binding";
 
 interface HarnessPageProps {
   projectId: string;
@@ -121,9 +122,16 @@ const HarnessPage = ({
   const bindingsValid = Object.entries(bindings).every(([field, binding]) =>
     Array.isArray(binding)
       ? binding.every((hook) => validFlowTimeout(hook.timeout_seconds ?? 10))
-      : field !== "context_strategy" ||
-        !binding ||
-        validFlowTimeout((binding as ContextBinding).timeout_seconds ?? 30),
+      : field === "compaction" && binding
+        ? validFlowTimeout(
+            (binding as CompactionBinding).timeout_seconds ?? 60,
+          ) &&
+          validCompactionThreshold(
+            (binding as CompactionBinding).trigger_tokens ?? 8000,
+          )
+        : field !== "context_strategy" ||
+          !binding ||
+          validFlowTimeout((binding as ContextBinding).timeout_seconds ?? 30),
   );
   const updateBinding = (
     fieldName: string,
@@ -543,10 +551,19 @@ const HarnessPage = ({
                               ? undefined
                               : bindings[fieldName]
                           }
-                          initialConfig={{
-                            context_strategy: values.context_strategy,
-                            context_turns: values.context_turns,
-                          }}
+                          initialConfig={
+                            fieldName === "compaction"
+                              ? {
+                                  compaction_trigger_tokens:
+                                    values.compaction_trigger_tokens,
+                                  compaction_keep_messages:
+                                    values.compaction_keep_messages,
+                                }
+                              : {
+                                  context_strategy: values.context_strategy,
+                                  context_turns: values.context_turns,
+                                }
+                          }
                           disabled={isPending}
                           onChange={(binding) =>
                             updateBinding(fieldName, binding)

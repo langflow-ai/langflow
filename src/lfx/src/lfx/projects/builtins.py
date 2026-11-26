@@ -104,7 +104,7 @@ AGENT_HARNESS = register_project_type(
                     section="Runtime",
                     input=inp,
                     writes_to=FieldTarget("Agent", inp.name),
-                    supports_flow_binding=inp.name == "context_strategy",
+                    supports_flow_binding=inp.name in {"context_strategy", "compaction"},
                     option_labels={
                         "context_strategy": {"all": "All loaded messages", "recent_turns": "Recent complete turns"},
                         "compaction": {"off": "Off", "summarize": "Summarize older messages"},

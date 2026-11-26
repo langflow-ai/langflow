@@ -168,3 +168,38 @@ it.each([true, false])(
     );
   },
 );
+
+it.each([true, false])(
+  "validates Compaction from its marker or return URL (marker=%s)",
+  async (marked) => {
+    state.currentFlow = {
+      id: "compaction",
+      folder_id: "project",
+      data: marked ? { harness_contract: { slot: "Compactor" } } : {},
+    };
+    searchParams = new URLSearchParams(marked ? "" : "harnessField=compaction");
+    post.mockResolvedValue({ data: { valid: true, outputs: [{}] } });
+    const { rerender } = render(<HarnessFlowContract />);
+    await tick();
+    expect(post).toHaveBeenLastCalledWith(
+      expect.any(String),
+      expect.any(Object),
+      expect.objectContaining({ params: { field_name: "compaction" } }),
+    );
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Compaction output ready",
+    );
+    expect(screen.getByRole("link")).toHaveAttribute(
+      "href",
+      "/all/folder/project?tab=harness&field=compaction",
+    );
+    expect(screen.getByText(/For a standalone preview/)).toBeInTheDocument();
+    state.edges = [{ invalid: true }];
+    post.mockResolvedValue({ data: { valid: false, outputs: [] } });
+    rerender(<HarnessFlowContract />);
+    await tick();
+    expect(screen.getByRole("status")).toHaveTextContent(
+      "Compaction output needs attention",
+    );
+  },
+);
