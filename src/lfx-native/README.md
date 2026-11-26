@@ -31,12 +31,13 @@ src/lfx-native/
 
 ## The crate
 
-Each folder of `src/` imports only from the folders before it: `map`, `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `bindings.rs`. `tests/layers.rs` checks this. `lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
+Each folder of `src/` imports only from the folders before it: `types`, `map`, `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `bindings.rs`. `tests/layers.rs` checks this. `lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
 
 | Folder | What it holds |
 | --- | --- |
-| `map/` | maps: `hash` (ahash maps and sets), `ordered` (`OrderedMap`), `pending` (`PendingMap`, a map whose batch changes stay pending until the batch commits) |
-| `json/` | the JSON value and its text: `flow_value` (`FlowValue`), `flow_str` (`FlowStr`), `flow_obj` (`FlowObj`), `number` (`Number`, and numbers as JavaScript reads them), `serialize`, `deserialize`, `pointer` (a place in a value) |
+| `types/` | the engine's value types, including `FlowValue`, `FlowObj`, `FlowStr`, and `Number` |
+| `map/` | ordered maps, pending batch writes and path trees |
+| `json/` | JSON parsing, serialization and pointers into values |
 | `flow/` | what a flow looks like: `model` (`model.json`: view state and keyed lists), `node`, `edge`, `path`, `deserialize`, `list` (every keyed list: lookup by key and `__pos__` order), `edge_handle`, `id` |
 | `compare/` | when two flows are equal: `canonical_form`, `graph_hash` |
 | `node_input/` | what only some node inputs do: `table_input` (row ids, table input fields, stripping row keys for export) |
@@ -45,11 +46,11 @@ Each folder of `src/` imports only from the folders before it: `map`, `json`, `f
 | `rule/` | the rules a write must follow, checked only on what it adds or changes: `edge`, `list` |
 | `validate.rs` | runs the invariants and the rules |
 | `snapshot/` | `GraphSnapshot`, the committed flow that other threads read |
-| `state/` | the flow in memory: `GraphState`, its indexes, a batch's pending field writes, and `GraphPlain` |
+| `state/` | the flow in memory: `GraphState`, its indexes, field reads and writes, and `GraphPlain` |
 | `op/` | what you do to a flow: the operation types and their parser and dump, `apply`, `replay`, `field_update` (what apply and replay share), `diff`, `repair`, `restore` |
 | `bindings.rs` | the functions the bindings call: JSON text or values in, values out. It is behind the `bindings` feature, which both bindings turn on, so it is their one shared conversion layer. It turns an `Error` into a `BindingError`, with the Python exception class name and the error as JSON |
 
-The public modules are `bindings`, `json`, `flow`, `compare`, `node_input`, `validate`, `repair` and `restore`.
+The public modules are `bindings`, `types`, `json`, `flow`, `compare`, `node_input`, `validate`, `repair` and `restore`.
 
 Each folder raises its own errors: `json` a `NonFinite` number, `flow` a `DeserializeError` or a `ListError`, and `compare` and `node_input` only `NonFinite`. `violation` turns each of them into the one `Error` the bindings see.
 
@@ -65,7 +66,7 @@ The engine uses the words of Langflow: flow, node, edge, field, output, operatio
 | keyed list | a list whose items are found by a key: outputs by `name`, tool actions by `tags[0]`, table input rows by `__id__` |
 | view state | keys the engine keeps but never records or compares, such as `selected` or `viewport` |
 | canonical form | a flow without its view state, which equality and the hash use |
-| snapshot | a copy of the committed flow that other threads can read |
+| snapshot | a read-only view of the committed flow that other threads can read |
 
 ## Who uses what
 

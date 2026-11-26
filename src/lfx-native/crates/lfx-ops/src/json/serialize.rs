@@ -1,12 +1,16 @@
 //! Write JSON text fast into a byte buffer.
 //!
 //! A flow is mostly long strings, such as code, so a string is
-//! scanned eight bytes at a time. [`Ascii::Escape`] writes as Python's
-//! `json.dumps` does by default. Example: `é` gives `\u00e9`.
+//! scanned eight bytes at a time. [`Ascii::Escape`] writes as
+//! Python's `json.dumps` does by default. Example: `é` gives
+//! `\u00e9`.
 
-use crate::json::{FlowObj, FlowValue};
+use std::fmt;
 
-/// Whether a written string escapes its characters above U+007F.
+use crate::types::{FlowObj, FlowValue};
+
+/// Whether a written string escapes its characters above
+/// U+007F.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Ascii {
     /// Write them as they are, as RFC 8785 does.
@@ -15,8 +19,9 @@ pub(crate) enum Ascii {
     Escape,
 }
 
-/// Whether a byte starts an escape: `"`, `\`, a control character, or with
-/// `ESCAPE`, a byte of a character above U+007F.
+/// Whether a byte starts an escape: `"`, `\`, a control
+/// character, or with `ESCAPE`, a byte of a character above
+/// U+007F.
 #[inline]
 fn special<const ESCAPE: bool>(byte: u8) -> bool {
     byte < 0x20 || byte == b'"' || byte == b'\\' || (ESCAPE && byte >= 0x80)
@@ -25,15 +30,17 @@ fn special<const ESCAPE: bool>(byte: u8) -> bool {
 const ONES: u64 = 0x0101_0101_0101_0101;
 const HIGHS: u64 = 0x8080_8080_8080_8080;
 
-/// The high bit of each zero byte of `word` (little-endian). A borrow can
-/// also mark later bytes, but the lowest mark is always a zero byte.
+/// The high bit of each zero byte of `word` (little-endian). A
+/// borrow can also mark later bytes, but the lowest mark is
+/// always a zero byte.
 #[inline]
 fn zero_bytes(word: u64) -> u64 {
     word.wrapping_sub(ONES) & !word & HIGHS
 }
 
-/// Marks for the bytes of `word` that start an escape, as [`zero_bytes`]
-/// marks: the lowest mark is always such a byte, and none means none is.
+/// Marks for the bytes of `word` that start an escape, as
+/// [`zero_bytes`] marks: the lowest mark is always such a byte,
+/// and none means none is.
 #[inline]
 fn special_bytes<const ESCAPE: bool>(word: u64) -> u64 {
     let control = word.wrapping_sub(ONES * 0x20) & !word & HIGHS;
@@ -54,7 +61,8 @@ fn unit_escape(unit: u16) -> [u8; 6] {
     [b'\\', b'u', digit(12), digit(8), digit(4), digit(0)]
 }
 
-/// Write the escape of the character at `at`. Return its length in `text`.
+/// Write the escape of the character at `at`. Return its length
+/// in `text`.
 fn write_escape(out: &mut Vec<u8>, text: &str, at: usize) -> usize {
     let byte = text.as_bytes()[at];
     let short: &[u8] = match byte {
@@ -98,7 +106,8 @@ fn write_str_with<const ESCAPE: bool>(out: &mut Vec<u8>, text: &str) {
     // Where the scan is.
     let mut at = 0;
     while at < bytes.len() {
-        // Skip eight bytes at a time while none starts an escape.
+        // Skip eight bytes at a time while none starts an
+        // escape.
         while let Some(word) = bytes.get(at..at + 8) {
             let word = u64::from_le_bytes(word.try_into().expect("eight bytes"));
             let marks = special_bytes::<ESCAPE>(word);
@@ -123,7 +132,8 @@ fn write_str_with<const ESCAPE: bool>(out: &mut Vec<u8>, text: &str) {
     out.push(b'"');
 }
 
-/// Write a value as compact JSON text, object keys in their order.
+/// Write a value as compact JSON text, object keys in their
+/// order.
 pub(crate) fn write_value(out: &mut Vec<u8>, value: &FlowValue, ascii: Ascii) {
     match value {
         FlowValue::Null => out.extend_from_slice(b"null"),
@@ -134,20 +144,26 @@ pub(crate) fn write_value(out: &mut Vec<u8>, value: &FlowValue, ascii: Ascii) {
             write!(out, "{number}").expect("a number is written to memory");
         }
         FlowValue::String(text) => {
-            if ascii == Ascii::Escape
-                && let Some(encoded) = text.shared_ascii_json()
-            {
-                out.extend_from_slice(encoded);
-            } else {
-                write_str(out, text, ascii);
+            if ascii == Ascii::Escape {
+                let cached = text.shared_ascii_json(|text| {
+                    let mut encoded = Vec::with_capacity(text.len() + 2);
+                    write_str(&mut encoded, text, Ascii::Escape);
+                    encoded.into_boxed_slice()
+                });
+                if let Some(encoded) = cached {
+                    out.extend_from_slice(encoded);
+                    return;
+                }
             }
+            write_str(out, text, ascii);
         }
         FlowValue::Array(items) => write_seq(out, items, |out, item| write_value(out, item, ascii)),
         FlowValue::Object(map) => write_map(out, map, ascii),
     }
 }
 
-/// Write an object as compact JSON text, its keys in their order.
+/// Write an object as compact JSON text, its keys in their
+/// order.
 pub(crate) fn write_map(out: &mut Vec<u8>, map: &FlowObj, ascii: Ascii) {
     write_entries(
         out,
@@ -173,7 +189,8 @@ pub(crate) fn write_seq<T>(
     out.push(b']');
 }
 
-/// Write keys and values as a JSON object, each value with `write_value`.
+/// Write keys and values as a JSON object, each value with
+/// `write_value`.
 pub(crate) fn write_entries<K: AsRef<str>, V>(
     out: &mut Vec<u8>,
     entries: impl IntoIterator<Item = (K, V)>,
@@ -192,15 +209,24 @@ pub(crate) fn write_entries<K: AsRef<str>, V>(
     out.push(b'}');
 }
 
-/// Bytes the buffer holds as text. Everything written here is UTF-8.
+/// Bytes the buffer holds as text. Everything written here is
+/// UTF-8.
 pub(crate) fn into_string(out: Vec<u8>) -> String {
     String::from_utf8(out).expect("JSON text is written as UTF-8")
 }
 
-// --- Strings as Python's `repr` prints them -------------------------------------------------
+impl fmt::Display for FlowValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let mut out = Vec::new();
+        write_value(&mut out, self, Ascii::Keep);
+        f.write_str(&into_string(out))
+    }
+}
 
-/// A string as error messages quote it: as Python's `repr` prints it, so
-/// messages read the same in every runtime.
+// --- Strings as Python's `repr` prints them ------------------
+
+/// A string as error messages quote it: as Python's `repr`
+/// prints it, so messages read the same in every runtime.
 pub(crate) fn quoted(value: &str) -> String {
     let quote = if value.contains('\'') && !value.contains('"') {
         '"'
@@ -237,8 +263,9 @@ pub(crate) fn quoted(value: &str) -> String {
     out
 }
 
-/// Whether Python's `str.isprintable` holds for a character: not a control,
-/// format, separator (other than a space), surrogate or private-use character.
+/// Whether Python's `str.isprintable` holds for a character:
+/// not a control, format, separator (other than a space),
+/// surrogate or private-use character.
 fn is_printable(c: char) -> bool {
     !(c.is_control()
         || matches!(
@@ -265,7 +292,8 @@ mod tests {
 
     use super::*;
 
-    /// A string written one character at a time, as the reference.
+    /// A string written one character at a time, as the
+    /// reference.
     fn reference(text: &str, ascii: Ascii) -> String {
         let mut out = String::from('"');
         for character in text.chars() {

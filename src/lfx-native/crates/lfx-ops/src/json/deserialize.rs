@@ -4,11 +4,11 @@ use std::fmt;
 
 use serde::de::{self, Deserialize, DeserializeSeed, Deserializer, MapAccess, SeqAccess, Visitor};
 
-use crate::json::flow_obj::{Entries, entries_of, small_and_unique};
-use crate::json::flow_str::StringSeed;
 use crate::json::{FlowObj, FlowStr, FlowValue, Number, StringPool};
+use crate::types::{Entries, StringSeed, entries_of, small_and_unique};
 
-/// The key of the one-key map that holds a number's text (`arbitrary_precision`).
+/// The key of the one-key map that holds a number's text
+/// (`arbitrary_precision`).
 const NUMBER_TOKEN: &str = "$serde_json::private::Number";
 
 impl<'de> Deserialize<'de> for FlowValue {
@@ -20,8 +20,9 @@ impl<'de> Deserialize<'de> for FlowValue {
 /// Why [`FiniteFlowValue`] refuses a number.
 pub const NOT_FINITE: &str = "NaN and Infinity are not JSON numbers";
 
-/// A value whose every number is finite as a double. Example: `1e400` fails
-/// ([`NOT_FINITE`]). A large integer keeps its digits, as a Python `int` does.
+/// A value whose every number is finite as a double. Example:
+/// `1e400` fails ([`NOT_FINITE`]). A large integer keeps its
+/// digits, as a Python `int` does.
 #[derive(Debug, Clone, PartialEq)]
 pub struct FiniteFlowValue(pub FlowValue);
 
@@ -33,11 +34,12 @@ impl<'de> Deserialize<'de> for FiniteFlowValue {
     }
 }
 
-/// The stacks of members and items that a parse holds for open objects and
-/// arrays. A closed one moves its members into a collection of exact size.
+/// The stacks of members and items that a parse holds for open
+/// objects and arrays. A closed one moves its members into a
+/// collection of exact size.
 #[derive(Debug, Default)]
 pub(crate) struct Builder<const FINITE: bool> {
-    strings: StringPool,
+    pub(crate) strings: StringPool,
     entries: Vec<(FlowStr, FlowValue)>,
     items: Vec<FlowValue>,
 }
@@ -48,11 +50,13 @@ impl<const FINITE: bool> Builder<FINITE> {
     }
 }
 
-/// Builds an [`FlowValue`] with a [`Builder`]. With `FINITE`, it refuses Infinity.
+/// Builds an [`FlowValue`] with a [`Builder`]. With `FINITE`,
+/// it refuses Infinity.
 struct FlowValueVisitor<'b, const FINITE: bool>(&'b mut Builder<FINITE>);
 
-/// Reads one JSON value as [`FiniteFlowValue`] does, with a builder shared
-/// across the values of one input, so they share its string pool.
+/// Reads one JSON value as [`FiniteFlowValue`] does, with a
+/// builder shared across the values of one input, so they share
+/// its string pool.
 #[cfg(feature = "bindings")]
 pub(crate) struct FiniteSeed<'b>(pub(crate) &'b mut Builder<true>);
 
@@ -141,8 +145,9 @@ impl<'de, const FINITE: bool> Visitor<'de> for FlowValueVisitor<'_, FINITE> {
             let value = access.next_value_seed(FlowValueVisitor(&mut *builder))?;
             builder.entries.push((key, value));
         }
-        // A repeated key keeps its first position and its last value. The rows
-        // are not shared yet, so no insert checks the reference count.
+        // A repeated key keeps its first position and its last
+        // value. The rows are not shared yet, so no insert
+        // checks the reference count.
         let entries = if small_and_unique(&builder.entries[start..]) {
             // One allocation of exactly these rows.
             Entries::Small(builder.entries.drain(start..).collect())

@@ -1,5 +1,6 @@
-//! Field writes: following an update's path through the batch's writes, and
-//! writing its last segment. Replay uses the same steps with no rule.
+//! Field writes: following an update's path through the batch's
+//! writes, and writing its last segment. Replay uses the same
+//! steps with no rule.
 
 use std::borrow::Cow;
 
@@ -7,7 +8,7 @@ use crate::json::FlowValue;
 
 use crate::flow::list::{ListIndex, ListProblem, check_position};
 use crate::flow::model::{FLOW_MODEL, KeyedList};
-use crate::flow::path::{AsKey, PathExt, Segment};
+use crate::flow::path::{AsKey, PathExt, Segment, path_label};
 use crate::json::serialize::quoted;
 use crate::op::ApplyOptions;
 use crate::op::field_update::{
@@ -16,13 +17,14 @@ use crate::op::field_update::{
 };
 use crate::op::operation::{Change, FieldUpdate};
 use crate::rule::edge::{GraphRead, reads_before};
-use crate::state::field_write::{self, FieldWrite, Holder};
+use crate::state::field_write::{FieldWrite, Holder};
 use crate::state::{Graph, GraphState, Lists, field_value};
-use crate::violation::error::{Result, bail};
+use crate::violation::error::{Result, bail, invalid};
 
 impl GraphState {
-    /// Apply one `set_field` or `delete_field` to a node, with the rules for
-    /// list items. Returns what the path held before the write.
+    /// Apply one `set_field` or `delete_field` to a node, with
+    /// the rules for list items. Returns what the path held
+    /// before the write.
     pub(super) fn apply_field_update(
         &mut self,
         update: &mut FieldUpdate,
@@ -48,7 +50,7 @@ impl GraphState {
         check_written_item(&sequenced, &update_target)?;
         let value = written_value(update, options.forward);
         let sequenced = SequencedUpdate { update, context };
-        self.write_update(&sequenced, &update_target, value);
+        self.write_update(&sequenced, &update_target, value)?;
         self.check_positions_kept(&sequenced, &update_target)?;
         Ok(if exists {
             Before::Value(before)
@@ -57,13 +59,15 @@ impl GraphState {
         })
     }
 
-    /// Follow the write's path ([`Graph::read_field`]) and read what it
-    /// holds. A segment that does not fit its value, such as a key of a list,
-    /// is an error, not a missing value.
+    /// Follow the write's path ([`Graph::read_field`]) and read
+    /// what it holds. A segment that does not fit its value,
+    /// such as a key of a list, is an error, not a missing
+    /// value.
     ///
     /// # Errors
     ///
-    /// A segment does not fit the value it reads, or a key names two items.
+    /// A segment does not fit the value it reads, or a key
+    /// names two items.
     pub(crate) fn find_update_target(
         &mut self,
         sequenced: &SequencedUpdate<'_>,
@@ -93,15 +97,16 @@ impl GraphState {
                 }
             }
             Holder::Node { writes } => {
-                let write = writes.and_then(|writes| writes.child_write(&path[last]));
+                let write = writes.and_then(|writes| writes.write_at(path));
                 PathEnd::InNode(NodeValue::new(has_last, write))
             }
         };
         Ok(reader.finish(end))
     }
 
-    /// Record a write that puts back what the path holds, before the write.
-    /// A list item comes back with its position.
+    /// Record a write that puts back what the path holds,
+    /// before the write. A list item comes back with its
+    /// position.
     ///
     /// # Errors
     ///
@@ -123,7 +128,8 @@ impl GraphState {
         Ok(())
     }
 
-    /// Check that a write inside a list item left the item a position.
+    /// Check that a write inside a list item left the item a
+    /// position.
     fn check_positions_kept(
         &mut self,
         sequenced: &SequencedUpdate<'_>,
@@ -147,19 +153,22 @@ impl GraphState {
 
     /// Write or delete the last segment of the path, after
     /// [`Self::find_update_target`].
+    ///
+    /// # Errors
+    ///
+    /// The pending patch cannot reach the assignment parent.
     pub(crate) fn write_update(
         &mut self,
         sequenced: &SequencedUpdate<'_>,
         update_target: &UpdateTarget,
         value: FlowValue,
-    ) {
+    ) -> Result<()> {
         let update = sequenced.update;
         let id = update.id.as_str();
         let path = &update.path;
-        let last = path.len() - 1;
         if update.is_delete() && !update_target.exists() {
             // A delete that finds nothing writes nothing.
-            return;
+            return Ok(());
         }
         let write = if update.is_delete() {
             FieldWrite::Remove
@@ -168,31 +177,34 @@ impl GraphState {
         };
         let writes = self.graph.writes_mut(id);
         match update_target.end {
-            PathEnd::InWrite { path_len, .. } => {
-                let (_, on_path) = writes
-                    .write_on_path_mut(&path[..last])
-                    .expect("the update_target found the write on the way");
-                let FieldWrite::Set(set) = on_path else {
-                    unreachable!("the update_target found the parent in a set's value")
-                };
-                let parent = field_write::descend_mut(set, &path[..last], path_len)
-                    .expect("the update_target found the parent in the write");
-                field_write::make_write(parent, &path[last], &path[..last], write);
+            PathEnd::InWrite { path_len, .. } => writes.edit(path, path_len, write),
+            // The value is only the batch's own write at the
+            // path.
+            PathEnd::InNode(NodeValue::Added) if update.is_delete() => {
+                writes.drop_write(path);
+                Ok(())
             }
-            // The value is only the batch's own write at the path.
-            PathEnd::InNode(NodeValue::Added) if update.is_delete() => writes.drop_write(path),
             _ => writes.set(path, write),
         }
+        .map_err(|_| {
+            invalid!(
+                "{}: cannot write to path {}",
+                sequenced.context,
+                path_label(path)
+            )
+        })
     }
 }
 
-/// Reads a field update's path one segment at a time. It checks each segment
-/// against the value it reads, and keeps the keyed lists on the way.
+/// Reads a field update's path one segment at a time. It checks
+/// each segment against the value it reads, and keeps the keyed
+/// lists on the way.
 struct PathReader<'r, 'g> {
     graph: &'g Graph,
     lists: &'r mut Lists,
     sequenced: &'r SequencedUpdate<'r>,
-    /// Only a stored node's lists keep their index between reads.
+    /// Only a stored node's lists keep their index between
+    /// reads.
     stored: bool,
     list_items: Vec<ListItemOnPath>,
     last_list: Option<&'static KeyedList>,
@@ -212,8 +224,8 @@ impl<'r, 'g> PathReader<'r, 'g> {
         }
     }
 
-    /// Read `path[index]` under `value`. `in_write` is true inside a write's
-    /// value, whose lists have no index.
+    /// Read `path[index]` under `value`. `in_write` is true
+    /// inside a write's value, whose lists have no index.
     fn step(
         &mut self,
         value: &'g FlowValue,
@@ -236,7 +248,8 @@ impl<'r, 'g> PathReader<'r, 'g> {
         }
     }
 
-    /// Read the item with `key` of the list `value`, which `path[index]` names.
+    /// Read the item with `key` of the list `value`, which
+    /// `path[index]` names.
     fn item(
         &mut self,
         value: &'g FlowValue,
@@ -274,8 +287,9 @@ impl<'r, 'g> PathReader<'r, 'g> {
         Ok(item_index.map(|item_index| &items[item_index]))
     }
 
-    /// Add the item at the end of the write on the way, which holds the
-    /// rest of the path. It was checked when it was written.
+    /// Add the item at the end of the write on the way, which
+    /// holds the rest of the path. It was checked when it was
+    /// written.
     fn add_written_item(&mut self, path_len: usize) {
         let path = &self.sequenced.update.path;
         if let Segment::Item(_) = &path[path_len - 1] {
@@ -297,7 +311,8 @@ impl<'r, 'g> PathReader<'r, 'g> {
     }
 }
 
-/// Check that each keyed list the path reads follows the keyed list rules.
+/// Check that each keyed list the path reads follows the keyed
+/// list rules.
 fn check_lists_on_path(
     sequenced: &SequencedUpdate<'_>,
     update_target: &UpdateTarget,
@@ -308,7 +323,8 @@ fn check_lists_on_path(
     }
 }
 
-/// Check that a table row written at its key carries a position.
+/// Check that a table row written at its key carries a
+/// position.
 fn check_written_item(sequenced: &SequencedUpdate<'_>, update_target: &UpdateTarget) -> Result<()> {
     let update = sequenced.update;
     let last = update.path.len() - 1;
@@ -328,14 +344,15 @@ fn check_written_item(sequenced: &SequencedUpdate<'_>, update_target: &UpdateTar
 /// What a field write's path held before the write.
 #[derive(Debug)]
 pub(super) enum Before {
-    /// Nothing: the write added a value, or a delete found nothing.
+    /// Nothing: the write added a value, or a delete found
+    /// nothing.
     Nothing,
     /// A value, kept only when [`reads_before`] needs it.
     Value(Option<FlowValue>),
 }
 
-/// The keyed list whose item `path[index]` names. Checks that `model.json`
-/// declares it keyed and that `value` is a list.
+/// The keyed list whose item `path[index]` names. Checks that
+/// `model.json` declares it keyed and that `value` is a list.
 fn keyed_list(
     graph: &Graph,
     sequenced: &SequencedUpdate<'_>,

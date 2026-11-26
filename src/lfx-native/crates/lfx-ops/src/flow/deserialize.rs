@@ -1,7 +1,8 @@
 //! Reading typed values out of a parsed JSON value.
 //!
-//! Each type moves the parts it keeps out of an owned [`FlowValue`], so
-//! parsing copies nothing. Example: `Vec<String>` refuses `["a", 5]`.
+//! Each type moves the parts it keeps out of an owned
+//! [`FlowValue`], so parsing copies nothing. Example:
+//! `Vec<String>` refuses `["a", 5]`.
 
 use crate::flow::path::Segment;
 use crate::json::{FlowObj, FlowValue};
@@ -10,7 +11,8 @@ use crate::json::serialize::quoted;
 
 /// A type that reads itself from a JSON value.
 pub(crate) trait FromFlowValue: Sized {
-    /// Read `value` as this type, or say why its shape is wrong.
+    /// Read `value` as this type, or say why its shape is
+    /// wrong.
     fn from_value(value: FlowValue) -> Result<Self, DeserializeError>;
 }
 
@@ -23,7 +25,8 @@ pub(crate) enum Place {
     Index(usize),
 }
 
-/// Why a JSON value does not have the expected shape, and where.
+/// Why a JSON value does not have the expected shape, and
+/// where.
 ///
 /// It is `pub` because `OperationKind::from_str` returns it.
 #[derive(Debug)]
@@ -94,7 +97,8 @@ impl<T: FromFlowValue> FromFlowValue for Vec<T> {
     }
 }
 
-/// Read the value of the object key `key` as `T`, naming the key in any error.
+/// Read the value of the object key `key` as `T`, naming the
+/// key in any error.
 pub(crate) fn read<T: FromFlowValue>(
     value: FlowValue,
     key: &'static str,
@@ -112,7 +116,7 @@ pub(crate) fn unexpected(key: &str) -> DeserializeError {
     DeserializeError::new(format!("unexpected key {}", quoted(key)))
 }
 
-// --- Paths ---------------------------------------------------------------------------------
+// --- Paths ---------------------------------------------------
 
 impl FromFlowValue for Segment {
     fn from_value(value: FlowValue) -> Result<Self, DeserializeError> {
@@ -120,13 +124,13 @@ impl FromFlowValue for Segment {
             DeserializeError::new(r#"must be an object key or {"key": ...} with a non-empty key"#)
         };
         match value {
-            FlowValue::String(key) => Ok(Self::Key(key.to_string())),
+            FlowValue::String(key) => Ok(Self::Key(key)),
             FlowValue::Number(_) => Err(DeserializeError::new(
                 r#"integer list indexes are not allowed; name a list item with {"key": ...}"#,
             )),
             FlowValue::Object(item) if item.len() == 1 => match item.into_iter().next() {
                 Some((name, FlowValue::String(key))) if name == "key" && !key.is_empty() => {
-                    Ok(Self::Item(key.to_string()))
+                    Ok(Self::Item(key))
                 }
                 _ => Err(invalid()),
             },

@@ -1,18 +1,23 @@
 //! Replaying stored operations on a flow.
 //!
-//! Replay runs no rule. The operations passed the rules when they were
-//! applied, and a newer rule must not stop history from replaying. Stored
-//! operations list every edge they delete, so replay deletes no edge itself.
-//! It fails only when an operation cannot be carried out:
+//! Replay runs no rule. The operations passed the rules when
+//! they were applied, and a newer rule must not stop history
+//! from replaying. Stored operations list every edge they
+//! delete, so replay deletes no edge itself. It fails only when
+//! an operation cannot be carried out:
 //!
-//! - `add_nodes` or `add_edges` adds an id that the flow already has;
-//! - `add_edges` names a source or target node that does not exist;
-//! - `update_nodes` or `delete_nodes` names a node that does not exist;
+//! - `add_nodes` or `add_edges` adds an id that the flow
+//!   already has;
+//! - `add_edges` names a source or target node that does not
+//!   exist;
+//! - `update_nodes` or `delete_nodes` names a node that does
+//!   not exist;
 //! - an update's path does not exist up to its last segment;
-//! - a list item segment before the last one matches no item, or two items.
+//! - a list item segment before the last one matches no item,
+//!   or two items.
 //!
-//! [`apply`](crate::op::apply) makes the same checks, so its forward
-//! operations always replay to the same flow.
+//! [`apply`](crate::op::apply) makes the same checks, so its
+//! forward operations always replay to the same flow.
 
 use crate::flow::edge::Edge;
 use crate::json::FlowValue;
@@ -28,9 +33,9 @@ use crate::state::GraphState;
 use crate::violation::error::{Result, bail};
 
 impl GraphState {
-    /// Replay stored operations in order, with no rule. On an error nothing
-    /// is replayed. A deleted node keeps its edges unless the operations
-    /// delete them.
+    /// Replay stored operations in order, with no rule. On an
+    /// error nothing is replayed. A deleted node keeps its
+    /// edges unless the operations delete them.
     ///
     /// # Errors
     ///
@@ -80,13 +85,14 @@ impl GraphState {
             if let Some(backward) = backward.as_mut() {
                 self.record_backward(&sequenced, backward)?;
             }
-            // Replay returns no forward operations, so the value moves out.
+            // Replay returns no forward operations, so the
+            // value moves out.
             let value = written_value(&mut update, false);
             let sequenced = SequencedUpdate {
                 update: &update,
                 context,
             };
-            self.write_update(&sequenced, &update_target, value);
+            self.write_update(&sequenced, &update_target, value)?;
         }
         if let Some(backward) = backward {
             backward.record(report);
@@ -94,7 +100,8 @@ impl GraphState {
         Ok(())
     }
 
-    /// Delete nodes, each of which must exist. Their edges stay.
+    /// Delete nodes, each of which must exist. Their edges
+    /// stay.
     fn replay_delete_nodes(&mut self, ids: &[String], report: &mut Report) -> Result<()> {
         let ids: IndexSet<&str> = ids.iter().map(String::as_str).collect();
         for id in &ids {
@@ -117,12 +124,14 @@ impl GraphState {
     }
 }
 
-/// Replay stored operations on a flow graph, with no rule. Loading the flow
-/// checks the structural rules ([`GraphState::new`]).
+/// Replay stored operations on a flow graph, with no rule.
+/// Loading the flow checks the structural rules
+/// ([`GraphState::new`]).
 ///
 /// # Errors
 ///
-/// The flow breaks a structural rule, or an operation cannot be carried out.
+/// The flow breaks a structural rule, or an operation cannot be
+/// carried out.
 pub fn replay_flow_operations(
     base: FlowValue,
     operations: Vec<Operation>,

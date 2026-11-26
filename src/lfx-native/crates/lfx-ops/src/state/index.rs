@@ -1,11 +1,13 @@
-//! [`Graph`]: nodes and edges by id, edges by the nodes they touch, and the batch's field
-//! writes. [`Lists`]: the keyed-list indexes of stored nodes.
+//! [`Graph`]: nodes and edges by id, and edges by the nodes
+//! they touch. [`Lists`]: the keyed-list indexes of stored
+//! nodes.
 
 use std::borrow::Cow;
 use std::fmt;
 
 use crate::json::{FlowObj, FlowStr, FlowValue};
 use crate::map::hash::{HashMap, IndexSet};
+use crate::map::patched::PatchedMap;
 use crate::map::pending::PendingMap;
 
 use crate::flow::edge::Edge;
@@ -14,7 +16,7 @@ use crate::flow::model::{FLOW_MODEL, KeyedList};
 use crate::flow::node::Node;
 use crate::flow::path::{AsKey, PathExt, Segment};
 use crate::rule::edge::GraphRead;
-use crate::state::field_write::{self, PendingFieldWrites};
+use crate::state::field_write::{self, PathWrites};
 use crate::violation::error::Result;
 
 /// The ids of the edges at each node.
@@ -47,7 +49,8 @@ impl EdgesAt {
 
     pub(super) fn detach(&mut self, id: &str, edge: &Edge) {
         for end in ends(edge) {
-            // Remove the last id with its key, without copying the set.
+            // Remove the last id with its key, without copying
+            // the set.
             let kept = self.by_node.update_if(
                 end,
                 |ids| ids.len() > 1,
@@ -70,16 +73,12 @@ fn ends(edge: &Edge) -> impl Iterator<Item = &str> {
         .take(if source == target { 1 } else { 2 })
 }
 
-/// Nodes and edges by id, edges by the nodes they touch, and the batch's field writes.
-///
-/// Its maps are private, so every node read goes through [`field_write::read_through`] and
-/// sees the batch's field writes.
+/// Nodes and edges by id, and edges by the nodes they touch.
 #[derive(Debug)]
 pub(crate) struct Graph {
-    pub(super) nodes: PendingMap<Node>,
-    pub(super) edges: PendingMap<Edge>,
+    pub(super) nodes: PatchedMap<Node, PathWrites>,
+    pub(super) edges: PatchedMap<Edge>,
     pub(super) edges_at: EdgesAt,
-    pub(super) fields: PendingFieldWrites,
 }
 
 impl Graph {
@@ -88,7 +87,8 @@ impl Graph {
         self.edge_keys_at(node_id).map(FlowStr::as_str)
     }
 
-    /// The shared ids of the edges at a node, in the same order as `edges_at`.
+    /// The shared ids of the edges at a node, in the same order
+    /// as `edges_at`.
     pub(crate) fn edge_keys_at(&self, node_id: &str) -> impl Iterator<Item = &FlowStr> {
         self.edges_at.by_node.get(node_id).into_iter().flatten()
     }
@@ -98,13 +98,15 @@ impl Graph {
         self.edges.contains(id)
     }
 
-    /// Whether node `id` existed when the batch started and the batch did not
-    /// replace it. Only a stored node's lists are indexed.
+    /// Whether node `id` existed when the batch started and the
+    /// batch did not replace it. Only a stored node's lists are
+    /// indexed.
     pub fn is_stored_node(&self, id: &str) -> bool {
-        self.nodes.is_based(id) && !self.nodes.is_pending(id)
+        self.nodes.is_stored(id)
     }
 
-    /// Follow `path` in node `id` ([`field_write::read_through`]). `None` when there is no
+    /// Follow `path` in node `id`
+    /// ([`field_write::read_through`]). `None` when there is no
     /// such node.
     ///
     /// # Errors
@@ -116,22 +118,21 @@ impl Graph {
         path: &[Segment],
         step: impl FnMut(&'g FlowValue, usize, bool) -> Result<Option<&'g FlowValue>>,
     ) -> Result<Option<field_write::ReadThrough<'g>>> {
-        let Some(node) = self.nodes.get(id) else {
+        let Some((node, writes)) = self.nodes.read(id) else {
             return Ok(None);
         };
-        field_write::read_through(node.as_value(), self.fields.node(id), path, step).map(Some)
+        field_write::read_through(node.as_value(), writes, path, step).map(Some)
     }
 
     /// The batch's writes to node `id`, to add one.
-    pub fn writes_mut(&mut self, id: &str) -> &mut field_write::PathWrites {
-        self.fields.node_mut(id)
+    pub fn writes_mut(&mut self, id: &str) -> &mut PathWrites {
+        self.nodes.patch_mut(id)
     }
 
     pub(super) fn drop_pending(&mut self) {
         self.nodes.drop_pending();
         self.edges.drop_pending();
         self.edges_at.by_node.drop_pending();
-        self.fields.drop_pending();
     }
 }
 
@@ -141,23 +142,22 @@ impl GraphRead for Graph {
     }
 
     fn node_value(&self, id: &str, path: &[&str]) -> Option<Cow<'_, FlowValue>> {
-        let node = self.nodes.get(id)?;
-        let writes = self.fields.node(id);
-        if writes.is_none() {
-            // The batch wrote nothing to the node.
-            return path
-                .iter()
-                .try_fold(node.as_value(), |value, key| value.as_object()?.get(key))
-                .map(Cow::Borrowed);
+        let (node, writes) = self.nodes.read(id)?;
+        if let Some(writes) = writes.filter(|writes| !writes.is_empty()) {
+            let path: Vec<Segment> = path.iter().map(|key| Segment::Key((*key).into())).collect();
+            let step = |value, index: usize, _| {
+                Ok(field_write::child(value, &path[..index], &path[index]))
+            };
+            return field_write::read(node.as_value(), Some(writes), &path, step)
+                .expect("a read of object keys cannot fail");
         }
-        let path: Vec<Segment> = path
-            .iter()
-            .map(|key| Segment::Key((*key).to_owned()))
-            .collect();
-        let step =
-            |value, index: usize, _| Ok(field_write::child(value, &path[..index], &path[index]));
-        field_write::read(node.as_value(), self.fields.node(id), &path, step)
-            .expect("a read of object keys cannot fail")
+
+        let mut value = node.as_value();
+        for key in path {
+            let object = value.as_object()?;
+            value = object.get(key)?;
+        }
+        Some(Cow::Borrowed(value))
     }
 
     fn edge(&self, id: &str) -> Option<&FlowObj> {
@@ -169,9 +169,9 @@ impl GraphRead for Graph {
     }
 }
 
-/// The value at `path` of node `id`, with the batch's field writes. A stored
-/// node's list items are found through the list's index. `context` names the
-/// read in an error.
+/// The value at `path` of node `id`, with the batch's field
+/// writes. A stored node's list items are found through the
+/// list's index. `context` names the read in an error.
 ///
 /// # Errors
 ///
@@ -183,7 +183,7 @@ pub(crate) fn field_value<'g>(
     path: &[Segment],
     context: &dyn fmt::Display,
 ) -> Result<Option<Cow<'g, FlowValue>>> {
-    let Some(node) = graph.nodes.get(id) else {
+    let Some((node, writes)) = graph.nodes.read(id) else {
         return Ok(None);
     };
     let stored = graph.is_stored_node(id);
@@ -203,12 +203,14 @@ pub(crate) fn field_value<'g>(
         let item_index = lists.index(id, parent, keyed, items).find(key, context)?;
         Ok(item_index.map(|item_index| &items[item_index]))
     };
-    field_write::read(node.as_value(), graph.fields.node(id), path, step)
+    field_write::read(node.as_value(), writes, path, step)
 }
 
-/// The keyed lists indexed so far, by node and by the path of the list.
+/// The keyed lists indexed so far, by node and by the path of
+/// the list.
 ///
-/// They index stored nodes only, so a batch that fails leaves them right.
+/// They index stored nodes only, so a batch that fails leaves
+/// them right.
 #[derive(Debug, Default)]
 pub(crate) struct Lists {
     pub(super) by_node: HashMap<String, Vec<IndexedList>>,
@@ -223,8 +225,8 @@ pub(crate) struct IndexedList {
 }
 
 impl Lists {
-    /// The index of the list `items` at `path` of a node, built on first use.
-    /// Every part of `path` is an object key.
+    /// The index of the list `items` at `path` of a node, built
+    /// on first use. Every part of `path` is an object key.
     pub fn index<T: AsKey>(
         &mut self,
         node_id: &str,
@@ -254,8 +256,8 @@ impl Lists {
         &mut lists[position].index
     }
 
-    /// The index of the list at `path` of a node, if one is built. A path
-    /// that names a list item has none.
+    /// The index of the list at `path` of a node, if one is
+    /// built. A path that names a list item has none.
     pub fn built<T: AsKey>(&mut self, node_id: &str, path: &[T]) -> Option<&mut ListIndex> {
         self.by_node
             .get_mut(node_id)?
@@ -264,8 +266,8 @@ impl Lists {
             .map(|list| &mut list.index)
     }
 
-    /// Forget the indexes of the lists at or below `parent` plus `key`.
-    /// A `parent` that names a list item has none.
+    /// Forget the indexes of the lists at or below `parent`
+    /// plus `key`. A `parent` that names a list item has none.
     pub fn forget_under<T: AsKey>(&mut self, node_id: &str, parent: &[T], key: &str) {
         if let Some(lists) = self.by_node.get_mut(node_id) {
             lists.retain(|list| {

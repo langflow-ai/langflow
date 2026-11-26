@@ -1,13 +1,15 @@
 //! Langflow's flow operation engine.
 //!
-//! Operations add, update or delete the nodes and edges of a flow's `data`.
-//! Apply checks every rule on a new batch. Replay runs stored operations
-//! with no rule. A path names a list item by its key, never by its index.
+//! Operations add, update or delete the nodes and edges of a
+//! flow's `data`. Apply checks every rule on a new batch.
+//! Replay runs stored operations with no rule. A path names a
+//! list item by its key, never by its index.
 //!
 //! Each folder imports only from the folders before it: `map`,
-//! `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`,
-//! `rule`, `validate`, `snapshot`, `state`, `op`, then `bindings`, which the
-//! `bindings` feature turns on for the bindings.
+//! `json`, `flow`, `compare`, `node_input`, `violation`,
+//! `invariant`, `rule`, `validate`, `snapshot`, `state`, `op`,
+//! then `bindings`, which the `bindings` feature turns on for
+//! the bindings.
 
 #[cfg(feature = "bindings")]
 pub mod bindings;
@@ -21,6 +23,7 @@ mod op;
 mod rule;
 mod snapshot;
 mod state;
+pub mod types;
 pub mod validate;
 mod violation;
 

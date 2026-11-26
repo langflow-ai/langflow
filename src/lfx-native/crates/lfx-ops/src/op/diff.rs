@@ -1,23 +1,27 @@
 //! Deriving operations from two whole flow graphs.
 //!
-//! [`diff_flow_data`] gives the operations a client would send for a
-//! whole-flow save. [`derive_flow_operations`] replays them and requires the
-//! result to equal the target. A mismatch is a bug, and the save fails.
+//! [`diff_flow_data`] gives the operations a client would send
+//! for a whole-flow save. [`derive_flow_operations`] replays
+//! them and requires the result to equal the target. A mismatch
+//! is a bug, and the save fails.
 //!
 //! The result has this shape:
 //!
-//! - at most one operation of each type, in the order `delete_edges`,
-//!   `delete_nodes`, `add_nodes`, `update_nodes`, `add_edges`. Deletions keep
-//!   the base order, and the rest keep the target order;
-//! - nodes, edges and table rows match by id. Array order is never a change;
-//! - inside a node, an object is diffed key by key, so a write holds only
-//!   what changed. Any other value that changed is written whole;
-//! - a keyed list is written per item and per key inside an item. A move is a
-//!   write to `__pos__`. A list without a unique key and a position on every
-//!   item is written whole;
+//! - at most one operation of each type, in the order
+//!   `delete_edges`, `delete_nodes`, `add_nodes`,
+//!   `update_nodes`, `add_edges`. Deletions keep the base
+//!   order, and the rest keep the target order;
+//! - nodes, edges and table rows match by id. Array order is
+//!   never a change;
+//! - inside a node, an object is diffed key by key, so a write
+//!   holds only what changed. Any other value that changed is
+//!   written whole;
+//! - a keyed list is written per item and per key inside an
+//!   item. A move is a write to `__pos__`. A list without a
+//!   unique key and a position on every item is written whole;
 //! - a changed edge is deleted and added again;
-//! - view state is never recorded. Example: a change to a node's `selected`
-//!   is not a change.
+//! - view state is never recorded. Example: a change to a
+//!   node's `selected` is not a change.
 
 use std::borrow::Cow;
 
@@ -37,7 +41,8 @@ use crate::state::plain::GraphPlain;
 use crate::validate::{Numbers, validate_flow_data};
 use crate::violation::error::{Error, ErrorCode, ErrorKind, Result};
 
-/// Operations that turn one graph into another, verified by replay.
+/// Operations that turn one graph into another, verified by
+/// replay.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Derived {
     /// The operations, as the engine records them.
@@ -48,8 +53,8 @@ pub struct Derived {
 
 /// The ordered operations that turn `base` into `target`.
 ///
-/// It checks `base` structurally and `target` fully, so a broken target
-/// fails here and not as a replay mismatch.
+/// It checks `base` structurally and `target` fully, so a
+/// broken target fails here and not as a replay mismatch.
 ///
 /// # Errors
 ///
@@ -60,8 +65,9 @@ pub fn diff_flow_data(base: &FlowValue, target: &FlowValue) -> Result<Vec<Operat
     diff_proving(base, target, None)
 }
 
-/// [`diff_flow_data`] for graphs that passed its checks, recording in
-/// `known_equal` each base node it finds equal to its target node.
+/// [`diff_flow_data`] for graphs that passed its checks,
+/// recording in `known_equal` each base node it finds equal to
+/// its target node.
 fn diff_proving(
     base: &FlowValue,
     target: &FlowValue,
@@ -101,8 +107,9 @@ fn diff_proving(
     let mut node_updates = Vec::new();
     for (id, node) in &target_nodes {
         if let Some(before) = base_nodes.get(id) {
-            // Skip the diff of an equal node: most nodes of a save are
-            // unchanged. The diff cannot fail on an equal node.
+            // Skip the diff of an equal node: most nodes of a
+            // save are unchanged. The diff cannot fail on an
+            // equal node.
             if before == node {
                 if let Some(known_equal) = known_equal.as_deref_mut() {
                     known_equal.insert(
@@ -144,8 +151,8 @@ fn gone(
         .collect()
 }
 
-/// The nodes or edges of `target` that `base` lacks or `replaced` names, without
-/// their view state.
+/// The nodes or edges of `target` that `base` lacks or
+/// `replaced` names, without their view state.
 fn added<T: TryFrom<FlowObj, Error = DeserializeError>>(
     root: &str,
     base: &IndexMap<&str, &FlowObj>,
@@ -163,19 +170,21 @@ fn added<T: TryFrom<FlowObj, Error = DeserializeError>>(
         .collect()
 }
 
-/// Diff two graphs, and return the forward operations with the replayed graph.
+/// Diff two graphs, and return the forward operations with the
+/// replayed graph.
 ///
 /// # Errors
 ///
-/// A graph breaks the rules, or the operations do not replay to `target`.
+/// A graph breaks the rules, or the operations do not replay to
+/// `target`.
 pub fn derive_flow_operations(base: FlowValue, target: &FlowValue) -> Result<Derived> {
     validate_flow_data(&base, Numbers::Skip, "flow.data", None)?;
     validate_flow_data(target, Numbers::Check, "target flow.data", None)?;
     derive_checked(base, target)
 }
 
-/// [`derive_flow_operations`] for graphs that have passed its checks: `base`
-/// structurally, and `target` fully.
+/// [`derive_flow_operations`] for graphs that have passed its
+/// checks: `base` structurally, and `target` fully.
 fn derive_checked(base: FlowValue, target: &FlowValue) -> Result<Derived> {
     let mut known_equal = KnownEqual::default();
     let operations = diff_proving(&base, target, Some(&mut known_equal))?;
@@ -198,7 +207,8 @@ fn derive_checked(base: FlowValue, target: &FlowValue) -> Result<Derived> {
     })
 }
 
-/// A validated graph's nodes or edges, by id, in the graph's order.
+/// A validated graph's nodes or edges, by id, in the graph's
+/// order.
 fn by_id<'g>(graph: &'g FlowValue, key: &str) -> IndexMap<&'g str, &'g FlowObj> {
     graph
         .get(key)
@@ -217,7 +227,7 @@ fn without(map: &FlowObj, hidden: impl Fn(&str) -> bool) -> FlowObj {
         .collect()
 }
 
-// --- Nodes ---------------------------------------------------------------------------
+// --- Nodes ---------------------------------------------------
 
 /// The writes that turn one node into another.
 #[derive(Debug)]
@@ -227,7 +237,8 @@ struct NodeDiff<'a> {
 }
 
 impl NodeDiff<'_> {
-    /// Record a `set_field`. The caller passes its own copy of the path.
+    /// Record a `set_field`. The caller passes its own copy of
+    /// the path.
     fn set(&mut self, path: Path, value: &FlowValue) -> Result<()> {
         let path = NodePath::try_from(path)?;
         self.updates
@@ -235,14 +246,16 @@ impl NodeDiff<'_> {
         Ok(())
     }
 
-    /// Record a `delete_field`, with its own copy of the path like [`Self::set`].
+    /// Record a `delete_field`, with its own copy of the path
+    /// like [`Self::set`].
     fn delete(&mut self, path: Path) -> Result<()> {
         let path = NodePath::try_from(path)?;
         self.updates.push(FieldUpdate::delete(self.id, path));
         Ok(())
     }
 
-    /// The keys the diff never writes, besides a node's identity: view state.
+    /// The keys the diff never writes, besides a node's
+    /// identity: view state.
     fn skipped(path: &[Segment], key: &str) -> bool {
         if path.is_empty() {
             key == "id" || FLOW_MODEL.node_view_state.contains(key)
@@ -257,14 +270,14 @@ impl NodeDiff<'_> {
         }
     }
 
-    /// Diff two objects key by key. Each step pushes its segment onto `path`
-    /// and pops it when done.
+    /// Diff two objects key by key. Each step pushes its
+    /// segment onto `path` and pops it when done.
     fn object(&mut self, base: &FlowObj, target: &FlowObj, path: &mut Path) -> Result<()> {
         for (key, value) in target {
             if Self::skipped(path, key) {
                 continue;
             }
-            path.push(Segment::Key(key.to_string()));
+            path.push(Segment::Key(key.clone()));
             match base.get(key) {
                 None => self.set(path.clone(), value)?,
                 Some(previous) => self.value(previous, value, target, path)?,
@@ -273,7 +286,7 @@ impl NodeDiff<'_> {
         }
         for key in base.keys() {
             if !target.contains_key(key) && !Self::skipped(path, key) {
-                path.push(Segment::Key(key.to_string()));
+                path.push(Segment::Key(key.clone()));
                 self.delete(path.clone())?;
                 path.pop();
             }
@@ -281,9 +294,10 @@ impl NodeDiff<'_> {
         Ok(())
     }
 
-    /// Diff the value at `path`. `parent` is the target object that holds it.
-    /// An object is diffed key by key, and a keyed list item by item. Any
-    /// other value that changed is written whole.
+    /// Diff the value at `path`. `parent` is the target object
+    /// that holds it. An object is diffed key by key, and a
+    /// keyed list item by item. Any other value that changed is
+    /// written whole.
     fn value(
         &mut self,
         base: &FlowValue,
@@ -317,15 +331,16 @@ impl NodeDiff<'_> {
     }
 }
 
-/// One write the keyed-list diff found, before the node diff records it.
+/// One write the keyed-list diff found, before the node diff
+/// records it.
 #[derive(Debug)]
 enum Write<'v> {
     Set { path: Path, value: &'v FlowValue },
     Delete { path: Path },
 }
 
-/// Diff a keyed list item by item. Returns false when it has to be written whole.
-/// `path` names the list.
+/// Diff a keyed list item by item. Returns false when it has to
+/// be written whole. `path` names the list.
 fn keyed_list<'v>(
     keyed: &KeyedList,
     base: &'v FlowValue,
@@ -339,7 +354,7 @@ fn keyed_list<'v>(
         return Ok(false);
     };
     for (key, item) in &target_items {
-        path.push(Segment::Item((*key).to_owned()));
+        path.push(Segment::Item((*key).into()));
         match base_items.get(key) {
             None => writes.push(Write::Set {
                 path: path.clone(),
@@ -355,7 +370,7 @@ fn keyed_list<'v>(
     }
     for key in base_items.keys() {
         if !target_items.contains_key(key) {
-            path.push(Segment::Item((*key).to_owned()));
+            path.push(Segment::Item((*key).into()));
             writes.push(Write::Delete { path: path.clone() });
             path.pop();
         }
@@ -363,8 +378,8 @@ fn keyed_list<'v>(
     Ok(true)
 }
 
-/// The writes that turn one keyed-list item into another, key by key.
-/// `path` names the item.
+/// The writes that turn one keyed-list item into another, key
+/// by key. `path` names the item.
 fn item_writes<'v>(
     target: &'v FlowObj,
     base: &'v FlowObj,
@@ -378,7 +393,7 @@ fn item_writes<'v>(
             None => false,
         };
         if !unchanged {
-            path.push(Segment::Key(key.to_string()));
+            path.push(Segment::Key(key.clone()));
             writes.push(Write::Set {
                 path: path.clone(),
                 value,
@@ -388,7 +403,7 @@ fn item_writes<'v>(
     }
     for key in base.keys() {
         if !target.contains_key(key) {
-            path.push(Segment::Key(key.to_string()));
+            path.push(Segment::Key(key.clone()));
             writes.push(Write::Delete { path: path.clone() });
             path.pop();
         }
@@ -396,8 +411,9 @@ fn item_writes<'v>(
     Ok(())
 }
 
-/// A list by item key, or `None` when an item has no unique key or no
-/// numeric position. Writing such a legacy list whole brings it within the rules.
+/// A list by item key, or `None` when an item has no unique key
+/// or no numeric position. Writing such a legacy list whole
+/// brings it within the rules.
 fn items_by_key<'v>(
     keyed: &KeyedList,
     items: &'v FlowValue,
@@ -421,12 +437,13 @@ fn items_by_key<'v>(
 }
 
 impl GraphPlain {
-    /// The operations that turn this graph into `target`, checked by replay.
-    /// See [`derive_flow_operations`].
+    /// The operations that turn this graph into `target`,
+    /// checked by replay. See [`derive_flow_operations`].
     ///
     /// # Errors
     ///
-    /// A graph breaks the rules, or the operations do not replay to `target`.
+    /// A graph breaks the rules, or the operations do not
+    /// replay to `target`.
     pub fn ops_diff(&self, target: &Self) -> Result<Derived> {
         self.require(Numbers::Skip, "flow.data")?;
         target.require(Numbers::Check, "target flow.data")?;

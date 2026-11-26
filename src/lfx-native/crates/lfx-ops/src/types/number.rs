@@ -4,9 +4,10 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::str::FromStr;
 
-use crate::json::FlowValue;
+use super::FlowValue;
 
-/// A JSON number: an integer or a double, or the text of one that neither holds exactly.
+/// A JSON number: an integer or a double, or the text of one
+/// that neither holds exactly.
 #[derive(Debug, Clone, PartialEq)]
 pub struct Number(pub(crate) N);
 
@@ -16,10 +17,11 @@ pub(crate) enum N {
     PosInt(u64),
     /// A negative integer from `i64::MIN`.
     NegInt(i64),
-    /// A finite double, from text with a fraction or an exponent.
+    /// A finite double, from text with a fraction or an
+    /// exponent.
     Float(f64),
-    /// The text of an integer too large for 64 bits, or of a number that is
-    /// infinite as a double.
+    /// The text of an integer too large for 64 bits, or of a
+    /// number that is infinite as a double.
     Text(Box<str>),
 }
 
@@ -30,7 +32,8 @@ impl Number {
         value.is_finite().then_some(Number(N::Float(value)))
     }
 
-    /// The number as an `i64`, when it is an integer that one holds.
+    /// The number as an `i64`, when it is an integer that one
+    /// holds.
     #[must_use]
     pub fn as_i64(&self) -> Option<i64> {
         match self.0 {
@@ -40,7 +43,8 @@ impl Number {
         }
     }
 
-    /// The number as a `u64`, when it is an integer that one holds.
+    /// The number as a `u64`, when it is an integer that one
+    /// holds.
     #[must_use]
     pub fn as_u64(&self) -> Option<u64> {
         match self.0 {
@@ -49,7 +53,8 @@ impl Number {
         }
     }
 
-    /// The number as a double, `None` only for text that is not a number.
+    /// The number as a double, `None` only for text that is not
+    /// a number.
     #[must_use]
     #[expect(clippy::cast_precision_loss, reason = "a double is what is asked for")]
     pub fn as_f64(&self) -> Option<f64> {
@@ -61,7 +66,8 @@ impl Number {
         }
     }
 
-    /// Whether the text had no fraction and no exponent, as a Python `int`.
+    /// Whether the text had no fraction and no exponent, as a
+    /// Python `int`.
     #[must_use]
     pub fn is_integer(&self) -> bool {
         match &self.0 {
@@ -71,7 +77,8 @@ impl Number {
         }
     }
 
-    /// The number as an integer, when it is one that 128 bits hold.
+    /// The number as an integer, when it is one that 128 bits
+    /// hold.
     #[must_use]
     pub fn as_i128(&self) -> Option<i128> {
         match &self.0 {
@@ -98,7 +105,8 @@ impl From<u64> for Number {
     }
 }
 
-/// `From` each narrower integer type for [`Number`], through the 64-bit type that holds it.
+/// `From` each narrower integer type for [`Number`], through
+/// the 64-bit type that holds it.
 macro_rules! number_from {
     ($($int:ty => $wide:ty),*) => {$(
         impl From<$int> for Number {
@@ -116,8 +124,9 @@ number_from!(i32 => i64, u32 => u64, usize => u64);
 #[error("not a JSON number")]
 pub struct NotANumber;
 
-/// A number from its JSON text: an integer that 64 bits hold, a finite double
-/// from text with a fraction or an exponent, or else the text.
+/// A number from its JSON text: an integer that 64 bits hold, a
+/// finite double from text with a fraction or an exponent, or
+/// else the text.
 impl FromStr for Number {
     type Err = NotANumber;
     fn from_str(text: &str) -> Result<Self, NotANumber> {
@@ -176,8 +185,9 @@ fn is_json_number(text: &str) -> bool {
     at == bytes.len()
 }
 
-/// The number's JSON text: integers in full, doubles in the shortest form that
-/// reads back as the same double (`1.0`, `1e+300`), and text as it is.
+/// The number's JSON text: integers in full, doubles in the
+/// shortest form that reads back as the same double (`1.0`,
+/// `1e+300`), and text as it is.
 impl fmt::Display for Number {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self.0 {
@@ -189,27 +199,30 @@ impl fmt::Display for Number {
     }
 }
 
-// --- Numbers as JavaScript reads them ----------------------------------------------------------
+// --- Numbers as JavaScript reads them ------------------------
 
-/// A number JavaScript cannot hold: NaN, Infinity, or an integer too large
-/// for a double.
+/// A number JavaScript cannot hold: NaN, Infinity, or an
+/// integer too large for a double.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 #[error("NaN, Infinity and integers too large for a double are not valid JSON numbers")]
 pub struct NonFinite;
 
-/// A number as the double JavaScript reads it. Too large a number is infinite.
+/// A number as the double JavaScript reads it. Too large a
+/// number is infinite.
 #[must_use]
 pub fn as_double(number: &Number) -> f64 {
     number.as_f64().unwrap_or(f64::NAN)
 }
 
-/// Whether a number is finite as the double JavaScript reads it.
+/// Whether a number is finite as the double JavaScript reads
+/// it.
 #[must_use]
 pub fn is_finite_number(number: &Number) -> bool {
     as_double(number).is_finite()
 }
 
-/// Whether a value is a valid table row position: a finite number.
+/// Whether a value is a valid table row position: a finite
+/// number.
 #[must_use]
 pub fn is_row_position(value: &FlowValue) -> bool {
     matches!(value, FlowValue::Number(number) if is_finite_number(number))
@@ -224,10 +237,12 @@ pub(crate) fn finite_double(number: &Number) -> Result<f64, NonFinite> {
     }
 }
 
-/// Order strings by UTF-16 code units, the order JavaScript's default sort uses.
+/// Order strings by UTF-16 code units, the order JavaScript's
+/// default sort uses.
 ///
-/// UTF-8 bytes give the same order when the first bytes that differ are below
-/// 0xEE. Above that, a surrogate pair can sort before U+E000 to U+FFFF.
+/// UTF-8 bytes give the same order when the first bytes that
+/// differ are below 0xEE. Above that, a surrogate pair can sort
+/// before U+E000 to U+FFFF.
 #[must_use]
 pub fn utf16_cmp(left: &str, right: &str) -> Ordering {
     let left_bytes = left.as_bytes();

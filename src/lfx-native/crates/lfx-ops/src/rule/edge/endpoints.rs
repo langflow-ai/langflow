@@ -1,5 +1,5 @@
-//! The endpoints that a field write removes from a node: template fields
-//! and outputs. The edges there go with them.
+//! The endpoints that a field write removes from a node:
+//! template fields and outputs. The edges there go with them.
 
 use std::borrow::Cow;
 
@@ -16,13 +16,15 @@ use super::outputs::index_outputs;
 struct Holder {
     /// The path of the holder in a node.
     path: &'static [&'static str],
-    /// Whether the holder is a keyed list rather than an object.
+    /// Whether the holder is a keyed list rather than an
+    /// object.
     keyed: bool,
     /// The endpoint an entry of the holder is.
     endpoint: fn(String) -> Endpoint,
 }
 
-/// The template holds a node's fields, and the outputs list its outputs.
+/// The template holds a node's fields, and the outputs list its
+/// outputs.
 const HOLDERS: [Holder; 2] = [
     Holder {
         path: &TEMPLATE_PATH,
@@ -36,22 +38,26 @@ const HOLDERS: [Holder; 2] = [
     },
 ];
 
-/// Whether [`removed_endpoints`] needs the old value at `path`: a write there
-/// can remove a field or an output that an edge ends at.
+/// Whether [`removed_endpoints`] needs the old value at `path`:
+/// a write there can remove a field or an output that an edge
+/// ends at.
 pub(crate) fn reads_before(path: &[Segment]) -> bool {
     HOLDERS
         .iter()
         .any(|holder| path.len() <= holder.path.len() && path.shares_start(holder.path))
 }
 
-/// The endpoints that a write at `path` of node `node_id` removed.
+/// The endpoints that a write at `path` of node `node_id`
+/// removed.
 ///
-/// `before` is the old value at `path`, needed only when [`reads_before`] is true.
-/// `after(keys)` reads the node after the write.
+/// `before` is the old value at `path`, needed only when
+/// [`reads_before`] is true. `after(keys)` reads the node after
+/// the write.
 ///
 /// # Errors
 ///
-/// An outputs list, before or after the write, breaks the keyed-list rules.
+/// An outputs list, before or after the write, breaks the
+/// keyed-list rules.
 pub(crate) fn removed_endpoints<'a>(
     path: &[Segment],
     is_delete: bool,
@@ -70,7 +76,7 @@ pub(crate) fn removed_endpoints<'a>(
                 Segment::Key(key) if !holder.keyed => key,
                 _ => continue,
             };
-            removed.push((holder.endpoint)(name.clone()));
+            removed.push((holder.endpoint)(name.to_string()));
         } else if path.len() <= holder.path.len() && path.shares_start(holder.path) {
             let before = before.expect("a write that reads before passes what it replaced");
             let held = holder.names(at_keys(before, &holder.path[path.len()..]), node_id)?;
@@ -86,7 +92,8 @@ pub(crate) fn removed_endpoints<'a>(
 }
 
 impl Holder {
-    /// The endpoint names in `held`: the output names, or the template keys.
+    /// The endpoint names in `held`: the output names, or the
+    /// template keys.
     fn names(&self, held: Option<&FlowValue>, node_id: &str) -> Result<Vec<String>> {
         let Some(held) = held else {
             return Ok(Vec::new());

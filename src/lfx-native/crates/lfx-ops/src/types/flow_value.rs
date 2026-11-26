@@ -1,16 +1,15 @@
 //! [`FlowValue`]: a JSON value as the engine holds it.
 //!
-//! - An object ([`FlowObj`]) keeps insertion order. Copies share it until a
-//!   write.
-//! - Text of up to 24 bytes is inline. One input shares each long string.
-//! - A number ([`Number`]) keeps `1` and `1.0` apart, as Python does. Example:
-//!   `1e2` and `100.0` are the same number.
+//! - An object ([`FlowObj`]) keeps insertion order. Copies
+//!   share it until a write.
+//! - Text of up to 24 bytes is inline. One input shares each
+//!   long string.
+//! - A number ([`Number`]) keeps `1` and `1.0` apart, as Python
+//!   does. Example: `1e2` and `100.0` are the same number.
 
-use crate::json::serialize::{self, Ascii};
-use std::fmt;
 use std::ops::{Index, IndexMut};
 
-use crate::json::{FlowObj, FlowStr, Number};
+use super::{FlowObj, FlowStr, Number};
 
 /// A JSON value.
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -92,13 +91,15 @@ impl FlowValue {
         }
     }
 
-    /// The number as an `i64`, when it is an integer that one holds.
+    /// The number as an `i64`, when it is an integer that one
+    /// holds.
     #[must_use]
     pub fn as_i64(&self) -> Option<i64> {
         self.as_number().and_then(Number::as_i64)
     }
 
-    /// The number as a `u64`, when it is an integer that one holds.
+    /// The number as a `u64`, when it is an integer that one
+    /// holds.
     #[must_use]
     pub fn as_u64(&self) -> Option<u64> {
         self.as_number().and_then(Number::as_u64)
@@ -119,7 +120,8 @@ impl FlowValue {
         }
     }
 
-    /// The array's items, when the value is an array, to change them in place.
+    /// The array's items, when the value is an array, to change
+    /// them in place.
     pub fn as_array_mut(&mut self) -> Option<&mut [FlowValue]> {
         match self {
             FlowValue::Array(items) => Some(items),
@@ -127,7 +129,8 @@ impl FlowValue {
         }
     }
 
-    /// The array, when the value is one, to add or remove items.
+    /// The array, when the value is one, to add or remove
+    /// items.
     pub fn as_vec_mut(&mut self) -> Option<&mut Vec<FlowValue>> {
         match self {
             FlowValue::Array(items) => Some(items),
@@ -153,16 +156,9 @@ impl FlowValue {
     }
 }
 
-/// The JSON text of a value, compact, with its characters above U+007F as they are.
-impl fmt::Display for FlowValue {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut out = Vec::new();
-        serialize::write_value(&mut out, self, Ascii::Keep);
-        f.write_str(&serialize::into_string(out))
-    }
-}
-
-/// A value equals a string when it holds that string.
+/// The JSON text of a value, compact, with its characters above
+/// U+007F as they are. A value equals a string when it holds
+/// that string.
 impl PartialEq<&str> for FlowValue {
     fn eq(&self, other: &&str) -> bool {
         self.as_str() == Some(*other)
@@ -175,15 +171,17 @@ impl PartialEq<FlowValue> for &str {
     }
 }
 
-// --- Indexing --------------------------------------------------------------------------------
+// --- Indexing ------------------------------------------------
 
-/// What indexes a value: a key of an object, or an index of an array.
+/// What indexes a value: a key of an object, or an index of an
+/// array.
 pub trait FlowValueIndex {
     /// The value at this index of `value`.
     fn index_into<'v>(&self, value: &'v FlowValue) -> Option<&'v FlowValue>;
     /// The value at this index of `value`, to change it.
     fn index_into_mut<'v>(&self, value: &'v mut FlowValue) -> Option<&'v mut FlowValue>;
-    /// The value at this index, made when it is missing, as `value[index] = ...` needs.
+    /// The value at this index, made when it is missing, as
+    /// `value[index] = ...` needs.
     fn index_or_insert<'v>(&self, value: &'v mut FlowValue) -> &'v mut FlowValue;
 }
 
@@ -194,7 +192,8 @@ impl FlowValueIndex for str {
     fn index_into_mut<'v>(&self, value: &'v mut FlowValue) -> Option<&'v mut FlowValue> {
         value.as_object_mut()?.get_mut(self)
     }
-    /// `null` becomes an empty object, and a missing key is added as `null`.
+    /// `null` becomes an empty object, and a missing key is
+    /// added as `null`.
     fn index_or_insert<'v>(&self, value: &'v mut FlowValue) -> &'v mut FlowValue {
         if value.is_null() {
             *value = FlowValue::Object(FlowObj::new());
@@ -269,16 +268,18 @@ impl<I: FlowValueIndex> Index<I> for FlowValue {
     }
 }
 
-/// `value[key] = ...`: adds a missing key, and makes `null` an empty object first.
+/// `value[key] = ...`: adds a missing key, and makes `null` an
+/// empty object first.
 impl<I: FlowValueIndex> IndexMut<I> for FlowValue {
     fn index_mut(&mut self, index: I) -> &mut FlowValue {
         index.index_or_insert(self)
     }
 }
 
-// --- Conversions -----------------------------------------------------------------------------
+// --- Conversions ---------------------------------------------
 
-/// `From` each listed type for [`FlowValue`], converted into the variant that holds it.
+/// `From` each listed type for [`FlowValue`], converted into
+/// the variant that holds it.
 macro_rules! value_from {
     ($($variant:ident: $($from:ty),+;)*) => {$($(
         impl From<$from> for FlowValue {
@@ -306,7 +307,8 @@ impl From<bool> for FlowValue {
     }
 }
 
-/// A copy of the value. Copies share their objects and long strings.
+/// A copy of the value. Copies share their objects and long
+/// strings.
 impl From<&FlowValue> for FlowValue {
     fn from(value: &FlowValue) -> Self {
         value.clone()
@@ -377,7 +379,8 @@ macro_rules! flow_value_tokens {
         $crate::flow_value_tokens!(@array [$($items,)*] $($rest)*)
     };
 
-    // An object: read a key up to its colon, then a value up to its comma.
+    // An object: read a key up to its colon, then a value up to
+    // its comma.
     (@object $object:ident () () ()) => {};
     (@object $object:ident [$($key:tt)+] ($value:expr) , $($rest:tt)*) => {
         let _ = $object.insert(::std::string::String::from($($key)+), $value);
@@ -412,32 +415,32 @@ macro_rules! flow_value_tokens {
     };
 
     (null) => {
-        $crate::json::FlowValue::Null
+        $crate::types::FlowValue::Null
     };
     (true) => {
-        $crate::json::FlowValue::Bool(true)
+        $crate::types::FlowValue::Bool(true)
     };
     (false) => {
-        $crate::json::FlowValue::Bool(false)
+        $crate::types::FlowValue::Bool(false)
     };
     ([]) => {
-        $crate::json::FlowValue::Array(::std::vec::Vec::new())
+        $crate::types::FlowValue::Array(::std::vec::Vec::new())
     };
     ([ $($tt:tt)+ ]) => {
-        $crate::json::FlowValue::Array($crate::flow_value_tokens!(@array [] $($tt)+))
+        $crate::types::FlowValue::Array($crate::flow_value_tokens!(@array [] $($tt)+))
     };
     ({}) => {
-        $crate::json::FlowValue::Object($crate::json::FlowObj::new())
+        $crate::types::FlowValue::Object($crate::types::FlowObj::new())
     };
     ({ $($tt:tt)+ }) => {
-        $crate::json::FlowValue::Object({
-            let mut object = $crate::json::FlowObj::new();
+        $crate::types::FlowValue::Object({
+            let mut object = $crate::types::FlowObj::new();
             $crate::flow_value_tokens!(@object object () ($($tt)+) ($($tt)+));
             object
         })
     };
     ($other:expr) => {
-        $crate::json::FlowValue::from($other)
+        $crate::types::FlowValue::from($other)
     };
 }
 

@@ -1,56 +1,34 @@
-//! [`GraphSnapshot`]: the committed graph, to read and write as text on another thread.
-
-pub(crate) mod list;
+//! [`GraphSnapshot`]: the committed graph, to read and write as
+//! text on another thread.
+//!
+//! Taking a snapshot copies references to node and edge JSON
+//! objects.
+//!
+//! The server can use a snapshot to send the graph to a user
+//! who opens the flow or to save the graph to the database.
+//! Both happen less often than graph edits.
+//!
+//! A persistent segment tree can take a snapshot in `O(1)`
+//! by sharing its root. The tree adds
+//! `O(log n)` work for each changed node or edge. A flat map
+//! updates an entry in expected `O(1)` time and takes `O(n)` to
+//! copy `n` entries for a snapshot.
 
 use std::borrow::Cow;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+use crate::flow::{edge::Edge, node::Node};
+use crate::json::FlowObj;
 use crate::json::serialize::{self, Ascii};
-use crate::json::{FlowObj, FlowValue};
-use crate::map::pending::{PendingMap, Write};
 
 use crate::compare;
 use crate::violation::error::Result;
 
-/// The committed nodes or edges, one per position of the map ([`OrderedMap`](crate::map::ordered::OrderedMap)): `None` where one was removed.
-pub(crate) type SnapshotObjects = list::SnapshotList<Option<FlowObj>>;
-
-/// Commit the batch's pending changes to `entries`, and keep the snapshot list in step.
-pub(crate) fn commit_with_snapshot<V: Clone>(
-    entries: &mut PendingMap<V>,
-    mirror: &mut SnapshotObjects,
-    released: &mut Vec<V>,
-    object: impl Fn(&V) -> &FlowObj,
-) {
-    for (id, written) in entries.writes() {
-        match (written, entries.base().get_index_of(id)) {
-            (Write::Set(value), Some(position)) => {
-                mirror.set(position, Some(object(value).clone()));
-            }
-            (Write::Set(value), None) => mirror.push_back(Some(object(value).clone())),
-            (Write::Delete, Some(position)) => mirror.set(position, None),
-            (Write::Delete, None) => {}
-        }
-    }
-    if entries.commit_into(released) {
-        *mirror = snapshot_objects_of(entries, object);
-    }
-}
-
-/// The snapshot list of `entries`, with no removed positions: after a load, or after the map packs.
-pub(crate) fn snapshot_objects_of<V>(
-    entries: &PendingMap<V>,
-    object: impl Fn(&V) -> &FlowObj,
-) -> SnapshotObjects {
-    entries
-        .values()
-        .map(|value| Some(object(value).clone()))
-        .collect()
-}
-
-/// A read-only graph from [`GraphState::snapshot`](crate::GraphState::snapshot). Later batches do not
-/// change it, so another thread can write and hash it.
+/// A read-only graph from
+/// [`GraphState::snapshot`](crate::GraphState::snapshot). Later
+/// batches do not change it, so another thread can write and
+/// hash it.
 #[derive(Debug, Clone)]
 pub struct GraphSnapshot {
     pub(crate) data: Arc<SnapshotData>,
@@ -58,17 +36,19 @@ pub struct GraphSnapshot {
 
 #[derive(Debug)]
 pub(crate) struct SnapshotData {
-    /// The flow's top-level object; `nodes` and `edges` hold placeholders.
+    /// The flow's top-level object; `nodes` and `edges` hold
+    /// placeholders.
     pub(crate) root: FlowObj,
-    // SnapshotList hold shared objects, not node values, to avoid a copy per node.
-    pub(crate) nodes: SnapshotObjects,
-    pub(crate) edges: SnapshotObjects,
-    /// The length of the state's last JSON text, shared with the state.
+    pub(crate) nodes: Vec<Node>,
+    pub(crate) edges: Vec<Edge>,
+    /// The length of the state's last JSON text, shared with
+    /// the state.
     pub(crate) text_len: Arc<AtomicUsize>,
 }
 
 impl GraphSnapshot {
-    /// The data, when this is its last owner, to drop on another thread.
+    /// The data, when this is its last owner, to drop on
+    /// another thread.
     #[must_use]
     pub fn into_unshared_data(self) -> Option<impl Send + 'static> {
         Arc::into_inner(self.data)
@@ -80,7 +60,8 @@ impl GraphSnapshot {
         self.data.nodes.len() + self.data.edges.len()
     }
 
-    /// [`GraphState::to_json`](crate::GraphState::to_json) at the time of the snapshot.
+    /// [`GraphState::to_json`](crate::GraphState::to_json) at
+    /// the time of the snapshot.
     #[must_use]
     pub fn to_json(&self) -> String {
         let data = &self.data;
@@ -88,38 +69,34 @@ impl GraphSnapshot {
             write_graph(
                 out,
                 &data.root,
-                data.nodes.iter().flatten(),
-                data.edges.iter().flatten(),
+                data.nodes.iter().map(Node::as_map),
+                data.edges.iter().map(Edge::as_map),
                 |out, node| serialize::write_map(out, node, Ascii::Escape),
             );
         })
     }
 
-    /// [`GraphState::graph_hash`](crate::GraphState::graph_hash) at the time of the snapshot.
-    ///
-    /// # Panics
-    ///
-    /// A snapshot row invariant is broken.
+    /// The [graph hash](crate::GraphState::graph_hash) at the
+    /// time of the snapshot.
     ///
     /// # Errors
     ///
     /// A number that is not finite as JavaScript reads it.
     pub fn graph_hash(&self) -> Result<String> {
-        Ok(compare::loaded_graph_hash(
-            &self.data.root,
-            self.data
-                .nodes
-                .iter()
-                .flatten()
-                .map(|node| Cow::Owned(FlowValue::Object(node.clone())))
-                .collect(),
-            self.data.edges.iter().flatten().collect(),
-        )?)
+        let data = &self.data;
+        let nodes = data
+            .nodes
+            .iter()
+            .map(|node| Cow::Borrowed(node.as_value()))
+            .collect();
+        let edges = data.edges.iter().map(Edge::as_map).collect();
+        Ok(compare::loaded_graph_hash(&data.root, nodes, edges)?)
     }
 }
 
-/// Text written into a buffer pre-sized from `text_len`, which it then
-/// updates. Growing a buffer of megabytes copies it each time.
+/// Text written into a buffer pre-sized from `text_len`, which
+/// it then updates. Growing a buffer of megabytes copies it
+/// each time.
 pub(crate) fn sized_text(text_len: &AtomicUsize, write: impl FnOnce(&mut Vec<u8>)) -> String {
     let last = text_len.load(Ordering::Relaxed);
     let mut out = Vec::with_capacity(last + last / 16);
@@ -128,7 +105,8 @@ pub(crate) fn sized_text(text_len: &AtomicUsize, write: impl FnOnce(&mut Vec<u8>
     serialize::into_string(out)
 }
 
-/// A loaded graph as ASCII JSON text, each node written by `write_node`.
+/// A loaded graph as ASCII JSON text, each node written by
+/// `write_node`.
 pub(crate) fn write_graph<'g, N>(
     out: &mut Vec<u8>,
     root: &FlowObj,

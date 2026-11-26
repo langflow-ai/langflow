@@ -1,12 +1,16 @@
-//! [`FlowObj`]: a JSON object in insertion order. Copies share it until a write.
+//! [`FlowObj`]: a JSON object in insertion order. Copies share
+//! it until a write.
 
-use crate::map::hash::{IndexMap, State};
+use ahash::RandomState as State;
 use std::ops::Index;
 use std::sync::Arc;
 
-use crate::json::{FlowStr, FlowValue};
+use super::{FlowStr, FlowValue};
 
-/// The most keys of a small object. A larger object uses a hash map.
+type IndexMap<K, V> = indexmap::IndexMap<K, V, State>;
+
+/// The most keys of a small object. A larger object uses a hash
+/// map.
 const SMALL_OBJECT_KEYS: usize = 32;
 pub(crate) type Row = (FlowStr, FlowValue);
 /// The keys and values of an object, in insertion order.
@@ -22,7 +26,8 @@ impl Default for Entries {
     }
 }
 
-/// The rows of a small object: moved when unshared, copied otherwise.
+/// The rows of a small object: moved when unshared, copied
+/// otherwise.
 fn take_rows(rows: &mut Arc<[Row]>) -> Vec<Row> {
     match Arc::get_mut(rows) {
         Some(owned) => owned.iter_mut().map(std::mem::take).collect(),
@@ -30,7 +35,8 @@ fn take_rows(rows: &mut Arc<[Row]>) -> Vec<Row> {
     }
 }
 
-/// Whether `rows` fit a small object: few enough, and no key repeated.
+/// Whether `rows` fit a small object: few enough, and no key
+/// repeated.
 pub(crate) fn small_and_unique(rows: &[Row]) -> bool {
     rows.len() <= SMALL_OBJECT_KEYS
         && rows.iter().enumerate().all(|(i, (key, _))| {
@@ -45,7 +51,8 @@ pub(crate) fn entries_of(mut rows: Vec<Row>) -> Entries {
     if small_and_unique(&rows) {
         return Entries::Small(Arc::from(rows));
     }
-    // A repeated key keeps its first position and its last value.
+    // A repeated key keeps its first position and its last
+    // value.
     let mut map = FlowObj::with_capacity(rows.len());
     for (key, value) in rows.drain(..) {
         map.insert_shared(key, value);
@@ -64,14 +71,16 @@ impl Entries {
 
 /// An object whose keys keep insertion order.
 ///
-/// A clone shares the keys and values. A write copies only the objects on its path.
-/// The object is one pointer wide, so an [`FlowValue`] fits in a string's room.
+/// A clone shares the keys and values. A write copies only the
+/// objects on its path. The object is one pointer wide, so an
+/// [`FlowValue`] fits in a string's room.
 #[derive(Debug, Clone, Default)]
 pub struct FlowObj {
     pub(crate) entries: Entries,
 }
 
-/// Two objects are equal when they hold equal keys and values in the same order.
+/// Two objects are equal when they hold equal keys and values
+/// in the same order.
 impl PartialEq for FlowObj {
     fn eq(&self, other: &Self) -> bool {
         (self.entries.ptr() == other.entries.ptr() && self.len() == other.len())
@@ -80,7 +89,8 @@ impl PartialEq for FlowObj {
 }
 
 impl FlowObj {
-    /// The address of the shared keys and values: equal for two copies that share them.
+    /// The address of the shared keys and values: equal for two
+    /// copies that share them.
     #[must_use]
     pub(crate) fn entries_ptr(&self) -> usize {
         self.entries.ptr()
@@ -106,9 +116,10 @@ impl FlowObj {
         Self { entries }
     }
 
-    /// Consume this object. Return its keys and values when it is their only owner,
-    /// so a caller can drop them on a worker. Otherwise return `None`.
-    /// Only the Python binding's drop thread needs it.
+    /// Consume this object. Return its keys and values when it
+    /// is their only owner, so a caller can drop them on a
+    /// worker. Otherwise return `None`. Only the Python
+    /// binding's drop thread needs it.
     #[doc(hidden)]
     #[must_use]
     pub fn into_unshared_entries(self) -> Option<impl Send + 'static> {
@@ -120,8 +131,8 @@ impl FlowObj {
         unique.then_some(entries)
     }
 
-    /// An object of these keys and values. A repeated key keeps its first position
-    /// and its last value.
+    /// An object of these keys and values. A repeated key keeps
+    /// its first position and its last value.
     #[must_use]
     pub fn from_entries(rows: Vec<(FlowStr, FlowValue)>) -> Self {
         Self {
@@ -170,12 +181,14 @@ impl FlowObj {
         self.get(key).is_some()
     }
 
-    /// Insert or replace. A replaced key keeps its place. A new key goes last.
+    /// Insert or replace. A replaced key keeps its place. A new
+    /// key goes last.
     pub fn insert(&mut self, key: String, value: FlowValue) -> Option<FlowValue> {
         self.insert_shared(key.into(), value)
     }
 
-    /// Insert a key whose text can be shared with other objects.
+    /// Insert a key whose text can be shared with other
+    /// objects.
     pub fn insert_shared(&mut self, key: FlowStr, value: FlowValue) -> Option<FlowValue> {
         let v = match &mut self.entries {
             Entries::Small(v) => v,
@@ -260,15 +273,16 @@ impl FlowObj {
     }
 }
 
-/// The iterator of a small object's rows, or of a large object's map.
+/// The iterator of a small object's rows, or of a large
+/// object's map.
 #[derive(Debug, Clone)]
 enum EntryIter<S, I> {
     Small(S),
     Indexed(I),
 }
 
-/// An iterator over an object's keys and values, in insertion order. `$row` turns a
-/// small object's row into the item.
+/// An iterator over an object's keys and values, in insertion
+/// order. `$row` turns a small object's row into the item.
 macro_rules! entries_iter {
     ($(#[$attr:meta])* $name:ident$(<$l:lifetime>)?($small:ty, $indexed:ty) -> $item:ty, $row:expr) => {
         $(#[$attr])*

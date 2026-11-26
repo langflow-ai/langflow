@@ -1,13 +1,15 @@
 //! The Python binding of lfx: the `lfx_native` package.
 //!
-//! A `bytes` argument is UTF-8 JSON text. Any other argument is a JSON value:
-//! `dict`, `list`, `tuple`, `str`, `int`, `float`, `bool` or `None`. A `str` is
-//! a JSON string, never text to parse. Reading Python objects is about 4 times
-//! faster than `json.dumps` and a parse. Building them is about 3 times faster
-//! than writing JSON and `json.loads`.
+//! A `bytes` argument is UTF-8 JSON text. Any other argument is
+//! a JSON value: `dict`, `list`, `tuple`, `str`, `int`,
+//! `float`, `bool` or `None`. A `str` is a JSON string, never
+//! text to parse. Reading Python objects is about 4 times
+//! faster than `json.dumps` and a parse. Building them is about
+//! 3 times faster than writing JSON and `json.loads`.
 //!
-//! An engine error raises [`EngineError`]. Each function calls `lfx_ops::bindings`.
-//! Only large work releases the GIL. See `HELD_VALUES`.
+//! An engine error raises [`EngineError`]. Each function calls
+//! `lfx_ops::bindings`. Only large work releases the GIL. See
+//! `HELD_VALUES`.
 
 use std::collections::HashMap;
 use std::sync::mpsc::{SyncSender, TrySendError, sync_channel};
@@ -50,12 +52,14 @@ fn describe(py: Python<'_>, raised: &PyErr, error: &BindingError) -> PyResult<()
     value.setattr("details", to_python(py, &error.details())?)
 }
 
-// --- Arguments ------------------------------------------------------------------------------
+// --- Arguments -----------------------------------------------
 
-/// The deepest nesting the engine reads: the depth the JSON parser allows.
+/// The deepest nesting the engine reads: the depth the JSON
+/// parser allows.
 const MAX_DEPTH: usize = 127;
 
-/// An argument: JSON text from UTF-8 `bytes`, or a Python value.
+/// An argument: JSON text from UTF-8 `bytes`, or a Python
+/// value.
 fn input<'a>(object: &'a Bound<'_, PyAny>) -> PyResult<Input<'a>> {
     if let Ok(bytes) = object.cast::<PyBytes>() {
         return std::str::from_utf8(bytes.as_bytes())
@@ -72,15 +76,16 @@ fn optional_input<'a>(object: Option<&'a Bound<'_, PyAny>>) -> PyResult<Option<I
         .transpose()
 }
 
-/// A value the JSON parser would refuse: the same engine error as text that
-/// does not parse.
+/// A value the JSON parser would refuse: the same engine error
+/// as text that does not parse.
 fn not_json(object: &Bound<'_, PyAny>, why: &str) -> PyErr {
     let error = Error::graph_message(format!("flow data is not valid JSON: {why}"));
     engine_error(object.py(), error)
 }
 
-/// Read a Python value as JSON, with the limits of the JSON parser. A key that
-/// is not a `str`, or a value of another type, is a `TypeError`.
+/// Read a Python value as JSON, with the limits of the JSON
+/// parser. A key that is not a `str`, or a value of another
+/// type, is a `TypeError`.
 fn read(object: &Bound<'_, PyAny>, depth: usize, strings: &mut StringPool) -> PyResult<FlowValue> {
     if let Ok(string) = object.cast::<PyString>() {
         return Ok(FlowValue::String(strings.intern(text_of(string)?)));
@@ -116,7 +121,8 @@ fn read(object: &Bound<'_, PyAny>, depth: usize, strings: &mut StringPool) -> Py
         if let Ok(int) = object.extract::<i64>() {
             return Ok(FlowValue::Number(int.into()));
         }
-        // An int too large for 64 bits keeps its digits, as JSON text does.
+        // An int too large for 64 bits keeps its digits, as
+        // JSON text does.
         let digits = object.str()?;
         return digits
             .to_str()?
@@ -151,14 +157,15 @@ fn nested(object: &Bound<'_, PyAny>, depth: usize) -> PyResult<()> {
     Ok(())
 }
 
-/// A string's text, refusing a lone surrogate as the JSON parser does.
+/// A string's text, refusing a lone surrogate as the JSON
+/// parser does.
 fn text_of<'a>(string: &'a Bound<'_, PyString>) -> PyResult<&'a str> {
     string
         .to_str()
         .map_err(|_| not_json(string.as_any(), "a string holds a lone surrogate"))
 }
 
-// --- Results --------------------------------------------------------------------------------
+// --- Results -------------------------------------------------
 
 /// A JSON value as Python objects, as `json.loads` builds them.
 fn to_python<'py>(py: Python<'py>, value: &FlowValue) -> PyResult<Bound<'py, PyAny>> {
@@ -167,13 +174,14 @@ fn to_python<'py>(py: Python<'py>, value: &FlowValue) -> PyResult<Bound<'py, PyA
 
 /// Builds Python objects from JSON values, for one result.
 ///
-/// All dicts with the same key share one Python `str`, as `json.loads` does.
-/// A flow repeats a few keys thousands of times, so this saves allocations,
-/// hashing and memory.
+/// All dicts with the same key share one Python `str`, as
+/// `json.loads` does. A flow repeats a few keys thousands of
+/// times, so this saves allocations, hashing and memory.
 struct Builder<'py, 'v> {
     py: Python<'py>,
     keys: HashMap<&'v str, Bound<'py, PyString>>,
-    /// Values visited while building the result, capped at the GIL threshold.
+    /// Values visited while building the result, capped at the
+    /// GIL threshold.
     work: Work,
 }
 
@@ -327,7 +335,8 @@ impl<'py, 'v> Builder<'py, 'v> {
         Ok(dict)
     }
 
-    /// The Python `str` for a key: made the first time, shared after.
+    /// The Python `str` for a key: made the first time, shared
+    /// after.
     fn key(&mut self, key: &'v str) -> Bound<'py, PyString> {
         let py = self.py;
         self.keys
@@ -355,30 +364,35 @@ fn number_to_python<'py>(py: Python<'py>, number: &Number) -> PyResult<Bound<'py
     Ok(PyFloat::new(py, float).into_any())
 }
 
-// --- Work and the GIL -----------------------------------------------------------------------
+// --- Work and the GIL ----------------------------------------
 
-/// How much engine work a call holds the GIL for, in JSON values.
+/// How much engine work a call holds the GIL for, in JSON
+/// values.
 ///
-/// A call that releases the GIL waits one switch interval (5 ms by default) to
-/// take it back while another thread runs Python code. Work below this limit
-/// is short next to that interval, so it keeps the GIL.
+/// A call that releases the GIL waits one switch interval (5 ms
+/// by default) to take it back while another thread runs Python
+/// code. Work below this limit is short next to that interval,
+/// so it keeps the GIL.
 const HELD_VALUES: usize = 8192;
 
-/// JSON text counts one value per this many bytes. Real text takes more bytes
-/// per value, so the count is never too small. Text of 128 KB or more releases
-/// the GIL.
+/// JSON text counts one value per this many bytes. Real text
+/// takes more bytes per value, so the count is never too small.
+/// Text of 128 KB or more releases the GIL.
 const TEXT_BYTES_PER_VALUE: usize = 16;
 
-/// A node or an edge of a loaded graph counts as this many values, about what
-/// a typical node holds. Counting values would walk the graph.
+/// A node or an edge of a loaded graph counts as this many
+/// values, about what a typical node holds. Counting values
+/// would walk the graph.
 const VALUES_PER_GRAPH_ITEM: usize = 200;
 
-/// How large a piece of engine work is, in JSON values, up to [`HELD_VALUES`].
+/// How large a piece of engine work is, in JSON values, up to
+/// [`HELD_VALUES`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
 struct Work(usize);
 
 impl Work {
-    /// The work on a value: its number of values, counted up to the limit.
+    /// The work on a value: its number of values, counted up to
+    /// the limit.
     fn of_value(value: &FlowValue) -> Self {
         let mut count = 0;
         let mut stack = vec![value];
@@ -396,7 +410,8 @@ impl Work {
         Self(count)
     }
 
-    /// The work on an argument: text by its length, a value by its values.
+    /// The work on an argument: text by its length, a value by
+    /// its values.
     fn of_input(input: &Input<'_>) -> Self {
         match input {
             Input::Text(text) => Self(text.len() / TEXT_BYTES_PER_VALUE),
@@ -422,7 +437,8 @@ impl std::ops::Add for Work {
     }
 }
 
-/// Run engine work: with the GIL when it is small, without it when it is large.
+/// Run engine work: with the GIL when it is small, without it
+/// when it is large.
 fn run<T: Send, E: Into<BindingError> + Send>(
     py: Python<'_>,
     work: Work,
@@ -436,7 +452,8 @@ fn run<T: Send, E: Into<BindingError> + Send>(
     result.map_err(|error| engine_error(py, error))
 }
 
-/// Run engine work as [`run`] does, and return its result as Python objects.
+/// Run engine work as [`run`] does, and return its result as
+/// Python objects.
 fn call(
     py: Python<'_>,
     work: Work,
@@ -445,7 +462,8 @@ fn call(
     finish(py, run(py, work, job)?)
 }
 
-/// A result as Python objects. A large result is dropped without the GIL.
+/// A result as Python objects. A large result is dropped
+/// without the GIL.
 fn finish(py: Python<'_>, value: FlowValue) -> PyResult<Bound<'_, PyAny>> {
     let mut builder = Builder::new(py);
     let result = builder.value(&value);
@@ -462,9 +480,11 @@ fn finish(py: Python<'_>, value: FlowValue) -> PyResult<Bound<'_, PyAny>> {
     result
 }
 
-/// Build operation results after the state lock is released. `options` picks
-/// the operations to build. With `forward_json`, the result also holds
-/// `forward_operations_json`: each forward operation as JSON `bytes`.
+/// Build operation results after the state lock is released.
+/// `options` picks the operations to build. With
+/// `forward_json`, the result also holds
+/// `forward_operations_json`: each forward operation as JSON
+/// `bytes`.
 fn finish_applied(
     py: Python<'_>,
     applied: Applied,
@@ -475,7 +495,8 @@ fn finish_applied(
     let mut result = builder.applied(&applied, options);
     #[cfg(debug_assertions)]
     if let Ok(actual) = &result {
-        // Compare with the generic builder on these operations, not a new engine call.
+        // Compare with the generic builder on these operations,
+        // not a new engine call.
         let generic = FlowValue::Object(bindings::applied_json(applied.clone(), options));
         let mut reference = Builder::new(py);
         let expected = reference.value(&generic)?;
@@ -508,20 +529,22 @@ fn finish_applied(
     result
 }
 
-/// How many large graphs can wait for the drop thread. A graph dropped
-/// while that many wait is dropped where it is.
+/// How many large graphs can wait for the drop thread. A graph
+/// dropped while that many wait is dropped where it is.
 const DROPS_WAITING: usize = 4;
 
 /// Something that the drop thread frees.
 type Dropped = Box<dyn Send>;
 
-/// Whether the process may run on more than one CPU, its CPU quota included.
+/// Whether the process may run on more than one CPU, its CPU
+/// quota included.
 static SPARE_CPU: LazyLock<bool> =
     LazyLock::new(|| std::thread::available_parallelism().is_ok_and(|cpus| cpus.get() > 1));
 
-/// Drop a large graph on the drop thread, so the caller, often a server's
-/// event loop, does not wait while it is freed. Without that thread, or with
-/// [`DROPS_WAITING`] graphs waiting, it is dropped here without the GIL.
+/// Drop a large graph on the drop thread, so the caller, often
+/// a server's event loop, does not wait while it is freed.
+/// Without that thread, or with [`DROPS_WAITING`] graphs
+/// waiting, it is dropped here without the GIL.
 fn drop_elsewhere(py: Python<'_>, value: Dropped) {
     static DROPS: LazyLock<Option<SyncSender<Dropped>>> = LazyLock::new(|| {
         let (sender, receiver) = sync_channel::<Dropped>(DROPS_WAITING);
@@ -541,26 +564,29 @@ fn drop_elsewhere(py: Python<'_>, value: Dropped) {
     py.detach(move || drop(value));
 }
 
-// --- The engine -----------------------------------------------------------------------------
+// --- The engine ----------------------------------------------
 
-/// A flow graph that the engine keeps loaded, to apply or replay many
-/// batches on it. A refused batch changes nothing.
+/// A flow graph that the engine keeps loaded, to apply or
+/// replay many batches on it. A refused batch changes nothing.
 ///
-/// `stage` applies a batch as `apply` does, but reads still see the graph
-/// before it. `keep` commits the staged batch and `drop` drops it, as after a
-/// database commit. While a batch is staged, `apply`, `replay` and `stage`
-/// raise `RuntimeError`.
+/// `stage` applies a batch as `apply` does, but reads still see
+/// the graph before it. `keep` commits the staged batch and
+/// `drop` drops it, as after a database commit. While a batch
+/// is staged, `apply`, `replay` and `stage` raise
+/// `RuntimeError`.
 ///
-/// Threads can share one state. A call releases the GIL to wait for a held
-/// lock, and never waits for the GIL while it holds the lock. So two threads
-/// cannot deadlock. Large work, such as a long replay, runs without the GIL.
+/// Threads can share one state. A call releases the GIL to wait
+/// for a held lock, and never waits for the GIL while it holds
+/// the lock. So two threads cannot deadlock. Large work, such
+/// as a long replay, runs without the GIL.
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphState {
     state: RwLock<lfx_ops::GraphState>,
 }
 
-/// A graph with no node and no edge: what a dropped graph leaves in its place.
+/// A graph with no node and no edge: what a dropped graph
+/// leaves in its place.
 fn empty_graph() -> FlowValue {
     let mut root = FlowObj::new();
     root.insert("nodes".into(), FlowValue::Array(Vec::new()));
@@ -568,7 +594,8 @@ fn empty_graph() -> FlowValue {
     FlowValue::Object(root)
 }
 
-/// A large graph is dropped on the drop thread ([`drop_elsewhere`]).
+/// A large graph is dropped on the drop thread
+/// ([`drop_elsewhere`]).
 impl Drop for GraphState {
     fn drop(&mut self) {
         let state = self.state.get_mut().unwrap_or_else(PoisonError::into_inner);
@@ -584,7 +611,8 @@ impl Drop for GraphState {
 /// Why a call on the state could not run.
 #[derive(Debug, Clone, Copy)]
 enum Refused {
-    /// A call panicked while it held the lock, so the graph may be half changed.
+    /// A call panicked while it held the lock, so the graph may
+    /// be half changed.
     Poisoned,
     /// A batch is staged, so no other batch can start.
     Staged,
@@ -615,8 +643,9 @@ fn unstaged(
 }
 
 impl GraphState {
-    /// Run `job` on the state locked for writing: with the GIL when the lock
-    /// is free and `work` on the locked state is small, else without the GIL.
+    /// Run `job` on the state locked for writing: with the GIL
+    /// when the lock is free and `work` on the locked state is
+    /// small, else without the GIL.
     fn write<T: Send>(
         &self,
         py: Python<'_>,
@@ -632,7 +661,8 @@ impl GraphState {
         py.detach(|| job(self.state.write().map_err(|_| Refused::Poisoned)?))
     }
 
-    /// Run `job` on the state locked for reading, as [`Self::write`] does.
+    /// Run `job` on the state locked for reading, as
+    /// [`Self::write`] does.
     fn read<T: Send>(
         &self,
         py: Python<'_>,
@@ -648,7 +678,8 @@ impl GraphState {
             .map_err(refused)
     }
 
-    /// Apply or stage a batch, with every rule, under the write lock.
+    /// Apply or stage a batch, with every rule, under the write
+    /// lock.
     fn batch(
         &self,
         py: Python<'_>,
@@ -713,8 +744,9 @@ impl GraphState {
         )
     }
 
-    /// Apply a batch as `apply` does, and keep it staged until `keep` or
-    /// `drop`. Returns what `apply` returns. A refused batch is not staged.
+    /// Apply a batch as `apply` does, and keep it staged until
+    /// `keep` or `drop`. Returns what `apply` returns. A
+    /// refused batch is not staged.
     #[pyo3(signature = (operations, *, forward = false, backward = false, forward_json = false))]
     fn stage<'py>(
         &self,
@@ -732,8 +764,8 @@ impl GraphState {
         finish_applied(py, staged, ApplyOptions { forward, backward }, forward_json)
     }
 
-    /// `stage(operations, forward_json=True)["forward_operations_json"]`
-    /// without the dict: the forward operations as JSON text, one `bytes` each.
+    /// Stage a batch and return only its forward operations.
+    /// Each operation is a `bytes` object containing JSON text.
     fn stage_json<'py>(
         &self,
         py: Python<'py>,
@@ -758,7 +790,8 @@ impl GraphState {
         list
     }
 
-    /// Commit the staged batch. Raises `RuntimeError` when no batch is staged.
+    /// Commit the staged batch. Raises `RuntimeError` when no
+    /// batch is staged.
     fn keep(&self, py: Python<'_>) -> PyResult<()> {
         let released = self
             .write(
@@ -773,8 +806,9 @@ impl GraphState {
                 },
             )
             .map_err(refused)?;
-        // The drop thread frees the removed nodes and edges only with a spare CPU.
-        // With one CPU, it only adds a thread switch.
+        // The drop thread frees the removed nodes and edges
+        // only with a spare CPU. With one CPU, it only adds a
+        // thread switch.
         if let Some(released) = released {
             if *SPARE_CPU {
                 drop_elsewhere(py, Box::new(released));
@@ -785,8 +819,8 @@ impl GraphState {
         Ok(())
     }
 
-    /// Drop the staged batch, so the graph stays as it was before it.
-    /// Returns whether a batch was staged.
+    /// Drop the staged batch, so the graph stays as it was
+    /// before it. Returns whether a batch was staged.
     fn drop(&self, py: Python<'_>) -> PyResult<bool> {
         self.write(py, |_| Work::default(), |mut state| Ok(state.drop_staged()))
             .map_err(refused)
@@ -798,7 +832,8 @@ impl GraphState {
         self.read(py, |_| Work::default(), lfx_ops::GraphState::is_staged)
     }
 
-    /// Replay stored operations, with no rule. Returns what it did.
+    /// Replay stored operations, with no rule. Returns what it
+    /// did.
     #[pyo3(signature = (operations, *, backward = false))]
     fn replay<'py>(
         &self,
@@ -825,9 +860,10 @@ impl GraphState {
         finish(py, replayed.map_err(|error| engine_error(py, error))?)
     }
 
-    /// The graph as JSON text: the committed graph, without a staged batch.
-    /// With `staged`, the graph as `keep` will make it. Raises `RuntimeError`
-    /// when `staged` is true and no batch is staged.
+    /// The graph as JSON text: the committed graph, without a
+    /// staged batch. With `staged`, the graph as `keep` will
+    /// make it. Raises `RuntimeError` when `staged` is true and
+    /// no batch is staged.
     #[pyo3(signature = (*, staged = false))]
     fn to_json(&self, py: Python<'_>, staged: bool) -> PyResult<String> {
         let work = |state: &lfx_ops::GraphState| Work::of_items(state.item_count());
@@ -841,8 +877,9 @@ impl GraphState {
         .ok_or_else(|| refused(Refused::NotStaged))
     }
 
-    /// The SHA-256 hex digest of the graph's canonical form, without writing
-    /// its text. `staged` works as in `to_json`.
+    /// The SHA-256 hex digest of the graph's canonical form,
+    /// without writing its text. `staged` works as in
+    /// `to_json`.
     #[pyo3(signature = (*, staged = false))]
     fn graph_hash(&self, py: Python<'_>, staged: bool) -> PyResult<String> {
         let work = |state: &lfx_ops::GraphState| Work::of_items(state.item_count());
@@ -857,15 +894,18 @@ impl GraphState {
         .map_err(|error| engine_error(py, error))
     }
 
-    /// The committed graph, without a staged batch, as a read-only `GraphSnapshot`.
-    /// It shares each node and edge with the state, at the cost of one pointer.
-    /// A later batch copies only the nodes it changes.
+    /// The committed graph, without a staged batch, as a
+    /// read-only `GraphSnapshot`. A new snapshot copies the
+    /// node and edge lists and shares their JSON objects.
+    /// Taking a large snapshot releases the GIL.
     fn snapshot(&self, py: Python<'_>) -> PyResult<GraphSnapshot> {
-        let cached = self.read(py, |_| Work::default(), lfx_ops::GraphState::try_snapshot)?;
-        let snapshot = if let Some(snapshot) = cached {
+        let work = |state: &lfx_ops::GraphState| Work::of_items(state.item_count());
+        let result = self.read(py, work, lfx_ops::GraphState::try_snapshot)?;
+        let snapshot = if let Some(snapshot) = result {
             snapshot
         } else {
-            // No lock is held while this waits without the GIL for another capture.
+            // Release the GIL before waiting for another thread
+            // to take a snapshot.
             py.detach(|| {
                 let state = self.state.read().map_err(|_| Refused::Poisoned)?;
                 Ok(state.snapshot())
@@ -877,7 +917,8 @@ impl GraphState {
 
     /// The committed graph as a dict, built without a copy.
     fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
-        // `read_py_attached` waits for the lock without the GIL, then holds both.
+        // `read_py_attached` waits for the lock without the
+        // GIL, then holds both.
         let state = self
             .state
             .read_py_attached(py)
@@ -902,8 +943,9 @@ impl GraphState {
     }
 }
 
-/// A read-only graph from `GraphState.snapshot()`. Later batches on the state
-/// do not change it. Threads can share it, and large calls release the GIL.
+/// A read-only graph from `GraphState.snapshot()`. Later
+/// batches on the state do not change it. Threads can share it,
+/// and large calls release the GIL.
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphSnapshot {
@@ -922,8 +964,9 @@ impl GraphSnapshot {
     }
 }
 
-/// A large snapshot is dropped on the drop thread ([`drop_elsewhere`]): it
-/// may hold the only copy of nodes that the state has changed since.
+/// A large snapshot is dropped on the drop thread
+/// ([`drop_elsewhere`]): it may hold the only copy of nodes
+/// that the state has changed since.
 impl Drop for GraphSnapshot {
     fn drop(&mut self) {
         if !self.work.is_large() {
@@ -941,7 +984,8 @@ impl Drop for GraphSnapshot {
 
 #[pymethods]
 impl GraphSnapshot {
-    /// The graph as JSON text: what the state's `to_json()` gave when the snapshot was taken.
+    /// The graph as JSON text: what the state's `to_json()`
+    /// gave when the snapshot was taken.
     fn to_json(&self, py: Python<'_>) -> String {
         let snapshot = self
             .snapshot
@@ -955,8 +999,9 @@ impl GraphSnapshot {
         }
     }
 
-    /// The SHA-256 hex digest of the graph's canonical form: what the
-    /// state's `graph_hash()` gave when the snapshot was taken.
+    /// The SHA-256 hex digest of the graph's canonical form:
+    /// what the state's `graph_hash()` gave when the snapshot
+    /// was taken.
     fn graph_hash(&self, py: Python<'_>) -> PyResult<String> {
         let snapshot = self
             .snapshot
@@ -966,10 +1011,11 @@ impl GraphSnapshot {
     }
 }
 
-/// A flow graph read once, to validate, repair, hash, compare and diff it.
+/// A flow graph read once, to validate, repair, hash, compare
+/// and diff it.
 ///
-/// Making it checks nothing. A check that passes does not run again. The graph
-/// cannot change, so threads can share it.
+/// Making it checks nothing. A check that passes does not run
+/// again. The graph cannot change, so threads can share it.
 #[pyclass(module = "lfx_native", frozen)]
 #[derive(Debug)]
 struct GraphPlain {
@@ -994,7 +1040,8 @@ impl GraphPlain {
     }
 }
 
-/// A large graph is dropped on the drop thread ([`drop_elsewhere`]).
+/// A large graph is dropped on the drop thread
+/// ([`drop_elsewhere`]).
 impl Drop for GraphPlain {
     fn drop(&mut self) {
         if !self.work.is_large() {
@@ -1047,7 +1094,8 @@ impl GraphPlain {
         })
     }
 
-    /// Repair what has one fix. Returns the repaired graph and the fixes.
+    /// Repair what has one fix. Returns the repaired graph and
+    /// the fixes.
     #[pyo3(signature = (base = None))]
     fn repair<'py>(
         &self,
@@ -1058,7 +1106,8 @@ impl GraphPlain {
         let (repaired, fixes) = run(py, self.work + base_work, || {
             bindings::plain_repair(self.core(), base)
         })?;
-        // With no fixes, the repaired graph is this graph, so its work is known.
+        // With no fixes, the repaired graph is this graph, so
+        // its work is known.
         let work = if fixes.as_array().is_some_and(<[_]>::is_empty) {
             self.work
         } else {
@@ -1089,7 +1138,8 @@ impl GraphPlain {
         })
     }
 
-    /// The operations that turn this graph into `target`, checked by replay.
+    /// The operations that turn this graph into `target`,
+    /// checked by replay.
     fn ops_diff<'py>(
         &self,
         py: Python<'py>,
@@ -1118,9 +1168,10 @@ impl GraphPlain {
 }
 
 /// Module functions that run one engine call on JSON arguments.
-/// In `fn name(a, b [c]; flag: bool)`, `a` and `b` are JSON arguments, `c` is
-/// optional, and `flag` passes as it is. With `-> T`, a function returns the
-/// `T`. Without it, it returns its JSON result as Python objects ([`call`]).
+/// In `fn name(a, b [c]; flag: bool)`, `a` and `b` are JSON
+/// arguments, `c` is optional, and `flag` passes as it is. With
+/// `-> T`, a function returns the `T`. Without it, it returns
+/// its JSON result as Python objects ([`call`]).
 macro_rules! engine_functions {
     (@run $py:ident, $work:ident, $job:expr) => { call($py, $work, $job) };
     (@run $py:ident, $work:ident, $job:expr, $ret:ty) => {
@@ -1150,24 +1201,28 @@ macro_rules! engine_functions {
 }
 
 engine_functions! {
-    /// Apply operations to a graph, with every rule. Returns `{"flow_data", ...}`.
+    /// Apply operations to a graph, with every rule. Returns
+    /// `{"flow_data", ...}`.
     #[pyo3(signature = (flow, operations, *, forward = true, backward = false))]
     fn apply(flow, operations; forward: bool, backward: bool) =>
         bindings::apply(flow, operations, ApplyOptions { forward, backward });
 
-    /// Replay stored operations on a graph, with no rule. Returns `{"flow_data", ...}`.
+    /// Replay stored operations on a graph, with no rule.
+    /// Returns `{"flow_data", ...}`.
     #[pyo3(signature = (flow, operations, *, backward = false))]
     fn replay(flow, operations; backward: bool) =>
         bindings::replay(flow, operations, ReplayOptions { backward });
 
-    /// The operations that turn `base` into `target`, checked by replay.
+    /// The operations that turn `base` into `target`, checked
+    /// by replay.
     fn ops_diff(base, target) => bindings::ops_diff(base, target);
 
     /// Every rule a graph breaks, as a list of violations.
     #[pyo3(signature = (flow, base = None, *, check_values = true))]
     fn validate(flow [base]; check_values: bool) => bindings::validate(flow, base, check_values);
 
-    /// Repair what has one fix. Returns `{"flow_data", "fixes"}`.
+    /// Repair what has one fix. Returns
+    /// `{"flow_data", "fixes"}`.
     #[pyo3(signature = (flow, base = None))]
     fn repair(flow [base]) => bindings::repair(flow, base);
 
@@ -1183,11 +1238,13 @@ engine_functions! {
     /// A JSON value in RFC 8785 canonical form, as text.
     fn canonical_json(value) -> String => bindings::canonical_json(value);
 
-    /// A revision with a restore's fixes applied, after checking each one.
+    /// A revision with a restore's fixes applied, after
+    /// checking each one.
     fn apply_restore_fixes(revision, stored, fixes) =>
         bindings::apply_restore_fixes(revision, stored, fixes);
 
-    /// The fixes that turn a revision's edges as read into the edges its preview shows.
+    /// The fixes that turn a revision's edges as read into the
+    /// edges its preview shows.
     fn edge_fixes(read, shown) => bindings::edge_fixes(read, shown);
 
     /// The part of the fixes that touches the given edges.
@@ -1196,10 +1253,12 @@ engine_functions! {
     /// Rows in order and without `__id__` and `__pos__`.
     fn strip_row_keys(rows) => bindings::strip_row_keys(rows);
 
-    /// Rows in order, by `(__pos__, __id__)`, or as stored for a legacy table.
+    /// Rows in order, by `(__pos__, __id__)`, or as stored for
+    /// a legacy table.
     fn ordered_rows(rows) => bindings::ordered_rows(rows);
 
-    /// A flow whose top-level tables have their rows in order and without `__id__` and `__pos__`.
+    /// A flow whose top-level tables have their rows in order
+    /// and without `__id__` and `__pos__`.
     fn strip_flow_table_row_keys(flow) => bindings::strip_flow_table_row_keys(flow);
 
     /// Rows with the ids and positions a write needs.
@@ -1211,26 +1270,32 @@ engine_functions! {
     #[pyo3(signature = (node, *, editor = false))]
     fn assign_table_row_ids(node; editor: bool) => bindings::assign_table_row_ids(node, editor);
 
-    /// `target` with ids on the tables it adds or changes relative to `base`.
+    /// `target` with ids on the tables it adds or changes
+    /// relative to `base`.
     #[pyo3(signature = (base, target, *, editor = false))]
     fn assign_changed_table_row_ids(base, target; editor: bool) =>
         bindings::assign_changed_table_row_ids(base, target, editor);
 
-    /// A node with ids on the tables it adds or changes relative to `previous`.
+    /// A node with ids on the tables it adds or changes
+    /// relative to `previous`.
     #[pyo3(signature = (node, previous = None, *, editor = false))]
     fn assign_changed_node_table_row_ids(node [previous]; editor: bool) =>
         bindings::assign_changed_node_table_row_ids(node, previous, editor);
 
-    /// Rows with `new_rows` appended, each with a new id one position past the last.
+    /// Rows with `new_rows` appended, each with a new id one
+    /// position past the last.
     fn append_table_rows(rows, new_rows) => bindings::append_table_rows(rows, new_rows);
 
-    /// The names of a node's template fields whose value is a table.
+    /// The names of a node's template fields whose value is a
+    /// table.
     fn table_fields(node) => bindings::table_fields(node);
 }
 
-/// The SHA-256 hex digest of `text`, a `str` (as UTF-8) or `bytes`. It equals
-/// `hashlib.sha256(text.encode()).hexdigest()`, without the copy that `encode`
-/// makes. Large text is hashed without the GIL.
+/// The SHA-256 hex digest of `text`, a `str` (as UTF-8) or
+/// `bytes`. It equals
+/// `hashlib.sha256(text.encode()).hexdigest()`, without the
+/// copy that `encode` makes. Large text is hashed without the
+/// GIL.
 #[pyfunction]
 fn text_sha256(py: Python<'_>, text: &Bound<'_, PyAny>) -> PyResult<String> {
     let bytes = if let Ok(string) = text.cast::<PyString>() {

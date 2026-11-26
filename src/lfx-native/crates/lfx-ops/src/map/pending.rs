@@ -1,10 +1,10 @@
 //! [`PendingMap`]:
 
-use std::clone;
-
 use super::ordered::OrderedMap;
+use crate::types::FlowStr;
 
-/// The most pending changes a map keeps allocated between batches.
+/// The most pending changes a map keeps allocated between
+/// batches.
 pub(crate) const MAX_RETAINED_BATCH_ENTRIES: usize = 256;
 
 /// A map that stages every
@@ -25,15 +25,16 @@ pub(crate) struct PendingMap<V> {
 
 /// A pending write to a key.
 #[derive(Debug)]
-pub(crate) enum Write<V> {
+enum Write<V> {
     /// The key was created,
     /// or its value was updated.
     Set(V),
     /// The key was removed.
     Delete,
 }
+
 impl<V> Write<V> {
-    pub(crate) fn get(&self) -> Option<&V> {
+    fn get(&self) -> Option<&V> {
         match self {
             Self::Set(value) => Some(value),
             Self::Delete => None,
@@ -46,43 +47,19 @@ impl<V> Write<V> {
             Self::Delete => None,
         }
     }
-
-}
-
-
-impl<V> PendingMap<V> {
-    /// The base values, without the pending writes.
-    pub(crate) fn values(&self) -> impl Iterator<Item = &V> {
-        self.base.values()
-    }
-
-    /// The base map, to read.
-    pub(crate) fn base(&self) -> &OrderedMap<V> {
-        &self.base
-    }
-
-    /// The pending writes, in the order they were first made.
-    pub(crate) fn writes(&self) -> impl Iterator<Item = (&String, &Write<V>)> {
-        self.pending.iter()
-    }
 }
 
 impl<V: Clone> PendingMap<V> {
     pub fn new() -> Self {
         Self {
             base: OrderedMap::new(),
-            pending: OrderedMap::new()
-        }
-    }
-    /// Create a [`PendingMap`] which takes ownership of `base`
-    pub(crate) fn with_base(base: OrderedMap<V>) -> Self {
-        Self {
-            base,
             pending: OrderedMap::new(),
         }
     }
 
-    /// The value of `key`.
+    /// The staged value, or the base value if the batch has no
+    /// write for the key. Returns `None` when the batch deletes
+    /// the key or neither map has it.
     pub fn get(&self, key: &str) -> Option<&V> {
         match self.pending.get(key) {
             Some(write) => write.get(),
@@ -95,31 +72,11 @@ impl<V: Clone> PendingMap<V> {
         self.get(key).is_some()
     }
 
-    /// Whether `key` exists in the original base map
-    pub fn is_based(&self, key: &str) -> bool {
-        self.base.contains_key(key)
-    }
-
-    /// Whether `key` has been written to.
-    pub fn is_pending(&self, key: &str) -> bool {
-        self.pending.contains_key(key)
-    }
-
-    /// Get a mutable reference to the **base** value of `key`
-    pub fn base_mut(&mut self, key: &str) -> Option<&mut V> {
-        debug_assert!(self.pending.is_empty(), "write between batches only");
-        self.base.get_mut(key)
-    }
-
     /// Set the value of `key` through
     /// the `writer` function.
     /// Returns `None` of `key` is not found.
-    pub fn update<R>(
-        &mut self,
-        key: &str,
-        writer: impl FnOnce(&mut V) -> R
-    ) -> Option<R> {
-        if !self.is_pending(key) {
+    pub fn update<R>(&mut self, key: &str, writer: impl FnOnce(&mut V) -> R) -> Option<R> {
+        if !self.pending.contains_key(key) {
             let copy = self.base.get(key)?.clone();
             self.pending.insert(key, Write::Set(copy));
         }
@@ -130,7 +87,8 @@ impl<V: Clone> PendingMap<V> {
         // we want to return None if not found.
         self.pending.get_mut(key)?.get_mut().map(writer)
     }
-    /// [`Self::update`] only if `cond` holds for the value of `key`.
+    /// [`Self::update`] only if
+    /// `cond` holds for the value of `key`.
     /// Returns whether `f` ran.
     pub fn update_if(
         &mut self,
@@ -149,7 +107,7 @@ impl<V: Clone> PendingMap<V> {
     }
 
     /// Add a value, or replace the value of the same key.
-    pub fn insert<K: AsRef<str> + Into<String>>(&mut self, key: K, value: V) {
+    pub fn insert<K: AsRef<str> + Into<FlowStr>>(&mut self, key: K, value: V) {
         self.pending.insert(key, Write::Set(value));
     }
 
@@ -164,22 +122,18 @@ impl<V: Clone> PendingMap<V> {
         existed
     }
 
-    /// Make the batch's changes part of the base map. Returns whether empty
-    /// positions were pruned ([`OrderedMap::clear_garbage`]).
-    pub fn commit(&mut self) -> bool {
-        self.commit_into(&mut Vec::new())
-    }
-
-    /// [`Self::commit`], and move each removed value into `released`.
-    pub fn commit_into(&mut self, released: &mut Vec<V>) -> bool {
+    /// Make the batch's changes part of the base map.
+    pub fn commit(&mut self) {
         for (key, written) in self.pending.drain() {
             match written {
                 Write::Set(value) => self.base.insert(key, value),
-                Write::Delete => released.extend(self.base.remove(&key)),
+                Write::Delete => {
+                    self.base.remove(&key);
+                }
             }
         }
         self.shrink_large_pending();
-        self.base.clear_garbage()
+        self.base.clear_garbage();
     }
 
     fn shrink_large_pending(&mut self) {
@@ -192,30 +146,6 @@ impl<V: Clone> PendingMap<V> {
     pub fn drop_pending(&mut self) {
         self.pending.clear();
         self.shrink_large_pending();
-    }
-
-    /// The keys and values with the pending writes, in the order [`Self::commit`]
-    /// gives them.
-    pub(crate) fn pending_entries(&self) -> impl Iterator<Item = (&String, &V)> {
-        let kept = self
-            .base
-            .iter()
-            .filter_map(|(key, value)| match self.pending.get(key) {
-                Some(written) => written.get().map(|written| (key, written)),
-                None => Some((key, value)),
-            });
-        let added = self
-            .pending
-            .iter()
-            .filter(|(key, _)| !self.base.contains_key(key))
-            .filter_map(|(key, written)| written.get().map(|value| (key, value)));
-        kept.chain(added)
-    }
-
-    /// The values, without copying them. Only between batches.
-    pub(crate) fn into_values(self) -> impl Iterator<Item = V> {
-        debug_assert!(self.pending.is_empty(), "read between batches only");
-        self.base.into_values()
     }
 }
 
@@ -272,12 +202,12 @@ mod tests {
     }
 
     fn base(keys: &[&str]) -> PendingMap<u32> {
-        let map = keys
-            .iter()
-            .zip(1..)
-            .map(|(key, value)| ((*key).to_owned(), value))
-            .collect();
-        PendingMap::with_base(map)
+        let mut map = PendingMap::new();
+        for (&key, value) in keys.iter().zip(1..) {
+            map.insert(key, value);
+        }
+        map.commit();
+        map
     }
 
     fn keys(map: &PendingMap<u32>) -> Vec<&str> {
@@ -294,7 +224,7 @@ mod tests {
         assert_eq!(map.get("b"), None);
         assert_eq!(map.get("c"), Some(&3));
         assert_eq!(map.base.get("a"), Some(&1));
-        assert!(map.is_based("b") && !map.is_based("c"));
+        assert!(map.base.contains_key("b") && !map.base.contains_key("c"));
     }
 
     #[test]

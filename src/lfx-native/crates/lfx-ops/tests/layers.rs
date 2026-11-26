@@ -1,14 +1,16 @@
-//! Each folder of `src` imports only from the folders before it:
-//! `map`, `json`, `flow`, `compare`, `node_input`, `violation`,
-//! `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `bindings.rs`.
+//! Each folder of `src` imports only from the folders before
+//! it: `types`, `map`, `json`, `flow`, `compare`, `node_input`,
+//! `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`,
+//! `state`, `op`, then `bindings.rs`.
 //!
-//! Tests may import from any folder, so the check stops at `#[cfg(test)]`
-//! and skips `tests.rs` files.
+//! Tests may import from any folder, so the check stops at
+//! `#[cfg(test)]` and skips `tests.rs` files.
 
 use std::fs;
 use std::path::{Path, PathBuf};
 
-const LAYERS: [&str; 13] = [
+const LAYERS: [&str; 14] = [
+    "types",
     "map",
     "json",
     "flow",

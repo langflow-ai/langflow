@@ -123,7 +123,8 @@ fn a_kept_state_swaps_two_edges_by_deleting_and_adding_them() {
         "edges": [edge("e1", "B"), edge("e2", "A")],
     });
     let mut state = GraphState::new(graph).unwrap();
-    // This batch indexes the connections of T, which the next batch reuses.
+    // This batch indexes the connections of T, which the next
+    // batch reuses.
     let add = flow_value!([{"type": "add_edges", "edges": [edge("e3", "C")]}]);
     state
         .apply(operations(add), ApplyOptions::default())
@@ -153,7 +154,8 @@ fn a_refused_batch_keeps_the_indexes_earlier_batches_built() {
         .apply(operations(add), ApplyOptions::default())
         .unwrap();
     assert!(state.edge_index.has_connections("T"));
-    // A writes T, then the second edge into A is refused: the batch changes nothing.
+    // A writes T, then the second edge into A is refused: the
+    // batch changes nothing.
     let refused = flow_value!([
         {"type": "update_nodes", "updates": [
             {"id": "T", "op": "set_field", "path": ["data", "node", "template", "A", "value"], "value": "x"},
@@ -209,7 +211,8 @@ fn cell_path(key: &str) -> FlowValue {
     path
 }
 
-/// A batch on a kept graph state gives what it gives on a fresh one.
+/// A batch on a kept graph state gives what it gives on a fresh
+/// one.
 fn same_as_fresh(state: &mut GraphState, batch: Vec<Operation>) -> Result<()> {
     let fresh = apply_flow_operations(state.to_value(), batch.clone(), ApplyOptions::default());
     let kept = state.apply(batch, ApplyOptions::default());
@@ -237,7 +240,8 @@ fn a_kept_table_keeps_its_index_through_writes_and_refused_batches() {
         updates(vec![delete("t", rows_path(Some("r1")))]),
     )
     .unwrap();
-    // Refused after a row is added and a cell written: nothing changes.
+    // Refused after a row is added and a cell written: nothing
+    // changes.
     let before = state.to_value();
     let refused = updates(vec![
         set("t", rows_path(Some("r4")), row("r4", 4.0)),
@@ -363,6 +367,7 @@ fn an_output_deleted_and_added_again_in_one_batch_takes_its_new_position() {
 fn a_node_deleted_and_added_again_takes_the_writes_after_it() {
     let node = flow_value!({"id": "n", "data": {"node": {"template": {"f": {"value": 1}}}}});
     let batch = flow_value!([
+        {"type": "update_nodes", "updates": [set("n", flow_value!(["data", "node", "template", "f", "value"]), flow_value!(4))]},
         {"type": "delete_nodes", "ids": ["n"]},
         {"type": "add_nodes", "nodes": [{"id": "n", "data": {"node": {"template": {"g": {"value": 2}}}}}]},
         {"type": "update_nodes", "updates": [set("n", flow_value!(["data", "node", "template", "g", "value"]), flow_value!(3))]},
@@ -456,7 +461,8 @@ fn a_staged_batch_is_not_read_until_it_is_kept() {
         serde_json::from_str::<FlowValue>(&state.to_json()).unwrap(),
         before
     );
-    // The staged graph is the graph that keep makes, while the committed graph stays.
+    // The staged graph is the graph that keep makes, while the
+    // committed graph stays.
     let staged_text = state.staged_to_json().unwrap();
     assert!(
         crate::compare::graphs_equal(
@@ -506,7 +512,8 @@ fn a_dropped_batch_leaves_the_graph_and_its_indexes() {
     assert!(!state.is_staged());
     assert_eq!(state.to_value(), before);
     assert!(state.edge_index.has_connections("T"));
-    // The indexes still hold e1 in A: a second edge into A is refused.
+    // The indexes still hold e1 in A: a second edge into A is
+    // refused.
     let second = flow_value!([{"type": "add_edges", "edges": [edge("e3", "A")]}]);
     state
         .apply(operations(second), ApplyOptions::default())

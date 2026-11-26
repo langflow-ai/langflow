@@ -1,13 +1,17 @@
-//! [`FlowStr`]: text that is inline when short and shared when long, and [`StringPool`].
+//! [`FlowStr`]: text that is inline when short and shared when
+//! long, and [`StringPool`].
 
-use crate::map::hash::{HashSet, State};
+use std::collections::HashSet;
+
+use ahash::RandomState as State;
 use std::borrow::Borrow;
 use std::fmt;
 use std::sync::{Arc, OnceLock};
 
 use serde::de::{DeserializeSeed, Deserializer, Visitor};
 
-/// Immutable text. Short text is inline. Copies of long text share it.
+/// Immutable text. Short text is inline. Copies of long text
+/// share it.
 #[derive(Debug, Clone)]
 pub struct FlowStr(Repr);
 
@@ -17,14 +21,17 @@ enum Repr {
     Inline(compact_str::CompactString),
     /// Shorter than [`LONG`] bytes: one allocation.
     Mid(Arc<str>),
-    /// At least [`LONG`] bytes, with room to keep its JSON spelling.
+    /// At least [`LONG`] bytes, with room to keep its JSON
+    /// spelling.
     Shared(Arc<Text>),
 }
 
-/// Text this long can keep its JSON spelling ([`FlowStr::shared_ascii_json`]).
+/// Text this long can keep its JSON spelling
+/// ([`FlowStr::shared_ascii_json`]).
 const LONG: usize = 256;
 
-/// The longest text held inline: what `CompactString` holds without allocating.
+/// The longest text held inline: what `CompactString` holds
+/// without allocating.
 const INLINE: usize = std::mem::size_of::<String>();
 
 #[derive(Debug)]
@@ -61,9 +68,12 @@ impl FlowStr {
         }
     }
 
-    /// The cached JSON spelling of long shared text. Unshared text gets no
-    /// cache, so it keeps no second copy.
-    pub(crate) fn shared_ascii_json(&self) -> Option<&[u8]> {
+    /// The cached JSON spelling of long shared text. Unshared
+    /// text gets no cache, so it keeps no second copy.
+    pub(crate) fn shared_ascii_json(
+        &self,
+        encode: impl FnOnce(&str) -> Box<[u8]>,
+    ) -> Option<&[u8]> {
         let Repr::Shared(shared) = &self.0 else {
             return None;
         };
@@ -76,15 +86,7 @@ impl FlowStr {
         if Arc::strong_count(shared) <= 1 {
             return None;
         }
-        Some(shared.ascii_json.get_or_init(|| {
-            let mut encoded = Vec::with_capacity(self.len() + 2);
-            crate::json::serialize::write_str(
-                &mut encoded,
-                self,
-                crate::json::serialize::Ascii::Escape,
-            );
-            encoded.into_boxed_slice()
-        }))
+        Some(shared.ascii_json.get_or_init(|| encode(self)))
     }
 }
 
@@ -154,18 +156,20 @@ impl PartialEq<&str> for FlowStr {
     }
 }
 
-/// Text shared within one input. Separate inputs never share text.
+/// Text shared within one input. Separate inputs never share
+/// text.
 #[derive(Debug, Default)]
 pub struct StringPool {
     // Small inputs fit here, with no hash table to allocate.
     small: [Option<FlowStr>; 16],
-    large: Option<HashSet<FlowStr>>,
+    large: Option<HashSet<FlowStr, State>>,
 }
 
 impl StringPool {
     /// Reuse equal text, or allocate its first copy.
     pub fn intern(&mut self, text: &str) -> FlowStr {
-        // Short text is inline: a copy costs no more than a shared reference.
+        // Short text is inline: a copy costs no more than a
+        // shared reference.
         if text.len() <= INLINE {
             return FlowStr::from(text);
         }

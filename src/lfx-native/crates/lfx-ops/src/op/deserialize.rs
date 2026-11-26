@@ -1,4 +1,5 @@
-//! JSON → operations: the strict parser, and a reader for operation text.
+//! JSON → operations: the strict parser, and a reader for
+//! operation text.
 
 use std::str::FromStr;
 
@@ -38,8 +39,8 @@ impl Operation {
     ///
     /// # Errors
     ///
-    /// Fails when `operations` is not a JSON list, or when one of its
-    /// operations is not a valid operation.
+    /// Fails when `operations` is not a JSON list, or when one
+    /// of its operations is not a valid operation.
     pub fn list_from_value(operations: FlowValue) -> Result<Vec<Self>> {
         Vec::from_value(operations).map_err(|error| error.into_error("operations"))
     }
@@ -48,8 +49,8 @@ impl Operation {
 impl TryFrom<FlowValue> for Operation {
     type Error = Error;
 
-    /// Parse one operation. It fails unless the operation has exactly one of
-    /// the protocol's shapes.
+    /// Parse one operation. It fails unless the operation has
+    /// exactly one of the protocol's shapes.
     fn try_from(operation: FlowValue) -> Result<Self> {
         Self::from_value(operation).map_err(|error| error.into_error("operation"))
     }
@@ -82,8 +83,9 @@ impl FromFlowValue for Operation {
     }
 }
 
-/// Fail when an id repeats in one operation. For example, the second of two
-/// nodes `a` fails with `[1].id: repeats the id 'a'`.
+/// Fail when an id repeats in one operation. For example, the
+/// second of two nodes `a` fails with
+/// `[1].id: repeats the id 'a'`.
 fn no_repeated_ids<'a>(ids: impl Iterator<Item = &'a str>) -> Result<(), DeserializeError> {
     let mut seen = HashSet::default();
     for (index, id) in ids.enumerate() {
@@ -95,9 +97,13 @@ fn no_repeated_ids<'a>(ids: impl Iterator<Item = &'a str>) -> Result<(), Deseria
     Ok(())
 }
 
-/// Fail when one `update_nodes` writes one path of one node twice, which is a
-/// client bug.
+/// Fail when one `update_nodes` writes one path of one node
+/// twice, which is a client bug.
 fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), DeserializeError> {
+    #[expect(
+        clippy::mutable_key_type,
+        reason = "FlowStr's JSON cache does not affect path equality or hashing"
+    )]
     let mut seen = HashSet::default();
     for (index, update) in updates.iter().enumerate() {
         if !seen.insert((update.id.as_str(), &*update.path)) {
@@ -112,8 +118,8 @@ fn no_repeated_paths(updates: &[FieldUpdate]) -> Result<(), DeserializeError> {
     Ok(())
 }
 
-/// The value of an operation's one payload key, read as `T`. The operation
-/// may hold only `type` and `key`.
+/// The value of an operation's one payload key, read as `T`.
+/// The operation may hold only `type` and `key`.
 fn payload<T: FromFlowValue>(object: FlowObj, key: &'static str) -> Result<T, DeserializeError> {
     let mut payload = None;
     for (name, value) in object {
@@ -166,9 +172,10 @@ impl FromFlowValue for FieldUpdate {
 }
 
 impl FieldUpdate {
-    /// Check that the update keeps the key of every list item on its path. An
-    /// item's key is its id, so no write may change it, as no write may change
-    /// a node's `id`. To give an item another key, delete it and add it again.
+    /// Check that the update keeps the key of every list item
+    /// on its path. An item's key is its id, so no write may
+    /// change it, as no write may change a node's `id`. To give
+    /// an item another key, delete it and add it again.
     fn check_keys_kept(&self) -> Result<(), DeserializeError> {
         for (index, segment) in self.path.iter().enumerate() {
             let Segment::Item(key) = segment else {
@@ -178,7 +185,7 @@ impl FieldUpdate {
             let keyed = FLOW_MODEL.listed_at(&self.path[..index]);
             match keyed.key_after_write(inner, &self.change) {
                 KeyWrite::Untouched => {}
-                KeyWrite::Key(after) if after == key => {}
+                KeyWrite::Key(after) if after == key.as_str() => {}
                 _ if inner.is_empty() => {
                     let message = format!(
                         "a list item written at its key must carry the same key: {}",
@@ -197,11 +204,13 @@ impl FieldUpdate {
     }
 }
 
-/// Read operations from JSON text straight into their types, without a JSON
-/// value for the whole batch. It reads only text in the common shape: an
-/// operation with its `type` first, and no repeated key. For any other text,
-/// or text that breaks a rule, it returns `None`, and the caller reads the
-/// text the general way, which gives the same operations or the exact error.
+/// Read operations from JSON text straight into their types,
+/// without a JSON value for the whole batch. It reads only text
+/// in the common shape: an operation with its `type` first, and
+/// no repeated key. For any other text, or text that breaks a
+/// rule, it returns `None`, and the caller reads the text the
+/// general way, which gives the same operations or the exact
+/// error.
 #[cfg(feature = "bindings")]
 pub(crate) fn operations_from_text(text: &str) -> Option<Vec<Operation>> {
     let mut builder = crate::json::Builder::<true>::default();
@@ -227,13 +236,15 @@ mod text {
     };
     use crate::flow::deserialize::FromFlowValue;
     use crate::json::{Builder, FiniteSeed, FlowValue};
+    use crate::types::{StringPool, StringSeed};
 
     /// Any failure: the caller reads the text the general way.
     fn bail<E: de::Error>() -> E {
         E::custom("not in the common shape")
     }
 
-    /// A key of an operation or a field update, read without allocating.
+    /// A key of an operation or a field update, read without
+    /// allocating.
     #[derive(PartialEq, Eq)]
     enum Key {
         Type,
@@ -321,12 +332,13 @@ mod text {
         }
     }
 
-    /// Reads the next item of a list with a seed, without naming the access type.
+    /// Reads the next item of a list with a seed, without
+    /// naming the access type.
     trait ItemReader<'de> {
         fn ops(&mut self, builder: &mut Builder<true>) -> Option<Operation>;
         fn value(&mut self, builder: &mut Builder<true>) -> Option<FlowValue>;
         fn text(&mut self) -> Option<String>;
-        fn segment(&mut self) -> Option<Segment>;
+        fn segment(&mut self, strings: &mut StringPool) -> Option<Segment>;
         fn update(&mut self, builder: &mut Builder<true>) -> Option<FieldUpdate>;
     }
 
@@ -362,8 +374,8 @@ mod text {
         fn text(&mut self) -> Option<String> {
             self.next(Text)
         }
-        fn segment(&mut self) -> Option<Segment> {
-            self.next(SegmentSeed)
+        fn segment(&mut self, strings: &mut StringPool) -> Option<Segment> {
+            self.next(SegmentSeed(strings))
         }
         fn update(&mut self, builder: &mut Builder<true>) -> Option<FieldUpdate> {
             self.next(UpdateSeed(builder))
@@ -473,38 +485,42 @@ mod text {
         }
     }
 
-    struct Path;
-    impl<'de> DeserializeSeed<'de> for Path {
+    struct Path<'a>(&'a mut StringPool);
+    impl<'de> DeserializeSeed<'de> for Path<'_> {
         type Value = Vec<Segment>;
         fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Vec<Segment>, D::Error> {
-            d.deserialize_seq(List(|reader: &mut dyn ItemReader<'de>| reader.segment()))
+            let strings = self.0;
+            d.deserialize_seq(List(|reader: &mut dyn ItemReader<'de>| {
+                reader.segment(strings)
+            }))
         }
     }
 
-    /// A path segment: a string, or `{"key": ...}` with a non-empty key.
-    struct SegmentSeed;
-    impl<'de> DeserializeSeed<'de> for SegmentSeed {
+    /// A path segment: a string, or `{"key": ...}` with a
+    /// non-empty key.
+    struct SegmentSeed<'a>(&'a mut StringPool);
+    impl<'de> DeserializeSeed<'de> for SegmentSeed<'_> {
         type Value = Segment;
         fn deserialize<D: Deserializer<'de>>(self, d: D) -> Result<Segment, D::Error> {
             d.deserialize_any(self)
         }
     }
-    impl<'de> Visitor<'de> for SegmentSeed {
+    impl<'de> Visitor<'de> for SegmentSeed<'_> {
         type Value = Segment;
         fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             f.write_str("a path segment")
         }
         fn visit_str<E: de::Error>(self, key: &str) -> Result<Segment, E> {
-            Ok(Segment::Key(key.to_owned()))
+            Ok(Segment::Key(self.0.intern(key)))
         }
         fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Segment, M::Error> {
-            let Some(name) = map.next_key_seed(Text)? else {
+            let Some(name) = map.next_key_seed(StringSeed(self.0))? else {
                 return Err(bail());
             };
             if name != "key" {
                 return Err(bail());
             }
-            let key = map.next_value_seed(Text)?;
+            let key = map.next_value_seed(StringSeed(self.0))?;
             if key.is_empty() || map.next_key::<IgnoredAny>()?.is_some() {
                 return Err(bail());
             }
@@ -533,7 +549,9 @@ mod text {
                 match key {
                     Key::Op if op.is_none() => op = Some(map.next_value_seed(Text)?),
                     Key::Id if id.is_none() => id = Some(map.next_value_seed(Text)?),
-                    Key::Path if path.is_none() => path = Some(map.next_value_seed(Path)?),
+                    Key::Path if path.is_none() => {
+                        path = Some(map.next_value_seed(Path(&mut self.0.strings))?);
+                    }
                     Key::Value if value.is_none() => {
                         value = Some(map.next_value_seed(FiniteSeed(&mut *self.0))?);
                     }
@@ -554,12 +572,12 @@ mod text {
     }
 }
 
-// --- What a write does to a keyed list item's key ---------------------------------------------
+// --- What a write does to a keyed list item's key ------------
 
 impl KeyedList {
-    /// What `change` at `inner`, a path inside an item, does to the item's key.
-    /// Example: in a list keyed by `name`, a set of `"b"` at `["name"]` gives
-    /// the item the key `b`.
+    /// What `change` at `inner`, a path inside an item, does to
+    /// the item's key. Example: in a list keyed by `name`, a
+    /// set of `"b"` at `["name"]` gives the item the key `b`.
     pub(crate) fn key_after_write<'c>(
         &self,
         inner: &[Segment],
@@ -569,7 +587,7 @@ impl KeyedList {
             return KeyWrite::Untouched;
         }
         let reaches = inner.iter().zip(&self.key).all(|pair| match pair {
-            (Segment::Key(segment), PathPart::Key(part)) => segment == part,
+            (Segment::Key(segment), PathPart::Key(part)) => segment == part.as_str(),
             _ => false,
         });
         match change {
@@ -590,9 +608,11 @@ impl KeyedList {
 /// What a write does to the key of the list item it writes in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum KeyWrite<'c> {
-    /// The write does not reach the key, or deletes the whole item.
+    /// The write does not reach the key, or deletes the whole
+    /// item.
     Untouched,
-    /// After the write, the item has this key. It can be the key it had.
+    /// After the write, the item has this key. It can be the
+    /// key it had.
     Key(&'c str),
     /// After the write, the item has no key.
     Keyless,
@@ -629,7 +649,8 @@ mod tests {
                 assert_eq!(String::from_utf8(written).unwrap(), expected);
             }
         }
-        // Other shapes, and text that breaks a rule, are left to the general reader.
+        // Other shapes, and text that breaks a rule, are left
+        // to the general reader.
         for text in [
             r#"[{"ids":["a"],"type":"delete_nodes"}]"#,
             r#"[{"type":"delete_nodes","ids":["a"],"ids":["b"]}]"#,
