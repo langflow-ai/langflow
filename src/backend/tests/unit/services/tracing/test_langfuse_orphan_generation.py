@@ -1,7 +1,7 @@
 """Regression tests for the Langfuse orphan-generation fix (issue #13429).
 
 When a model runs as the *root* LangChain run — i.e. invoked directly with no
-wrapping chain, as reproduced with Ollama — the langfuse v3 ``CallbackHandler``
+wrapping chain, as reproduced with Ollama — the Langfuse ``CallbackHandler``
 emitted the LLM generation as a separate, orphan trace: ``parent = None``,
 ``userId = None``, ``sessionId = None``, and the token usage detached from the
 flow trace. The langfuse SDK only applies the constructor ``trace_context`` on
@@ -310,6 +310,10 @@ class TestRootGenerationNestsUnderFlowTrace:
 
         # The generation is recorded as a langfuse generation (carries token usage).
         assert generation_span.attributes.get("langfuse.observation.type") == "generation"
+        assert generation_span.attributes.get("user.id") == "demo-user-13429"
+        assert generation_span.attributes.get("session.id") == "demo-session-13429"
+        assert generation_span.attributes.get("langfuse.trace.name") == "repro"
+        assert generation_span.attributes.get("langfuse.trace.metadata.flow_id") == "flow-xyz"
 
         # Core of #13429: the generation must live in the flow trace, not orphan.
         assert generation_span.context.trace_id == root_span.context.trace_id
@@ -353,19 +357,15 @@ class TestFlowNameParsing:
 
         assert tracer.flow_name == expected_name
         assert tracer.flow_id == expected_flow_id
-        assert client.start_span.call_args.kwargs["name"] == expected_name
-        assert client.start_span.call_args.kwargs["metadata"]["flow_id"] == expected_flow_id
-        trace_update = client.start_span.return_value.update_trace.call_args.kwargs
-        assert trace_update["name"] == expected_name
-        assert trace_update["metadata"]["flow_id"] == expected_flow_id
+        assert client.start_observation.call_args.kwargs["name"] == expected_name
+        assert client.start_observation.call_args.kwargs["metadata"]["flow_id"] == expected_flow_id
 
     def test_unnamed_flow_falls_back_to_flow_id(self):
         # An unnamed graph formats its run name as "None - <id>"; the trace must not be called "None".
         tracer, client = self._make_tracer("None - flow-xyz")
 
         assert tracer.flow_id == "flow-xyz"
-        assert client.start_span.call_args.kwargs["name"] == "flow-xyz"
-        assert client.start_span.return_value.update_trace.call_args.kwargs["name"] == "flow-xyz"
+        assert client.start_observation.call_args.kwargs["name"] == "flow-xyz"
 
 
 class TestGraphRunNamesTraceAfterFlow:
@@ -505,10 +505,9 @@ def test_handler_deepcopy_returns_self(monkeypatch):
 
     with patch("langflow.services.tracing.langfuse._get_or_create_shared_client") as mock_client:
         mock_client.return_value.auth_check.return_value = True
-        mock_client.return_value.start_span.return_value.__enter__ = lambda s: s
-        mock_client.return_value.start_span.return_value.__exit__ = lambda *_: None
-        mock_client.return_value.start_span.return_value.id = "root-span-id"
-        mock_client.return_value.start_span.return_value.update_trace = lambda **_: None
+        mock_client.return_value.start_observation.return_value.__enter__ = lambda s: s
+        mock_client.return_value.start_observation.return_value.__exit__ = lambda *_: None
+        mock_client.return_value.start_observation.return_value.id = "root-span-id"
 
         tracer = LangFuseTracer(
             trace_name="test-flow - abc",

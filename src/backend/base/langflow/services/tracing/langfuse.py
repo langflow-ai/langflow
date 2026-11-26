@@ -220,10 +220,20 @@ def delete_feedback_score(*, message_id: UUID | str) -> None:
 
     Used when a user clears their thumbs up/down so Langfuse stays in sync
     with Langflow's UI state. Callers must gate on tracing being enabled
-    and Langfuse being configured.
+    and Langfuse being configured. Langfuse v4 moved the legacy score-delete
+    endpoint under ``client.api.legacy.score_v1``.
     """
     client = _get_langfuse_client()
-    client.api.score.delete(score_id=feedback_score_id(message_id))
+    legacy_api = getattr(getattr(client.api, "legacy", None), "score_v1", None)
+    score_api = legacy_api or getattr(client.api, "score", None)
+    delete_score = getattr(score_api, "delete", None)
+    if delete_score is None:
+        logger.warning(
+            "Langfuse does not support deleting feedback scores in this SDK; leaving score %s unchanged",
+            feedback_score_id(message_id),
+        )
+        return
+    delete_score(score_id=feedback_score_id(message_id))
 
 
 def _build_otel_parent_span(trace_id: str | None, parent_span_id: str | None):
@@ -264,7 +274,7 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
 
     Why this exists
     ---------------
-    The langfuse v3 LangChain ``CallbackHandler`` only applies its constructor
+    The Langfuse LangChain ``CallbackHandler`` only applies its constructor
     ``trace_context`` on the chain path (``on_chain_start``). When a model runs as
     the *root* LangChain run — e.g. a bare Ollama / chat-model call with no wrapping
     chain — the generation path calls ``start_observation`` without that
@@ -288,9 +298,16 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
     from opentelemetry import trace as otel_trace_api
 
     class _RootRunReparentingCallbackHandler(base_cls):  # type: ignore[misc, valid-type]
-        def __init__(self, *, otel_parent: Any = None, **kwargs: Any) -> None:
+        def __init__(
+            self,
+            *,
+            otel_parent: Any = None,
+            trace_attributes: dict[str, Any] | None = None,
+            **kwargs: Any,
+        ) -> None:
             super().__init__(**kwargs)
             self._otel_parent = otel_parent
+            self._trace_attributes = trace_attributes or {}
 
         def __deepcopy__(self, memo: dict[int, Any]) -> Any:
             """Return self instead of a copy.
@@ -311,17 +328,25 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
 
         def _reparent(self, method_name: str, args: tuple, kwargs: dict, parent_run_id: UUID | None):
             bound = getattr(super(), method_name)
-            if parent_run_id is None and self._otel_parent is not None:
-                # end_on_exit/record_exception False so the parent span is never
-                # mutated or closed by activating it as the current context.
-                with otel_trace_api.use_span(
-                    self._otel_parent,
-                    end_on_exit=False,
-                    record_exception=False,
-                    set_status_on_exception=False,
-                ):
-                    return bound(*args, parent_run_id=parent_run_id, **kwargs)
-            return bound(*args, parent_run_id=parent_run_id, **kwargs)
+            from contextlib import ExitStack
+
+            with ExitStack() as stack:
+                if parent_run_id is None and self._otel_parent is not None:
+                    # end_on_exit/record_exception False so the parent span is never
+                    # mutated or closed by activating it as the current context.
+                    stack.enter_context(
+                        otel_trace_api.use_span(
+                            self._otel_parent,
+                            end_on_exit=False,
+                            record_exception=False,
+                            set_status_on_exception=False,
+                        )
+                    )
+                if self._trace_attributes:
+                    from langfuse import propagate_attributes
+
+                    stack.enter_context(propagate_attributes(**self._trace_attributes))
+                return bound(*args, parent_run_id=parent_run_id, **kwargs)
 
         def on_chat_model_start(self, *args: Any, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
             return self._reparent("on_chat_model_start", args, kwargs, parent_run_id)
@@ -333,9 +358,9 @@ def _root_run_reparenting_handler_cls(base_cls: type) -> type:
 
 
 class LangFuseTracer(BaseTracer):
-    """LangFuse tracer implementation using langfuse v3 API.
+    """LangFuse tracer implementation using the Langfuse v4 API.
 
-    The v3 API uses OpenTelemetry-based spans instead of the v2 trace/span pattern.
+    The v4 API uses OpenTelemetry-based observations instead of the v2 trace/span pattern.
     See: https://langfuse.com/docs/observability/sdk/upgrade-path
     """
 
@@ -344,6 +369,7 @@ class LangFuseTracer(BaseTracer):
     flow_display_name: str
     _trace_context: TraceContext
     langfuse_trace_id: str | None
+    _trace_metadata: dict[str, str]
 
     def __init__(
         self,
@@ -375,6 +401,7 @@ class LangFuseTracer(BaseTracer):
         self._input_trace_names: dict[str, str] = {}
         self._output_trace_names: dict[str, str] = {}
         self.langfuse_trace_id = None
+        self._trace_metadata = {}
 
         config = self._get_config()
         self._ready: bool = self._setup_langfuse(config) if config else False
@@ -386,7 +413,7 @@ class LangFuseTracer(BaseTracer):
     def _setup_langfuse(self, config: dict) -> bool:
         """Initialize langfuse client and create root span for the flow.
 
-        Uses langfuse v3 API which requires creating spans with trace_context
+        Uses the Langfuse v4 observation API with trace_context
         instead of using the removed trace() method.
 
         Setup failures are logged at WARNING level so users see why traces
@@ -399,7 +426,7 @@ class LangFuseTracer(BaseTracer):
         https://github.com/langflow-ai/langflow/issues/13317.
         """
         try:
-            from langfuse import Langfuse
+            from langfuse import Langfuse, propagate_attributes
             from langfuse.types import TraceContext
 
             self._client = _get_or_create_shared_client(config)
@@ -413,37 +440,35 @@ class LangFuseTracer(BaseTracer):
                 logger.warning(f"Cannot connect to Langfuse at {config.get('host')!r}: {e}")
                 return False
 
-            # Create a deterministic trace ID from the UUID (v3 requires 32-char hex)
+            # Create a deterministic trace ID from the UUID (Langfuse requires 32-char hex)
             langfuse_trace_id = Langfuse.create_trace_id(seed=str(self.trace_id))
             self.langfuse_trace_id = langfuse_trace_id
             # parent_span_id is NotRequired but ty doesn't fully support this yet
             self._trace_context = TraceContext(trace_id=langfuse_trace_id)  # type: ignore[call-arg]
 
-            # Create root span for the flow - this also creates the trace implicitly. It is named
-            # after the flow so traces can be found by name in Langfuse; the id stays in metadata.
-            self._root_span = self._client.start_span(
-                name=self.flow_display_name,
-                trace_context=self._trace_context,
-                metadata={"flow_id": self.flow_id, "project_name": self.project_name},
-            )
-
-            # ``trace.userId`` stays the authenticated Langflow user so existing
-            # Langfuse consumers keep getting the same identity. When a caller
-            # provides an override via ``tracing_user_id``, stamp it under
-            # ``langflow.tracing_user_id`` so it is still recoverable from trace
-            # metadata without changing the meaning of ``trace.userId``.
-            # ``flow_id`` is stamped on the trace up front so traces stay filterable
-            # by flow now that the trace name is the display name; ``end()`` later
-            # merges the graph metadata (which also carries it) on top.
-            trace_metadata: dict[str, Any] = {"flow_id": self.flow_id}
+            # Langfuse v4 propagates trace-level attributes while observations
+            # are created. Keep the metadata string-valued as required by the
+            # SDK so every child observation receives the same attributes.
+            self._trace_metadata = {"flow_id": self.flow_id, "project_name": self.project_name}
             if self.tracing_user_id and self.tracing_user_id != self.user_id:
-                trace_metadata["langflow.tracing_user_id"] = self.tracing_user_id
-            self._root_span.update_trace(
-                name=self.flow_display_name,
+                self._trace_metadata["langflow.tracing_user_id"] = self.tracing_user_id
+
+            # Create the root observation for the flow. This also creates the
+            # trace implicitly, and replaces the removed ``update_trace`` calls.
+            # It is named after the flow so traces can be found by name in
+            # Langfuse; the id stays in metadata.
+            with propagate_attributes(
                 user_id=self.user_id,
                 session_id=self.session_id,
-                metadata=trace_metadata,
-            )
+                metadata=self._trace_metadata,
+                trace_name=self.flow_display_name,
+            ):
+                self._root_span = self._client.start_observation(
+                    name=self.flow_display_name,
+                    as_type="span",
+                    trace_context=self._trace_context,
+                    metadata=self._trace_metadata,
+                )
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
@@ -483,12 +508,23 @@ class LangFuseTracer(BaseTracer):
             if vertex.is_output:
                 self._output_trace_names[trace_id] = trace_name
 
-        # Create child span under the root span
-        span = self._root_span.start_span(
-            name=name,
-            input=serialize(inputs),
-            metadata=serialize(metadata_),
-        )
+        # Create a child observation under the root observation. Re-enter the
+        # propagation context for each observation because flow callbacks may
+        # run in different async contexts.
+        from langfuse import propagate_attributes
+
+        with propagate_attributes(
+            user_id=self.user_id,
+            session_id=self.session_id,
+            metadata=self._trace_metadata,
+            trace_name=self.flow_display_name,
+        ):
+            span = self._root_span.start_observation(
+                name=name,
+                as_type="span",
+                input=serialize(inputs),
+                metadata=serialize(metadata_),
+            )
 
         self.spans[trace_id] = span
 
@@ -526,15 +562,14 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
-        # Keep the complete component aggregates on the root observation.
+        # Keep the evaluator-facing graph-boundary contract that the v3
+        # integration exposed through ``update_trace``. In v4 the root
+        # observation is the trace-level record, so write the selected
+        # boundary values directly to it instead of dropping that distinction.
         inputs_ser = serialize(inputs)
         outputs_ser = serialize(outputs)
         metadata_ser = serialize(metadata) if metadata else None
 
-        # Input components emit the normalized external request as their output;
-        # output components emit the final graph result. If a custom graph has no
-        # boundary marker, retain the full aggregate rather than guessing from
-        # concurrent component completion order.
         dual_role_trace_ids = self._input_trace_names.keys() & self._output_trace_names.keys()
         input_found, trace_input = _trace_boundary_value(
             outputs,
@@ -549,19 +584,14 @@ class LangFuseTracer(BaseTracer):
         if not output_found:
             trace_output = outputs_ser
 
-        # Update the root span with final input/output
+        # Langfuse v4 no longer exposes a separate ``update_trace`` API; the
+        # root observation is the trace-level record.
         self._root_span.update(
-            input=inputs_ser,
-            output=outputs_ser,
-            metadata=metadata_ser,
-        )
-
-        # Update trace-level data
-        self._root_span.update_trace(
             input={"input": trace_input},
             output={"output": trace_output},
             metadata=metadata_ser,
         )
+        self._root_span.set_trace_io(input={"input": trace_input}, output={"output": trace_output})
 
         # End the root span
         self._root_span.end()
@@ -597,7 +627,16 @@ class LangFuseTracer(BaseTracer):
             # token usage. See https://github.com/langflow-ai/langflow/issues/13429.
             otel_parent = _build_otel_parent_span(self._trace_context["trace_id"], parent_span.id)
             handler_cls = _root_run_reparenting_handler_cls(CallbackHandler)
-            handler = handler_cls(trace_context=trace_ctx, otel_parent=otel_parent)
+            handler = handler_cls(
+                trace_context=trace_ctx,
+                otel_parent=otel_parent,
+                trace_attributes={
+                    "user_id": self.user_id,
+                    "session_id": self.session_id,
+                    "metadata": self._trace_metadata,
+                    "trace_name": self.flow_display_name,
+                },
+            )
 
         except (ImportError, ValueError, TypeError) as e:
             logger.debug(f"Error creating LangChain callback handler: {e}")
