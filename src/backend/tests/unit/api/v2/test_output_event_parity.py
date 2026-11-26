@@ -180,6 +180,19 @@ class TestIndexedTerminalMetadata:
         graph.successor_map["output"] = []
         assert _output_meta_for_vertex(graph, "output")["is_terminal"] is True
 
+    def test_terminal_list_and_metadata_share_scalar_rule(self):
+        """Changing the scalar rule changes both the list API and streamed metadata."""
+        from lfx.graph import Graph
+
+        graph = Graph()
+        vertices = [_vertex("included"), _vertex("excluded")]
+        graph.vertices = vertices
+        graph.get_vertex = {vertex.id: vertex for vertex in vertices}.__getitem__
+        graph.is_terminal_node = lambda vertex_id: vertex_id == "included"
+        assert graph.get_terminal_nodes() == ["included"]
+        assert _output_meta_for_vertex(graph, "included")["is_terminal"] is True
+        assert _output_meta_for_vertex(graph, "excluded")["is_terminal"] is False
+
     def test_instance_override_remains_authoritative(self):
         from lfx.graph import Graph
 

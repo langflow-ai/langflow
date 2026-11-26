@@ -1,14 +1,12 @@
-"""Execute connected graphs and verify terminal metadata at the output-event boundary."""
+"""Execute connected graphs and compare terminal metadata with the graph API."""
 
 import json
 
 from langflow.api.build import _output_meta_for_vertex
 
-from tests.unit.api.v2.test_output_event_parity import _adapter, _end_vertex_data
 
-
-async def test_connected_branch_metadata_matches_terminal_output_events():
-    """Execute real routing components and compare terminal events to the graph API."""
+async def test_connected_branch_metadata_matches_graph_terminal_nodes():
+    """Execute real routing components and compare terminal metadata to the graph API."""
     from lfx.graph import Graph
 
     from tests.unit.graph.graph.test_smart_router_branch_isolation import RecordingSink, _make_if_else_router
@@ -27,16 +25,12 @@ async def test_connected_branch_metadata_matches_terminal_output_events():
             continue
         meta = _output_meta_for_vertex(graph, vertex.id)
         assert meta["is_terminal"] == (vertex.id in graph.get_terminal_nodes())
-        data = _end_vertex_data(vertex.id, "result", is_terminal=meta["is_terminal"])
-        data["output_meta"] = meta
-        events = list(_adapter().translate("end_vertex", data))
-        assert any(event.type == "output" for event in events) == meta["is_terminal"]
         seen.append(vertex.id)
     assert "taken" in seen
     assert "untaken" not in seen
 
 
-async def test_loop_execution_metadata_matches_terminal_output_events(active_user):
+async def test_loop_execution_metadata_matches_graph_terminal_nodes(active_user):
     """Loop fixture execution retains the same terminal selection as the full graph API."""
     from pathlib import Path
     from uuid import uuid4
@@ -53,9 +47,5 @@ async def test_loop_execution_metadata_matches_terminal_output_events(active_use
             continue
         meta = _output_meta_for_vertex(graph, vertex.id)
         assert meta["is_terminal"] == (vertex.id in graph.get_terminal_nodes())
-        data = _end_vertex_data(vertex.id, "result", is_terminal=meta["is_terminal"])
-        data["output_meta"] = meta
-        events = list(_adapter().translate("end_vertex", data))
-        assert any(event.type == "output" for event in events) == meta["is_terminal"]
         completed += 1
     assert completed > 0

@@ -3087,6 +3087,10 @@ class Graph:
         """Get all vertex IDs in the graph."""
         return [vertex.id for vertex in self.vertices]
 
+    def is_terminal_node(self, vertex_id: str) -> bool:
+        """Return whether a vertex has no outgoing edges in the graph index."""
+        return not self.successor_map.get(vertex_id, [])
+
     def get_terminal_nodes(self) -> list[str]:
         """Returns vertex IDs that are terminal nodes (not source of any edge).
 
@@ -3096,7 +3100,7 @@ class Graph:
         Returns:
             list[str]: List of vertex IDs that are terminal nodes.
         """
-        return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
+        return [vertex.id for vertex in self.vertices if self.is_terminal_node(vertex.id)]
 
     def _orphaned_tool_vertex_ids(self) -> set[str]:
         """Tool-mode components with no consumer, excluded from scheduling.

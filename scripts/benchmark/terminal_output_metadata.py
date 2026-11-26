@@ -1,7 +1,7 @@
 """Measure only per-vertex output metadata; graph setup/execution is not timed.
 
-Run with the backend and lfx source directories on PYTHONPATH:
-uv run python scripts/benchmarks/terminal_output_metadata.py
+Run from the repository root:
+uv run python scripts/benchmark/terminal_output_metadata.py
 """
 
 import json
@@ -30,11 +30,13 @@ def measure(size, shape):
     by_id = {v.id: v for v in vertices}
     graph.vertices = vertices
     graph.get_vertex = by_id.__getitem__
-    graph.successor_map = (
+    successor_map = (
         {str(i): [str(i + 1)] for i in range(size - 1)}
         if shape == "chain"
         else {"0": [str(i) for i in range(1, size - 1)], **{str(i): [str(size - 1)] for i in range(1, size - 1)}}
     )
+
+    graph.successor_map = successor_map
 
     def old(vertex_id):
         vertex = graph.get_vertex(vertex_id)
@@ -53,11 +55,7 @@ def measure(size, shape):
             if old(vertex.id) != _output_meta_for_vertex(graph, vertex.id):
                 msg = "Output metadata differs from the scan implementation"
                 raise RuntimeError(msg)
-    graph.successor_map = (
-        {str(i): [str(i + 1)] for i in range(size - 1)}
-        if shape == "chain"
-        else {"0": [str(i) for i in range(1, size - 1)], **{str(i): [str(size - 1)] for i in range(1, size - 1)}}
-    )
+    graph.successor_map = successor_map
     samples = {}
     for name, helper in (("scan", old), ("indexed", lambda vid: _output_meta_for_vertex(graph, vid))):
         values = []

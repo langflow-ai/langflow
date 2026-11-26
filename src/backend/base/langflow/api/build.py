@@ -131,7 +131,7 @@ def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
     # The standard graph already indexes outgoing edges. Avoid rebuilding all
     # terminal IDs for each output event, but preserve custom graph semantics.
     if type(graph) is Graph and "get_terminal_nodes" not in vars(graph):
-        is_terminal = not graph.successor_map.get(vertex_id, [])
+        is_terminal = graph.is_terminal_node(vertex_id)
     else:
         try:
             is_terminal = vertex_id in graph.get_terminal_nodes()

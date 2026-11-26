@@ -16,6 +16,7 @@ import contextlib
 import json
 import time
 from collections.abc import Iterator
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import ANY, AsyncMock, MagicMock
 from uuid import uuid4
@@ -1485,6 +1486,40 @@ class TestOutputIdsSelection:
         assert text_id in result["outputs"]
 
 
+@pytest.fixture(params=["chatbot", "loop", "branch"])
+async def parity_flow(request, created_api_key, chatbot_flow, monkeypatch):
+    """Persist connected graphs so both real endpoint execution paths run."""
+    if request.param == "chatbot":
+        yield chatbot_flow
+        return
+    if request.param == "loop":
+        from langflow.services.deps import get_settings_service
+
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+        monkeypatch.setattr(get_settings_service().settings, "custom_component_admin_only", False)
+        raw = json.loads((Path(__file__).parents[3] / "data" / "LoopTest.json").read_text())
+    else:
+        from lfx.components.input_output import ChatInput, ChatOutput
+        from lfx.graph import Graph
+
+        graph = Graph()
+        graph.add_component(ChatInput(), "ChatInput-branch")
+        graph.add_component(ChatOutput(), "ChatOutput-left")
+        graph.add_component(ChatOutput(), "ChatOutput-right")
+        graph.add_component_edge("ChatInput-branch", ("message", "input_value"), "ChatOutput-left")
+        graph.add_component_edge("ChatInput-branch", ("message", "input_value"), "ChatOutput-right")
+        graph.prepare()
+        raw = graph.dump()
+    flow_id = uuid4()
+    async with session_scope() as session:
+        session.add(Flow(id=flow_id, name="Output parity", data=raw.get("data", raw), user_id=created_api_key.user_id))
+    yield flow_id
+    async with session_scope() as session:
+        flow = await session.get(Flow, flow_id)
+        if flow:
+            await session.delete(flow)
+
+
 class TestLangflowStreamOutputParity:
     """The ``langflow`` stream emits per-output ``output`` events that share sync's PARSER.
 
@@ -1500,23 +1535,28 @@ class TestLangflowStreamOutputParity:
         self,
         client: AsyncClient,
         created_api_key,
-        chatbot_flow,
+        parity_flow,
+        request,
     ):
+        """Compare real build-to-stream outputs with sync on chat, branch, and loop graphs."""
         headers = {"x-api-key": created_api_key.api_key}
 
         sync = await client.post(
             "api/v2/workflows",
-            json={"flow_id": str(chatbot_flow), "input_value": "hi", "mode": "sync", "session_id": "sync-1"},
+            json={"flow_id": str(parity_flow), "input_value": "hi", "mode": "sync", "session_id": "sync-1"},
             headers=headers,
         )
-        assert sync.status_code == 200
+        assert sync.status_code == 200, sync.text
+        assert sync.json()["status"] == "completed", sync.text
         sync_outputs = sync.json()["outputs"]
+        if request.node.callspec.params["parity_flow"] == "branch":
+            assert set(sync_outputs) == {"ChatOutput-left", "ChatOutput-right"}
         assert sync_outputs
 
         # Stream run with the DEFAULT protocol (langflow, not agui).
         stream = await client.post(
             "api/v2/workflows",
-            json={"flow_id": str(chatbot_flow), "input_value": "hi", "mode": "stream", "session_id": "stream-1"},
+            json={"flow_id": str(parity_flow), "input_value": "hi", "mode": "stream", "session_id": "stream-1"},
             headers=headers,
         )
         assert stream.status_code == 200
