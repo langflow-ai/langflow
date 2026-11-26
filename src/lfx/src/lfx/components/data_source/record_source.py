@@ -13,8 +13,8 @@ class RecordSourceComponent(Component):
     name = "RecordSource"
 
     inputs = [
-        StrInput(name="uri", display_name="Source Location", required=True),
-        StrInput(name="title", display_name="Source Title", required=True),
+        MessageTextInput(name="uri", display_name="Source Location", required=True),
+        MessageTextInput(name="title", display_name="Source Title", required=True),
         MessageTextInput(name="content", display_name="Retrieved Text", value=""),
         BoolInput(name="available", display_name="Evidence Available", value=True, advanced=True),
         StrInput(name="unavailable_reason", display_name="Unavailable Reason", value="", advanced=True),
