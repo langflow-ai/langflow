@@ -36,6 +36,10 @@ interface HeaderComponentProps {
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
   selectedFlows: string[];
+  /** The open project's type. Anything other than "flows" renders its own tab. */
+  projectType?: string;
+  /** That type's own label, so the tab names the thing rather than a hardcoded word. */
+  projectTypeLabel?: string;
 }
 
 const HeaderComponent = ({
@@ -49,6 +53,8 @@ const HeaderComponent = ({
   setSearch,
   isEmptyFolder,
   selectedFlows,
+  projectType,
+  projectTypeLabel,
 }: HeaderComponentProps) => {
   const { t } = useTranslation();
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -78,11 +84,13 @@ const HeaderComponent = ({
   useEffect(() => {
     if (
       (flowType === "mcp" && !isMCPEnabled) ||
-      (flowType === "components" && isMCPEnabled)
+      (flowType === "components" && isMCPEnabled) ||
+      // Switching to a project that has no form leaves the harness tab selected but gone.
+      (flowType === "harness" && (!projectType || projectType === "flows"))
     ) {
       setFlowType("flows");
     }
-  }, [flowType, isMCPEnabled, setFlowType]);
+  }, [flowType, isMCPEnabled, projectType, setFlowType]);
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setDebouncedSearch(e.target.value);
@@ -93,11 +101,22 @@ const HeaderComponent = ({
   );
   const hideNewFlowButton = useUtilityStore((s) => s.hideNewFlowButton);
 
+  // A typed project keeps its own tab, which is how its form is reached. "flows" is the
+  // default type and has no form, so it adds nothing here.
+  const hasProjectForm = Boolean(projectType) && projectType !== "flows";
+
+  const showFlowControls =
+    flowType !== "mcp" &&
+    flowType !== "deployments" &&
+    flowType !== "harness" &&
+    !isEmptyFolder;
+
   // Determine which tabs to show based on feature flags
   const tabTypes = [
     "flows",
     ...(isMCPEnabled ? ["mcp"] : ["components"]),
     ...(isDeploymentsEnabled ? ["deployments"] : []),
+    ...(hasProjectForm ? ["harness"] : []),
   ];
 
   const handleDownload = () => {
@@ -151,7 +170,9 @@ const HeaderComponent = ({
         </div>
         {folderName}
       </div>
-      {!isEmptyFolder && (
+      {/* A project with a form keeps its tabs even while it holds no flows, or a just-created
+          typed project would have no way to reach the form. */}
+      {(!isEmptyFolder || hasProjectForm) && (
         <>
           <div className={cn("flex pb-4")}>
             {tabTypes.map((type) => (
@@ -183,7 +204,9 @@ const HeaderComponent = ({
                         ? t("mainPage.tabDeployments")
                         : type === "components"
                           ? t("mainPage.tabComponents")
-                          : type.charAt(0).toUpperCase() + type.slice(1)}
+                          : type === "harness"
+                            ? projectTypeLabel || t("mainPage.tabHarness")
+                            : type.charAt(0).toUpperCase() + type.slice(1)}
                   {type === "deployments" && (
                     <Badge
                       variant="purpleStatic"
@@ -199,7 +222,7 @@ const HeaderComponent = ({
             <div className="w-full border-b dark:border-border" />
           </div>
           {/* Search and filters */}
-          {flowType !== "mcp" && flowType !== "deployments" && (
+          {showFlowControls && (
             <div className="flex justify-between">
               <div className="flex w-full xl:w-5/12">
                 <Input
