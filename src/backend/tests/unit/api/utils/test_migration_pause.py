@@ -252,6 +252,7 @@ READS = frozenset(
         "/api/v1/projects/",
         "/api/v1/projects/audits",
         "/api/v1/projects/download/{project_id}",
+        "/api/v1/projects/types",
         "/api/v1/projects/{project_id}",
         "/api/v1/projects/{project_id}/deployment-snapshot",
         "/api/v1/projects/{project_id}/replacement-operations/{operation_id}",
