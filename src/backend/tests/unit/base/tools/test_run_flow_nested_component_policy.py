@@ -104,7 +104,7 @@ def nested_env(monkeypatch):
     async def target_scope(**_kwargs):
         yield env.target_flow
 
-    monkeypatch.setattr(run_flow_module, "scoped_model_provider_policy_for_target_flow", target_scope)
+    monkeypatch.setattr(run_flow_module, "_model_provider_policy", target_scope)
     monkeypatch.setattr(run_flow_module, "get_user_is_superuser", env.get_user_is_superuser)
     monkeypatch.setattr(run_flow_module, "admin_only_build_required", env.admin_only_build_required)
     monkeypatch.setattr(
