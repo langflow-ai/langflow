@@ -257,6 +257,7 @@ class Graph:
         # Server-established reviewed references survive approval resumes. Executable
         # definitions remain private to the running graph and are reloaded by version.
         self.reviewed_tool_packs: dict[str, dict] = {}
+        self.reviewed_harness_flows: dict[str, dict] = {}
         self.frozen_tool_flows: dict[str, dict] | None = None
         # Vertices already built at checkpoint time: on resume their async generators are exhausted,
         # so the output-collection loop must NOT re-consume them. Empty for fresh (non-resume) runs.
@@ -897,6 +898,7 @@ class Graph:
 
         if self._run_id and str(run_id) != self._run_id:
             self.reviewed_tool_packs = {}
+            self.reviewed_harness_flows = {}
             self.frozen_tool_flows = None
 
         self._run_id = str(run_id)
@@ -3513,6 +3515,7 @@ class Graph:
         subgraph.source_flow_id = self.source_flow_id
         subgraph.runs_stored_flow = self.runs_stored_flow
         subgraph.reviewed_tool_packs = self.reviewed_tool_packs
+        subgraph.reviewed_harness_flows = self.reviewed_harness_flows
         subgraph.frozen_tool_flows = self.frozen_tool_flows
         subgraph._is_subgraph = True
 
