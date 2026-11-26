@@ -783,6 +783,9 @@ it.each([false, true])(
     );
     expect(toggle).toBeDisabled();
     expect(
+      screen.getByRole("heading", { name: "Database maintenance" }),
+    ).toHaveFocus();
+    expect(
       maintenanceSection().getByText(/before changing maintenance mode/),
     ).toBeVisible();
     expect(api.post).not.toHaveBeenCalled();

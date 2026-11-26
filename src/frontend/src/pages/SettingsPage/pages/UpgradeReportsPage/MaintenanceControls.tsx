@@ -333,9 +333,11 @@ export default function MaintenanceControls() {
           className="w-[calc(100%_-_2rem)] max-w-md"
           onCloseAutoFocus={(event) => {
             event.preventDefault();
-            (
-              toggle.current ??
-              document.getElementById(`${MAINTENANCE_SECTION_ID}-title`)
+            const usable =
+              toggle.current?.isConnected && !toggle.current.disabled;
+            (usable
+              ? toggle.current
+              : document.getElementById(`${MAINTENANCE_SECTION_ID}-title`)
             )?.focus();
           }}
         >
