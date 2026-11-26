@@ -64,6 +64,14 @@ class PermissionSlot(SlotDefinition):
         return permission_baseline(initial_config)
 
 
+class LoopSlot(SlotDefinition):
+    def binding_contract(self):
+        from lfx.projects.bindings import FlowBinding
+        from lfx.projects.loop import loop_outputs, validate_loop_binding
+
+        return FlowBinding, loop_outputs, validate_loop_binding
+
+
 class ToolSlot(SlotDefinition):
     def validate_binding(self, data, binding):
         from lfx.projects.local_tools import LocalToolBinding, validate_local_tool_source
@@ -77,7 +85,18 @@ class ToolSlot(SlotDefinition):
         return source
 
 
-AGENTIC_LOOP = register_slot(SlotDefinition("AgenticLoop", "Message", FireTiming.ORCHESTRATOR))
+AGENTIC_LOOP = register_slot(
+    LoopSlot(
+        "AgenticLoop",
+        "Message",
+        FireTiming.ORCHESTRATOR,
+        binding_kind="agentic_loop",
+        binding_label="Loop",
+        agent_input_name="loop_binding",
+        origin_key="_harness_agentic_loop",
+        validation_hint="Bind the Last Message output of a While Loop whose body is Agent Step and Execute Tool.",
+    )
+)
 TOOL = register_slot(ToolSlot("Tool", "Tool", FireTiming.ON_LLM_TOOL_CALL, Cardinality.MULTI))
 INSTRUCTIONS = register_slot(
     InstructionsSlot(
@@ -162,5 +181,6 @@ HARNESS_BINDING_SLOTS = {
     "context_strategy": CONTEXT_MANAGER,
     "compaction": COMPACTOR,
     "tool_policy": PERMISSION_GATE,
+    "agentic_loop": AGENTIC_LOOP,
 }
 BINDING_SLOTS = {**HARNESS_BINDING_SLOTS, "tools": TOOL}
