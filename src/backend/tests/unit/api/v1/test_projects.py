@@ -3154,11 +3154,8 @@ async def test_project_type_survives_zip_round_trip(client: AsyncClient, logged_
     assert "project" not in flow_names, f"the metadata member leaked in as a flow: {flow_names}"
 
 
-async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient, logged_in_headers, json_flow):
-    """An archive naming a project type this deployment does not have still imports.
-
-    Refusing the whole upload would lose the flows too, so the type degrades to the default.
-    """
+async def test_zip_import_rejects_unknown_project_type(client: AsyncClient, logged_in_headers, json_flow):
+    """Missing plugin must not silently turn a typed project into ordinary flows."""
     flow_payload = json.loads(json_flow)
     zip_stream = io.BytesIO()
     with zipfile.ZipFile(zip_stream, "w") as zf:
@@ -3171,12 +3168,10 @@ async def test_zip_import_falls_back_on_unknown_project_type(client: AsyncClient
         files={"file": ("future.zip", zip_stream.getvalue(), "application/zip")},
         headers=logged_in_headers,
     )
-    assert upload_response.status_code == status.HTTP_201_CREATED, upload_response.text
-
+    assert upload_response.status_code == 422, upload_response.text
+    assert "Install its plugin" in upload_response.text
     projects = (await client.get("api/v1/projects/", headers=logged_in_headers)).json()
-    imported = [p for p in projects if p["name"].startswith("future")]
-    assert imported, f"no imported project found in {[p['name'] for p in projects]}"
-    assert imported[0]["project_type"] == "flows"
+    assert not any(p["name"].startswith("future") for p in projects)
 
 
 @pytest.mark.parametrize("project_type", ["flows", "agent-harness"])

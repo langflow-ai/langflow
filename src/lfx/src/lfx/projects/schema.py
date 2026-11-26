@@ -191,6 +191,37 @@ class ProjectTypeDefinition:
     exportable: ClassVar[bool] = True
     panels: ClassVar[tuple[str, ...]] = ()
 
+    archive_format: ClassVar[str] = "composition"
+
+    def archive_references(self, config: dict | None) -> tuple:
+        """Declare the project closure. The host authorizes every included project."""
+        from lfx.projects.references import field_references
+
+        return tuple(
+            reference
+            for field in self.fields
+            if field.references
+            for reference in field_references(field, (config or {}).get(field.name))
+        )
+
+    def archive_sources(self, config: dict | None) -> tuple:  # noqa: ARG002
+        """Saved source references that must be verified before export."""
+        return ()
+
+    def validate_archive(self, config, ctx) -> None:
+        """Validate config using only included resources. No external reads or effects."""
+
+    def export_config(self, config, mapping):
+        """Map declared references; override for additional IDs, revisions and snapshots."""
+        from lfx.projects.archive_config import remap_declared_references
+
+        return remap_declared_references(self, config, mapping)
+
+    def import_config(self, config, mapping):
+        from lfx.projects.archive_config import remap_declared_references
+
+        return remap_declared_references(self, config, mapping)
+
     async def save_config(self, request: SaveRequest, ctx: ProjectSaveContext) -> PreparedSave:  # noqa: ARG002
         """Prepare config without committing. Override to validate and pin sources."""
         from lfx.projects.lifecycle import PreparedSave
