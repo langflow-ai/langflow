@@ -79,6 +79,7 @@ nvidia = ["langchain-nvidia-ai-endpoints>=1.5.0,<2.0.0", "requests>=2.33.0", "nv
 olivya = []
 ollama = ["lfx-ollama>=0.1.0,<1.0.0"]
 olostep = []
+onlinecompiler = []
 openrouter = ["langchain-openai>=1.1.6"]
 orcarouter = ["langchain-openai>=1.1.6"]
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
@@ -155,6 +156,7 @@ all = [
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[olostep]",
+    "lfx-bundles[onlinecompiler]",
     "lfx-bundles[openrouter]",
     "lfx-bundles[orcarouter]",
     "lfx-bundles[perplexity]",
@@ -230,6 +232,7 @@ all-no-torch = [
     "lfx-bundles[nvidia]",
     "lfx-bundles[olivya]",
     "lfx-bundles[olostep]",
+    "lfx-bundles[onlinecompiler]",
     "lfx-bundles[openrouter]",
     "lfx-bundles[orcarouter]",
     "lfx-bundles[perplexity]",

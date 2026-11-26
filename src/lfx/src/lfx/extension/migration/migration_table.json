@@ -5325,6 +5325,16 @@
       "bare_class_name": "SocialScrapeTranscriptComponent",
       "target": "ext:socialscrape:SocialScrapeTranscriptComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OnlineCompilerRunCodeComponent",
+      "target": "ext:onlinecompiler:OnlineCompilerRunCodeComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "OnlineCompilerRunTestsComponent",
+      "target": "ext:onlinecompiler:OnlineCompilerRunTestsComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [
