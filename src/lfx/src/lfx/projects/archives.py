@@ -20,7 +20,7 @@ from lfx.projects.flow_slots import (
     flow_runtime_bindings,
     validate_project_binding,
 )
-from lfx.projects.tool_packs import ToolPackToolBinding, tool_pack_manifest, tool_pack_references
+from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_manifest, tool_pack_references
 from lfx.projects.tools import TOOL_ORIGIN, tool_node_revision
 
 MAX_COMPOSITION_PROJECTS = 100
@@ -92,7 +92,11 @@ class CompositionGraph:
             msg = "A referenced Tool Pack is missing from the composition archive."
             raise ValueError(msg)
         return tool_pack_manifest(
-            project_id=project.id, name=project.name, config=project.project_config, flows=project.flows
+            project_id=project.id,
+            name=project.name,
+            config=project.project_config,
+            flows=project.flows,
+            dependency_flows=list(self.flows.values()),
         )
 
     def selected_flow(self, node: dict) -> str | None:
@@ -178,6 +182,7 @@ class CompositionGraph:
                         validate_binding("system_prompt", self.source(target)["data"], binding)
                     elif origin.get("tool_pack"):
                         binding = ToolPackToolBinding.model_validate(origin["tool_pack"])
+                        binding.dependency_snapshots()
                         manifest = self.manifest(str(binding.reference.project_id))
                         if binding.reference != manifest.reference or binding.tool not in manifest.tools:
                             msg = "An archived tool has an unreviewed Tool Pack definition."
@@ -204,6 +209,7 @@ class CompositionGraph:
         visited: set[str] = set()
         active: set[str] = set()
         pack_manifests = {}
+        original_flow_ids = {new_id: old_id for old_id, new_id in flow_ids.items()}
         names = flow_names or {flow_id: flow["name"] for flow_id, flow in self.flows.items()}
 
         def pack(project_id):
@@ -215,7 +221,11 @@ class CompositionGraph:
                 config = deepcopy(project.project_config or {})
                 config["tools"] = [flow_ids[item] for item in config.get("tools", [])]
                 pack_manifests[project_id] = tool_pack_manifest(
-                    project_id=UUID(project_ids[project_id]), name=project.name, config=config, flows=project.flows
+                    project_id=UUID(project_ids[project_id]),
+                    name=project.name,
+                    config=config,
+                    flows=project.flows,
+                    dependency_flows=list(target.flows.values()),
                 )
             return pack_manifests[project_id]
 
@@ -285,7 +295,16 @@ class CompositionGraph:
                         manifest = pack(str(original_binding.reference.project_id))
                         export = next(item for item in manifest.tools if str(item.flow_id) == flow_ids[selected])
                         origin["tool_pack"] = ToolPackToolBinding(
-                            reference=manifest.reference, tool=export, version_id=UUID(version_ids[selected])
+                            reference=manifest.reference,
+                            tool=export,
+                            version_id=UUID(version_ids[selected]),
+                            dependency_versions=tuple(
+                                FlowDependencyVersion(
+                                    flow=dependency,
+                                    version_id=UUID(version_ids[original_flow_ids[str(dependency.flow_id)]]),
+                                )
+                                for dependency in export.dependencies
+                            ),
                         ).model_dump(mode="json")
                     if unchanged_tool:
                         origin["applied_revision"] = tool_node_revision(node)

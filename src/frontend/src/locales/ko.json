@@ -4399,5 +4399,8 @@
   "toolPacks.reviewHelp": "이 Pack이 제공할 Tool을 확인하세요. 참조를 업데이트하면 Harness를 저장할 때 이 리비전이 적용됩니다.",
   "toolPacks.selectedCount_one": "Tool Pack {{count}}개",
   "toolPacks.usedTitle": "이 실행에서 쓴 Tool",
-  "toolPacks.callCount_other": "완료된 호출 {{count}}개"
+  "toolPacks.callCount_other": "완료된 호출 {{count}}개",
+  "toolPacks.nestedRecordedHelp": "이 Tool에서 쓸 수 있는 검토된 정의입니다. 실행에서는 이 Flow 중 일부만 쓸 수도 있습니다.",
+  "toolPacks.nestedDependencies": "중첩 Flow 의존성",
+  "toolPacks.nestedReviewHelp": "이 Flow가 바뀌면 검토한 Tool 리비전도 바뀝니다."
 }
