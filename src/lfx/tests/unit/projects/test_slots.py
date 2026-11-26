@@ -141,7 +141,9 @@ def test_contract_metadata_does_not_replace_the_existing_field_value_or_widget()
         "default_flow_ref": None,
     }
     assert template["n_messages"]["value"] == 100
-    assert template["n_messages"]["flow_contract"]["name"] == "ContextManager"
+    assert template["context_strategy"]["flow_contract"]["name"] == "ContextManager"
+    assert template["tool_policy"]["flow_contract"]["name"] == "PermissionGate"
+    assert not template["tool_policy"].get("supports_flow_binding", False)
 
 
 def test_custom_contract_can_be_registered_before_a_component_cache_exists():
@@ -172,5 +174,11 @@ def test_registered_vocabulary_does_not_claim_unbuilt_baseline_flows():
         "model",
         "tools",
         "n_messages",
+        "tool_policy",
+        "context_strategy",
+        "context_turns",
         "compaction",
+        "compaction_trigger_tokens",
+        "compaction_keep_messages",
+        "max_iterations",
     }

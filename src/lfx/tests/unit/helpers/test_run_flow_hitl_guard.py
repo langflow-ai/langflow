@@ -93,3 +93,13 @@ async def test_plain_flow_still_runs():
     outputs = await run_flow(inputs={"input_value": "hi"}, user_id="u1", graph=graph)
 
     assert outputs is not None
+
+
+async def test_nested_harness_approval_fails_before_model_or_tool_execution():
+    from lfx.components.models_and_agents.agent import AgentComponent
+    from lfx.run.hitl import NestedHITLUnsupportedError, flow_has_pausing_node
+
+    graph = _graph([_node(AgentComponent(tool_policy="ask", _id="agent"))], [])
+    assert flow_has_pausing_node(graph)
+    with pytest.raises(NestedHITLUnsupportedError, match="parent flow"):
+        await run_flow(inputs={"input_value": "Record"}, user_id="u1", graph=graph)

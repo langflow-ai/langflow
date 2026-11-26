@@ -12,6 +12,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
+from uuid import uuid4
 
 import pytest
 from langgraph.graph.state import CompiledStateGraph
@@ -101,7 +102,7 @@ async def test_should_apply_tool_retry_middleware_when_handle_parsing_errors_set
         return MagicMock(name="compiled_state_graph")
 
     component = _build_component()  # handle_parsing_errors=True
-    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
@@ -124,7 +125,7 @@ async def test_should_apply_tool_call_id_middleware_when_tools_are_attached() ->
         return MagicMock(name="compiled_state_graph")
 
     component = _build_component()
-    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
@@ -447,7 +448,7 @@ async def test_should_recover_when_llm_emits_malformed_tool_args() -> None:
         return MagicMock(name="compiled_state_graph")
 
     component = _build_component()  # handle_parsing_errors=True
-    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_create_agent),
@@ -983,7 +984,7 @@ async def test_should_raise_at_build_time_when_llm_does_not_support_tool_calling
     bad_llm.bind_tools.side_effect = NotImplementedError("provider doesn't support bind_tools")
 
     component = _build_component()
-    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
 
     with (
         patch.object(type(component), "_get_llm", return_value=bad_llm),
@@ -1003,7 +1004,7 @@ async def test_should_pass_through_other_bind_tools_exceptions_unchanged() -> No
     bad_llm.bind_tools.side_effect = ValueError("tool x is missing arg schema")
 
     component = _build_component()
-    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
 
     with (
         patch.object(type(component), "_get_llm", return_value=bad_llm),
@@ -1043,7 +1044,7 @@ async def test_should_map_attribute_error_from_bind_tools_to_user_message() -> N
     bad_llm.bind_tools.side_effect = AttributeError("'X' object has no attribute 'bind_tools'")
 
     component = _build_component()
-    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
 
     with (
         patch.object(type(component), "_get_llm", return_value=bad_llm),
@@ -1059,7 +1060,7 @@ async def test_should_map_type_error_from_bind_tools_to_user_message() -> None:
     bad_llm.bind_tools.side_effect = TypeError("bind_tools() got unexpected kwarg")
 
     component = _build_component()
-    component.set_attributes({"tools": [MagicMock(name="some_tool")]})
+    component.set_attributes({"tools": [MagicMock(name="some_tool", metadata={})]})
 
     with (
         patch.object(type(component), "_get_llm", return_value=bad_llm),
@@ -1375,7 +1376,7 @@ async def test_should_pass_recursion_limit_derived_from_max_iterations_when_stre
     )
 
 
-def test_gated_tool_budget_lets_model_call_limiter_end_an_ungated_tool_loop() -> None:
+async def test_gated_tool_budget_lets_model_call_limiter_end_an_ungated_tool_loop() -> None:
     """A gated tool adds a graph node even when the model only calls an ungated tool."""
     from langchain_core.language_models.chat_models import BaseChatModel
     from langchain_core.messages import AIMessage, HumanMessage
@@ -1392,7 +1393,7 @@ def test_gated_tool_budget_lets_model_call_limiter_end_an_ungated_tool_loop() ->
         def bind_tools(self, tools: Any, **kwargs: Any) -> BaseChatModel:  # noqa: ARG002
             return self
 
-        def _generate(self, messages: list, stop: list[str] | None = None, **kwargs: Any) -> ChatResult:  # noqa: ARG002
+        def _generate(self, messages, stop=None, run_manager=None, **kwargs):  # noqa: ARG002
             self.calls += 1
             response = AIMessage(content="", tool_calls=[{"name": "ping", "args": {}, "id": f"call_{self.calls}"}])
             return ChatResult(generations=[ChatGeneration(message=response)])
@@ -1410,14 +1411,21 @@ def test_gated_tool_budget_lets_model_call_limiter_end_an_ungated_tool_loop() ->
     gated.metadata = {"approval_actions": ["approve"]}
     component = _build_component()
     component.set_attributes({"tools": [ping, gated], "max_iterations": 15, "handle_parsing_errors": False})
+    # Approvals need a resumable run, so the Agent runs inside a graph run.
+    component._vertex = SimpleNamespace(
+        graph=SimpleNamespace(run_id=str(uuid4()), session_id=str(uuid4()), human_input_decisions={})
+    )
     model = RepeatingToolModel()
 
     with patch.object(type(component), "_get_llm", return_value=model):
         graph = component.create_agent_runnable()
 
-    result = graph.invoke(
+    result = await graph.ainvoke(
         {"messages": [HumanMessage(content="Keep calling ping")]},
-        config={"recursion_limit": component._compute_recursion_limit()},
+        config={
+            "configurable": {"thread_id": component._agent_thread_id()},
+            "recursion_limit": component._compute_recursion_limit(),
+        },
     )
 
     assert model.calls == 15
@@ -1675,10 +1683,8 @@ async def test_should_omit_checkpointer_when_no_tools_gated() -> None:
 
 
 @pytest.mark.asyncio
-async def test_should_omit_checkpointer_and_hitl_when_allow_interrupts_false() -> None:
-    """The structured-output path disables interrupts: no checkpointer, no HITL middleware."""
-    from langchain.agents.middleware import HumanInTheLoopMiddleware
-
+async def test_should_reject_gated_tools_when_allow_interrupts_false() -> None:
+    """A path unable to suspend must not silently approve connected tools."""
     captured: dict = {}
     component = _build_component()
     component._run_id = "job-1"
@@ -1688,11 +1694,11 @@ async def test_should_omit_checkpointer_and_hitl_when_allow_interrupts_false() -
     with (
         patch.object(type(component), "_get_llm", return_value=MagicMock(name="fake_llm")),
         patch("lfx.components.models_and_agents.agent.create_agent", side_effect=_capture_kwargs(captured)),
+        pytest.raises(ValueError, match="Agent message output"),
     ):
         component.create_agent_runnable(allow_interrupts=False)
 
-    assert captured.get("checkpointer") is None
-    assert not any(isinstance(m, HumanInTheLoopMiddleware) for m in (captured.get("middleware") or []))
+    assert captured == {}
 
 
 _INTERRUPT_VALUE = {

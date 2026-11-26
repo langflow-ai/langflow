@@ -15,6 +15,7 @@ import type {
   FlowBinding,
   ProjectConfig,
   ProjectSaveResult,
+  ProjectTypeType,
 } from "../../entities";
 import {
   AgentFlowPicker,
@@ -24,9 +25,11 @@ import {
 import { HarnessSummary } from "./components/harness-summary";
 import { InstructionsFlowPicker } from "./components/instructions-flow-picker";
 import { LongTextField } from "./components/long-text-field";
+import { ProjectChoiceField } from "./components/project-choice-field";
 import { ProjectFlowPicker } from "./components/project-flow-picker";
 
 import { editorDraft } from "./editor-draft";
+import { isProjectFieldVisible } from "./field-visibility";
 
 interface HarnessPageProps {
   projectId: string;
@@ -137,14 +140,18 @@ const HarnessPage = ({
 
   // One group per section, in the order the type's fields first name them.
   const sections = useMemo(() => {
-    const grouped = new Map<string, [string, Partial<InputFieldType>][]>();
+    const grouped = new Map<
+      string,
+      [string, ProjectTypeType["template"][string]][]
+    >();
     for (const [fieldName, field] of Object.entries(type?.template ?? {})) {
+      if (!isProjectFieldVisible(field, values)) continue;
       const section = (field as { section?: string })?.section ?? "";
       if (!grouped.has(section)) grouped.set(section, []);
       grouped.get(section)?.push([fieldName, field]);
     }
     return [...grouped.entries()];
-  }, [type]);
+  }, [type, values]);
 
   const toolsFieldName = useMemo(
     () =>
@@ -188,6 +195,7 @@ const HarnessPage = ({
           ([fieldName, field]) =>
             fieldName !== toolsFieldName &&
             fieldName !== modelFieldName &&
+            isProjectFieldVisible(field, values) &&
             // A long free-text field says nothing useful at a glance.
             !field?.multiline,
         )
@@ -197,7 +205,8 @@ const HarnessPage = ({
           value:
             values[fieldName] === undefined || values[fieldName] === ""
               ? "—"
-              : String(values[fieldName]),
+              : (field.option_labels?.[String(values[fieldName])] ??
+                String(values[fieldName])),
         })),
     [type, toolsFieldName, modelFieldName, values],
   );
@@ -334,7 +343,11 @@ const HarnessPage = ({
       </div>
 
       <div className="grid min-w-0 items-start gap-8 py-6 xl:grid-cols-[minmax(0,1fr)_280px]">
-        <div className="flex min-w-0 flex-col gap-8">
+        <fieldset
+          disabled={isPending}
+          inert={isPending}
+          className="flex min-w-0 flex-col gap-8 border-0 p-0"
+        >
           {projectType === "agent-harness" && (
             <AgentFlowPicker
               flows={flows}
@@ -445,6 +458,20 @@ const HarnessPage = ({
                         }))
                       }
                     />
+                  ) : field.option_labels ? (
+                    <ProjectChoiceField
+                      name={fieldName}
+                      label={field.display_name ?? fieldName}
+                      options={field.option_labels}
+                      value={String(values[fieldName] ?? "")}
+                      disabled={isPending}
+                      onChange={(value) =>
+                        setEdits((current) => ({
+                          ...current,
+                          [fieldName]: value,
+                        }))
+                      }
+                    />
                   ) : (
                     <ParameterRenderComponent
                       handleOnNewValue={(changes) =>
@@ -464,20 +491,27 @@ const HarnessPage = ({
                       inspectionPanel={false}
                       handleNodeClass={() => {}}
                       nodeClass={syntheticNodeClass}
-                      disabled={isPending}
+                      // Canvas widgets use `disabled` for a connected input and may clear
+                      // its value. The fieldset handles temporary form save restrictions.
+                      disabled={false}
                       placeholder={field?.placeholder ?? ""}
                       isToolMode={false}
                       // No flow is open here, so provider credentials scope to the project.
                       providerScope={{ projectId }}
                     />
                   )}
+                  {field.info && !(field as { renders?: string }).renders && (
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {field.info}
+                    </p>
+                  )}
                 </div>
               ))}
             </section>
           ))}
-        </div>
+        </fieldset>
 
-        <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-24">
+        <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-32">
           <HarnessSummary
             displayName={type.display_name}
             icon={type.icon}

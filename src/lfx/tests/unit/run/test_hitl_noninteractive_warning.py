@@ -1,11 +1,4 @@
-"""Non-interactive ``lfx run`` of a pausing flow must warn, not silently mis-run (LE-1698).
-
-Without a TTY (piped stdin, CI) or with ``--no-human-input``, the run goes through
-``graph.async_start``, which never consults the pause seam: a HumanInput node does not
-pause — it returns an empty message and the run continues down every branch. That is
-correct-by-limitation, but it must be loud: the CLI has to tell the user the pause was
-skipped and how to get the interactive behavior.
-"""
+"""Non-interactive runs reject required approvals instead of continuing without a decision."""
 
 from __future__ import annotations
 
@@ -14,7 +7,7 @@ import json
 import pytest
 from lfx.components.flow_controls.human_input import HumanInput
 from lfx.components.input_output import ChatInput, ChatOutput
-from lfx.run.base import run_flow
+from lfx.run.base import RunError, run_flow
 
 
 def _node(component) -> dict:
@@ -57,36 +50,38 @@ def pausing_flow_path(tmp_path):
 
 
 @pytest.mark.asyncio
-async def test_noninteractive_run_of_pausing_flow_warns(pausing_flow_path, capsys):
-    result = await run_flow(
-        script_path=pausing_flow_path,
-        input_value="hello",
-        check_variables=False,
-        human_input=False,
-    )
-
-    assert result["success"] is True
-    err = capsys.readouterr().err
-    assert "Human Input" in err or "pausing" in err
-    assert "--human-input" in err
+async def test_noninteractive_run_of_pausing_flow_fails(pausing_flow_path):
+    with pytest.raises(RunError, match="--human-input"):
+        await run_flow(
+            script_path=pausing_flow_path,
+            input_value="hello",
+            check_variables=False,
+            human_input=False,
+        )
 
 
 @pytest.mark.asyncio
-async def test_auto_detect_without_tty_also_warns(pausing_flow_path, capsys, monkeypatch):
-    # Default (human_input=None) on a non-TTY stdin resolves to non-interactive; same warning.
+async def test_auto_detect_without_tty_also_fails(pausing_flow_path, monkeypatch):
     import sys as _sys
 
     monkeypatch.setattr(_sys.stdin, "isatty", lambda: False)
 
-    result = await run_flow(
-        script_path=pausing_flow_path,
-        input_value="hello",
-        check_variables=False,
-        human_input=None,
-    )
+    with pytest.raises(RunError, match="--human-input"):
+        await run_flow(
+            script_path=pausing_flow_path,
+            input_value="hello",
+            check_variables=False,
+            human_input=None,
+        )
 
-    assert result["success"] is True
-    assert "--human-input" in capsys.readouterr().err
+
+async def test_noninteractive_harness_approval_fails_before_loading_model(tmp_path):
+    from lfx.components.models_and_agents.agent import AgentComponent
+
+    path = tmp_path / "harness.json"
+    path.write_text(json.dumps({"data": {"nodes": [_node(AgentComponent(tool_policy="ask"))], "edges": []}}))
+    with pytest.raises(RunError, match="requires human approval"):
+        await run_flow(script_path=path, input_value="Record", check_variables=False, human_input=False)
 
 
 @pytest.mark.asyncio

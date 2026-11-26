@@ -8,6 +8,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from fastapi import HTTPException
+from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.log.logger import logger
 from lfx.projects import DEFAULT_PROJECT_TYPE, apply_project_config, get_project_type
 from lfx.projects.bindings import (
@@ -169,8 +170,26 @@ async def write_project_config_to_flows(
     instruction_target = None
     instruction_binding = None
     if project_type.name == "agent-harness":
+        try:
+            runtime = HarnessRuntimeConfig.model_validate(config)
+        except ValueError as exc:
+            raise HTTPException(
+                422, "Invalid harness runtime settings. Check context, compaction, and model-call limits."
+            ) from exc
         agent = select_agent_flow(flows, config)
         targets = [agent] if agent else []
+        if agent is not None:
+            node = next(node for node in agent.data["nodes"] if node["data"].get("type") == "Agent")
+            template = node["data"]["node"]["template"]
+            unsupported = [
+                name
+                for name, field in HarnessRuntimeConfig.model_fields.items()
+                if name in config and name not in template and getattr(runtime, name) != field.default
+            ]
+            if unsupported:
+                raise HTTPException(
+                    422, "Update the Agent component on its canvas before configuring context or compaction."
+                )
         if "tools" in config:
             tools = selected_tools(flows, agent, config["tools"])
         if agent is not None:
