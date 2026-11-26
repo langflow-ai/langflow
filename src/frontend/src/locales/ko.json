@@ -4418,5 +4418,8 @@
   "runConfig.bindings": "설정된 Flow 바인딩",
   "runConfig.runtime": "런타임 제어",
   "runConfig.loadedHistory": "불러온 기록 메시지",
-  "runConfig.legacy": "이 보고서에는 기록된 설정이 없습니다. 현재 프로젝트 설정으로는 이 실행에 쓰인 값을 알 수 없습니다."
+  "runConfig.legacy": "이 보고서에는 기록된 설정이 없습니다. 현재 프로젝트 설정으로는 이 실행에 쓰인 값을 알 수 없습니다.",
+  "projectStarters.research.title": "리서치 Starter",
+  "projectStarters.research.description": "검색, 출처 읽기, 출처 기반 보고서용 Tool Pack이 따로 딸린 Agent Harness입니다.",
+  "projectStarters.label": "Starter"
 }

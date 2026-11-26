@@ -2,6 +2,18 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type { ProjectTypeType } from "@/pages/MainPage/entities";
 import { AddFolderButton } from "../add-folder-button";
 
+jest.mock("../project-starter-item", () => ({
+  ProjectStarterItem: ({
+    starter,
+  }: {
+    starter: { name: string; display_name: string };
+  }) => (
+    <button data-testid={`starter-${starter.name}`}>
+      {starter.display_name}
+    </button>
+  ),
+}));
+
 jest.mock("react-i18next", () => ({
   initReactI18next: { type: "3rdParty", init: jest.fn() },
   useTranslation: () => ({ t: (key: string) => key }),
@@ -51,6 +63,10 @@ jest.mock("@/components/ui/button", () => ({
 }));
 
 jest.mock("@/components/ui/dropdown-menu", () => ({
+  DropdownMenuSeparator: () => <hr />,
+  DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => (
+    <span>{children}</span>
+  ),
   DropdownMenu: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
@@ -163,5 +179,32 @@ describe("AddFolderButton", () => {
     fireEvent.click(screen.getByTestId("add-project-agent-harness"));
 
     expect(onClick).toHaveBeenCalledWith("agent-harness");
+  });
+
+  it("offers the research starter within the registered harness type", () => {
+    render(
+      <AddFolderButton
+        {...defaultProps}
+        projectTypes={[
+          FLOWS,
+          {
+            ...HARNESS,
+            starters: [
+              {
+                name: "research",
+                display_name: "Research starter",
+                description: "A harness and reusable tools.",
+              },
+            ],
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByText("projectStarters.label")).toBeInTheDocument();
+    expect(screen.getByTestId("starter-research")).toBeInTheDocument();
+    expect(screen.getByTestId("add-project-agent-harness")).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("add-project-research"),
+    ).not.toBeInTheDocument();
   });
 });
