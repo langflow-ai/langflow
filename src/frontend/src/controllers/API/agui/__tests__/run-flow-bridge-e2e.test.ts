@@ -238,47 +238,47 @@ describe("runFlowAGUI end-to-end", () => {
         "The provider credential is expired or was rejected.\n\nReconnect the integration and try again.",
       code: "auth-expired",
     },
-  ])("surfaces RUN_ERROR details to alertStore and clears isBuilding: $code", async ({
-    message,
-    code,
-  }) => {
-    const displayed = code ? `[${code}] ${message}` : message;
-    const events = [
-      {
-        type: "RUN_STARTED",
-        threadId: "thread-1",
-        runId: "run-1",
-        timestamp: 0,
-      },
-      {
-        type: "RUN_ERROR",
-        message,
-        code,
-        timestamp: 0,
-      },
-    ];
+  ])(
+    "surfaces RUN_ERROR details to alertStore and clears isBuilding: $code",
+    async ({ message, code }) => {
+      const displayed = code ? `[${code}] ${message}` : message;
+      const events = [
+        {
+          type: "RUN_STARTED",
+          threadId: "thread-1",
+          runId: "run-1",
+          timestamp: 0,
+        },
+        {
+          type: "RUN_ERROR",
+          message,
+          code,
+          timestamp: 0,
+        },
+      ];
 
-    const fetchSpy = jest
-      .spyOn(global as { fetch: typeof fetch }, "fetch")
-      .mockImplementation((async () =>
-        sseResponse(events)) as unknown as typeof fetch);
+      const fetchSpy = jest
+        .spyOn(global as { fetch: typeof fetch }, "fetch")
+        .mockImplementation((async () =>
+          sseResponse(events)) as unknown as typeof fetch);
 
-    try {
-      await runFlowAGUI({ flowId: "flow-1", message: "boom" });
+      try {
+        await runFlowAGUI({ flowId: "flow-1", message: "boom" });
 
-      const flow = useFlowStore.getState();
-      const alert = useAlertStore.getState();
-      expect(flow.isBuilding).toBe(false);
-      expect(flow.buildInfo).toEqual({
-        error: [displayed],
-        success: false,
-      });
-      expect(alert.errorData.title).toBe("Workflow run failed");
-      expect(alert.errorData.list).toEqual([displayed]);
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
+        const flow = useFlowStore.getState();
+        const alert = useAlertStore.getState();
+        expect(flow.isBuilding).toBe(false);
+        expect(flow.buildInfo).toEqual({
+          error: [displayed],
+          success: false,
+        });
+        expect(alert.errorData.title).toBe("Workflow run failed");
+        expect(alert.errorData.list).toEqual([displayed]);
+      } finally {
+        fetchSpy.mockRestore();
+      }
+    },
+  );
 
   it("tells a shared-playground visitor why a run can fail there", async () => {
     const events = [
