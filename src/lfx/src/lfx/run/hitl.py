@@ -174,6 +174,12 @@ NESTED_HITL_UNSUPPORTED = (
 )
 
 
+LOOP_BODY_HITL_UNSUPPORTED = (
+    "A Human Input node or a tool that requires approval cannot ask for a decision inside a loop, because a "
+    "loop iteration cannot pause. Move the approval out of the loop body."
+)
+
+
 class NestedHITLUnsupportedError(ValueError):
     """Deliberate user guidance — wrappers must surface it verbatim, not genericize it."""
 
