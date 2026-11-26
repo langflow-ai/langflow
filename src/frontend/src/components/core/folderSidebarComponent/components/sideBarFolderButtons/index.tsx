@@ -27,6 +27,7 @@ import {
 } from "@/contexts/permissionsContext";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import {
+  useGetProjectTypesQuery,
   usePatchFolders,
   usePostFolders,
   usePostUploadFolders,
@@ -186,6 +187,8 @@ const SideBarFoldersButtonsComponent = ({
 
   const { mutate: mutateDownloadFolder } = useGetDownloadFolders({});
   const { mutate: mutateAddFolder, isPending } = usePostFolders();
+  // Drives the "+" menu. One registered type means no menu at all.
+  const { data: projectTypes } = useGetProjectTypesQuery();
   const { mutate: mutateUpdateFolder } = usePatchFolders();
   const { mutate } = usePostUploadFolders();
 
@@ -292,13 +295,17 @@ const SideBarFoldersButtonsComponent = ({
     );
   };
 
-  function addNewFolder() {
+  function addNewFolder(projectType?: string) {
+    const displayName =
+      projectTypes?.find((candidate) => candidate.name === projectType)
+        ?.display_name ?? "Project";
     mutateAddFolder(
       {
         data: {
-          name: "New Project",
+          name: `New ${displayName}`,
           parent_id: null,
           description: "",
+          project_type: projectType,
         },
       },
       {
@@ -345,8 +352,12 @@ const SideBarFoldersButtonsComponent = ({
         ...old,
         [item.id]: foldersNames[item.id],
       }));
+      // project_type and project_config are deliberately left out. The cached project row can
+      // be older than the last save of the project's form, and a rename that carried them
+      // would write that stale config back over it.
+      const { project_type: _type, project_config: _config, ...rest } = item;
       const body = {
-        ...item,
+        ...rest,
         name: foldersNames[item.id],
         flows: item.flows?.length > 0 ? item.flows : [],
         components: item.components?.length > 0 ? item.components : [],
@@ -508,6 +519,7 @@ const SideBarFoldersButtonsComponent = ({
           addNewFolder={addNewFolder}
           containerClassName={projectSidebar.headerRowClassName}
           titleClassName={projectSidebar.headerClassName}
+          projectTypes={projectTypes}
         />
         {projectSidebar.tools}
       </SidebarHeader>

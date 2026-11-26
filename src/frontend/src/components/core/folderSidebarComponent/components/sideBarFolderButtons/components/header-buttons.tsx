@@ -5,6 +5,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
 import { useCustomNewProjectButton } from "@/customization/hooks/use-custom-new-project-button";
+import type { ProjectTypeType } from "@/pages/MainPage/entities";
 import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { cn } from "@/utils/utils";
@@ -19,13 +20,15 @@ export const HeaderButtons = ({
   addNewFolder,
   containerClassName,
   titleClassName,
+  projectTypes,
 }: {
   handleUploadFlowsToFolder: () => void;
   isUpdatingFolder: boolean;
   isPending: boolean;
-  addNewFolder: () => void;
   containerClassName?: string;
   titleClassName?: string;
+  addNewFolder: (projectType?: string) => void;
+  projectTypes?: ProjectTypeType[];
 }) => {
   const { t } = useTranslation();
   const userData = useAuthStore((state) => state.userData);
@@ -109,6 +112,7 @@ export const HeaderButtons = ({
               disabled={isUpdatingFolder}
               loading={isPending}
               blockedReason={newProjectButton.blockedReason}
+              projectTypes={projectTypes}
             />
           )}
         </div>
