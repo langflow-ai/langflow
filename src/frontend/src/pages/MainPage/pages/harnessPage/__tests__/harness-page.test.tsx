@@ -394,6 +394,36 @@ const defaultProps = {
 const renderPage = (props: Partial<ComponentProps<typeof HarnessPage>> = {}) =>
   render(<HarnessPage {...defaultProps} {...props} />);
 
+it("summarizes a Skill Pack without claiming that callable flows are missing", () => {
+  projectTypes = [
+    {
+      name: "skill-pack",
+      display_name: "Skill Pack",
+      icon: "BookOpen",
+      description: "Reusable skills",
+      template: {
+        skills: {
+          name: "skills",
+          display_name: "Skills",
+          type: "list",
+          value: [],
+          renders: "skill_definitions",
+        },
+      },
+    },
+  ];
+  renderPage({ projectType: "skill-pack", projectConfig: { skills: [] } });
+  expect(screen.getByTestId("harness-summary-detail-skills")).toHaveTextContent(
+    "0",
+  );
+  expect(
+    screen.queryByTestId("harness-summary-tools-empty"),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByTestId("harness-summary-model-empty"),
+  ).not.toBeInTheDocument();
+});
+
 it("renders a tool pack's exports without an agent target or model requirement", () => {
   const pack = {
     name: "tool-pack",
