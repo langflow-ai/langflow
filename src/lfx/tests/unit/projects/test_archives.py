@@ -98,3 +98,79 @@ def test_named_dependency_is_relocated_when_unique(tool):
     imported = relocate(composition)
     parent, nested = imported.projects[0].flows
     assert parent["data"]["nodes"][-1]["data"]["node"]["template"]["flow_id_selected"]["value"] == nested["id"]
+
+
+@pytest.fixture
+def archive_type(monkeypatch):
+    from lfx.inputs.inputs import StrInput
+    from lfx.projects import ProjectTypeDefinition, ProjectTypeField, registry
+
+    class CustomArchiveType(ProjectTypeDefinition):
+        name = "archive-test"
+        display_name = "Archive test"
+        icon = "Box"
+        fields = (
+            ProjectTypeField(name="libraries", input=StrInput(name="libraries", list=True), references="archive-test"),
+        )
+
+        def export_config(self, config, mapping):
+            config = super().export_config(config, mapping)
+            return {**(config or {}), "direction": "export"}
+
+        def import_config(self, config, mapping):
+            config = super().import_config(config, mapping)
+            return {**(config or {}), "direction": "import"}
+
+    original = registry.get_project_type
+    monkeypatch.setattr(
+        "lfx.projects.archives.get_project_type",
+        lambda name: CustomArchiveType() if name == CustomArchiveType.name else original(name),
+    )
+    return CustomArchiveType
+
+
+def test_custom_archive_hooks_remap_declared_references_without_changing_source(archive_type):
+    dependency = ArchivedProject(id=uuid4(), name="Library", project_type=archive_type.name, flows=[])
+    root = ArchivedProject(
+        id=uuid4(),
+        name="Support",
+        project_type=archive_type.name,
+        flows=[],
+        project_config={"libraries": [{"project_id": str(dependency.id), "revision": "a" * 64}]},
+    )
+    graph = CompositionGraph(ProjectComposition(root_project_id=root.id, projects=[root, dependency]))
+    original = graph.composition.model_dump()
+    graph.validate()
+    mapped_ids = {key: str(uuid4()) for key in graph.projects}
+    exported = graph.relocate(project_ids=mapped_ids, flow_ids={}, version_ids={}, operation="export")
+    assert exported.projects[0].project_config["direction"] == "export"
+    assert exported.projects[0].project_config["libraries"][0]["project_id"] == mapped_ids[str(dependency.id)]
+    imported = relocate(exported)
+    assert imported.projects[0].project_config["direction"] == "import"
+    assert graph.composition.model_dump() == original
+
+
+def test_declared_archive_references_cannot_escape_closed_graph(archive_type):
+    root = ArchivedProject(
+        id=uuid4(),
+        name="Support",
+        project_type=archive_type.name,
+        flows=[],
+        project_config={"libraries": [{"project_id": str(uuid4()), "revision": "a" * 64}]},
+    )
+    with pytest.raises(ValueError, match="missing or has the wrong type"):
+        CompositionGraph(ProjectComposition(root_project_id=root.id, projects=[root])).validate()
+
+
+def test_unavailable_project_type_is_not_downgraded():
+    root = ArchivedProject(id=uuid4(), name="Unknown", project_type="plugin-no-longer-installed", flows=[])
+    with pytest.raises(ValueError, match="not registered"):
+        CompositionGraph(ProjectComposition(root_project_id=root.id, projects=[root])).validate()
+
+
+@pytest.mark.parametrize("result", [[], {"_applied": {}}, {"invalid": float("nan")}])
+def test_archive_hook_invalid_results_are_rejected(archive_type, monkeypatch, result):
+    monkeypatch.setattr(archive_type, "import_config", lambda *_: result)
+    root = ArchivedProject(id=uuid4(), name="Invalid", project_type=archive_type.name, flows=[])
+    with pytest.raises(ValueError, match=r"archive hook|Out of range float"):
+        relocate(ProjectComposition(root_project_id=root.id, projects=[root]))
