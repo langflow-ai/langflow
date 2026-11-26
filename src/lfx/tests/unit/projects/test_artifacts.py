@@ -132,26 +132,33 @@ async def test_stored_report_survives_reload_and_concurrent_saves_do_not_overwri
     assert set(await storage.list_files(flow_id)) == {
         first.markdown_name,
         first.record_name,
+        f"report-{first.report.id}.summary.json",
         second.markdown_name,
         second.record_name,
+        f"report-{second.report.id}.summary.json",
     }
 
 
-async def test_failed_record_write_cleans_its_partial_files_and_preserves_prior_artifact(storage, monkeypatch):
+@pytest.mark.parametrize("failure", ["summary", "record"])
+async def test_failed_record_write_cleans_its_partial_files_and_preserves_prior_artifact(storage, monkeypatch, failure):
     original = report()
     saved = await store_report(original, storage)
     save_file = storage.save_file
 
     async def fail_record(flow_id, file_name, data):
         await save_file(flow_id, file_name, data)
-        if file_name.endswith(".json"):
+        if file_name.endswith(".json") and file_name.endswith(".summary.json") == (failure == "summary"):
             msg = "Injected write failure after partial persistence"
             raise OSError(msg)
 
     monkeypatch.setattr(storage, "save_file", fail_record)
     with pytest.raises(OSError, match="Injected"):
         await store_report(original, storage)
-    assert set(await storage.list_files(str(original.execution.flow_id))) == {saved.markdown_name, saved.record_name}
+    assert set(await storage.list_files(str(original.execution.flow_id))) == {
+        saved.markdown_name,
+        saved.record_name,
+        f"report-{saved.report.id}.summary.json",
+    }
 
 
 def graph_report(*, markdown=None, require_resolved=True, flow_id=None):
