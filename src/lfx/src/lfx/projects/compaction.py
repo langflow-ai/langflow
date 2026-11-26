@@ -6,10 +6,11 @@ from pydantic import Field
 from lfx.base.agents.compaction import COMPACTION_MODEL, CompactionResult
 from lfx.base.agents.context_messages import messages_to_table
 from lfx.projects.bindings import FlowBinding, compose_single_binding, contract_outputs, flow_revision
+from lfx.projects.builtin_slots import COMPACTOR
 from lfx.projects.invocation import ReviewedFlowRunner
 
 COMPACTION_INPUT = "harness_compaction_input"
-COMPACTION_ORIGIN = "_harness_compaction"
+COMPACTION_ORIGIN = COMPACTOR.origin_key
 
 
 class CompactionBinding(FlowBinding):
@@ -58,7 +59,7 @@ def compose_compaction(data: dict, *, project_id: str, agent_id: str, binding: C
         project_id=project_id,
         agent_id=agent_id,
         binding=binding,
-        input_name="compaction_binding",
+        input_name=COMPACTOR.agent_input_name,
         origin_name=COMPACTION_ORIGIN,
         label="Compaction",
     )
@@ -68,7 +69,9 @@ class CompactionFlowRunner:
     def __init__(self, component, binding: CompactionBinding, model):
         self.binding = binding
         self.model = model
-        self.runner = ReviewedFlowRunner(component, validate=validate_compaction_binding, label="compaction")
+        self.runner = ReviewedFlowRunner(
+            component, validate=validate_compaction_binding, label="compaction", field_name="compaction"
+        )
 
     async def __call__(self, messages, *, estimated_tokens):
         async def invoke(rows):

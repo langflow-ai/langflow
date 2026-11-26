@@ -5,10 +5,11 @@ from pydantic import Field
 
 from lfx.base.agents.context_messages import messages_from_table, messages_to_table
 from lfx.projects.bindings import FlowBinding, compose_single_binding, contract_outputs, flow_revision
+from lfx.projects.builtin_slots import CONTEXT_MANAGER
 from lfx.projects.invocation import ReviewedFlowRunner
 
 AGENT_CONTEXT = "harness_agent_context"
-CONTEXT_ORIGIN = "_harness_context"
+CONTEXT_ORIGIN = CONTEXT_MANAGER.origin_key
 
 
 class ContextBinding(FlowBinding):
@@ -56,7 +57,7 @@ def compose_context(data: dict, *, project_id: str, agent_id: str, binding: Cont
         project_id=project_id,
         agent_id=agent_id,
         binding=binding,
-        input_name="context_binding",
+        input_name=CONTEXT_MANAGER.agent_input_name,
         origin_name=CONTEXT_ORIGIN,
         label="Context",
     )
@@ -65,7 +66,9 @@ def compose_context(data: dict, *, project_id: str, agent_id: str, binding: Cont
 class ContextFlowRunner:
     def __init__(self, component, binding: ContextBinding):
         self.binding = binding
-        self.runner = ReviewedFlowRunner(component, validate=validate_context_binding, label="context")
+        self.runner = ReviewedFlowRunner(
+            component, validate=validate_context_binding, label="context", field_name="context_strategy"
+        )
 
     async def __call__(self, messages):
         async def invoke(rows):

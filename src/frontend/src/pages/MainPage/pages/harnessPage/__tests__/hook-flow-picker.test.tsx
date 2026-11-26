@@ -10,6 +10,7 @@ import { useState } from "react";
 import type { FlowOutputChoice, HookBinding } from "@/pages/MainPage/entities";
 import { HookFlowPicker } from "../components/hook-flow-picker";
 import { outputKey } from "../flow-binding";
+import slotContracts from "./slot-contracts";
 
 let choices: FlowOutputChoice[];
 let isError = false;
@@ -99,6 +100,7 @@ function setup(
       <HookFlowPicker
         projectId="project"
         fieldName="hooks"
+        contract={slotContracts.hooks}
         agentId="agent"
         disabled={false}
         onOpen={() => {}}
@@ -266,6 +268,7 @@ it("shows discovery loading and offers retry after failure", () => {
     <HookFlowPicker
       projectId="project"
       fieldName="hooks"
+      contract={slotContracts.hooks}
       value={[]}
       disabled={false}
       onChange={() => {}}
