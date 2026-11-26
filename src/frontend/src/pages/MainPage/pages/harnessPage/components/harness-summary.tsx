@@ -152,13 +152,13 @@ export const HarnessSummary = ({
           {details.map((detail) => (
             <div
               key={detail.name}
-              className="flex items-center justify-between gap-3 py-1.5"
+              className="grid grid-cols-2 items-start gap-3 py-1.5"
             >
               <span className="text-sm text-muted-foreground">
                 {detail.label}
               </span>
               <span
-                className="truncate text-sm font-medium"
+                className="break-words text-right text-sm font-medium"
                 data-testid={`harness-summary-detail-${detail.name}`}
               >
                 {detail.value}

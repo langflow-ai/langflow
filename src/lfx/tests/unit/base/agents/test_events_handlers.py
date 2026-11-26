@@ -426,3 +426,15 @@ async def test_tool_error_survives_a_model_publication_while_another_call_runs()
 
     run_a, run_b = [block for block in result.content_blocks if isinstance(block, ToolContent)]
     assert (run_a.output, run_b.error) == ("result-a", "error-b")
+
+
+async def test_tool_result_survives_harness_evidence_published_while_another_call_runs():
+    """Harness evidence published mid-flight must not detach the runs still in progress."""
+    events = _parallel_search_events(model_declared=False, first_finished="on_tool_end")
+    evidence = {"event": "on_custom_event", "name": "harness_runtime", "data": {"kind": "permission_decision"}}
+    events.insert(2, evidence)
+
+    result, _ = await _run_recording_publications(events)
+
+    run_a, run_b = [block for block in result.content_blocks if isinstance(block, ToolContent)]
+    assert (run_a.output, run_b.output) == ("result-a", "result-b")

@@ -43,7 +43,8 @@ def test_decision_matches_its_exact_interrupt():
 def test_legacy_two_part_decision_still_resumes_old_checkpoints():
     decision = {"action_id": "approve"}
     agent = _Agent({"Agent-x:run-1": decision})
-    assert agent._injected_agent_decision("run-1", "int-A") == decision
+    assert agent._injected_agent_decision("run-1") == decision
+    assert agent._injected_agent_decision("run-1", "int-A") is None
 
 
 def test_legacy_caller_without_interrupt_id_matches_single_nonced_decision():

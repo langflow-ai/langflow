@@ -1,11 +1,8 @@
-"""Agent tool-call approval HITL helpers (LE-1447).
+"""Resolve harness tool policy and bridge agent interrupts to the shared HITL pause contract.
 
-Split out of ``agent.py`` to keep it within the file-size budget. ``ToolApprovalMixin``
-carries the interrupt → pause → resume logic for AgentComponent: gating connected tools,
-mapping a ``HumanInTheLoopMiddleware`` interrupt onto the shared HITL pause contract (the
-same one the HumanInput node uses), reading the pending interrupt from the agent's
-checkpointed state, and translating the human decision back into the middleware's resume
-shape. Behavior is unchanged; methods stay instance methods so ``self`` semantics hold.
+Approvals use the same cards and resume route as Human Input nodes. Each current pause
+is matched by its checkpoint interrupt ID; legacy value-only helpers remain available
+for Agent code frozen into older saved flows.
 """
 
 from __future__ import annotations
@@ -49,18 +46,23 @@ class ToolApprovalMixin:
         return JobCheckpointSaver(thread_id, store.save_blob, store.load_blob)
 
     def _gated_interrupt_on(self) -> dict[str, dict[str, Any]]:
-        """Gate connected tools by the decisions selected on each tool's Actions row.
+        """Combine the harness policy with each tool's selected approval decisions.
 
         Each tool carries ``approval_actions`` (a subset of approve/edit/reject/respond)
         in its metadata; a non-empty list gates that tool and maps to the middleware's
-        ``InterruptOnConfig`` so the card offers exactly those decisions. The agent has
-        no tool list of its own — each tool keeps its own per-action selection.
+        ``InterruptOnConfig`` so the card offers exactly those decisions. Ask adds an
+        approve/reject gate to otherwise ungated tools; deny never requests approval.
         """
+        policy = getattr(self, "tool_policy", "tool_defaults")
+        if policy == "deny":
+            return {}
         gated: dict[str, dict[str, Any]] = {}
         for tool in self.tools or []:
             name = getattr(tool, "name", None)
             metadata = getattr(tool, "metadata", None) or {}
             actions = metadata.get("approval_actions") or []
+            if policy == "ask" and not actions:
+                actions = ["approve", "reject"]
             if name and actions:
                 gated[name] = {"allowed_decisions": list(actions)}
         return gated
@@ -96,12 +98,19 @@ class ToolApprovalMixin:
     async def _read_pending_interrupt(self, agent, config: dict[str, Any]) -> tuple[dict[str, Any] | None, str | None]:
         """Return (raw interrupt value, interrupt id) from the snapshot, or (None, None)."""
         snapshot = await agent.aget_state(config)
-        interrupts = getattr(snapshot, "interrupts", None) or []
-        if not interrupts:
-            for task in getattr(snapshot, "tasks", None) or []:
-                interrupts = getattr(task, "interrupts", None) or []
-                if interrupts:
-                    break
+        tasks = getattr(snapshot, "tasks", None) or []
+        # Parallel tool tasks can retain their old interrupt write after producing
+        # a result. The snapshot-wide list includes those resolved interrupts too.
+        interrupts = (
+            [
+                item
+                for task in tasks
+                if getattr(task, "result", None) is None
+                for item in (getattr(task, "interrupts", None) or [])
+            ]
+            if tasks
+            else (getattr(snapshot, "interrupts", None) or [])
+        )
         if not interrupts:
             return None, None
         first = interrupts[0]
@@ -150,11 +159,9 @@ class ToolApprovalMixin:
         if not isinstance(decisions, dict):
             return None
         if interrupt_id:
-            nonce_match = decisions.get(f"{self._id}:{thread_id}:{interrupt_id}")
-            if nonce_match is not None:
-                return nonce_match
+            return decisions.get(f"{self._id}:{thread_id}:{interrupt_id}")
         bare_match = decisions.get(f"{self._id}:{thread_id}")
-        if bare_match is not None or interrupt_id:
+        if bare_match is not None:
             return bare_match
         prefix = f"{self._id}:{thread_id}:"
         nonced = [value for key, value in decisions.items() if str(key).startswith(prefix)]
@@ -174,7 +181,29 @@ class ToolApprovalMixin:
             return {"type": "reject", "message": values.get("message", "")}
         if action_id == "respond":
             return {"type": "respond", "message": values.get("message") or values.get("response") or ""}
-        return {"type": "approve"}
+        if action_id == "approve":
+            return {"type": "approve"}
+        msg = f"Unknown tool approval decision: {action_id!r}"
+        raise ValueError(msg)
+
+    async def _agent_stream_input(self, agent, config, input_dict):
+        """Read the checkpoint before resuming; a stale response never restarts the model."""
+        from langgraph.types import Command
+
+        thread_id = self._agent_thread_id()
+        value, interrupt_id = await self._read_pending_interrupt(agent, config)
+        if not value:
+            if self._has_candidate_decision(thread_id):
+                msg = "No pending tool approval matches this response. Reload the run before continuing."
+                raise ValueError(msg)
+            return input_dict
+        decision = self._injected_agent_decision(thread_id, interrupt_id)
+        if decision is None:
+            # None re-exposes existing interrupts without adding another user message
+            # or resolving any tool. The existing pause handler renders the current card.
+            return None
+        resume = {"decisions": self._build_resume_decisions(decision, value.get("action_requests") or [])}
+        return Command(resume={interrupt_id: resume} if interrupt_id else resume)
 
     def _build_resume_decisions(
         self, decision: dict[str, Any], action_requests: list[dict[str, Any]]
