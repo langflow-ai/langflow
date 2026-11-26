@@ -26,6 +26,24 @@ const nodeWithRefreshableField = (): APIClassType =>
     },
   }) as unknown as APIClassType;
 
+const mcpNode = (
+  server: string,
+  tool: string,
+  options: string[] = [tool],
+  toolMode = false,
+): APIClassType =>
+  ({
+    tool_mode: toolMode,
+    template: {
+      mcp_server: {
+        type: "mcp",
+        real_time_refresh: true,
+        value: { name: server, config: {} },
+      },
+      tool: { value: tool, options },
+    },
+  }) as unknown as APIClassType;
+
 describe("useFetchDataOnMount", () => {
   beforeEach(() => mockMutateTemplate.mockClear());
 
@@ -41,6 +59,53 @@ describe("useFetchDataOnMount", () => {
     );
 
     expect(mockMutateTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps saved tool templates when opening MCP nodes on different servers", () => {
+    const firstNode = mcpNode("catalog", "list_items");
+    const secondNode = mcpNode("search", "find_matches");
+
+    renderHook(() => {
+      useFetchDataOnMount(
+        firstNode,
+        "mcp-1",
+        jest.fn(),
+        "mcp_server",
+        {} as never,
+      );
+      useFetchDataOnMount(
+        secondNode,
+        "mcp-2",
+        jest.fn(),
+        "mcp_server",
+        {} as never,
+      );
+    });
+
+    expect(mockMutateTemplate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["without a selected tool", "", [], false],
+    [
+      "with a selected tool missing from its options",
+      "old_tool",
+      ["list_items"],
+      false,
+    ],
+    ["in tool mode", "list_items", ["list_items"], true],
+  ])("refreshes an MCP server %s", (_, tool, options, toolMode) => {
+    const node = mcpNode("catalog", tool, options, toolMode);
+
+    renderHook(() =>
+      useFetchDataOnMount(node, "mcp-1", jest.fn(), "mcp_server", {} as never),
+    );
+
+    expect(mockMutateTemplate).toHaveBeenCalledTimes(1);
+    expect(mockMutateTemplate.mock.calls[0][0]).toEqual({
+      name: "catalog",
+      config: {},
+    });
   });
 
   // Whether that refresh saves the flow is decided by the setter the caller
