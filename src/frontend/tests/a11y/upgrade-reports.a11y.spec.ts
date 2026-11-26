@@ -25,9 +25,13 @@ test(
     });
     await page.goto(routePath);
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await page
+      .getByRole("button", { name: "Import report", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
       .getByLabel("Checker report file")
       .setInputFiles(
         path.resolve(
@@ -36,6 +40,7 @@ test(
         ),
       );
     await page
+      .getByRole("dialog")
       .getByRole("button", { name: "Import report", exact: true })
       .click();
     await expect(
@@ -44,7 +49,7 @@ test(
     await expect(page).toHaveURL(/report=/);
     await page.reload();
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
       page.getByRole("heading", { name: "MCP flow", exact: true }),
@@ -116,7 +121,7 @@ test(
     });
     await page.goto(routePath);
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
       page.getByRole("heading", { name: "Customer support" }),
@@ -183,12 +188,15 @@ test(
     });
     await page.goto(routePath);
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
-      page.getByText("No upgrade reports have been imported."),
+      page.getByText("No compatibility reports yet", { exact: true }),
     ).toBeVisible();
     await page.runA11yScan("upgrade-reports-empty");
+    await page
+      .getByRole("button", { name: "Import an existing report", exact: true })
+      .click();
     await page.getByLabel("Checker report file").setInputFiles({
       name: "large.json",
       mimeType: "application/json",

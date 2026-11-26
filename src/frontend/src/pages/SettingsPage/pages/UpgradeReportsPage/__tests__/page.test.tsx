@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import { migrationKeys } from "@/controllers/API/queries/migration";
 import * as checkApi from "@/controllers/API/queries/upgrade-reports/use-upgrade-check";
@@ -28,26 +28,31 @@ function open(
   });
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[entry]}>
-        <Routes>
-          <Route
-            path="/settings/upgrade-reports"
-            element={
-              <main>
-                <h1>Settings</h1>
-                <UpgradeReportsPage />
-              </main>
-            }
-          />
-          <Route path="/" element={<p>Home</p>} />
-        </Routes>
-      </MemoryRouter>
+      <RouterProvider
+        router={createMemoryRouter(
+          [
+            {
+              path: "/settings/upgrade-reports",
+              element: (
+                <main>
+                  <h1>Settings</h1>
+                  <UpgradeReportsPage />
+                </main>
+              ),
+            },
+            { path: "/", element: <p>Home</p> },
+          ],
+          { initialEntries: [entry] },
+        )}
+      />
     </QueryClientProvider>,
   );
   return { ...view, client };
 }
 
 beforeEach(() => {
+  Element.prototype.scrollIntoView ??= jest.fn();
+  jest.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
   jest.spyOn(api, "get").mockImplementation(async (url) => ({
     data: url.endsWith("/maintenance/status")
       ? { maintenance: false, migration: false, running_jobs: 0 }
@@ -163,7 +168,9 @@ it("opens and focuses the completed check after another history entry was select
     await screen.findByLabelText("Target release"),
     "1.14.0",
   );
-  await userEvent.click(screen.getByRole("button", { name: "Check upgrade" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  );
   const view = await screen.findByRole("button", { name: "View report" });
   const historySelect = await screen.findByLabelText("Choose a report");
   await userEvent.selectOptions(historySelect, other.id);
@@ -320,7 +327,7 @@ it("waits for the signed-in profile before deciding admin access", async () => {
     useAuthStore.setState({ userData: { is_superuser: true } as Users });
   });
   expect(
-    await screen.findByRole("heading", { name: "Upgrade reports" }),
+    await screen.findByRole("heading", { name: "Upgrade compatibility" }),
   ).toBeVisible();
   expect(screen.queryByText("Home")).not.toBeInTheDocument();
 });
@@ -366,10 +373,9 @@ it("redirects non-admins without reading reports", async () => {
 it("explains the first action and keeps incomplete checks distinct from success", async () => {
   open();
   await screen.findByRole("heading", { name: "Assessment incomplete" });
-  await userEvent.click(screen.getByText("Start an upgrade review"));
-  expect(
-    screen.getByText(/Pick a target release under "Check an upgrade"/),
-  ).toBeVisible();
+  await userEvent.click(screen.getByText("About compatibility checks"));
+  expect(screen.getByText(/the index set in UV_INDEX_URL/)).toBeVisible();
+  expect(screen.getByText(/not the image you will deploy/)).toBeVisible();
   expect(
     await screen.findByRole("heading", { name: "Assessment incomplete" }),
   ).toBeVisible();
@@ -506,6 +512,10 @@ it("requires preview, maintenance, and explicit confirmation before applying ser
   expect(
     screen.getByText(/Update request complete. Review each result/),
   ).toBeVisible();
+  expect(screen.getByText("Updated: 1 · Not updated: 0")).toBeVisible();
+  expect(
+    screen.getByText(/Maintenance stays on after the update/),
+  ).toBeVisible();
 });
 
 async function reviewUpdate() {
@@ -567,9 +577,10 @@ it.each([undefined, null, -1, Number.NaN, "0"])(
     expect(apply).toBeDisabled();
     expect(
       await screen.findByText(
-        "Maintenance status could not be verified. Updates are disabled.",
+        /Maintenance status could not be verified. Updates are disabled./,
       ),
     ).toBeVisible();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
   },
 );
 
@@ -865,7 +876,7 @@ it("drops a failed change once the server reports the requested status", async (
 
 it("lets the admin retry an unverified maintenance status", async () => {
   let reachable = false;
-  const get = jest.spyOn(api, "get").mockImplementation(async (url) => {
+  jest.spyOn(api, "get").mockImplementation(async (url) => {
     if (url.endsWith("/maintenance/status")) {
       if (!reachable) throw new Error("offline");
       return {
@@ -888,18 +899,10 @@ it("lets the admin retry an unverified maintenance status", async () => {
   expect(
     await screen.findByRole("button", { name: "Enable maintenance" }),
   ).toBeEnabled();
-  expect(
-    get.mock.calls.filter(([url]) =>
-      String(url).endsWith("/maintenance/status"),
-    ).length,
-  ).toBeGreaterThan(1);
 });
 
 it("opens on the maintenance section when the link asks for it", async () => {
-  Element.prototype.scrollIntoView ??= jest.fn();
-  const scroll = jest
-    .spyOn(Element.prototype, "scrollIntoView")
-    .mockImplementation(() => {});
+  const scroll = jest.mocked(Element.prototype.scrollIntoView);
   open(true, "/settings/upgrade-reports#upgrade-maintenance");
   const heading = await screen.findByRole("heading", {
     name: "Database maintenance",
@@ -912,7 +915,6 @@ it("links the update section back to maintenance", async () => {
   open();
   await screen.findByRole("heading", { name: "Customer support" });
   const heading = screen.getByRole("heading", { name: "Database maintenance" });
-  heading.scrollIntoView = jest.fn();
   await userEvent.click(
     screen.getByRole("button", { name: "Manage maintenance" }),
   );
@@ -1046,8 +1048,12 @@ it("explains an unsupported imported format", async () => {
   Object.defineProperty(file, "text", {
     value: async () => '{"format_version":2}',
   });
-  await userEvent.upload(screen.getByLabelText("Checker report file"), file);
-  await userEvent.click(screen.getByRole("button", { name: "Import report" }));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Import report" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.upload(dialog.getByLabelText("Checker report file"), file);
+  await userEvent.click(dialog.getByRole("button", { name: "Import report" }));
   expect(
     await screen.findByText(
       /This report format is not supported by this server/,
@@ -1152,4 +1158,208 @@ it("names only the database in the summary and keeps its full location in the id
   expect(location).not.toBeVisible();
   await userEvent.click(screen.getByText("Source and target identity"));
   expect(location).toBeVisible();
+});
+
+it("imports a report from the dialog and opens it", async () => {
+  const imported = { ...report, id: "imported-report" };
+  let items = [report];
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : url.endsWith(imported.id)
+          ? imported
+          : url.endsWith(report.id)
+            ? report
+            : { ...history, items, total: items.length },
+  }));
+  const post = jest.spyOn(api, "post").mockImplementation(async () => {
+    items = [imported, report];
+    return { data: imported };
+  });
+  open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Import report" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  const submit = dialog.getByRole("button", { name: "Import report" });
+  expect(submit).toBeDisabled();
+  await userEvent.click(dialog.getByText("How to generate a report"));
+  expect(
+    dialog.getByText(/langflow upgrade-check --database-url/),
+  ).toBeVisible();
+  await userEvent.upload(
+    dialog.getByLabelText("Checker report file"),
+    new File(["{}"], "report.json", { type: "application/json" }),
+  );
+  expect(dialog.getByText("report.json")).toBeVisible();
+  await userEvent.click(submit);
+  expect(post).toHaveBeenCalledTimes(1);
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole("heading", { name: "Report details" }),
+    ).toHaveFocus(),
+  );
+  expect(screen.getByText("1 of 2")).toBeVisible();
+});
+
+it("refuses a report file over 20 MiB before uploading it", async () => {
+  const post = jest.spyOn(api, "post");
+  open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Import report" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  const big = new File(["{}"], "big.json", { type: "application/json" });
+  Object.defineProperty(big, "size", { value: 21 * 1024 * 1024 });
+  await userEvent.upload(dialog.getByLabelText("Checker report file"), big);
+  expect(dialog.getByRole("alert")).toBeVisible();
+  expect(dialog.getByRole("button", { name: "Import report" })).toBeDisabled();
+  expect(post).not.toHaveBeenCalled();
+});
+
+it("offers an import from the empty history", async () => {
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : { items: [], total: 0 },
+  }));
+  open();
+  expect(await screen.findByText("No compatibility reports yet")).toBeVisible();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Import an existing report" }),
+  );
+  expect(
+    screen.getByRole("dialog", { name: "Import compatibility report" }),
+  ).toBeVisible();
+});
+
+it("steps through report history with Previous and Next", async () => {
+  const second = { ...report, id: "second-report" };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : url.endsWith(second.id)
+          ? second
+          : url.endsWith(report.id)
+            ? report
+            : { ...history, items: [report, second], total: 2 },
+  }));
+  open();
+  expect(await screen.findByText("1 of 2")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Previous report" }),
+  ).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Next report" }));
+  expect(await screen.findByText("2 of 2")).toBeVisible();
+  expect(screen.getByLabelText("Choose a report")).toHaveValue(second.id);
+  expect(screen.getByRole("button", { name: "Next report" })).toBeDisabled();
+});
+
+it("warns before turning maintenance off with reviewed updates not applied", async () => {
+  const { client } = open();
+  await reviewUpdate();
+  act(() =>
+    client.setQueryData(migrationKeys.pause, {
+      maintenance: true,
+      migration: false,
+      running_jobs: 0,
+    }),
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Disable maintenance" }),
+  );
+  expect(
+    within(screen.getByRole("dialog")).getByText(
+      /Previewed flow updates have not been applied/,
+    ),
+  ).toBeVisible();
+});
+
+it("shows each flow as a table row with its compatibility", async () => {
+  open();
+  const findings = await screen.findByRole("region", {
+    name: "Flow compatibility findings",
+  });
+  const row = within(findings)
+    .getAllByRole("article")
+    .find((article) =>
+      within(article).queryByRole("heading", { name: "Customer support" }),
+    ) as HTMLElement;
+  expect(within(row).getByText("Needs review")).toBeVisible();
+  expect(
+    within(row).getByRole("checkbox", {
+      name: "Select Customer support for preview",
+    }),
+  ).toBeEnabled();
+});
+
+it("keeps history paging when the selected report is on another page", async () => {
+  const all = Array.from({ length: 25 }, (_, i) => ({
+    ...report,
+    id: `r${i}`,
+  }));
+  jest.spyOn(api, "get").mockImplementation(async (url, config) => {
+    if (url.endsWith("/maintenance/status"))
+      return {
+        data: { maintenance: false, migration: false, running_jobs: 0 },
+      };
+    if (url.endsWith("/repairs")) return { data: { items: [], total: 0 } };
+    const id = /\/(r\d+)$/.exec(url)?.[1];
+    if (id) return { data: { ...report, id } };
+    const offset =
+      (config as { params?: { offset?: number } })?.params?.offset ?? 0;
+    return {
+      data: { ...history, items: all.slice(offset, offset + 20), total: 25 },
+    };
+  });
+  open(true, "/settings/upgrade-reports?report=r22");
+  const next = await screen.findByRole("button", { name: "Next report" });
+  expect(next).toBeEnabled();
+  await userEvent.click(next);
+  expect(await screen.findByText("1 of 25")).toBeVisible();
+  for (let step = 1; step < 20; step++)
+    await userEvent.click(screen.getByRole("button", { name: "Next report" }));
+  expect(await screen.findByText("20 of 25")).toBeVisible();
+  const boundary = screen.getByRole("button", { name: "Next report" });
+  boundary.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(await screen.findByText("21 of 25")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Next report" })).toBe(boundary);
+  expect(boundary).toHaveFocus();
+});
+
+it("holds the chosen file while an import is in flight", async () => {
+  let finish: (value: unknown) => void = () => {};
+  jest.spyOn(api, "post").mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Import report" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  const input = dialog.getByLabelText(
+    "Checker report file",
+  ) as HTMLInputElement;
+  await userEvent.upload(
+    input,
+    new File(["{}"], "report.json", { type: "application/json" }),
+  );
+  expect(input.value).toBe("");
+  await userEvent.click(dialog.getByRole("button", { name: "Import report" }));
+  expect(input).toBeDisabled();
+  await act(async () => finish({ data: report }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
 });

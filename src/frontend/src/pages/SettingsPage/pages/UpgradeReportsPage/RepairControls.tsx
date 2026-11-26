@@ -11,18 +11,20 @@ import {
   useUpgradeMaintenance,
 } from "@/controllers/API/queries/upgrade-reports";
 import { CustomLink } from "@/customization/components/custom-link";
-import { reportTime } from "./format";
-import { scrollToMaintenance, verifiedStatus } from "./MaintenanceControls";
+import { reportTime, verifiedStatus } from "./format";
+import { scrollToMaintenance } from "./MaintenanceControls";
 import { repairReasonKey, repairRequestErrorKey } from "./reasons";
 
 export default function RepairControls({
   reportId,
   selected,
   flows,
+  onUnappliedUpdatesChange,
 }: {
   reportId: string;
   selected: Set<string>;
   flows: ReportFlow[];
+  onUnappliedUpdatesChange: (unapplied: boolean) => void;
 }) {
   const { t, i18n } = useTranslation();
   const maintenance = useUpgradeMaintenance();
@@ -49,6 +51,11 @@ export default function RepairControls({
       (item): item is RepairResult & { data_sha256: string } =>
         item.status === "ready" && typeof item.data_sha256 === "string",
     ) ?? [];
+  const hasUnappliedUpdates = ready.length > 0;
+  useEffect(() => {
+    onUnappliedUpdatesChange(hasUnappliedUpdates);
+    return () => onUnappliedUpdatesChange(false);
+  }, [hasUnappliedUpdates, onUnappliedUpdatesChange]);
   const status = verifiedStatus(maintenance);
   const canApply = Boolean(
     status?.maintenance && !status.migration && status.running_jobs === 0,
@@ -99,13 +106,22 @@ export default function RepairControls({
   return (
     <section
       aria-labelledby="upgrade-repair-title"
-      className="space-y-3 rounded border p-4"
+      className="min-w-0 space-y-3 rounded-lg border p-3 sm:p-5"
     >
       <h3 id="upgrade-repair-title" className="font-medium">
         {t("settings.upgrade.repairTitle")}
       </h3>
       <p>{t("settings.upgrade.repairExplanation")}</p>
-      <p>{t("settings.upgrade.selected", { count: selected.size })}</p>
+      <p>
+        {t("settings.upgrade.selected", { count: selected.size })} ·{" "}
+        {t(
+          preview.isPending
+            ? "settings.upgrade.previewState.running"
+            : result
+              ? "settings.upgrade.previewState.done"
+              : "settings.upgrade.previewState.required",
+        )}
+      </p>
       <Button
         variant="outline"
         disabled={!selected.size || busy}
@@ -128,29 +144,26 @@ export default function RepairControls({
       >
         {t("settings.upgrade.preview")}
       </Button>
-      {status && !status.maintenance && !status.migration && !apply.isError && (
-        <p role="note">{t("settings.upgrade.freezeRequired")}</p>
-      )}
-      {status?.migration && !preview.isError && !apply.isError && (
-        <p role="note">{t("settings.upgrade.migrationPause")}</p>
-      )}
-      {status && status.running_jobs > 0 && (
-        <p role="status">
-          {t("settings.upgrade.runningJobs", { count: status.running_jobs })}
-        </p>
-      )}
-      {!maintenance.isPending && !status && (
-        <p role="alert">{t("settings.upgrade.freezeUnknown")}</p>
-      )}
       {!maintenance.isPending && !canApply && (
-        <Button
-          variant="link"
-          className="h-auto p-0"
-          onClick={scrollToMaintenance}
-          ignoreTitleCase
-        >
-          {t("settings.upgrade.maintenance.manage")}
-        </Button>
+        <p role="note">
+          {!status
+            ? t("settings.upgrade.freezeUnknown")
+            : status.migration
+              ? t("settings.upgrade.migrationPause")
+              : !status.maintenance
+                ? t("settings.upgrade.freezeRequired")
+                : t("settings.upgrade.runningJobs", {
+                    count: status.running_jobs,
+                  })}{" "}
+          <Button
+            variant="link"
+            className="h-auto p-0"
+            onClick={scrollToMaintenance}
+            ignoreTitleCase
+          >
+            {t("settings.upgrade.maintenance.manage")}
+          </Button>
+        </p>
       )}
       {(preview.isError || apply.isError) && (
         <p role="alert">
@@ -169,6 +182,23 @@ export default function RepairControls({
                 : "settings.upgrade.previewComplete",
             )}
           </p>
+          {applied && (
+            <div className="space-y-1 rounded-md border-l-4 border-primary bg-muted/50 px-4 py-3 text-sm">
+              <p className="font-medium">
+                {t("settings.upgrade.applyOutcome", {
+                  updated: result.results.filter(
+                    (item) => item.status === "updated",
+                  ).length,
+                  other: result.results.filter(
+                    (item) => item.status !== "updated",
+                  ).length,
+                })}
+              </p>
+              <p className="text-muted-foreground">
+                {t("settings.upgrade.maintenanceStaysOn")}
+              </p>
+            </div>
+          )}
           <dl className="text-sm">
             <dt>{t("settings.upgrade.target")}</dt>
             <dd>{result.target_version ?? t("settings.upgrade.unknown")}</dd>

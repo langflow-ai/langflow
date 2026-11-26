@@ -115,14 +115,18 @@ test(
     ];
     await page.goto("/settings/upgrade-reports");
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Import report", exact: true })
+      .click();
     await page.getByLabel("Checker report file").setInputFiles({
       name: "selected-repair.json",
       mimeType: "application/json",
       buffer: Buffer.from(`${JSON.stringify(report)}\n`),
     });
     await page
+      .getByRole("dialog")
       .getByRole("button", { name: "Import report", exact: true })
       .click();
     await expect(

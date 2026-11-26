@@ -22,6 +22,8 @@ import type {
 export * from "./types";
 export * from "./use-upgrade-check";
 
+export const UPGRADE_REPORTS_PAGE_SIZE = 20;
+
 export const useGetUpgradeReports: useQueryFunctionType<
   { offset: number },
   ReportHistory
@@ -32,7 +34,7 @@ export const useGetUpgradeReports: useQueryFunctionType<
     async () =>
       (
         await api.get(getURL("UPGRADE_REPORTS"), {
-          params: { ...params, limit: 20 },
+          params: { ...params, limit: UPGRADE_REPORTS_PAGE_SIZE },
         })
       ).data,
     options,
