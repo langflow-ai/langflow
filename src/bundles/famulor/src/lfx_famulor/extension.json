@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-famulor",
+  "version": "0.1.0",
+  "name": "Famulor",
+  "description": "Start Famulor outbound AI calls and read assistants, calls, and campaigns.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "famulor",
+      "path": "components/famulor"
+    }
+  ]
+}

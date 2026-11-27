@@ -5270,6 +5270,26 @@
       "bare_class_name": "MrscraperWebSearch",
       "target": "ext:mrscraper:MrscraperWebSearch@official",
       "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FamulorGetCallComponent",
+      "target": "ext:famulor:FamulorGetCallComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FamulorListAssistantsComponent",
+      "target": "ext:famulor:FamulorListAssistantsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FamulorListCampaignsComponent",
+      "target": "ext:famulor:FamulorListCampaignsComponent@official",
+      "added_in": "1.13.0"
+    },
+    {
+      "bare_class_name": "FamulorMakeCallComponent",
+      "target": "ext:famulor:FamulorMakeCallComponent@official",
+      "added_in": "1.13.0"
     }
   ],
   "ambiguous_bare_names": [
