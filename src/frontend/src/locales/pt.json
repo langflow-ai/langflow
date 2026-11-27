@@ -4139,5 +4139,7 @@
   "settings.upgrade.check.error.unsupported_upgrade_report_format": "A verificação terminou, mas a versão de destino gravou um formato de relatório que este servidor não consegue importar. Execute langflow upgrade-check manualmente para obter o arquivo do relatório.",
   "settings.upgrade.check.error.subprocess_unavailable": "Este servidor não pode iniciar a verificação a partir desta página. Execute langflow upgrade-check em um terminal e importe o relatório.",
   "settings.upgrade.check.error.connection_lost": "A conexão foi fechada antes de a verificação terminar. Execute-a de novo.",
-  "settings.upgrade.check.error.refused": "O servidor não iniciou a verificação. Tente de novo mais tarde."
+  "settings.upgrade.check.error.refused": "O servidor não iniciou a verificação. Tente de novo mais tarde.",
+  "updateComponent.customizedUpdateDesc": "Ao atualizar um componente personalizado, seu código salvo é substituído pela versão do catálogo de componentes.",
+  "settings.upgrade.duplicateImport": "Importação duplicada"
 }

@@ -4138,5 +4138,7 @@
   "settings.upgrade.check.error.unsupported_upgrade_report_format": "检查已完成，但目标版本写出的报告格式此服务器无法导入。请手动运行 langflow upgrade-check 以获取报告文件。",
   "settings.upgrade.check.error.subprocess_unavailable": "此服务器无法从本页面启动检查。请在终端中运行 langflow upgrade-check 并导入报告。",
   "settings.upgrade.check.error.connection_lost": "检查结束前连接已关闭。请重新运行。",
-  "settings.upgrade.check.error.refused": "服务器没有启动检查。请稍后重试。"
+  "settings.upgrade.check.error.refused": "服务器没有启动检查。请稍后重试。",
+  "updateComponent.customizedUpdateDesc": "更新自定义组件时，其已保存的代码将替换为组件目录中的版本。",
+  "settings.upgrade.duplicateImport": "重复导入"
 }

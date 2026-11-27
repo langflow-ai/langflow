@@ -178,7 +178,9 @@ function configureUpdatableNodes(ids: string[]) {
       outputs: [],
     },
   };
-  mockProcessNodeAdvancedFields.mockImplementation((_data, _edges, nodeId) => ({
+  mockProcessNodeAdvancedFields.mockImplementation((data, _edges, nodeId) => ({
+    template: {},
+    ...data,
     nodeId,
   }));
   flowStoreState = {
@@ -424,7 +426,10 @@ describe("UpdateAllComponents", () => {
       .flow!.data!;
     nested.edges = [{ id: "internal", source: "source", target: "node-1" }];
     mockValidateComponentCode.mockResolvedValue({
-      data: { display_name: "Prompt" },
+      data: {
+        display_name: "Prompt",
+        template: { input: { type: "str", value: "saved group value" } },
+      },
       type: "Prompt",
     });
     mockUpdateAllNodes.mockImplementationOnce(() => {
@@ -438,7 +443,28 @@ describe("UpdateAllComponents", () => {
     expect(mockSetNoticeData).toHaveBeenCalledTimes(1);
   });
 
-  it("clears dismissed nodes after a successful bulk update", async () => {
+  it("requests review when a component rebuild drops a saved value", async () => {
+    const user = userEvent.setup();
+    nestUpdatableNode();
+    mockValidateComponentCode.mockResolvedValue({
+      data: {
+        display_name: "Prompt",
+        template: { input: { type: "str", value: "" } },
+      },
+      type: "Prompt",
+    });
+    render(<UpdateAllComponents />);
+
+    await user.click(screen.getByTestId("update-all-button"));
+    const confirm = await screen.findByRole("button", {
+      name: "Confirm reviewed components",
+    });
+    expect(mockUpdateAllNodes).not.toHaveBeenCalled();
+    await user.click(confirm);
+    await waitFor(() => expect(mockUpdateAllNodes).toHaveBeenCalledTimes(1));
+  });
+
+  it("clears dismissed nodes after a confirmed bulk update", async () => {
     const user = userEvent.setup();
 
     mockTemplates = {
@@ -511,6 +537,10 @@ describe("UpdateAllComponents", () => {
     render(<UpdateAllComponents />);
 
     await user.click(screen.getByTestId("update-all-button"));
+    expect(mockValidateComponentCode).not.toHaveBeenCalled();
+    await user.click(
+      screen.getByRole("button", { name: "Confirm reviewed components" }),
+    );
 
     await waitFor(() => {
       expect(mockUpdateAllNodes).toHaveBeenCalledTimes(1);
