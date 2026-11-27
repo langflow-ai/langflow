@@ -8,11 +8,15 @@ import zipfile
 from pathlib import Path
 from typing import Any, TypeVar
 
+from pydantic import TypeAdapter
+
 from langflow_sdk._http import _HTTP_201_CREATED, _logger
 from langflow_sdk.models import FlowCreate, RunRequest, StreamChunk
 from langflow_sdk.serialization import flow_to_json, normalize_flow
+from langflow_sdk.workflow_models import WorkflowExecutionResult, WorkflowRunRequest
 
 _ModelT = TypeVar("_ModelT")
+_WORKFLOW_RESULT_ADAPTER = TypeAdapter(WorkflowExecutionResult)
 
 
 class _ClientCommon:
@@ -25,6 +29,17 @@ class _ClientCommon:
     def _model_payload(model: Any) -> dict[str, Any]:
         """Return a JSON-safe payload for request models."""
         return model.model_dump(mode="json", exclude_none=True)
+
+    @classmethod
+    def _workflow_payload(cls, request: WorkflowRunRequest) -> dict[str, Any]:
+        """Revalidate even models built or changed without Pydantic validation."""
+        validated = WorkflowRunRequest.model_validate(request.model_dump(mode="python"))
+        return cls._model_payload(validated)
+
+    @staticmethod
+    def _workflow_result(payload: Any) -> WorkflowExecutionResult:
+        """Discriminate the JSON object without guessing from lifecycle status."""
+        return _WORKFLOW_RESULT_ADAPTER.validate_python(payload)
 
     @staticmethod
     def _validate_model(model_type: type[_ModelT], payload: Any) -> _ModelT:
@@ -111,7 +126,7 @@ class _ClientCommon:
         )
 
     @staticmethod
-    def _extract_error_detail(body: bytes) -> str:
+    def _extract_error_detail(body: bytes) -> Any:
         """Extract a user-facing error detail from an HTTP error response body."""
         try:
             parsed = json.loads(body)

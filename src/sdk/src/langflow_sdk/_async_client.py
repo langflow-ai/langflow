@@ -37,6 +37,7 @@ from langflow_sdk.models import (
     RunResponse,
     StreamChunk,
 )
+from langflow_sdk.workflow_models import WorkflowExecutionResult, WorkflowRunRequest, WorkflowStopResponse
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -311,6 +312,36 @@ class AsyncLangflowClient(_ClientCommon):
                         yield chunk
         except httpx.ConnectError as exc:
             raise _connection_error(self._base_url, exc) from exc
+
+    # ------------------------------------------------------------------
+    # V2 workflows (full Langflow backend)
+    # ------------------------------------------------------------------
+
+    async def run_workflow(self, request: WorkflowRunRequest) -> WorkflowExecutionResult:
+        """Execute JSON sync mode or submit a server background job, without retries.
+
+        Stream mode is rejected locally, including requests mutated after creation.
+        """
+        payload = self._workflow_payload(request)
+        resp = await self._request("POST", "/api/v2/workflows", json=payload)
+        return self._workflow_result(resp.json())
+
+    async def get_workflow(self, job_id: UUID | str) -> WorkflowExecutionResult:
+        """Fetch one job snapshot/result, without polling or resuming suspended jobs.
+
+        Failed and timed-out jobs raise LangflowHTTPError (500/408), retaining
+        structured server detail, rather than returning a failed result model.
+        """
+        resp = await self._request("GET", "/api/v2/workflows", params={"job_id": str(job_id)})
+        return self._workflow_result(resp.json())
+
+    async def stop_workflow(self, job_id: UUID | str) -> WorkflowStopResponse:
+        """Request background cancellation; acknowledgement is not interruption proof.
+
+        Only background jobs can be stopped. The message is opaque, not a status.
+        """
+        resp = await self._request("POST", "/api/v2/workflows/stop", json={"job_id": str(job_id)})
+        return self._validate_model(WorkflowStopResponse, resp.json())
 
     # ------------------------------------------------------------------
     # Projects
