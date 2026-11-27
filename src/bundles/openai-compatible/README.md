@@ -13,6 +13,7 @@ the OpenAI HTTP API shape can be configured through it — for example:
 | Together AI | `https://api.together.xyz/v1` |
 | Groq | `https://api.groq.com/openai/v1` |
 | Fireworks AI | `https://api.fireworks.ai/inference/v1` |
+| Synap (Linkrra) | `https://pool.linkrra.com/v1` |
 | Self-hosted vLLM / TGI / LM Studio | `http://localhost:8000/v1` |
 
 The provider reuses the `ChatOpenAI` / `OpenAIEmbeddings` classes and discovers
