@@ -41,6 +41,29 @@ Install the LFX engine and any provider extensions your flows need.
 
 <PartialExtensionBundleInstall />
 
+You can also build an external extension from a reviewed source revision.
+Use a separate environment that matches the extension's dependencies.
+For example, the [community-maintained Loom extension](https://github.com/ClickHouse/loom/tree/8981fe8b52089c75c64f34f8dc8f59c8d73d1d2a/integrations/langflow) supports Python 3.11–3.14 and requires LFX 1.13.3.
+With Python 3.11 and uv 0.4.5 or later available, build both its SDK and extension from the same pinned checkout:
+
+```bash
+git clone --filter=blob:none --sparse https://github.com/ClickHouse/loom.git loom-lfx-source
+cd loom-lfx-source
+git sparse-checkout set sdk/python integrations/langflow
+git checkout --detach 8981fe8b52089c75c64f34f8dc8f59c8d73d1d2a
+uv venv --python 3.11 .venv
+source .venv/bin/activate
+uv build sdk/python --wheel --out-dir dist/sdk
+uv build integrations/langflow --wheel --out-dir dist/langflow
+uv pip install dist/sdk/*.whl dist/langflow/*.whl
+lfx extension list
+```
+
+The extension declares `clickhouse-loom>=1.2.0,<2`; this example installs the SDK built from the same source revision.
+Keep this LFX 1.13.3 environment separate from Langflow installations that require another LFX version.
+Installed extension discovery and class loading have been checked for this revision; a live Langflow flow has not been qualified.
+Discovery does not need a Loom server or credentials.
+
 ## Clone the Langflow repository
 
 To run LFX from source without a PyPI install:
