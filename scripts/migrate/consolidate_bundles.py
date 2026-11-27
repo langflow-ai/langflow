@@ -50,7 +50,7 @@ MIGRATION_RELEASE = "1.11.0"
 # ``PROVIDER_DEPS`` so re-running the script keeps their extras managed, but the
 # move + migration-discovery steps are skipped for them.
 PRE_CONSOLIDATED_PROVIDERS: frozenset[str] = frozenset(
-    {"figranium", "keenable", "mrscraper", "olostep", "socialscrape"}
+    {"cleanedweb", "figranium", "keenable", "mrscraper", "olostep", "socialscrape"}
 )
 
 # Shared spec for providers whose components go through langchain_community
@@ -128,6 +128,7 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "openrouter": ["langchain-openai>=1.1.6"],
     "xai": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
     # --- tranche 4: remaining single-SDK providers (post core-tail audit) ---
+    "cleanedweb": ["cleanedweb>=0.2.0,<1.0.0"],  # official client; new in 1.14.0, never lived under lfx.components
     "cleanlab": ["cleanlab-tlm>=1.1.2,<2.0.0"],
     "twelvelabs": ["twelvelabs>=0.4.7,<1.0.0"],
     "jigsawstack": ["jigsawstack==0.2.7"],
