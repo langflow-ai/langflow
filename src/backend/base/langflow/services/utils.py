@@ -15,7 +15,7 @@ from lfx.services.settings.constants import (
     LEGACY_DEFAULT_SUPERUSER_PASSWORD,
 )
 from lfx.services.settings.feature_flags import FEATURE_FLAGS
-from sqlalchemy import delete
+from sqlalchemy import delete, func
 from sqlalchemy import exc as sqlalchemy_exc
 from sqlmodel import col, select
 
@@ -38,6 +38,8 @@ from .deps import (
 
 if TYPE_CHECKING:
     from lfx.services.settings.manager import SettingsService
+    from sqlalchemy import Select, UnaryExpression
+    from sqlalchemy.orm import InstrumentedAttribute
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -568,27 +570,42 @@ def initialize_session_service() -> None:
     )
 
 
+def _beyond_newest_per_partition(
+    key: InstrumentedAttribute,
+    keep: int,
+    *,
+    partition_by: tuple[InstrumentedAttribute, ...],
+    newest_first: tuple[UnaryExpression, ...],
+) -> Select:
+    """Select ``key`` for every row ranked after the ``keep`` newest rows of its partition."""
+    ranked = select(
+        key.label("key"),
+        func.row_number().over(partition_by=partition_by, order_by=newest_first).label("rank"),
+    ).subquery()
+    return select(ranked.c.key).where(ranked.c.rank > keep)
+
+
 async def clean_transactions(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old transactions from the database.
 
-    This function deletes transactions that exceed the maximum number to keep (configured in settings).
-    It orders transactions by timestamp descending and removes the oldest ones beyond the limit.
+    Keeps the newest ``max_transactions_to_keep`` transactions of each flow, the same
+    contract the runtime retention sweeper enforces. Timestamp ties are broken by id.
+    A negative setting keeps every transaction.
 
     Args:
         settings_service: The settings service containing configuration like max_transactions_to_keep
         session: The database session to use for the deletion
     """
+    max_entries = settings_service.settings.max_transactions_to_keep
+    if max_entries < 0:
+        return
     try:
-        # Delete transactions using bulk delete
-        delete_stmt = delete(TransactionTable).where(
-            col(TransactionTable.id).in_(
-                select(TransactionTable.id)
-                .order_by(col(TransactionTable.timestamp).desc())
-                .offset(settings_service.settings.max_transactions_to_keep)
-            )
+        newest_first = (col(TransactionTable.timestamp).desc(), col(TransactionTable.id).desc())
+        beyond = _beyond_newest_per_partition(
+            TransactionTable.id, max_entries, partition_by=(TransactionTable.flow_id,), newest_first=newest_first
         )
-
-        await session.exec(delete_stmt)
+        stmt = delete(TransactionTable).where(col(TransactionTable.id).in_(beyond))
+        await session.exec(stmt.execution_options(synchronize_session=False))
         logger.debug("Successfully cleaned up old transactions")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up transactions: {exc!s}")
@@ -641,24 +658,34 @@ async def clean_authz_audit_log(settings_service: SettingsService, session: Asyn
 async def clean_vertex_builds(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old vertex builds from the database.
 
-    This function deletes vertex builds that exceed the maximum number to keep (configured in settings).
-    It orders vertex builds by timestamp descending and removes the oldest ones beyond the limit.
+    Mirrors the runtime retention sweeper: first keeps the newest
+    ``max_vertex_builds_per_vertex`` builds of each vertex of each flow, then the newest
+    ``max_vertex_builds_to_keep`` builds overall. Rows are identified by ``build_id``,
+    since a vertex id repeats in every build. Timestamp ties are broken by ``build_id``.
+    A negative setting skips its limit.
 
     Args:
         settings_service: The settings service containing configuration like max_vertex_builds_to_keep
         session: The database session to use for the deletion
     """
+    settings = settings_service.settings
+    newest_first = (col(VertexBuildTable.timestamp).desc(), col(VertexBuildTable.build_id).desc())
     try:
-        # Delete vertex builds using bulk delete
-        delete_stmt = delete(VertexBuildTable).where(
-            col(VertexBuildTable.id).in_(
-                select(VertexBuildTable.id)
-                .order_by(col(VertexBuildTable.timestamp).desc())
-                .offset(settings_service.settings.max_vertex_builds_to_keep)
+        if settings.max_vertex_builds_per_vertex >= 0:
+            beyond_vertex = _beyond_newest_per_partition(
+                VertexBuildTable.build_id,
+                settings.max_vertex_builds_per_vertex,
+                partition_by=(VertexBuildTable.flow_id, VertexBuildTable.id),
+                newest_first=newest_first,
             )
-        )
-
-        await session.exec(delete_stmt)
+            stmt = delete(VertexBuildTable).where(col(VertexBuildTable.build_id).in_(beyond_vertex))
+            await session.exec(stmt.execution_options(synchronize_session=False))
+        if settings.max_vertex_builds_to_keep >= 0:
+            beyond_global = (
+                select(VertexBuildTable.build_id).order_by(*newest_first).offset(settings.max_vertex_builds_to_keep)
+            )
+            stmt = delete(VertexBuildTable).where(col(VertexBuildTable.build_id).in_(beyond_global))
+            await session.exec(stmt.execution_options(synchronize_session=False))
         logger.debug("Successfully cleaned up old vertex builds")
     except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
         logger.error(f"Error cleaning up vertex builds: {exc!s}")

@@ -21,6 +21,10 @@ on:
       - 'src/backend/tests/unit/services/database/models/flow_version/**'
       - 'src/backend/tests/unit/services/database/models/api_key/**'
       - 'src/backend/tests/unit/services/jobs/**'
+      - 'src/backend/base/langflow/services/utils.py'
+      - 'src/backend/base/langflow/services/telemetry_writer/service.py'
+      - 'src/backend/tests/unit/services/database/test_startup_retention.py'
+      - 'src/backend/tests/unit/services/telemetry_writer/test_service.py'
 
 permissions:
   contents: read
@@ -81,7 +85,8 @@ jobs:
         run: |
           uv run pytest \
             src/backend/tests/unit/alembic/test_transaction_flow_index_migration.py \
-            src/backend/tests/unit/alembic/test_transaction_flow_index_parity.py -x -v
+            src/backend/tests/unit/alembic/test_transaction_flow_index_parity.py \
+            src/backend/tests/unit/services/database/test_startup_retention.py -x -v
 
       - name: Check flow version deletion and attachment concurrency
         env:
