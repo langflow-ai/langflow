@@ -2269,6 +2269,7 @@ async def delete_project(
     from langflow.services.memory_base.flow_cleanup import FlowMemoryBaseCleanup, finalize_flow_memory_base_cleanup
 
     memory_base_cleanups: list[FlowMemoryBaseCleanup] = []
+    cleanup_project: Folder | None = project
 
     def _make_delete_operation(target: Folder):
         async def _delete_project_operation() -> None:
@@ -2317,6 +2318,7 @@ async def delete_project(
     # therefore re-read with awaits — a plain attribute read on expired state
     # would lazy-load outside the greenlet context and raise MissingGreenlet.
     async def _delete_attempt(attempt: int) -> None:
+        nonlocal cleanup_project
         # LE-2020 follow-up: a prior attempt may have populated memory_base_cleanups
         # before hitting a lock error. If this attempt short-circuits below (target
         # is None — the project was already deleted by a concurrent request), the
@@ -2330,8 +2332,9 @@ async def delete_project(
             await session.refresh(current_user)
             target = await _load_project()
         if target is None:
+            cleanup_project = None
             return
-        await cleanup_mcp_on_delete(target, project_id, current_user, session)
+        cleanup_project = target
         await retry_project_operation_on_deployment_guard(
             db=session,
             user_id=project_owner_id,
@@ -2341,8 +2344,16 @@ async def delete_project(
 
     try:
         await run_with_lock_retry(_delete_attempt, session=session, description=f"delete_project {project_id}")
-        # Commit the deletions before the best-effort external teardown so a
-        # Memory Base's remote collection is dropped only for flows that are gone.
+        if cleanup_project is not None:
+            await cleanup_mcp_on_delete(
+                cleanup_project,
+                project_id,
+                current_user,
+                session,
+                owns_transaction=False,
+            )
+        # Commit the project and MCP deletions before best-effort external teardown
+        # so a Memory Base's remote collection is dropped only for gone flows.
         await session.commit()
         mark_committed()
         await finalize_flow_memory_base_cleanup(memory_base_cleanups)
