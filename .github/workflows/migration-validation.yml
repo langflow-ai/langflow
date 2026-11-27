@@ -81,7 +81,8 @@ jobs:
         run: |
           uv run pytest \
             src/backend/tests/unit/alembic/test_transaction_flow_index_migration.py \
-            src/backend/tests/unit/alembic/test_transaction_flow_index_parity.py -x -v
+            src/backend/tests/unit/alembic/test_transaction_flow_index_parity.py \
+            src/backend/tests/unit/services/database/test_startup_retention.py -x -v
 
       - name: Check flow version deletion and attachment concurrency
         env:

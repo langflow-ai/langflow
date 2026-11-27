@@ -59,14 +59,15 @@ async def log_transaction(db: AsyncSession, transaction: TransactionBase) -> Tra
             col(TransactionTable.id).in_(
                 select(TransactionTable.id)
                 .where(TransactionTable.flow_id == transaction.flow_id)
-                .order_by(col(TransactionTable.timestamp).desc())
+                .order_by(col(TransactionTable.timestamp).desc(), col(TransactionTable.id).desc())
                 .offset(max_entries - 1)  # Keep newest max_entries-1 plus the one we're adding
             ),
         )
 
-        # Add new entry and execute delete in same transaction
-        db.add(table)
+        # Prune before adding the new row, so ORM autoflush cannot count it
+        # among the existing max_entries-1 records and evict one extra row.
         await db.exec(delete_older)
+        db.add(table)
         await db.commit()
 
     except Exception:
