@@ -3504,6 +3504,8 @@ class Graph:
 
         Args:
             vertex_ids: Set of vertex IDs to include in the subgraph
+            initialize: Whether to initialize vertices and edges immediately. Set to False
+                when the caller mutates node templates before calling ``prepare()``.
 
         Yields:
             A new Graph instance containing only the specified vertices
