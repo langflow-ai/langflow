@@ -1,0 +1,94 @@
+{
+  "ace_data_cloud": {
+    "ext:ace_data_cloud:GPTImageGenerateComponent@official": {
+      "display_name": "GPT Image Generate by Ace Data Cloud",
+      "description": "Generate GPT Image (GPTImage) images through Ace Data Cloud.",
+      "icon": "Image",
+      "documentation": "https://docs.langflow.org/acedatacloud-gpt-image",
+      "metadata": {
+        "component_class_name": "GPTImageGenerateComponent"
+      }
+    },
+    "ext:ace_data_cloud:GPTImageRetrieveTaskComponent@official": {
+      "display_name": "GPT Image Retrieve Task by Ace Data Cloud",
+      "description": "Query the same GPT Image task through Ace Data Cloud without another paid generation.",
+      "icon": "Image",
+      "documentation": "https://docs.langflow.org/acedatacloud-gpt-image",
+      "metadata": {
+        "component_class_name": "GPTImageRetrieveTaskComponent"
+      }
+    },
+    "ext:ace_data_cloud:HappyHorseGenerateComponent@official": {
+      "display_name": "Happy Horse Generate by Ace Data Cloud",
+      "description": "Generate Happy Horse (HappyHorse) videos through Ace Data Cloud.",
+      "icon": "Clapperboard",
+      "documentation": "https://docs.langflow.org/acedatacloud-happy-horse",
+      "metadata": {
+        "component_class_name": "HappyHorseGenerateComponent"
+      }
+    },
+    "ext:ace_data_cloud:HappyHorseRetrieveTaskComponent@official": {
+      "display_name": "Happy Horse Retrieve Task by Ace Data Cloud",
+      "description": "Query the same Happy Horse task through Ace Data Cloud without another paid generation.",
+      "icon": "Clapperboard",
+      "documentation": "https://docs.langflow.org/acedatacloud-happy-horse",
+      "metadata": {
+        "component_class_name": "HappyHorseRetrieveTaskComponent"
+      }
+    },
+    "ext:ace_data_cloud:NanoBananaGenerateComponent@official": {
+      "display_name": "Nano Banana Generate by Ace Data Cloud",
+      "description": "Generate Nano Banana (NanoBanana) images through Ace Data Cloud.",
+      "icon": "Image",
+      "documentation": "https://docs.langflow.org/acedatacloud-nano-banana",
+      "metadata": {
+        "component_class_name": "NanoBananaGenerateComponent"
+      }
+    },
+    "ext:ace_data_cloud:NanoBananaRetrieveTaskComponent@official": {
+      "display_name": "Nano Banana Retrieve Task by Ace Data Cloud",
+      "description": "Query the same Nano Banana task through Ace Data Cloud without another paid generation.",
+      "icon": "Image",
+      "documentation": "https://docs.langflow.org/acedatacloud-nano-banana",
+      "metadata": {
+        "component_class_name": "NanoBananaRetrieveTaskComponent"
+      }
+    },
+    "ext:ace_data_cloud:SeedanceGenerateComponent@official": {
+      "display_name": "Seedance Generate by Ace Data Cloud",
+      "description": "Generate Seedance videos through Ace Data Cloud.",
+      "icon": "Clapperboard",
+      "documentation": "https://docs.langflow.org/acedatacloud-seedance",
+      "metadata": {
+        "component_class_name": "SeedanceGenerateComponent"
+      }
+    },
+    "ext:ace_data_cloud:SeedanceRetrieveTaskComponent@official": {
+      "display_name": "Seedance Retrieve Task by Ace Data Cloud",
+      "description": "Query the same Seedance task through Ace Data Cloud without another paid generation.",
+      "icon": "Clapperboard",
+      "documentation": "https://docs.langflow.org/acedatacloud-seedance",
+      "metadata": {
+        "component_class_name": "SeedanceRetrieveTaskComponent"
+      }
+    },
+    "ext:ace_data_cloud:SunoGenerateComponent@official": {
+      "display_name": "Suno Generate by Ace Data Cloud",
+      "description": "Generate Suno music and audio through Ace Data Cloud.",
+      "icon": "Music",
+      "documentation": "https://docs.langflow.org/acedatacloud-suno",
+      "metadata": {
+        "component_class_name": "SunoGenerateComponent"
+      }
+    },
+    "ext:ace_data_cloud:SunoRetrieveTaskComponent@official": {
+      "display_name": "Suno Retrieve Task by Ace Data Cloud",
+      "description": "Query the same Suno task through Ace Data Cloud without another paid generation.",
+      "icon": "Music",
+      "documentation": "https://docs.langflow.org/acedatacloud-suno",
+      "metadata": {
+        "component_class_name": "SunoRetrieveTaskComponent"
+      }
+    }
+  }
+}
