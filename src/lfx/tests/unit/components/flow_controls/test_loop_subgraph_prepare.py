@@ -82,9 +82,11 @@ async def test_loop_prepares_and_initializes_subgraph_once_per_iteration(
     parser.set(input_data=loop.item_output, pattern="Item: {text}", mode="Parser")
     _attach_feedback(loop, parser, "parsed_text")
 
-    done_out = ChatOutput(_id="ChatOutput-done")
-    done_out.set(input_value=loop.done_output, should_store_message=False)
-    graph = Graph(loop, done_out)
+    # Use another LoopComponent as the downstream `done` sink so DataFrame output
+    # does not invoke ChatOutput's optional `tabulate` Markdown formatter in minimal LFX CI.
+    done_sink = LoopComponent(_id="loop-done-sink")
+    done_sink.set(data=loop.done_output)
+    graph = Graph(loop, done_sink)
 
     queue: asyncio.Queue = asyncio.Queue()
     em = create_default_event_manager(queue=queue)
@@ -133,9 +135,11 @@ async def test_multi_consumer_fanout_and_chained_body_prepare_once_per_item(
     sink.set(input_value=combine.combine_texts, should_store_message=False)
 
     _attach_feedback(loop, sink, "message")
-    done_out = ChatOutput(_id="ChatOutput-done")
-    done_out.set(input_value=loop.done_output, should_store_message=False)
-    graph = Graph(loop, done_out)
+    # Use another LoopComponent as the downstream `done` sink so DataFrame output
+    # does not invoke ChatOutput's optional `tabulate` Markdown formatter in minimal LFX CI.
+    done_sink = LoopComponent(_id="loop-done-sink")
+    done_sink.set(data=loop.done_output)
+    graph = Graph(loop, done_sink)
 
     results = [r async for r in graph.async_start()]
 
@@ -227,9 +231,9 @@ async def test_custom_executor_receives_prepared_subgraph_and_retains_compatibil
         parser = ParserComponent(_id="parser")
         parser.set(input_data=loop.item_output, pattern="Got {text}", mode="Parser")
         _attach_feedback(loop, parser, "parsed_text")
-        done_out = ChatOutput(_id="ChatOutput-done")
-        done_out.set(input_value=loop.done_output, should_store_message=False)
-        graph = Graph(loop, done_out)
+        done_sink = LoopComponent(_id="loop-done-sink")
+        done_sink.set(data=loop.done_output)
+        graph = Graph(loop, done_sink)
 
         results = [r async for r in graph.async_start()]
         loop_result = next(r for r in results if getattr(r, "vertex", None) and r.vertex.id == "loop")
@@ -266,9 +270,9 @@ async def test_cancellation_during_loop_iteration_propagates_cleanly() -> None:
         parser = ParserComponent(_id="parser")
         parser.set(input_data=loop.item_output, pattern="{text}", mode="Parser")
         _attach_feedback(loop, parser, "parsed_text")
-        done_out = ChatOutput(_id="ChatOutput-done")
-        done_out.set(input_value=loop.done_output, should_store_message=False)
-        graph = Graph(loop, done_out)
+        done_sink = LoopComponent(_id="loop-done-sink")
+        done_sink.set(data=loop.done_output)
+        graph = Graph(loop, done_sink)
 
         async def _consume():
             async for _ in graph.async_start():
