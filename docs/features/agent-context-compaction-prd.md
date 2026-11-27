@@ -1,6 +1,9 @@
 # PRD: session memory and context budget for the Agent component
 
-Status: draft, not implemented.
+Status: implemented on branch `feat/agent-session-memory-context-budget` (local commits) and measured.
+The eval results are in [agent-session-memory-eval.md](agent-session-memory-eval.md). The eval shows that
+facts apart from the summary do not beat a free-text summary under the same token policy. See
+"Result of the eval" at the end.
 Issue: [#15799](https://github.com/langflow-ai/langflow/issues/15799).
 Related: [PR #16515](https://github.com/langflow-ai/langflow/pull/16515),
 [Codex harness comparison](codex-harness-comparison.md).
@@ -14,8 +17,7 @@ and a short summary for the session, sends recent messages as they are, and keep
 history under a token budget. The flow author does not tune a message count.
 
 This plan keeps the storage design of PR #16515 and replaces its policy.
-Nothing in this plan is measured yet. The numbers are start values, and the eval in
-phase 1 sets the final ones.
+The numbers in the budget table were start values. The table now also has the measured values.
 
 ## Problem
 
@@ -71,12 +73,16 @@ No model call happens on this path.
 
 ### 2. The budget
 
-| Value | Start value | Meaning |
-|---|---|---|
-| High mark | The smaller of 20% of the model window and 12,000 tokens | A fold is due above this |
-| Low mark | Half of the high mark | A fold brings the unfolded messages down to this |
-| Message cap | 4,000 tokens | Largest size of one history message in the model input |
-| Unknown window | High mark of 8,000 tokens | Auto works for every model |
+| Value | Start value | Meaning | Measured (gpt-4o-mini, window 128,000, eval run 2) |
+|---|---|---|---|
+| High mark | The smaller of 20% of the model window and 12,000 tokens | A fold is due above this | 12,000. Largest history sent: 15,125 tokens (bound 16,000). Mean input for each turn of `long_60`: 7,287 tokens, against 15,046 for Last N at 100. 91% to 94% of the input is cached |
+| Low mark | Half of the high mark | A fold brings the unfolded messages down to this | 6,000. One fold reads about 6,000 tokens (30,217 in 5 folds). 5 folds in 60 turns. No added latency in the mean |
+| Message cap | 4,000 tokens | Largest size of one history message in the model input | 4,000. A pasted log of about 42,000 tokens costs 4,000 in later turns. Mean input of `pasted_log`: 11,184, against 54,028 for Last N at 100 |
+| Unknown window | High mark of 8,000 tokens | Auto works for every model | Not measured. The eval used only a model with a known window |
+| Send bound | Not in the start values | Largest history sent | Added after eval run 1: the high mark plus the message cap. With one bound for both, the messages of a fold that runs beside the answer were lost for one turn |
+
+The eval gives no reason to change the start values. It tested one model, so the values are not
+proven for other window sizes.
 
 Tokens are estimated at 4 characters for each token. Codex and the Langflow token
 callback use the same estimate. No tokenizer dependency is added.
@@ -197,21 +203,40 @@ budget stay internal. This answers question 3 of the issue.
 **Must**
 
 1. In Auto, a fact from turn 1 is recalled after 10 folds.
+   **Met.** `auto_stress/long_60`: 4/4 after 19 folds (both runs). Live in Docker: a turn-1 fact
+   recalled after 4 folds.
 2. In Auto, the history tokens of every model call stay under the high mark plus the
    message cap.
+   **Met.** Largest history: 15,125 of 16,000 tokens. The stress runs measure 2,701 and 2,702 of 2,700
+   in the eval's estimate. The 1 or 2 tokens come from the merge join and rounding in the eval count.
 3. A failed fold does not fail the turn.
+   **Met.** Unit tests, and 2 invalid replies in eval run 2 with no failed turn.
 4. Deleted or edited message content does not stay in facts or summary.
+   **Met.** Backend tests: a delete or edit of a folded message deletes the row, facts included,
+   and a fold whose batch changes during the model call saves nothing.
 5. No tool result enters the model input above its cap.
+   **Met.** Unit test with `create_agent`, and the 12 tool results of about 13,000 tokens in
+   `tool_heavy`.
 6. Fold and compaction text does not appear in the chat stream as part of the answer.
+   **Met.** The fold runs outside the agent event stream. Compaction events are dropped in the graph
+   event adapter (unit test). Not checked in the playground UI.
 7. Token usage of each fold and compaction is part of the usage shown for the message.
+   **Met for folds:** unit test, and the live message usage grows by about 6,000 input tokens on fold
+   turns. **Not checked for compaction** in the Agent message: the call reaches the run callbacks (the
+   eval counts it), but no test reads the Agent usage after a compaction.
 8. Flows in the Last N mode run no new queries on the history path.
+   **Met.** Unit test: Last N calls only the existing history read.
 9. Each fold and compaction writes one log event with tokens before, tokens after and
    duration. Message content is not logged.
+   **Met in code** (`session_memory_fold` and `in_run_compaction` events). No test reads the log.
 
 **Should**
 
 10. The playground message shows that a fold or compaction happened.
+    **Not met.** Not built.
 11. Tool approval (human in the loop) still pauses and resumes after a compaction.
+    **Met.** Unit test with `HumanInTheLoopMiddleware`, a checkpointer and a compaction before the
+    interrupt.
 
 ## Non-goals
 
@@ -277,3 +302,48 @@ Phase 2 depends on nothing and can start with phase 1.
 
 Write the four scripted sessions for the eval and run them against Last N at 100 for the
 baseline numbers.
+
+## Result of the eval
+
+Measured on `gpt-4o-mini`, one run for each case. Details in
+[agent-session-memory-eval.md](agent-session-memory-eval.md).
+
+### Goals
+
+1. **Recall of early facts: partly met.** Auto recalls 9/11 early facts across three sessions, against
+   0/11 for Last N at 10, 6/11 for Last N at 100 and 5/11 for PR #16515. It missed one fact in
+   `long_60` (the fold never extracted it) and the log error line, which no variant returned.
+2. **Bounded history cost: met.** Largest history 15,125 tokens for any session length, against
+   51,434 for Last N at 100.
+3. **No run fails on the model window: met.** `tool_heavy` passes with one compaction (2/2). Every
+   other variant fails at 130,878 tokens.
+4. **No tuning, existing flows unchanged: met.** One dropdown, Last N stays the default and runs no
+   new query, and the budget comes from the model window.
+
+### Risks to test first
+
+1. **Fact quality: tested.** No wrong fact in Auto answers in run 2. One fact missed in both runs.
+   Noise fills the list in long sessions (one fact for each troubleshooting step), and two distractors
+   that the user had disowned were stored.
+2. **Structured reply: tested on OpenAI and Ollama, not on three providers.** `gpt-4o-mini` wrote
+   Python `True` in 2 of 44 fold replies, which is not valid JSON. `qwen2.5:1.5b` on Ollama returned
+   valid JSON with useless facts, and `llama3.2:3b` timed out on CPU. Anthropic and Google were not
+   tested: no key. Native structured output was not tried.
+3. **Model window lookup: tested.** `max_input_tokens` comes from the profile for OpenAI (128,000),
+   Anthropic (200,000) and Google (1,048,576). Ollama and WatsonX (`langchain_ibm`) have no profile. The
+   Agent now falls back to `context_window` in the catalog metadata of the selected model (unit test,
+   not checked live). Groq was not installed.
+4. **Human in the loop: tested.** Pause and resume work after a compaction (unit test).
+5. **WatsonX: tested with a fake model.** The two WatsonX middleware and compaction run together, in
+   the order cap, limits, WatsonX, compaction, approval. A real WatsonX model has no profile, so
+   compaction is off unless the catalog has its window. Not tested against the WatsonX API.
+
+### Decision the eval supports
+
+Facts apart from the summary do not beat a free-text summary under the same token policy: 10/11 each
+in run 2, and 11/11 for the summary against 9/11 for facts in run 1. Facts add invalid JSON replies,
+noise and a missed fact. The gain over PR #16515 comes from the token policy.
+
+Recommendation: keep phases 2, 3 and 5 (tool result cap, token budget and fold, in-run compaction).
+Replace the JSON facts of phase 4 with the free-text summary of PR #16515, which keeps a "Key facts"
+block in plain text. Pinned keys can then become one line in the fold prompt, or wait for a user need.
