@@ -11441,6 +11441,187 @@
             }
           },
           "tool_mode": false
+        },
+        "WhileLoopComponent": {
+          "base_classes": [
+            "Message",
+            "Table"
+          ],
+          "beta": false,
+          "conditional_paths": [],
+          "custom_fields": {},
+          "description": "Executes loop body repeatedly with state accumulation until termination.",
+          "display_name": "While Loop",
+          "documentation": "",
+          "edited": false,
+          "field_order": [
+            "initial_state",
+            "input_value",
+            "max_iterations"
+          ],
+          "frozen": false,
+          "icon": "repeat",
+          "legacy": false,
+          "metadata": {
+            "code_hash": "c537ab96f50e",
+            "component_class_name": "WhileLoopComponent",
+            "dependencies": {
+              "dependencies": [
+                {
+                  "name": "langchain_core",
+                  "version": "1.5.1"
+                },
+                {
+                  "name": "lfx",
+                  "version": null
+                }
+              ],
+              "total_dependencies": 2
+            },
+            "module": "lfx.components.flow_controls.while_loop.WhileLoopComponent"
+          },
+          "minimized": false,
+          "output_types": [],
+          "outputs": [
+            {
+              "allows_loop": true,
+              "cache": true,
+              "display_name": "Loop",
+              "group_outputs": true,
+              "loop_types": [
+                "DataFrame"
+              ],
+              "method": "loop_output",
+              "name": "loop",
+              "selected": "Table",
+              "tool_mode": true,
+              "types": [
+                "Table"
+              ],
+              "value": "__UNDEFINED__"
+            },
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Done",
+              "group_outputs": true,
+              "method": "done_output",
+              "name": "done",
+              "selected": "Table",
+              "tool_mode": true,
+              "types": [
+                "Table"
+              ],
+              "value": "__UNDEFINED__"
+            },
+            {
+              "allows_loop": false,
+              "cache": true,
+              "display_name": "Last Message",
+              "group_outputs": true,
+              "method": "last_message_output",
+              "name": "last_message",
+              "selected": "Message",
+              "tool_mode": true,
+              "types": [
+                "Message"
+              ],
+              "value": "__UNDEFINED__"
+            }
+          ],
+          "pinned": false,
+          "template": {
+            "_type": "Component",
+            "code": {
+              "advanced": true,
+              "api_editable": false,
+              "dynamic": true,
+              "fileTypes": [],
+              "file_path": "",
+              "info": "",
+              "list": false,
+              "load_from_db": false,
+              "multiline": true,
+              "name": "code",
+              "password": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "type": "code",
+              "value": "\"\"\"While Loop component: runs a loop body on a state until the body returns an answer.\n\nThe state is a DataFrame of message rows (`lfx.base.agents.loop_rows`). Each iteration hands the state to the body\nthrough the `loop` output, and the rows the body feeds back to the `loop` input are the new state. The body runs\nthrough the same single-iteration runner as Loop (`run_loop_iteration`).\n\nFlow pattern (agent example):\nhistory rows -> WhileLoop.initial_state, the current message -> WhileLoop.input_value\nWhileLoop.loop -> model call (the history plus the model's message)\n               -> tool calls (that history plus the tool results) -> WhileLoop.loop (feedback)\nWhileLoop.last_message -> the answer\n\"\"\"\n\nfrom __future__ import annotations\n\nimport json\nimport math\nfrom typing import Any\n\nfrom langchain_core.messages import AIMessage, message_to_dict\n\nfrom lfx.base.agents.loop_rows import HARNESS_LOOP_KEY, LC_MESSAGE, is_answer, messages_to_rows, row_to_message\nfrom lfx.base.flow_controls.loop_utils import (\n    get_loop_body_start_edge,\n    get_loop_body_vertices,\n    resolve_item_injections,\n    run_loop_iteration,\n)\nfrom lfx.custom.custom_component.component import Component\nfrom lfx.inputs.inputs import HandleInput, IntInput\nfrom lfx.schema.data import Data\nfrom lfx.schema.dataframe import DataFrame\nfrom lfx.schema.message import Message\nfrom lfx.template.field.base import Output\n\n\ndef _json_rows(df: DataFrame) -> list[dict]:\n    \"\"\"The rows of `df` as plain JSON values, floats unchanged, so the body's node data can be checkpointed.\n\n    A missing cell (NaN) becomes None.\n    \"\"\"\n    rows = [\n        {key: None if isinstance(value, float) and math.isnan(value) else value for key, value in row.items()}\n        for row in df.to_dict(orient=\"records\")\n    ]\n    return json.loads(json.dumps(rows, default=str))\n\n\nclass WhileLoopComponent(Component):\n    \"\"\"Runs the loop body on the state until it ends, and returns the final state.\n\n    The rows the body feeds back to `loop` replace the state. The loop ends when they end in an answer (an AI\n    message that asks for no tools), when the harness runtime in the graph context has stopped (a middleware ended\n    the run, or a `return_direct` tool ran), or when the body feeds nothing back (its branch to `loop` stopped).\n\n    `max_iterations` is a safety cap of at least 1. Under a harness, reaching it ends the state with the limit message\n    the Agent's own limit gives, so the Agent finishes its run. Without one it raises instead of returning a state\n    that holds no answer, so a consumer never takes an earlier turn's answer for this one.\n    \"\"\"\n\n    display_name = \"While Loop\"\n    description = \"Executes loop body repeatedly with state accumulation until termination.\"\n    icon = \"repeat\"\n\n    inputs = [\n        HandleInput(\n            name=\"initial_state\",\n            display_name=\"Initial State\",\n            info=\"Optional base state (DataFrame) to prepend to input_value. For agents, connect MessageHistory here.\",\n            input_types=[\"DataFrame\"],\n            required=False,\n        ),\n        HandleInput(\n            name=\"input_value\",\n            display_name=\"Input\",\n            info=\"The input for the first iteration. Combined with initial_state.\",\n            input_types=[\"DataFrame\", \"Data\", \"Message\"],\n        ),\n        IntInput(\n            name=\"max_iterations\",\n            display_name=\"Max Iterations\",\n            info=\"Maximum number of iterations to prevent infinite loops.\",\n            value=10,\n            required=True,\n        ),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Loop\",\n            name=\"loop\",\n            method=\"loop_output\",\n            allows_loop=True,\n            loop_types=[\"DataFrame\"],\n            info=\"Connect to the loop body. Receives the new state from the end of the body.\",\n            group_outputs=True,\n        ),\n        Output(\n            display_name=\"Done\",\n            name=\"done\",\n            method=\"done_output\",\n            info=\"Outputs the final state when the loop ends.\",\n            group_outputs=True,\n        ),\n        Output(\n            display_name=\"Last Message\",\n            name=\"last_message\",\n            method=\"last_message_output\",\n            info=\"The last row of the final state as a Message. Uses the same run as Done.\",\n            group_outputs=True,\n        ),\n    ]\n\n    def _to_dataframe(self, value: Any) -> DataFrame:\n        \"\"\"Convert input value to DataFrame. A Message becomes one message row, its files included.\"\"\"\n        if value is None:\n            return DataFrame([])\n        if isinstance(value, DataFrame):\n            return value\n        if isinstance(value, list):\n            return DataFrame(value)\n        if isinstance(value, Message):\n            return DataFrame(messages_to_rows([value.to_lc_message()]))\n        if isinstance(value, Data):\n            return DataFrame([value])\n        if isinstance(value, dict):\n            return DataFrame([Data(data=value)])\n        return DataFrame([Data(text=str(value))])\n\n    def get_loop_body_vertices(self) -> set[str]:\n        \"\"\"Vertices between this loop's `loop` output and the vertex that feeds back into `loop`.\"\"\"\n        if self._vertex is None:\n            return set()\n        return get_loop_body_vertices(\n            vertex=self._vertex,\n            graph=self.graph,\n            get_incoming_edge_by_target_param_fn=self.get_incoming_edge_by_target_param,\n            loop_output_name=\"loop\",\n            feedback_input_name=\"loop\",\n        )\n\n    def _build_initial_state(self) -> DataFrame:\n        \"\"\"The `initial_state` rows (history), then the `input_value` rows (current input).\"\"\"\n        input_df = self._to_dataframe(self.input_value)\n        if isinstance(self.initial_state, DataFrame) and not self.initial_state.empty:\n            return self.initial_state.add_rows(input_df.to_dict(orient=\"records\"))\n        return input_df\n\n    def _fed_back(self, results: list) -> DataFrame | None:\n        \"\"\"The value of the output wired to the `loop` input, or None when the body did not build it.\"\"\"\n        edge = next(edge for edge in self._vertex.incoming_edges if edge.target_param == \"loop\")\n        for result in results:\n            vertex = getattr(result, \"vertex\", None)  # the stream ends with a marker that has none\n            if vertex is not None and vertex.id == edge.source_id:\n                value = vertex.results.get(edge.source_handle.name)\n                return None if value is None else self._to_dataframe(value)\n        return None\n\n    def _ended(self, rows: list[dict]) -> bool:\n        runtime = self.ctx.get(HARNESS_LOOP_KEY)\n        return (runtime is not None and runtime.stopped) or (bool(rows) and is_answer(row_to_message(rows[-1])))\n\n    def _pre_run_setup(self):\n        super()._pre_run_setup()\n        self._final_state = None\n\n    async def _iterate(self) -> DataFrame:\n        \"\"\"Run the loop to its end once. Every output of this build reads that run.\"\"\"\n        if getattr(self, \"_final_state\", None) is None:\n            self._final_state = DataFrame(await self._run_iterations())\n        return self._final_state\n\n    async def _run_iterations(self) -> list[dict]:\n        rows = _json_rows(self._build_initial_state())\n        body_ids = self.get_loop_body_vertices()\n        if not body_ids:\n            return rows\n        start_edge = get_loop_body_start_edge(self._vertex, loop_output_name=\"loop\")\n        injections, list_sources = resolve_item_injections(self.graph, body_ids, start_edge.target_id, start_edge)\n        limit = max(1, int(self.max_iterations))\n        for _ in range(limit):\n            results = await run_loop_iteration(\n                self.graph,\n                DataFrame(rows),\n                body_ids,\n                injections,\n                list_sources,\n                self._event_manager,\n                user_id=self.user_id,\n                node_value=rows,\n            )\n            fed_back = self._fed_back(results)\n            if fed_back is None:\n                return rows\n            rows = _json_rows(fed_back)\n            if self._ended(rows):\n                return rows\n        if self.ctx.get(HARNESS_LOOP_KEY) is None:\n            msg = (\n                f\"While Loop reached max_iterations ({limit}) while the loop body was still feeding back. \"\n                \"Raise Max Iterations, or check why the body does not stop.\"\n            )\n            raise RuntimeError(msg)\n        # The text ModelCallLimitMiddleware ends an Agent's run with when it reaches the same limit.\n        limit_message = AIMessage(content=f\"Model call limits exceeded: run limit ({limit}/{limit})\")\n        return [*rows, *messages_to_rows([limit_message])]\n\n    async def loop_output(self) -> DataFrame:\n        \"\"\"Stop the `loop` branch, because the body runs inside `_iterate`, not in the outer graph.\n\n        Like Loop's `item`, this also runs the iteration, so it runs when nothing reads the other outputs.\n        \"\"\"\n        self.stop(\"loop\")\n        await self._iterate()\n        return self._build_initial_state()\n\n    async def done_output(self) -> DataFrame:\n        \"\"\"Run the loop (once) and return the final state.\"\"\"\n        return await self._iterate()\n\n    async def last_message_output(self) -> Message:\n        \"\"\"The last row of the final state: its text, and the whole LangChain message in `data`.\"\"\"\n        rows = (await self._iterate()).to_dict(orient=\"records\")\n        if not rows:\n            return Message(text=\"\")\n        last = row_to_message(rows[-1])\n        message = Message(text=last.text)\n        message.data[LC_MESSAGE] = message_to_dict(last)\n        return message\n"
+            },
+            "initial_state": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Initial State",
+              "dynamic": false,
+              "info": "Optional base state (DataFrame) to prepend to input_value. For agents, connect MessageHistory here.",
+              "input_types": [
+                "DataFrame"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "initial_state",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "input_value": {
+              "_input_type": "HandleInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Input",
+              "dynamic": false,
+              "info": "The input for the first iteration. Combined with initial_state.",
+              "input_types": [
+                "DataFrame",
+                "Data",
+                "Message"
+              ],
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "input_value",
+              "override_skip": false,
+              "placeholder": "",
+              "required": false,
+              "show": true,
+              "title_case": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": false,
+              "type": "other",
+              "value": ""
+            },
+            "max_iterations": {
+              "_input_type": "IntInput",
+              "advanced": false,
+              "api_editable": false,
+              "display_name": "Max Iterations",
+              "dynamic": false,
+              "info": "Maximum number of iterations to prevent infinite loops.",
+              "list": false,
+              "list_add_label": "Add More",
+              "name": "max_iterations",
+              "override_skip": false,
+              "placeholder": "",
+              "required": true,
+              "show": true,
+              "title_case": false,
+              "tool_mode": false,
+              "trace_as_metadata": true,
+              "track_in_telemetry": true,
+              "type": "int",
+              "value": 10
+            }
+          },
+          "tool_mode": false
         }
       }
     ],
@@ -36375,9 +36556,9 @@
     ]
   ],
   "metadata": {
-    "num_components": 142,
+    "num_components": 143,
     "num_modules": 17
   },
-  "sha256": "f550e7bbafa39ed7f09325ae316ce0eee2a83d2821ad9fe5e69d3f9a9f813705",
+  "sha256": "5f7247a2ada7dbe581b46b28df387662af9710ee46724ae93a76b690aa922688",
   "version": "1.14.0"
 }
