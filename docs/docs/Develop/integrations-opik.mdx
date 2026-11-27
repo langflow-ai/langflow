@@ -3,9 +3,12 @@ title: Opik
 slug: /integrations-opik
 ---
 
-[Opik](https://www.comet.com/site/products/opik/) is an open-source platform designed for evaluating, testing, and monitoring large language model (LLM) applications. Developed by Comet, it aims to facilitate more intuitive collaboration, testing, and monitoring of LLM-based applications.
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
-You can configure Langflow to collect [tracing](https://www.comet.com/docs/opik/tracing/log_traces) data about your flow executions and automatically send the data to Opik.
+[Opik](https://www.comet.com/site/products/opik/) is an open-source platform for evaluating, testing, and monitoring LLM applications. You can configure Langflow to collect tracing data about flow executions and send it to Opik automatically.
+
+For end-to-end integration details, see the official [Opik + Langflow guide](https://www.comet.com/docs/opik/integrations/langflow).
 
 ## Prerequisites
 
@@ -16,36 +19,82 @@ You can configure Langflow to collect [tracing](https://www.comet.com/docs/opik/
 If you need a flow to test the Opik integration, see the [Langflow quickstart](/get-started-quickstart).
 :::
 
-## Integrate Opik with Langflow
+## Configure Opik for Langflow
 
-1. If you use Opik Cloud, get an [Opik API key](https://www.comet.com/docs/opik/faq#where-can-i-find-my-opik-api-key-).
+Set the Opik environment variables in the process that runs Langflow. Langflow checks for an API key or a server URL before it initializes the Opik SDK, including when you have already run `opik configure`.
 
-    An API key isn't required with an Open-Source Opik server.
+### Opik Cloud
 
-2. Call the `opik configure` CLI to save your Opik configuration in the same environment where you run Langflow:
+Get an [Opik API key](https://www.comet.com/docs/opik/faq#where-can-i-find-my-opik-api-key-) and replace the placeholders with your key and workspace name.
 
-    ```bash
-    opik configure
-    ```
+<Tabs>
+<TabItem value="linux-macos" label="Linux or macOS" default>
 
-    For self-hosted Opik, you can also use the following Opik CLI command:
+```bash
+export OPIK_API_KEY=YOUR_API_KEY
+export OPIK_WORKSPACE=YOUR_WORKSPACE
+```
 
-    ```bash
-    opik configure --use_local
-    ```
+</TabItem>
+<TabItem value="windows" label="Windows (Command Prompt)">
 
-    For more information, see the [Opik SDK configuration documentation](https://www.comet.com/docs/opik/tracing/sdk_configuration).
+```batch
+set "OPIK_API_KEY=YOUR_API_KEY"
+set "OPIK_WORKSPACE=YOUR_WORKSPACE"
+```
 
-3. Start Langflow in the same terminal or environment where you set the environment variables:
+</TabItem>
+</Tabs>
 
-    ```bash
-    uv run langflow run
-    ```
+### Self-hosted Opik
 
-4. In Langflow, run a flow to produce activity for Opik to trace.
+Set `OPIK_URL_OVERRIDE` to the API endpoint of your Opik instance. Replace the example URL with the address that Langflow can reach.
 
-5. Navigate to your Opik project dashboard and view the collected tracing data.
+<Tabs>
+<TabItem value="linux-macos" label="Linux or macOS" default>
 
-## Disable the Opik integration
+```bash
+export OPIK_URL_OVERRIDE=https://opik.example.com/api
+```
 
-To disable the Opik integration, remove the environment variables you set with `opik configure`, and then restart Langflow.
+</TabItem>
+<TabItem value="windows" label="Windows (Command Prompt)">
+
+```batch
+set "OPIK_URL_OVERRIDE=https://opik.example.com/api"
+```
+
+</TabItem>
+</Tabs>
+
+### Verify tracing
+
+Start or restart Langflow in the environment you configured. Run a flow, then open your Opik dashboard and look for its trace.
+
+```bash title="Start Langflow"
+uv run langflow run
+```
+
+## Run Langflow with Docker Compose
+
+For Opik Cloud, pass your API key and workspace name to the Langflow container.
+
+```yaml title="docker-compose.yml"
+services:
+  langflow:
+    image: langflowai/langflow:latest
+    environment:
+      - OPIK_API_KEY=${OPIK_API_KEY}
+      - OPIK_WORKSPACE=${OPIK_WORKSPACE}
+```
+
+For self-hosted Opik, pass `OPIK_URL_OVERRIDE` with an API URL reachable from inside the container. Recreate the Langflow container after changing its environment.
+
+## Disable Opik tracing
+
+Remove `OPIK_API_KEY` and `OPIK_URL_OVERRIDE` from the Langflow process environment, then restart Langflow. Other applications can keep their Opik SDK configuration.
+
+## See also
+
+* [Opik + Langflow integration](https://www.comet.com/docs/opik/integrations/langflow)
+* [Opik SDK configuration](https://www.comet.com/docs/opik/tracing/sdk_configuration)
