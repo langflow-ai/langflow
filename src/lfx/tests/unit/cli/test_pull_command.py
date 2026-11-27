@@ -881,3 +881,33 @@ class TestRenderResults:
             PullResult(flow_id=_FLOW_ID, flow_name="My Flow", path=tmp_path / "my_flow.json", status="created"),
         ]
         _render_results(results)
+
+
+def test_write_flow_failure_leaves_the_existing_flow_intact(tmp_path, monkeypatch):
+    """A failed publish must not truncate a flow the user already has on disk.
+
+    ``_write_flow`` overwrites a file the user may already have (an earlier
+    pull, or their own edits).  Writing in place means a crash or a full disk
+    leaves it truncated; publishing through a sibling file that is swapped in
+    with ``Path.replace`` keeps the original until the swap succeeds.
+    """
+    from pathlib import Path as _Path
+
+    from lfx.cli.pull import _write_flow
+
+    flow = _fake_flow_obj()
+    _write_flow(flow, sdk=_make_sdk_mock(), dest_dir=tmp_path, strip_secrets=False, indent=2)
+    targets = sorted(tmp_path.glob("*.json"))
+    assert targets, "the first pull should have written a flow file"
+    before = {p.name: p.read_text(encoding="utf-8") for p in targets}
+
+    def boom(_self, _target):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(_Path, "replace", boom)
+    # A different payload, so a writer that skips the swap is visible: it would
+    # overwrite the file in place instead of leaving it alone.
+    changed = json.dumps({**_FLOW_DICT, "description": "changed by the second pull"})
+    _write_flow(flow, sdk=_make_sdk_mock(flow_json=changed), dest_dir=tmp_path, strip_secrets=False, indent=2)
+
+    assert {p.name: p.read_text(encoding="utf-8") for p in targets} == before
