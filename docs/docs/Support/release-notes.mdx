@@ -64,6 +64,14 @@ For details, see [Deployment variable declarations](/environment-variables#deplo
 When an extension binds a deployment to an execution account, unresolved MCP variable placeholders fail before an outbound connection.
 Restarting an instance also preserves existing empty assistant variables instead of adding duplicate default rows.
 
+### Breaking changes
+
+- Custom component and Python Function code must import every module it uses
+
+    Modules imported by one custom component or Python Function no longer leak into other components.
+    Code that used a module without importing it, and only worked because another component imported it first, now raises a `NameError`.
+    Pydantic models defined in component code whose field annotations use a module the component imports, such as `a: fractions.Fraction`, now fail with `PydanticUserError` because those annotations no longer resolve.
+
 ### New features
 
 - Connections

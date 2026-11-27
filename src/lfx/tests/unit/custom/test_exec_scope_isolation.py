@@ -66,10 +66,3 @@ def test_create_function_does_not_write_back_imports():
     )
     assert func() == "1/3"
     assert "leak_probe_fn" not in vars(validate)
-
-
-def test_exec_namespaces_are_independent_copies():
-    one, two = validate._new_exec_globals(), validate._new_exec_globals()
-    one["scratch"] = 1
-    assert "scratch" not in two
-    assert "scratch" not in validate._new_exec_globals()

@@ -122,7 +122,7 @@ def execute_function(code, function_name, *args, **kwargs):
     add_type_ignores()
 
     module = ast.parse(code)
-    exec_globals = _new_exec_globals()
+    exec_globals = globals().copy()
 
     for node in module.body:
         if isinstance(node, ast.Import):
@@ -166,7 +166,7 @@ def create_function(code, function_name):
         ast.TypeIgnore = TypeIgnore
 
     module = ast.parse(code)
-    exec_globals = _new_exec_globals()
+    exec_globals = globals().copy()
 
     for node in module.body:
         if isinstance(node, ast.Import | ast.ImportFrom):
@@ -620,7 +620,7 @@ def prepare_global_scope(module, *, trusted_method_returns=None, source_class_bi
     Raises:
         ModuleNotFoundError: If a module is not found in the code
     """
-    exec_globals = _new_exec_globals()
+    exec_globals = globals().copy()
     # Imports, import-only try/except guards, and the ``name = constant`` assignments a guard's
     # fallback may read, all run once in source order, so a later binding of a name wins as it
     # would in Python. Everything else is deferred to ``definitions`` as before.
@@ -837,7 +837,7 @@ def compile_class_code(class_code, future_imports=None):
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):
-    """Builds a constructor function for the dynamically created class.
+    """Executes the compiled class definition and returns the resulting class.
 
     Args:
         compiled_class: Compiled code object of the class
@@ -845,7 +845,7 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
         class_name: Name of the class
 
     Returns:
-         Constructor function for the class
+         The class defined by ``compiled_class``
     """
     exec_locals = dict(locals())
     exec(compiled_class, exec_globals, exec_locals)
@@ -944,19 +944,3 @@ def extract_class_name(code: str, class_name: str | None = None) -> str:
     if class_name in component_classes:
         return class_name
     return first_component
-
-
-_BASE_EXEC_GLOBALS: dict = {}
-
-
-def _new_exec_globals() -> dict:
-    """Return a fresh exec namespace seeded from a clean snapshot of this module's globals.
-
-    The snapshot is taken once, at import time, and then only ever copied, so one component's imports can
-    never leak into this module or into another component.
-    """
-    return _BASE_EXEC_GLOBALS.copy()
-
-
-# Must remain the last statement of this module: the snapshot has to include every name defined above.
-_BASE_EXEC_GLOBALS.update({k: v for k, v in globals().items() if k != "_BASE_EXEC_GLOBALS"})
