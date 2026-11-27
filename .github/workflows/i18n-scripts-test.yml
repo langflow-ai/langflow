@@ -1,0 +1,27 @@
+name: i18n Scripts Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/i18n/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test i18n scripts
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install pytest
+
+      - name: Run i18n script tests
+        run: python -m pytest scripts/i18n/tests/ -v
