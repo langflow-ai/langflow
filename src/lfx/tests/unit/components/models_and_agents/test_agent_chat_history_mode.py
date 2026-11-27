@@ -179,7 +179,7 @@ async def test_watsonx_middleware_run_together_with_compaction():
     assert state["messages"][-1].content == "answer"
 
 
-async def test_fold_block_shows_while_the_answer_streams_and_ends_done_or_failed():
+async def test_fold_event_shows_while_the_answer_streams_and_ends_done_or_failed():
     for saved, expected in ((SessionMemoryState(version=1), "done"), (None, "failed")):
         component = _component(CHAT_HISTORY_AUTO)
         batch = [Message(text="old", sender=MESSAGE_SENDER_USER, id=uuid.uuid4())]
@@ -190,10 +190,10 @@ async def test_fold_block_shows_while_the_answer_streams_and_ends_done_or_failed
 
         with patch.object(agent_module, "fold", new=finished_fold):
             component._start_fold()
-        first = component._build_initial_agent_message().content_blocks
-        assert [(b.kind, b.state, b.messages) for b in first] == [("fold", "running", 1)]
+        first = component._build_initial_agent_message().properties.context_events
+        assert [(e.kind, e.state, e.messages) for e in first] == [("fold", "running", 1)]
 
         await component._await_fold()
-        assert component._fold_block.state == expected
-        assert component._fold_block.id == first[0].id
-        assert component._fold_block.duration is not None
+        assert component._fold_event.state == expected
+        assert component._fold_event.id == first[0].id
+        assert component._fold_event.duration is not None

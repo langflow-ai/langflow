@@ -2,7 +2,6 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import type {
   CitationContent,
   ContentBlockItem,
-  ContextContent,
   FileContent,
   UsageContent,
 } from "@/types/chat";
@@ -540,66 +539,5 @@ describe("ContentDisplay", () => {
       expect(screen.getByText(/Tokens: 1 in \/ 2 out/)).toBeInTheDocument();
       expect(screen.getByText("Cited source")).toBeInTheDocument();
     });
-  });
-});
-
-describe("ContentDisplay — context events", () => {
-  const renderContext = (content: ContextContent) =>
-    render(<ContentDisplay content={content} chatId="ctx" />);
-
-  it("shows a running fold with the number of messages while it streams", () => {
-    renderContext({
-      type: "context",
-      kind: "fold",
-      state: "running",
-      messages: 18,
-    });
-    const row = screen.getByTestId("context-event-fold-running");
-    expect(row).toHaveTextContent("Summarizing 18 older messages…");
-    expect(screen.getByText("Summarizing 18 older messages…")).toHaveClass(
-      "animate-pulse",
-    );
-  });
-
-  it("shows a finished fold with its duration", () => {
-    renderContext({
-      type: "context",
-      kind: "fold",
-      state: "done",
-      messages: 1,
-      duration: 2500,
-    });
-    expect(screen.getByTestId("context-event-fold-done")).toHaveTextContent(
-      "Summarized 1 older message· 2.5s",
-    );
-  });
-
-  it("says a failed fold retries on the next turn", () => {
-    renderContext({
-      type: "context",
-      kind: "fold",
-      state: "failed",
-      messages: 4,
-      duration: 900,
-    });
-    expect(screen.getByTestId("context-event-fold-failed")).toHaveTextContent(
-      "Could not summarize older messages. The next turn tries again.",
-    );
-  });
-
-  it("shows a compaction with the tokens before and after", () => {
-    renderContext({
-      type: "context",
-      kind: "compaction",
-      state: "done",
-      tokens_before: 104000,
-      tokens_after: 33500,
-      duration: 4100,
-    });
-    expect(
-      screen.getByTestId("context-event-compaction-done"),
-    ).toHaveTextContent(
-      "Compacted the context of this run from 104,000 to 33,500 tokens",
-    );
   });
 });

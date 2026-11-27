@@ -20,6 +20,23 @@ class Usage(BaseModel):
     total_tokens: int | None = None
 
 
+class ContextEvent(BaseModel):
+    """A change to the context of an Agent run: a session fold or an in-run compaction.
+
+    The same event (same ``id``) moves from ``running`` to ``done`` or ``failed``. ``messages`` is the number
+    of folded messages. ``tokens_before`` and ``tokens_after`` give the size of a compaction. ``duration``
+    is in milliseconds. The UI writes the text, so the event holds no prose.
+    """
+
+    id: str
+    kind: Literal["fold", "compaction"]
+    state: Literal["running", "done", "failed"] = "running"
+    messages: int | None = None
+    tokens_before: int | None = None
+    tokens_after: int | None = None
+    duration: int | None = None
+
+
 class Properties(BaseModel):
     text_color: str | None = None
     background_color: str | None = None
@@ -32,6 +49,8 @@ class Properties(BaseModel):
     targets: list = []
     usage: Usage | None = None
     build_duration: float | None = None
+    # Agent "Auto" chat history mode: folds and compactions of this run, shown in the chat.
+    context_events: list[ContextEvent] | None = None
 
     @field_validator("source", mode="before")
     @classmethod

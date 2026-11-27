@@ -28,6 +28,7 @@ from langflow.services.database.models.message import MessageCreate, MessageRead
 from langflow.services.database.models.message.model import MessageTable
 from langflow.services.deps import session_scope
 from langflow.services.tracing.utils import convert_to_langchain_type
+from sqlmodel import select
 
 
 @pytest.fixture
@@ -1847,3 +1848,25 @@ class TestSanitizeJson:
             return False
 
         assert not _has_nan_or_inf(parsed), "No NaN/Inf values should survive sanitization"
+
+
+@pytest.mark.usefixtures("client")
+async def test_context_events_survive_the_storage_round_trip():
+    """The Agent adopts the stored copy of its message, so the fold indicator must survive storage and reload."""
+    session_id, flow_id, user_id = "context_events_session", uuid4(), uuid4()
+    event = {"id": "fold-1", "kind": "fold", "state": "running", "messages": 18}
+    message = Message(
+        text="",
+        sender="Machine",
+        sender_name="AI",
+        session_id=session_id,
+        properties={"state": "partial", "context_events": [event]},
+    )
+    stored = await astore_message(message, flow_id=flow_id, user_id=user_id)
+    assert stored[0].properties.context_events[0].messages == 18
+
+    (read_back,) = await aget_messages(session_id=session_id, flow_id=flow_id, user_id=user_id)
+    assert read_back.properties.context_events[0].state == "running"
+    async with session_scope() as session:
+        row = (await session.exec(select(MessageTable).where(MessageTable.session_id == session_id))).one()
+    assert MessageRead.model_validate(row, from_attributes=True).properties.context_events[0].id == "fold-1"

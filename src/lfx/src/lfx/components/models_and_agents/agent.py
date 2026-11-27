@@ -44,7 +44,12 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
-from lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.events import (
+    AgentPausedError,
+    ExceptionWithMessageError,
+    process_agent_events,
+    upsert_context_event,
+)
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
@@ -74,11 +79,10 @@ from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStr
 from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.memory.flow_context import is_evals_memory_isolated, should_persist_messages
-from lfx.schema.content_types import ContextContent
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
-from lfx.schema.properties import Usage
+from lfx.schema.properties import ContextEvent, Usage
 from lfx.schema.table import EditMode
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -833,10 +837,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # Auto mode: wait for the fold beside the answer, so its usage and its final state reach this message.
         fold_usage = await self._await_fold()
         usage_data = _add_usage(token_usage_handler.get_usage(), fold_usage)
-        fold_block = getattr(self, "_fold_block", None)
-        if fold_block is not None:
-            result.content_blocks = [fold_block if b.id == fold_block.id else b for b in result.content_blocks]
-        if usage_data or fold_block is not None:
+        fold_event = getattr(self, "_fold_event", None)
+        if fold_event is not None:
+            upsert_context_event(result, fold_event)
+        if usage_data or fold_event is not None:
             if usage_data:
                 self._token_usage = usage_data
                 result.properties.usage = usage_data
@@ -861,17 +865,22 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             session_id = None
 
         sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
+        properties: dict[str, Any] = {"icon": "Bot", "state": "partial"}
+        fold_event = getattr(self, "_fold_event", None)
+        if fold_event is not None:
+            # A fold that started for this turn is in the first message, so the chat shows it while the
+            # answer streams.
+            properties["context_events"] = [fold_event.model_dump()]
         return Message(
             sender=MESSAGE_SENDER_AI,
             sender_name=sender_name,
-            properties={"icon": "Bot", "state": "partial"},
+            properties=properties,
             # `text=""` sentinel so MessageTable's no_content check accepts
             # an in-flight agent message whose content_blocks haven't been
             # populated yet. Mirrors ChatInput's convention.
             text="",
             # Flat chronological event log; see lfx.base.agents.events.
-            # A fold that started for this turn shows first, so the user sees it while the answer streams.
-            content_blocks=[self._fold_block] if getattr(self, "_fold_block", None) else [],
+            content_blocks=[],
             session_id=session_id or uuid.uuid4(),
         )
 
@@ -1156,9 +1165,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             return
         self._staged_fold = None
         self._fold_usage_handler = TokenUsageCallbackHandler()
-        self._fold_block = ContextContent(
-            id=f"fold-{uuid.uuid4().hex[:12]}", kind="fold", messages=len(staged["batch"])
-        )
+        self._fold_event = ContextEvent(id=f"fold-{uuid.uuid4().hex[:12]}", kind="fold", messages=len(staged["batch"]))
         self._fold_started = perf_counter()
         self._fold_task = asyncio.create_task(
             fold(**staged, summarize=self._summarize_history, summary_model=self._get_resolved_model_name())
@@ -1167,7 +1174,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
     async def _await_fold(self, *, cancel: bool = False) -> Usage | None:
         """Wait for the background fold (or cancel it) and return its token usage.
 
-        Marks the fold block `done` when the fold saved a summary, else `failed`, with its duration.
+        Marks the fold event `done` when the fold saved a summary, else `failed`, with its duration.
         """
         task = getattr(self, "_fold_task", None)
         if task is None:
@@ -1182,9 +1189,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             task.cancel()
             raise
         saved = None if task.cancelled() or task.exception() is not None else task.result()
-        block = getattr(self, "_fold_block", None)
-        if block is not None:
-            self._fold_block = block.model_copy(
+        event = getattr(self, "_fold_event", None)
+        if event is not None:
+            self._fold_event = event.model_copy(
                 update={
                     "state": "done" if saved is not None else "failed",
                     "duration": round((perf_counter() - self._fold_started) * 1000),

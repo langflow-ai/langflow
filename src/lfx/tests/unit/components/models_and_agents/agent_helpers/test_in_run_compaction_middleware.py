@@ -12,7 +12,6 @@ from langgraph.types import Command
 from lfx.base.agents.events import process_agent_events
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import adapt_graph_events_to_executor_shape
 from lfx.components.models_and_agents.agent_helpers.in_run_compaction_middleware import InRunCompactionMiddleware
-from lfx.schema.content_types import ContextContent
 from lfx.schema.message import Message
 
 WINDOW = 2_000  # compact at 1,600 tokens, keep 500
@@ -132,11 +131,21 @@ async def test_should_show_the_compaction_in_the_chat_message_while_the_run_stre
         tools=[read_page],
         middleware=[InRunCompactionMiddleware(summarizer, WINDOW)],
     )
-    published: list[list] = []
+    seen: list[list[str]] = []
 
-    async def send_message(message, **_kwargs):
-        published.append([b for b in message.content_blocks if isinstance(b, ContextContent)])
-        return message
+    async def send_message(message, *, skip_db_update=False):
+        seen.append([e.state for e in message.properties.context_events or []])
+        if skip_db_update:
+            return message
+        # A stored publish comes back from the database row. The v1 projection drops flat content blocks of
+        # a run without tools, so the indicator must not depend on content_blocks.
+        return Message(
+            text=message.text,
+            sender=message.sender,
+            sender_name=message.sender_name,
+            properties=message.properties.model_dump(),
+            content_blocks=[],
+        )
 
     stream = adapt_graph_events_to_executor_shape(
         agent.astream_events({"messages": [("user", "read the pages")]}, version="v2")
@@ -145,12 +154,10 @@ async def test_should_show_the_compaction_in_the_chat_message_while_the_run_stre
         stream, Message(text="", sender="Machine", sender_name="AI", content_blocks=[]), send_message
     )
 
-    # The chat sees the block while it runs, then the same block (same id) when it is done.
-    states = [blocks[0].state for blocks in published if blocks]
-    assert states[0] == "running"
-    blocks = [b for b in final.content_blocks if isinstance(b, ContextContent)]
-    assert len(blocks) == 1
-    assert blocks[0].kind == "compaction"
-    assert blocks[0].state == "done"
-    assert blocks[0].tokens_after < blocks[0].tokens_before
+    # The chat sees the compaction while it runs, then the same event when it is done.
+    assert ["running"] in seen
+    (event,) = final.properties.context_events
+    assert event.kind == "compaction"
+    assert event.state == "done"
+    assert event.tokens_after < event.tokens_before
     assert SUMMARY not in final.text
