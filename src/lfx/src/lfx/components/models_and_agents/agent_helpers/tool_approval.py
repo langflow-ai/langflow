@@ -43,7 +43,15 @@ class ToolApprovalMixin:
         except Exception:  # noqa: BLE001
             store = None
         store = store or default_checkpoint_store()
-        return JobCheckpointSaver(thread_id, store.save_blob, store.load_blob)
+        load_blob = store.load_blob
+        if self._has_candidate_decision(thread_id):
+            # A run paused before each Agent had its own blob kept the paused Agent's state in the run's one blob.
+            async def load_blob(job_id: str, kind: str) -> str | None:
+                return await store.load_blob(job_id, kind) or await store.load_blob(thread_id, "agent")
+
+        # One blob per Agent: the saver keeps only the latest checkpoint, so a shared blob would hand
+        # the next Agent the previous one's finished run.
+        return JobCheckpointSaver(thread_id, store.save_blob, load_blob, kind=f"agent:{thread_id}:{self._id}")
 
     def _gated_interrupt_on(self) -> dict[str, dict[str, Any]]:
         """Combine the harness policy with each tool's selected approval decisions.

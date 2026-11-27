@@ -96,7 +96,7 @@ async def test_permission_binding_executes_from_stored_graph(client, logged_in_h
         assert graph.pause_requested
         request = graph.pause_info["data"]
         assert request["action_requests"][0]["tool_call_id"] == "call-1"
-        assert await jobs.load_checkpoint(job_id, "agent")
+        assert await jobs.load_checkpoint(job_id, f"agent:{job_id}:Agent-1")
         # Rebuild the stored graph and Agent with a new saver; only DB checkpoint
         # data carries the pending task and completed permission decision forward.
         graph, vertex = await build()
@@ -109,5 +109,5 @@ async def test_permission_binding_executes_from_stored_graph(client, logged_in_h
     assert "permission_decision" in str(public)
     assert binding.revision in str(public)
     assert source in str(public)
-    assert await jobs.load_checkpoint(job_id, "agent")
+    assert await jobs.load_checkpoint(job_id, f"agent:{job_id}:Agent-1")
     assert (await stored_flow(source)).data == source_data

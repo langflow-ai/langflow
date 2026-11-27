@@ -31,9 +31,10 @@ LoadBlob = Callable[[str, str], Awaitable[str | None]]
 
 
 class JobCheckpointSaver(BaseCheckpointSaver):
-    def __init__(self, job_id: str, save_blob: SaveBlob, load_blob: LoadBlob) -> None:
+    def __init__(self, job_id: str, save_blob: SaveBlob, load_blob: LoadBlob, *, kind: str = _KIND) -> None:
         super().__init__()
         self._job_id = job_id
+        self._kind = kind
         self._save_blob = save_blob
         self._load_blob = load_blob
         self._lock = asyncio.Lock()
@@ -47,7 +48,7 @@ class JobCheckpointSaver(BaseCheckpointSaver):
         return self.serde.loads_typed((type_, base64.b64decode(b64)))
 
     async def _read(self) -> dict[str, Any]:
-        raw = await self._load_blob(self._job_id, _KIND)
+        raw = await self._load_blob(self._job_id, self._kind)
         return json.loads(raw) if raw else {}
 
     @staticmethod
@@ -81,7 +82,7 @@ class JobCheckpointSaver(BaseCheckpointSaver):
                 # task results are already represented by this newer snapshot.
                 "pending_writes": {key: value for key, value in pending.items() if key > checkpoint_id},
             }
-            await self._save_blob(self._job_id, _KIND, json.dumps(blob))
+            await self._save_blob(self._job_id, self._kind, json.dumps(blob))
         return self._result_config(blob)
 
     async def aput_writes(self, config, writes: Sequence[tuple[str, Any]], task_id: str, task_path: str = "") -> None:  # noqa: ARG002
@@ -98,7 +99,7 @@ class JobCheckpointSaver(BaseCheckpointSaver):
             )
             for channel, value in writes:
                 stored.append([task_id, channel, *self._encode(value)])
-            await self._save_blob(self._job_id, _KIND, json.dumps(blob))
+            await self._save_blob(self._job_id, self._kind, json.dumps(blob))
 
     async def aget_tuple(self, config) -> CheckpointTuple | None:
         blob = await self._read()
