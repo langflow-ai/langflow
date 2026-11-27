@@ -65,6 +65,14 @@ Highlights of this release include the following changes. For all changes, see t
 
     For installation requirements, see [Install Langflow](/get-started-installation#install-and-run-the-langflow-oss-python-package).
 
+### Breaking changes
+
+- Custom component and Python Function code must import every module it uses
+
+    Modules imported by one custom component or Python Function no longer leak into other components.
+    Code that used a module without importing it, and only worked because another component imported it first, now raises a `NameError`.
+    Pydantic models defined in component code whose field annotations use a module the component imports, such as `a: fractions.Fraction`, now fail with `PydanticUserError` because those annotations no longer resolve.
+
 ### New features
 
 - Connections

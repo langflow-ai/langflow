@@ -199,12 +199,8 @@ def create_function(code, function_name):
         exec(code_obj, exec_globals, exec_locals)
     exec_globals[function_name] = exec_locals[function_name]
 
-    # Return a function that imports necessary modules and calls the target function
+    # Return a function that calls the target function; it resolves names through ``exec_globals``
     def wrapped_function(*args, **kwargs):
-        for module_name, module in exec_globals.items():
-            if isinstance(module, type(importlib)):
-                globals()[module_name] = module
-
         return exec_globals[function_name](*args, **kwargs)
 
     return wrapped_function
@@ -841,7 +837,7 @@ def compile_class_code(class_code, future_imports=None):
 
 
 def build_class_constructor(compiled_class, exec_globals, class_name):
-    """Builds a constructor function for the dynamically created class.
+    """Executes the compiled class definition and returns the resulting class.
 
     Args:
         compiled_class: Compiled code object of the class
@@ -849,21 +845,15 @@ def build_class_constructor(compiled_class, exec_globals, class_name):
         class_name: Name of the class
 
     Returns:
-         Constructor function for the class
+         The class defined by ``compiled_class``
     """
     exec_locals = dict(locals())
     exec(compiled_class, exec_globals, exec_locals)
     exec_globals[class_name] = exec_locals[class_name]
 
-    # Return a function that imports necessary modules and creates an instance of the target class
-    def build_custom_class():
-        for module_name, module in exec_globals.items():
-            if isinstance(module, type(importlib)):
-                globals()[module_name] = module
-
-        return exec_globals[class_name]
-
-    return build_custom_class()
+    # Methods resolve names through ``exec_globals`` (their ``__globals__``), so component imports
+    # must never be written back into this module's globals.
+    return exec_globals[class_name]
 
 
 # TODO: Remove this function
