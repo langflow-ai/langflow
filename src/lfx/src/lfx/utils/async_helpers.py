@@ -17,7 +17,8 @@ if hasattr(asyncio, "timeout"):
 
     @asynccontextmanager
     async def timeout_context(timeout_seconds):
-        with asyncio.timeout(timeout_seconds) as ctx:
+        """Yield a timeout context; ``None`` disables its deadline."""
+        async with asyncio.timeout(timeout_seconds) as ctx:
             yield ctx
 
 else:
