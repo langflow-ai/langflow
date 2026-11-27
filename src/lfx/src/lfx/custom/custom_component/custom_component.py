@@ -508,7 +508,7 @@ class CustomComponent(BaseComponent):
                 request_variables = context["request_variables"]
                 if name in request_variables:
                     if is_protected_tweak_field(type(self).__name__, field):
-                        logger.warning("Ignoring request variable override for protected field {!r}.", field)
+                        logger.warning("Ignoring request variable override for protected field %r.", field)
                     else:
                         logger.debug(f"Found context override for variable '{name}'")
                         return request_variables[name]

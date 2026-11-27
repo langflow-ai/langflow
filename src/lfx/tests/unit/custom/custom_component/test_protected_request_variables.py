@@ -1,13 +1,16 @@
 """Request variables must not redirect protected flow-author fields."""
 
+import logging
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+import structlog
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.graph import Graph
+from structlog.testing import CapturingLogger
 
 
 @pytest.mark.asyncio
@@ -66,3 +69,29 @@ async def test_account_bound_variable_uses_graph_user_before_request_override(us
     else:
         assert result == "from account"
         resolve_bound.assert_awaited_once_with(user_id=user_id, name="QUERY", field="input_value", session=session)
+
+
+@pytest.mark.asyncio
+async def test_protected_field_warning_formats_with_warnings_enabled():
+    # `langflow run` defaults to INFO, so the warning is emitted and its arguments are interpolated.
+    capture = CapturingLogger()
+    warning_logger = structlog.make_filtering_bound_logger(logging.WARNING)(capture, [], {})
+    component_class = type("BingSearchAPIComponent", (SimpleNamespace,), {})
+    user_id = uuid.uuid4()
+    component = component_class(
+        graph=SimpleNamespace(context={"request_variables": {"DESTINATION": "https://attacker.example"}}),
+        user_id=user_id,
+        _user_id=user_id,
+    )
+    with (
+        patch("lfx.custom.custom_component.custom_component.logger", warning_logger),
+        patch("lfx.custom.custom_component.custom_component.get_variable_service") as service,
+    ):
+        service.return_value.get_account_bound_variable = AsyncMock(return_value=None)
+        service.return_value.get_variable = AsyncMock(return_value="https://author.example")
+        result = await CustomComponent.get_variable(component, "DESTINATION", "bing_search_url", object())
+
+    assert result == "https://author.example"
+    assert capture.calls[0].kwargs["event"] == (
+        "Ignoring request variable override for protected field 'bing_search_url'."
+    )
