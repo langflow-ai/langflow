@@ -95,7 +95,7 @@ def test_end_writes_final_metadata_to_trace_and_preserves_boundary_io():
 
         root = next(span for span in exporter.get_finished_spans() if span.name == "flow")
         assert root.attributes["langfuse.trace.metadata.final"] == "True"
-        assert "langfuse.observation.metadata.final" not in root.attributes
+        assert root.attributes["langfuse.observation.metadata.final"] is True
         assert root.attributes["langfuse.trace.input"] == '{"input": {"input": "hello"}}'
         assert root.attributes["langfuse.trace.output"] == '{"output": {"output": "world"}}'
     finally:
