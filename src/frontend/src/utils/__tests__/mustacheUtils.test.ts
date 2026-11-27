@@ -1,6 +1,5 @@
 import {
   extractMustacheVariables,
-  type MustacheValidationResult,
   validateMustacheTemplate,
 } from "../mustacheUtils";
 
@@ -175,6 +174,12 @@ describe("mustacheUtils", () => {
 
       it("should reject variables with dots (nested access)", () => {
         const result = validateMustacheTemplate("{{user.name}}");
+        expect(result.isValid).toBe(false);
+        expect(result.error).toContain("Invalid mustache variable");
+      });
+
+      it("should reject a tag containing a closing brace inside", () => {
+        const result = validateMustacheTemplate('{{ {"key": "value"} }}');
         expect(result.isValid).toBe(false);
         expect(result.error).toContain("Invalid mustache variable");
       });
