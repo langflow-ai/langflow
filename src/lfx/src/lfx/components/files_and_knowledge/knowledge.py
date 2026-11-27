@@ -269,6 +269,11 @@ class KnowledgeComponent(Component):
         elif isinstance(knowledge_value, str) and knowledge_value.strip():
             mode = effective_parameters.get("mode", getattr(self, "mode", MODE_INGEST))
             metadata = await self._get_kb_metadata(knowledge_value.strip(), mode=mode)
+            if not metadata:
+                # No row this run may read, e.g. another user's KB in a shared playground.
+                unknown_provider = "unknown"
+                message = f"Knowledge base '{knowledge_value.strip()}' is not available to this run."
+                raise ModelProviderPolicyError(unknown_provider, purpose, message=message)
             provider = self._embedding_provider_from_selection(metadata.get("model_selection"))
             if provider is None:
                 legacy_provider = metadata.get("embedding_provider")

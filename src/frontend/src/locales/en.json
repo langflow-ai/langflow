@@ -4139,6 +4139,7 @@
   "settings.upgrade.check.error.subprocess_unavailable": "This server cannot start the check from this page. Run langflow upgrade-check from a terminal and import the report.",
   "settings.upgrade.check.error.connection_lost": "The connection closed before the check finished. Run it again.",
   "settings.upgrade.check.error.refused": "The server did not start the check. Try again later.",
+  "playground.sharedRunFailedHint": "This shared playground can't use the flow owner's credentials or knowledge bases. If the flow needs them, ask its owner.",
   "updateComponent.customizedUpdateDesc": "Updating a customized component replaces its saved code with the version from the component catalog.",
   "settings.upgrade.duplicateImport": "Duplicate import"
 }

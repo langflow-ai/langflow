@@ -4140,6 +4140,7 @@
   "settings.upgrade.check.error.subprocess_unavailable": "Dieser Server kann die Prüfung nicht von dieser Seite aus starten. Führen Sie langflow upgrade-check in einem Terminal aus und importieren Sie den Bericht.",
   "settings.upgrade.check.error.connection_lost": "Die Verbindung wurde vor dem Ende der Prüfung getrennt. Starten Sie sie erneut.",
   "settings.upgrade.check.error.refused": "Der Server hat die Prüfung nicht gestartet. Versuchen Sie es später erneut.",
+  "playground.sharedRunFailedHint": "Dieser geteilte Playground kann die Zugangsdaten und Wissensdatenbanken des Flow-Eigentümers nicht verwenden. Wenn der Flow sie benötigt, wende dich an den Eigentümer.",
   "updateComponent.customizedUpdateDesc": "Beim Aktualisieren einer angepassten Komponente wird ihr gespeicherter Code durch die Version aus dem Komponentenkatalog ersetzt.",
   "settings.upgrade.duplicateImport": "Doppelter Import"
 }

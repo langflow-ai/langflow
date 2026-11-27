@@ -4140,6 +4140,7 @@
   "settings.upgrade.check.error.subprocess_unavailable": "Este servidor não pode iniciar a verificação a partir desta página. Execute langflow upgrade-check em um terminal e importe o relatório.",
   "settings.upgrade.check.error.connection_lost": "A conexão foi fechada antes de a verificação terminar. Execute-a de novo.",
   "settings.upgrade.check.error.refused": "O servidor não iniciou a verificação. Tente de novo mais tarde.",
+  "playground.sharedRunFailedHint": "Este playground compartilhado não pode usar as credenciais nem as bases de conhecimento do dono do fluxo. Se o fluxo precisar delas, fale com o dono.",
   "updateComponent.customizedUpdateDesc": "Ao atualizar um componente personalizado, seu código salvo é substituído pela versão do catálogo de componentes.",
   "settings.upgrade.duplicateImport": "Importação duplicada"
 }
