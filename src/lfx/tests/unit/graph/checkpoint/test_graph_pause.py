@@ -12,7 +12,7 @@ import pytest
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.graph import Graph
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
-from lfx.graph.exceptions import GraphPausedException
+from lfx.graph.exceptions import GraphPausedException, PauseConflictError
 
 
 def _graph(store=None, probe=None, job_id="job-1") -> Graph:
@@ -80,6 +80,23 @@ async def test_request_pause_sets_flag_and_info():
     graph.request_pause(reason="human_input_required", data={"options": ["a"]})
     assert graph.pause_requested is True
     assert graph.pause_info == {"reason": "human_input_required", "data": {"options": ["a"]}}
+
+
+def test_a_second_decision_while_one_is_pending_is_refused():
+    graph = _graph(store=InMemoryCheckpointStore())
+    graph.request_pause(reason="human_input_required", data={"request_id": "first:run"})
+
+    with pytest.raises(PauseConflictError, match="asked for a decision at the same time"):
+        graph.request_pause(reason="human_input_required", data={"request_id": "second:run"})
+    assert graph.pause_info["data"]["request_id"] == "first:run"
+
+
+def test_an_operator_pause_keeps_the_pending_decision():
+    graph = _graph(store=InMemoryCheckpointStore())
+    graph.request_pause(reason="human_input_required", data={"request_id": "hitl:run"})
+    graph.request_pause()
+
+    assert graph.pause_info == {"reason": "human_input_required", "data": {"request_id": "hitl:run"}}
 
 
 async def test_checkpoint_builder_degrades_opaque_built_object_to_none():

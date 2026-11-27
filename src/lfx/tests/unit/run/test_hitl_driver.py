@@ -14,7 +14,9 @@ from uuid import uuid4
 
 import pytest
 from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
+from lfx.components.flow_controls.human_input import HumanInput
 from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.exceptions.component import ComponentBuildError
 from lfx.graph import Graph
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
 from lfx.run._defaults import apply_run_defaults
@@ -22,6 +24,8 @@ from lfx.run.hitl import run_graph_with_human_input
 from lfx.services.deps import get_settings_service
 
 sys.path.insert(0, str(Path(__file__).parent.parent / "graph" / "checkpoint"))
+sys.path.insert(0, str(Path(__file__).parent))
+from _pause_flows import edge, graph_from, node, payload
 from _static_pauser import StaticPauser
 
 
@@ -249,6 +253,27 @@ async def test_ontime_decision_routes_to_chosen_branch() -> None:
     built = {r.vertex.id for r in results}
     assert "out_approve" in built
     assert "out_fallback" not in built
+
+
+async def test_two_decisions_in_one_layer_fail_instead_of_dropping_one() -> None:
+    store = InMemoryCheckpointStore()
+    nodes = [node(ChatInput(_id="chat_input", should_store_message=False))]
+    edges = []
+    for name in ("a", "b"):
+        nodes += [
+            node(HumanInput(_id=f"human_{name}")),
+            node(ChatOutput(_id=f"out_{name}", should_store_message=False)),
+        ]
+        edges += [
+            edge("chat_input", f"human_{name}", "message", field="prompt"),
+            edge(f"human_{name}", f"out_{name}", "branch_approve"),
+        ]
+    graph = graph_from(payload(nodes, edges))
+    graph.set_run_id("job-1")
+
+    # A checkpoint holds one decision. The other Human Input used to be dropped and its branch ran undecided.
+    with pytest.raises(ComponentBuildError, match="asked for a decision at the same time"):
+        await run_graph_with_human_input(graph, decision_provider=lambda _r: {"action_id": "approve"}, store=store)
 
 
 def _two_hitl_graph(store, *, job_id="job-1"):
