@@ -140,6 +140,7 @@ lfx-confluent = { workspace = true }
 lfx-serply = { workspace = true }
 lfx-serpingapi = { workspace = true }
 lfx-gitlab = { workspace = true }
+lfx-specstream = { workspace = true }
 lfx-microsoft = { workspace = true }
 lfx-jira = { workspace = true }
 lfx-slack = { workspace = true }
@@ -189,6 +190,7 @@ members = [
     "src/bundles/serply",
     "src/bundles/serpingapi",
     "src/bundles/gitlab",
+    "src/bundles/specstream",
     "src/bundles/microsoft",
     "src/bundles/jira",
     "src/bundles/slack",
@@ -222,6 +224,7 @@ bundles = [
     "lfx-paddle>=0.2.1,<1.0.0",
     "lfx-serpingapi>=0.1.1,<1.0.0",
     "lfx-serply>=0.1.1,<1.0.0",
+    "lfx-specstream>=0.1.0,<1.0.0",
     "lfx-valkey>=0.3.0,<1.0.0",
 ]
 
