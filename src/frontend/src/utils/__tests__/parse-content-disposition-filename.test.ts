@@ -82,4 +82,22 @@ describe("parseContentDispositionFilename", () => {
       ),
     ).toBe("hello;world.txt");
   });
+
+  it("keeps semicolons inside a quoted legacy filename", () => {
+    expect(
+      parseContentDispositionFilename(
+        'attachment; filename="report; final.csv"',
+        "fallback.txt",
+      ),
+    ).toBe("report; final.csv");
+  });
+
+  it("unescapes quoted quotes in a legacy filename", () => {
+    expect(
+      parseContentDispositionFilename(
+        'attachment; filename="report; final \\"v2\\".csv"',
+        "fallback.txt",
+      ),
+    ).toBe('report; final "v2".csv');
+  });
 });
