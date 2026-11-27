@@ -94,7 +94,7 @@ class FlowBase(SQLModel):
     __mapper_args__ = {"confirm_deleted_rows": False}
 
     name: str = Field(index=True)
-    description: str | None = Field(default=None, sa_column=Column(Text, index=True, nullable=True))
+    description: str | None = Field(default=None, sa_column=Column(Text, nullable=True))
     icon: str | None = Field(default=None, nullable=True)
     icon_bg_color: str | None = Field(default=None, nullable=True)
     gradient: str | None = Field(default=None, nullable=True)
