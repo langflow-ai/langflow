@@ -126,6 +126,7 @@ def _upsert_single(
     # avoiding a spurious PUT when nothing has actually changed.
     # Import directly from serialization so this internal comparison is not
     # counted as a call to the public sdk.normalize_flow (keeps tests clean).
+    move_to: UUID | None = None
     if local_file_content is not None:
         try:
             # Use direct module imports (not sdk.*) so mock call-counts in tests
@@ -141,13 +142,15 @@ def _upsert_single(
                 sort_keys=True,
             )
             if flow_to_json(remote_normalized) == local_file_content:
-                return PushResult(
-                    path=path,
-                    flow_id=flow_id,
-                    flow_name=flow_name,
-                    status="unchanged",
-                    flow_url=flow_url,
-                )
+                if flow_create.folder_id is None or flow_create.folder_id == remote.folder_id:
+                    return PushResult(
+                        path=path,
+                        flow_id=flow_id,
+                        flow_name=flow_name,
+                        status="unchanged",
+                        flow_url=flow_url,
+                    )
+                move_to = flow_create.folder_id
         except LangflowNotFoundError:
             pass  # Flow doesn't exist yet — fall through to create it
         except Exception:  # noqa: BLE001
@@ -156,8 +159,13 @@ def _upsert_single(
             logging.getLogger(__name__).debug("Remote comparison failed; proceeding with push", exc_info=True)
 
     try:
-        _, created = client.upsert_flow(flow_id, flow_create)
-        status = "created" if created else "updated"
+        if move_to is not None:
+            # A project-only move must preserve remote content stripped by normalization.
+            client.update_flow(flow_id, sdk.FlowUpdate(folder_id=move_to))
+            status = "updated"
+        else:
+            _, created = client.upsert_flow(flow_id, flow_create)
+            status = "created" if created else "updated"
         return PushResult(path=path, flow_id=flow_id, flow_name=flow_name, status=status, flow_url=flow_url)
     except sdk.LangflowHTTPError as exc:
         return PushResult(

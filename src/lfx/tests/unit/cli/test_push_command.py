@@ -1,21 +1,23 @@
 """Unit tests for lfx push -- push_command and helpers.
 
-All tests run entirely in-process; no real Langflow instance or SDK required.
-The SDK module is replaced wholesale with MagicMock so only the push logic
-(file loading, upsert routing, dry-run, project resolution, result rendering)
-is under test.
+All tests run entirely in-process without a Langflow instance. Most tests
+replace the SDK with a MagicMock to isolate the push logic.
 """
 # pragma: allowlist secret -- all credentials in this file are fake test data
 
 from __future__ import annotations
 
 import json
+from functools import partial
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 from uuid import UUID
 
+import httpx
+import langflow_sdk
 import pytest
 import typer
+from typer.testing import CliRunner
 
 if TYPE_CHECKING:
     from pathlib import Path
@@ -571,6 +573,56 @@ class TestPushCommand:
         client.list_projects.assert_not_called()
         fc_kwargs = sdk.FlowCreate.call_args.kwargs
         assert fc_kwargs["folder_id"] == _PROJECT_ID
+
+    @pytest.mark.parametrize(
+        ("destination", "edited_name", "expected_method"),
+        [
+            (None, None, None),
+            (_PROJECT_ID, None, None),
+            (UUID("bbbbbbbb-0000-0000-0000-000000000002"), None, "PATCH"),
+            (UUID("bbbbbbbb-0000-0000-0000-000000000002"), "Renamed flow", "PUT"),
+        ],
+    )
+    def test_normalized_push_respects_target_project(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        destination: UUID | None,
+        edited_name: str | None,
+        expected_method: str | None,
+    ):
+        from lfx.cli._remote_commands import register
+
+        flow = langflow_sdk.Flow(**_FLOW_DICT, folder_id=_PROJECT_ID)
+        remote = flow.model_dump(mode="json")
+        local = langflow_sdk.normalize_flow(remote)
+        if edited_name:
+            local["name"] = edited_name
+        path = _write_flow(tmp_path, "flow.json", local)
+        writes: list[httpx.Request] = []
+
+        def handle(request: httpx.Request) -> httpx.Response:
+            assert request.url.path == f"/api/v1/flows/{_FLOW_ID}"
+            if request.method == "GET":
+                return httpx.Response(200, json=remote)
+            writes.append(request)
+            return httpx.Response(200, json={**remote, **json.loads(request.content)})
+
+        app = typer.Typer()
+        register(app)
+        args = ["push", str(path), "--target", _BASE_URL, "--api-key", _API_KEY]
+        if destination is not None:
+            args.extend(["--project-id", str(destination)])
+        with httpx.Client(base_url=_BASE_URL, transport=httpx.MockTransport(handle)) as http:
+            monkeypatch.setattr(langflow_sdk, "Client", partial(langflow_sdk.Client, httpx_client=http))
+            result = CliRunner().invoke(app, args)
+
+        assert result.exit_code == 0, result.output
+        assert [request.method for request in writes] == ([expected_method] if expected_method else [])
+        if expected_method == "PATCH":
+            assert json.loads(writes[0].content) == {"folder_id": str(destination)}
+        elif expected_method == "PUT":
+            assert json.loads(writes[0].content)["name"] == edited_name
 
     def test_normalize_calls_sdk_normalize_flow(self, tmp_path):
         """--normalize invokes sdk.normalize_flow before upsert."""
