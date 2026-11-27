@@ -589,6 +589,24 @@ class TestGraphExecution:
         assert captured.get("fallback_to_env_vars") is False
 
 
+@pytest.mark.parametrize(
+    ("input_value", "expected"),
+    [(None, "SAVED DEFAULT"), ("", ""), ("replacement", "replacement")],
+)
+@pytest.mark.asyncio
+async def test_execute_graph_with_capture_preserves_explicit_input(input_value, expected):
+    from lfx.components.input_output import ChatInput, ChatOutput
+    from lfx.graph import Graph
+
+    chat_input = ChatInput().set(input_value="SAVED DEFAULT", should_store_message=False)
+    chat_output = ChatOutput().set(input_value=chat_input.message_response, should_store_message=False)
+    graph = Graph(chat_input, chat_output)
+
+    results, logs = await execute_graph_with_capture(graph, input_value)
+
+    assert extract_result_data(results, logs)["result"] == expected
+
+
 class TestResultExtraction:
     """Test result data extraction."""
 
