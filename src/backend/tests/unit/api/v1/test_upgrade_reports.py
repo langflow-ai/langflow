@@ -178,14 +178,17 @@ async def test_pagination_target_filter_and_missing_report(client, admin_headers
 
 async def test_duplicate_imports_are_visible_across_history_pages(client, admin_headers):
     original = FIXTURE.read_bytes()
+    ids = []
     for content in (original, original, original + b"\n"):
         response = await client.post(URL, content=content, headers=admin_headers)
         assert response.status_code == 201, response.text
+        ids.append(response.json()["id"])
 
-    for offset, duplicate in enumerate((False, True, True)):
+    for offset, (report_id, duplicate) in enumerate(zip(reversed(ids), (False, True, False), strict=True)):
         response = await client.get(URL, params={"offset": offset, "limit": 1}, headers=admin_headers)
         assert response.status_code == 200, response.text
         [report] = response.json()["items"]
+        assert report["id"] == report_id
         assert report["duplicate"] is duplicate
 
 
