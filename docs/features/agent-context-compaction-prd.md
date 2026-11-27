@@ -1,6 +1,6 @@
 # PRD: session memory and context budget for the Agent component
 
-Status: implemented on branch `feat/agent-session-memory-context-budget` (local commits) and measured.
+Status: implemented on branch `feat/agent-session-memory-context-budget` and measured.
 The eval results are in [agent-session-memory-eval.md](agent-session-memory-eval.md). The eval showed
 that facts apart from the summary do not beat a free-text summary under the same token policy, so
 section 4 (facts) and Pinned Keys were replaced by the free-text summary of PR #16515. See
