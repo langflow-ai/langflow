@@ -49,6 +49,14 @@ def _env_if_allowed(key: str) -> str | None:
     return os.environ.get(key)
 
 
+def _has_api_version_suffix(url: str) -> bool:
+    """Return True when the URL's last path segment is an API version such as v1 or v2."""
+    last = url.rstrip("/").rsplit("/", 1)[-1]
+    if not last:
+        return False
+    return last[0] in "vV" and last[1:].isdigit()
+
+
 def _apply_registered_provider_connection(provider: str, user_id: UUID | str | None, kwargs: dict[str, Any]) -> None:
     """Apply a bundle-registered provider's non-secret connection variables to ``kwargs``.
 
@@ -89,7 +97,7 @@ def _apply_registered_provider_connection(provider: str, user_id: UUID | str | N
             if isinstance(base_url_suffix, str) and base_url_suffix:
                 normalized_suffix = f"/{base_url_suffix.strip('/')}"
                 value = value.rstrip("/")
-                if not value.endswith(normalized_suffix):
+                if not value.endswith(normalized_suffix) and not _has_api_version_suffix(value):
                     value = f"{value}{normalized_suffix}"
         kwargs[langchain_param] = value
     if default_headers:

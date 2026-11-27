@@ -2,7 +2,7 @@
 
 The provider targets any endpoint that speaks the OpenAI HTTP API shape
 (OpenRouter, Together, Groq, self-hosted vLLM/TGI/LM Studio, ...), so models
-are discovered from the endpoint's ``/v1/models`` route and credentials are
+are discovered from the endpoint's ``/models`` route and credentials are
 validated with a probe request. Both callables are referenced by dotted path
 from the bundle's ``extension.json`` provider spec and invoked lazily by lfx's
 provider registry, so importing this module is cheap and only happens when the
@@ -27,10 +27,24 @@ _PROVIDER = "OpenAI Compatible"
 _ICON = "Plug"
 
 
+def _has_api_version_suffix(url: str) -> bool:
+    """Return True when the URL's last path segment is an API version such as v1 or v2."""
+    last = url.rstrip("/").rsplit("/", 1)[-1]
+    if not last:
+        return False
+    return last[0] in "vV" and last[1:].isdigit()
+
+
 def _models_url(base_url: str) -> str:
-    """Return the ``/v1/models`` URL, tolerating a base that already ends in /v1."""
+    """Return the models URL, preserving an explicit API version segment.
+
+    A base URL that already ends in a version (``/v1``, ``/v2``, ...) keeps it;
+    a bare host gets the OpenAI default ``/v1``.
+    """
     base_url = base_url.rstrip("/")
-    return f"{base_url}/models" if base_url.endswith("/v1") else f"{base_url}/v1/models"
+    if _has_api_version_suffix(base_url):
+        return f"{base_url}/models"
+    return f"{base_url}/v1/models"
 
 
 def _parse_model_names(data: object) -> list[str]:
@@ -45,7 +59,7 @@ def _parse_model_names(data: object) -> list[str]:
 def fetch_live_openai_compatible_models(user_id: UUID | str | None, model_type: str = "llm") -> list[dict]:
     """Return models served by the user's OpenAI-compatible endpoint, tagged with ``model_type``.
 
-    The ``/v1/models`` route does not distinguish chat from embedding models, so
+    The ``/models`` route does not distinguish chat from embedding models, so
     every served model is returned and tagged with the requested ``model_type``;
     the unified catalog fetches once per type, so a model is offered in both the
     Language Model and Embedding Model pickers. Returns an empty list (never
@@ -89,7 +103,7 @@ def validate_openai_compatible_credentials(
     variables: dict[str, str],
     model_name: str | None = None,  # noqa: ARG001 - registry validator contract
 ) -> None:
-    """Validate the configured endpoint by probing ``/v1/models``.
+    """Validate the configured endpoint by probing its models URL.
 
     Raises ``ValueError`` with an actionable message on a missing URL,
     authentication failure, connection error, timeout, or any other HTTP or
