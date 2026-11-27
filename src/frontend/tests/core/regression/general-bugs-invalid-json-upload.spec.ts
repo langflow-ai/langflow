@@ -3,42 +3,14 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("Invalid JSON Upload Error Handling", () => {
-  // Helper function to verify error appears
+  // Helper function to verify the upload error alert appears
   async function verifyErrorAppears(page: Page) {
-    // Wait for error alert to appear
-    await page.waitForTimeout(2000);
-
-    const statusElements = await page.locator('[role="status"]').all();
-
-    let errorFound = false;
-
-    if (statusElements.length > 0) {
-      for (const element of statusElements) {
-        const isVisible = await element.isVisible().catch(() => false);
-        if (isVisible) {
-          const text = await element.textContent();
-          if (text && /error|upload|json|parse/i.test(text.toLowerCase())) {
-            errorFound = true;
-            expect(text).toBeTruthy();
-            break;
-          }
-        }
-      }
-    }
-
-    if (!errorFound) {
-      const errorTextLocator = page.getByText(/Error/i).first();
-      const errorVisible = await errorTextLocator
-        .isVisible()
-        .catch(() => false);
-      if (errorVisible) {
-        const text = await errorTextLocator.textContent();
-        expect(text?.toLowerCase()).toMatch(/error/i);
-        errorFound = true;
-      }
-    }
-
-    expect(errorFound).toBeTruthy();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: /error.*upload/i })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
   }
 
   test(

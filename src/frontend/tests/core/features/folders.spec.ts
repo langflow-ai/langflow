@@ -80,11 +80,8 @@ test(
 );
 
 test("add a flow into a folder by drag and drop", async ({ page }) => {
-  await page.goto("/");
-
-  await page.waitForSelector("text=New Flow", {
-    timeout: 50000,
-  });
+  // Seeds a flow on an empty DB so the project sidebar renders.
+  await awaitBootstrapTest(page, { skipModal: true });
 
   const jsonContent = readFileSync("tests/assets/collection.json", "utf-8");
 
@@ -112,12 +109,6 @@ test("add a flow into a folder by drag and drop", async ({ page }) => {
   // wait for the file to be uploaded failed with waitforselector
 
   await page.waitForTimeout(1000);
-
-  const genericNode = page.getByTestId("div-generic-node");
-  const elementCount = await genericNode?.count();
-  if (elementCount > 0) {
-    expect(true).toBeTruthy();
-  }
 
   await getSidebarProjectButton(page, "Starter Project").click();
 

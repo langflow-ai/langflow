@@ -44,13 +44,16 @@ test(
     await page
       .getByPlaceholder(TEXTS.placeholderVariableName)
       .fill(genericName);
-    await page.getByText("Generic", { exact: true }).first().isVisible();
+    await expect(
+      page.getByText("Generic", { exact: true }).first(),
+    ).toBeVisible();
     await page
       .getByPlaceholder("Enter a value for the variable...")
       .fill("This is a test of generic variable value");
     await page.getByText("Save Variable", { exact: true }).click();
-    expect(page.getByText(genericName, { exact: true })).not.toBeNull();
-    await page.getByText(genericName, { exact: true }).isVisible();
+    await expect(
+      page.getByText(genericName, { exact: true }).first(),
+    ).toBeVisible();
 
     await page.getByText("Add New Variable", { exact: true }).click();
     await page
@@ -61,8 +64,7 @@ test(
       .getByPlaceholder("Enter a value for the variable...")
       .fill("This is a test of credential variable value");
     await page.getByText("Save Variable", { exact: true }).click();
-    expect(page.getByText(credentialName, { exact: true })).not.toBeNull();
-    await page.getByText(credentialName, { exact: true }).isVisible();
+    await expect(page.getByText(credentialName, { exact: true })).toBeVisible();
 
     await page
       .getByText(credentialName, { exact: true })

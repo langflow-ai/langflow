@@ -47,11 +47,7 @@ test(
     // Wait for the animation to change the opacity
     await page.waitForTimeout(500);
 
-    const opacityAfterHover = await plusIcon.evaluate((el) =>
-      window.getComputedStyle(el).getPropertyValue("opacity"),
-    );
-
-    expect(Number(opacityAfterHover)).toBeGreaterThanOrEqual(0);
+    await expect(plusIcon).toHaveCSS("opacity", "1");
 
     // Click the plus icon associated with this component
     await plusIcon.click();

@@ -52,19 +52,11 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").last().click();
 
-    try {
-      await page.waitForSelector(
-        'text="Unsaved changes will be permanently lost."',
-        {
-          state: "visible",
-          timeout: 2000,
-        },
-      );
+    await expect(
+      page.getByText("Unsaved changes will be permanently lost."),
+    ).toBeVisible();
 
-      await page.getByText("Exit Anyway", { exact: true }).click();
-    } catch (_error) {
-      console.error("Warning text not visible, skipping dialog confirmation");
-    }
+    await page.getByText("Exit Anyway", { exact: true }).click();
 
     await openFlowCard(page, "New Flow");
 

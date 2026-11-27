@@ -43,12 +43,6 @@ test(
       timeout: 60000 * 2,
     });
 
-    const genericNode = page.getByTestId("div-generic-node");
-    const elementCount = await genericNode?.count();
-    if (elementCount > 0) {
-      expect(true).toBeTruthy();
-    }
-
     await page.waitForSelector("text=Getting Started:", {
       timeout: 100000,
     });
@@ -108,13 +102,6 @@ test(
     await page.waitForSelector("text=uploaded successfully", {
       timeout: 60000 * 2,
     });
-
-    const genericNode = page.getByTestId("div-generic-node");
-
-    const elementCount = await genericNode?.count();
-    if (elementCount > 0) {
-      expect(true).toBeTruthy();
-    }
 
     await page.waitForSelector(`text=${randomName}`, {
       timeout: 100000,
