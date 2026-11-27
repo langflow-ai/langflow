@@ -101,7 +101,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     setPageIndex(1);
   }
 
-  const { data: folderData, isLoading } = useGetFolderQuery({
+  const {
+    data: folderData,
+    isLoading,
+    isFetching,
+  } = useGetFolderQuery({
     id: folderId ?? myCollectionId,
     page: projectChanged ? 1 : pageIndex,
     size: pageSize,
@@ -146,6 +150,20 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     setSearch(newSearch);
     setPageIndex(1);
   }, []);
+
+  // Deleting the last flows of the last page leaves the requested page past
+  // the end: the server answers with no items and the real page count. Step
+  // back to the last page that exists instead of rendering an empty list.
+  // A page served from the cache while it refetches may carry an outdated
+  // page count, so wait for the fresh answer before stepping back.
+  const lastPage = folderData?.flows
+    ? Math.max(1, folderData.flows.pages)
+    : undefined;
+  useEffect(() => {
+    if (!isFetching && lastPage !== undefined && pageIndex > lastPage) {
+      setPageIndex(lastPage);
+    }
+  }, [isFetching, lastPage, pageIndex]);
 
   useEffect(() => {
     // Wait until both the global flows store has populated and the folder
