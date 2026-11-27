@@ -12,6 +12,7 @@ import type {
 import { extractLanguage, isCodeBlock } from "@/utils/codeBlockUtils";
 import ForwardedIconComponent from "../../common/genericIconComponent";
 import SimplifiedCodeTabComponent from "../codeTabsComponent";
+import { ContextEventDisplay } from "./ContextEventDisplay";
 import DurationDisplay from "./DurationDisplay";
 import HumanInputCard, { type HumanInputDecision } from "./HumanInputCard";
 import {
@@ -48,6 +49,7 @@ export default function ContentDisplay({
   // there to avoid rendering the same duration twice.
   const renderDuration = content.duration !== undefined &&
     content.type !== "reasoning" &&
+    content.type !== "context" &&
     !playgroundPage && (
       <div className="absolute right-2 top-4">
         <DurationDisplay duration={content.duration} chatId={chatId} />
@@ -276,6 +278,10 @@ export default function ContentDisplay({
       );
       break;
     }
+
+    case "context":
+      contentData = <ContextEventDisplay content={content} />;
+      break;
 
     case "citation":
       // Single citation renders as a one-card Sources strip; consecutive

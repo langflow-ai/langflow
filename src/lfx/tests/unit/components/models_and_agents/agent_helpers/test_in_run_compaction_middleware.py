@@ -9,8 +9,11 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
+from lfx.base.agents.events import process_agent_events
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import adapt_graph_events_to_executor_shape
 from lfx.components.models_and_agents.agent_helpers.in_run_compaction_middleware import InRunCompactionMiddleware
+from lfx.schema.content_types import ContextContent
+from lfx.schema.message import Message
 
 WINDOW = 2_000  # compact at 1,600 tokens, keep 500
 SUMMARY = "SUMMARY-OF-EARLIER-TOOL-CALLS"
@@ -120,3 +123,34 @@ async def test_should_pause_and_resume_tool_approval_after_a_compaction():
     tool_results = [m.content for m in resumed["messages"] if isinstance(m, ToolMessage)]
     assert "published report" in tool_results
     assert resumed["messages"][-1].content == "published"
+
+
+async def test_should_show_the_compaction_in_the_chat_message_while_the_run_streams():
+    summarizer = FakeMessagesListChatModel(responses=[AIMessage(content=SUMMARY)])
+    agent = create_agent(
+        model=_main_model([AIMessage(content="done")]),
+        tools=[read_page],
+        middleware=[InRunCompactionMiddleware(summarizer, WINDOW)],
+    )
+    published: list[list] = []
+
+    async def send_message(message, **_kwargs):
+        published.append([b for b in message.content_blocks if isinstance(b, ContextContent)])
+        return message
+
+    stream = adapt_graph_events_to_executor_shape(
+        agent.astream_events({"messages": [("user", "read the pages")]}, version="v2")
+    )
+    final = await process_agent_events(
+        stream, Message(text="", sender="Machine", sender_name="AI", content_blocks=[]), send_message
+    )
+
+    # The chat sees the block while it runs, then the same block (same id) when it is done.
+    states = [blocks[0].state for blocks in published if blocks]
+    assert states[0] == "running"
+    blocks = [b for b in final.content_blocks if isinstance(b, ContextContent)]
+    assert len(blocks) == 1
+    assert blocks[0].kind == "compaction"
+    assert blocks[0].state == "done"
+    assert blocks[0].tokens_after < blocks[0].tokens_before
+    assert SUMMARY not in final.text

@@ -265,6 +265,22 @@ class UsageContent(BaseContent):
     model: str | None = None
 
 
+class ContextContent(BaseContent):
+    """A change to the context of an Agent run: a session fold or an in-run compaction.
+
+    ``kind`` says which. ``state`` moves from ``running`` to ``done`` or ``failed`` on the same block
+    (same ``id``). ``messages`` is the number of folded messages. ``tokens_before`` and ``tokens_after``
+    give the size of a compaction. The UI writes the text, so the block holds no prose.
+    """
+
+    type: Literal["context"] = Field(default="context")
+    kind: Literal["fold", "compaction"]
+    state: Literal["running", "done", "failed"] = "running"
+    messages: int | None = Field(default=None, ge=0)
+    tokens_before: int | None = Field(default=None, ge=0)
+    tokens_after: int | None = Field(default=None, ge=0)
+
+
 class CitationContent(BaseContent):
     """Content type for citation content."""
 
@@ -348,6 +364,7 @@ ContentType = Annotated[
     | Annotated[FileContent, Tag("file")]
     | Annotated[ReasoningContent, Tag("reasoning")]
     | Annotated[UsageContent, Tag("usage")]
+    | Annotated[ContextContent, Tag("context")]
     | Annotated[CitationContent, Tag("citation")]
     | Annotated[HumanInputContent, Tag("human_input")]
     | Annotated[ContentBlock, Tag("group")],

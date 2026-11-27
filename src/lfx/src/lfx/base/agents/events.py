@@ -7,7 +7,7 @@ from langchain_core.agents import AgentFinish
 from langchain_core.messages import AIMessageChunk
 
 from lfx.events.event_manager import emit_token
-from lfx.schema.content_types import TextContent, ToolContent
+from lfx.schema.content_types import ContextContent, TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
 
@@ -484,6 +484,35 @@ class ChainEventHandler(Protocol):
 EventHandler = ToolEventHandler | ChainEventHandler
 
 # Define separate mappings of event types to their respective handler functions
+# Custom event of the Agent's in-run compaction (see InRunCompactionMiddleware).
+COMPACTION_EVENT = "agent_context_compaction"
+
+
+async def handle_on_custom_event(
+    event: dict[str, Any],
+    agent_message: Message,
+    send_message_callback: SendMessageFunctionType,
+    _send_token_callback: OnTokenFunctionType | None,
+    start_time: float,
+    **_kwargs: Any,
+) -> tuple[Message, float]:
+    """Show a compaction of the run's context as a `ContextContent` block, updated in place by its id."""
+    data = event.get("data")
+    if event.get("name") != COMPACTION_EVENT or not isinstance(data, dict) or not data.get("id"):
+        return agent_message, start_time
+    if agent_message.content_blocks is None:
+        agent_message.content_blocks = []
+    fields = {k: data.get(k) for k in ("state", "tokens_before", "tokens_after", "duration") if data.get(k) is not None}
+    blocks = agent_message.content_blocks
+    index = next((i for i, b in enumerate(blocks) if b.id == data["id"]), None)
+    if index is None:
+        blocks.append(ContextContent(id=data["id"], kind="compaction", **fields))
+    else:
+        blocks[index] = blocks[index].model_copy(update=fields)
+    agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
+    return agent_message, start_time
+
+
 CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     "on_chain_start": handle_on_chain_start,
     "on_chain_end": handle_on_chain_end,
@@ -494,6 +523,7 @@ CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     # interleaved text + tool_use the model emitted and appends them
     # to content_blocks in producer order.
     "on_chat_model_end": handle_on_chat_model_end,
+    "on_custom_event": handle_on_custom_event,
 }
 
 TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {

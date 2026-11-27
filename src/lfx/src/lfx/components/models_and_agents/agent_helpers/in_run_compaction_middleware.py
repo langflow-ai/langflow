@@ -1,7 +1,7 @@
 """Compact the messages of one agent run before they pass the model context window.
 
 A run with many tool calls grows inside one turn, where the session fold cannot help. This is
-LangChain's `SummarizationMiddleware` with five changes:
+LangChain's `SummarizationMiddleware` with six changes:
 
 - The thresholds come from the model window: compact at 80%, keep the newest 25%, and send at most
   60% to the summary call.
@@ -12,6 +12,8 @@ LangChain's `SummarizationMiddleware` with five changes:
 - The first user message stays word for word after the summary, so the run keeps the exact request,
   such as the reply format.
 - Each compaction writes one log event with tokens before and after and the duration.
+- Each compaction sends a `COMPACTION_EVENT` custom event when it starts and when it ends, so the
+  Agent shows it in the chat while the run streams.
 
 The summary call is tagged `lc_source=summarization`. The Agent drops events with that tag from the
 chat stream, so the summary never shows as part of the answer.
@@ -19,12 +21,16 @@ chat stream, so the summary never shows as part of the answer.
 
 from __future__ import annotations
 
+import uuid
+from contextlib import suppress
 from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
 from langchain.agents.middleware import SummarizationMiddleware
+from langchain_core.callbacks import adispatch_custom_event
 from langchain_core.messages import HumanMessage, RemoveMessage, get_buffer_string
 
+from lfx.base.agents.events import COMPACTION_EVENT
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -72,21 +78,31 @@ class InRunCompactionMiddleware(SummarizationMiddleware):
     async def abefore_model(self, state: Any, runtime: Any) -> dict[str, Any] | None:
         before = self.token_counter(state["messages"])
         start = perf_counter()
+        # `_acreate_summary` sends the "running" event only when a compaction really starts.
+        self._event = {"id": f"compaction-{uuid.uuid4().hex[:12]}", "tokens_before": before, "sent": False}
         try:
             update = await super().abefore_model(state, runtime)
         except Exception as exc:  # noqa: BLE001
             # Fail open: the run goes on with its messages. The tool result cap still bounds their growth.
             await logger.awarning(f"in_run_compaction_failed: {type(exc).__name__}")
+            if self._event["sent"]:
+                await self._emit("failed", duration=round((perf_counter() - start) * 1000))
             return None
         if update is None:
             return None
         update = {**update, "messages": _keep_first_request(state["messages"], update["messages"])}
         after = self.token_counter([m for m in update["messages"] if not isinstance(m, RemoveMessage)])
-        await logger.ainfo(
-            f"in_run_compaction tokens_before={before} tokens_after={after} "
-            f"duration_ms={round((perf_counter() - start) * 1000)}"
-        )
+        duration = round((perf_counter() - start) * 1000)
+        await logger.ainfo(f"in_run_compaction tokens_before={before} tokens_after={after} duration_ms={duration}")
+        await self._emit("done", duration=duration, tokens_after=after)
         return update
+
+    async def _emit(self, state: str, **values: Any) -> None:
+        """Send the compaction event. Outside a run there is no parent to receive it, so nothing is sent."""
+        self._event["sent"] = True
+        payload = {"id": self._event["id"], "state": state, "tokens_before": self._event["tokens_before"], **values}
+        with suppress(RuntimeError):
+            await adispatch_custom_event(COMPACTION_EVENT, payload)
 
     def _trim_messages_for_summary(self, messages: list[Any]) -> list[Any]:
         """The first message and the newest messages that fit the summary input limit."""
@@ -104,6 +120,7 @@ class InRunCompactionMiddleware(SummarizationMiddleware):
 
     async def _acreate_summary(self, messages_to_summarize: list[Any]) -> str:
         """Like the parent, but raise on failure instead of returning an error text as the summary."""
+        await self._emit("running")
         trimmed = self._trim_messages_for_summary(messages_to_summarize)
         if not trimmed:
             msg = "nothing to summarize after trimming"

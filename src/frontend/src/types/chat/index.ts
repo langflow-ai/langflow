@@ -220,6 +220,18 @@ export interface UsageContent extends BaseContent {
   model?: string;
 }
 
+// A change to the context of an Agent run: a session fold or an in-run
+// compaction. The same block (same id) moves from "running" to "done" or
+// "failed" while the message streams.
+export interface ContextContent extends BaseContent {
+  type: "context";
+  kind: "fold" | "compaction";
+  state: "running" | "done" | "failed";
+  messages?: number | null;
+  tokens_before?: number | null;
+  tokens_after?: number | null;
+}
+
 export interface CitationContent extends BaseContent {
   type: "citation";
   url?: string;
@@ -244,6 +256,7 @@ export type ContentType =
   | FileContent
   | ReasoningContent
   | UsageContent
+  | ContextContent
   | CitationContent;
 
 // A titled group of nested contents. Matches the backend's ContentBlock,

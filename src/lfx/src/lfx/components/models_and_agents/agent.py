@@ -5,6 +5,7 @@ import uuid
 from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from time import perf_counter
 from typing import TYPE_CHECKING, Any, cast
 
 from langchain.agents import create_agent
@@ -73,6 +74,7 @@ from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStr
 from lfx.log.logger import logger
 from lfx.memory import delete_message
 from lfx.memory.flow_context import is_evals_memory_isolated, should_persist_messages
+from lfx.schema.content_types import ContextContent
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
@@ -129,6 +131,19 @@ def _agent_base_inputs():
         ),
     }
     return [overrides.get(inp.name, inp) for inp in LCToolsAgentComponent.get_base_inputs() if inp.name not in drop]
+
+
+def _add_usage(own: Usage | None, other: Usage | None) -> Usage | None:
+    """Plain sum of two usages. `accumulate_usage` takes the max, which would hide the fold call."""
+    if not other:
+        return own
+    if not own:
+        return other
+    return Usage(
+        input_tokens=(own.input_tokens or 0) + (other.input_tokens or 0),
+        output_tokens=(own.output_tokens or 0) + (other.output_tokens or 0),
+        total_tokens=(own.total_tokens or 0) + (other.total_tokens or 0),
+    )
 
 
 def _content_text(content: Any) -> str:
@@ -815,10 +830,16 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             logger.exception("Agent run failed after a partial message was emitted")
             raise
 
-        usage_data = token_usage_handler.get_usage()
-        if usage_data:
-            self._token_usage = usage_data
-            result.properties.usage = usage_data
+        # Auto mode: wait for the fold beside the answer, so its usage and its final state reach this message.
+        fold_usage = await self._await_fold()
+        usage_data = _add_usage(token_usage_handler.get_usage(), fold_usage)
+        fold_block = getattr(self, "_fold_block", None)
+        if fold_block is not None:
+            result.content_blocks = [fold_block if b.id == fold_block.id else b for b in result.content_blocks]
+        if usage_data or fold_block is not None:
+            if usage_data:
+                self._token_usage = usage_data
+                result.properties.usage = usage_data
             # Only round-trip the DB when the message was stored (Chat Output wired).
             # `_should_skip_message=True` leaves `result.get_id()` empty; persisting
             # then would create a phantom row.
@@ -849,7 +870,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             # populated yet. Mirrors ChatInput's convention.
             text="",
             # Flat chronological event log; see lfx.base.agents.events.
-            content_blocks=[],
+            # A fold that started for this turn shows first, so the user sees it while the answer streams.
+            content_blocks=[self._fold_block] if getattr(self, "_fold_block", None) else [],
             session_id=session_id or uuid.uuid4(),
         )
 
@@ -1134,20 +1156,22 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             return
         self._staged_fold = None
         self._fold_usage_handler = TokenUsageCallbackHandler()
+        self._fold_block = ContextContent(
+            id=f"fold-{uuid.uuid4().hex[:12]}", kind="fold", messages=len(staged["batch"])
+        )
+        self._fold_started = perf_counter()
         self._fold_task = asyncio.create_task(
             fold(**staged, summarize=self._summarize_history, summary_model=self._get_resolved_model_name())
         )
 
-    async def _settle_fold(self, *, cancel: bool = False) -> None:
-        """Wait for the background fold (or cancel it) and add its token usage to this run.
+    async def _await_fold(self, *, cancel: bool = False) -> Usage | None:
+        """Wait for the background fold (or cancel it) and return its token usage.
 
-        Also ends the run's history memo, which only serves retries inside one run, and drops a staged fold.
+        Marks the fold block `done` when the fold saved a summary, else `failed`, with its duration.
         """
-        self._auto_history_memo = None
-        self._staged_fold = None
         task = getattr(self, "_fold_task", None)
         if task is None:
-            return
+            return None
         self._fold_task = None
         if cancel:
             task.cancel()
@@ -1157,18 +1181,28 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         except asyncio.CancelledError:
             task.cancel()
             raise
-        if not task.cancelled():
-            task.exception()  # mark as retrieved; the fold logs its own failures
-        handler = getattr(self, "_fold_usage_handler", None)
-        fold_usage = handler.get_usage() if handler else None
-        if fold_usage:
-            own = getattr(self, "_token_usage", None)
-            # Plain addition: `accumulate_usage` takes the max, which would hide the fold call.
-            self._token_usage = Usage(
-                input_tokens=((own.input_tokens or 0) if own else 0) + (fold_usage.input_tokens or 0),
-                output_tokens=((own.output_tokens or 0) if own else 0) + (fold_usage.output_tokens or 0),
-                total_tokens=((own.total_tokens or 0) if own else 0) + (fold_usage.total_tokens or 0),
+        saved = None if task.cancelled() or task.exception() is not None else task.result()
+        block = getattr(self, "_fold_block", None)
+        if block is not None:
+            self._fold_block = block.model_copy(
+                update={
+                    "state": "done" if saved is not None else "failed",
+                    "duration": round((perf_counter() - self._fold_started) * 1000),
+                }
             )
+        handler = getattr(self, "_fold_usage_handler", None)
+        return handler.get_usage() if handler else None
+
+    async def _settle_fold(self, *, cancel: bool = False) -> None:
+        """Wait for the background fold (or cancel it) and add its token usage to this run.
+
+        Also ends the run's history memo, which only serves retries inside one run, and drops a staged fold.
+        """
+        self._auto_history_memo = None
+        self._staged_fold = None
+        fold_usage = await self._await_fold(cancel=cancel)
+        if fold_usage:
+            self._token_usage = _add_usage(getattr(self, "_token_usage", None), fold_usage)
 
     def _model_window(self, llm: Any) -> int | None:
         """The model input window: the LangChain model profile first, then the catalog metadata of the model."""
