@@ -8,11 +8,13 @@ import os
 import pkgutil
 import threading
 import time
+from collections.abc import Mapping
 from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
 import orjson
+from typing_extensions import Self
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.class_cache import clear_component_class_cache
@@ -56,6 +58,191 @@ EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_
 MODULES_WITH_INTERNAL_CIRCULAR_IMPORTS = ("toolguard.runtime", "toolguard.runtime.runtime")
 
 
+# Maximum nesting depth tracked for in-place mutation invalidation:
+# 0=registry, 1=category, 2=component, 3=template, 4=field (including template["code"]).
+_TRACKED_REGISTRY_MAX_DEPTH = 4
+
+
+class _RegistryVersion:
+    """Shared mutable generation counter for a published component registry tree."""
+
+    __slots__ = ("has_custom_mapping", "value")
+
+    def __init__(self) -> None:
+        self.value: int = 0
+        self.has_custom_mapping: bool = False
+
+    def bump(self) -> None:
+        self.value += 1
+
+
+class _TrackedRegistryDict(dict[str, Any]):
+    """Plain ``dict`` subclass that bumps a shared version token on any mutation.
+
+    Used for published ``component_cache.all_types_dict`` snapshots so derived
+    indexes (such as the canonical ``FileInput`` metadata index) observe both
+    top-level replacement and nested in-place edits in O(1). Custom ``Mapping``
+    objects encountered anywhere in the tree are left untouched and mark the
+    token so callers fall back to a compatible scan path.
+    """
+
+    __slots__ = ("registry_depth", "registry_version")
+
+    def __init__(self, version: _RegistryVersion, depth: int, mapping: Mapping[str, Any] | None = None) -> None:
+        super().__init__()
+        self.registry_version = version
+        self.registry_depth = depth
+        if mapping:
+            for key, value in mapping.items():
+                super().__setitem__(key, _wrap_registry_value(value, version, depth + 1))
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        super().__setitem__(key, _wrap_registry_value(value, self.registry_version, self.registry_depth + 1))
+        self.registry_version.bump()
+
+    def __delitem__(self, key: Any) -> None:
+        super().__delitem__(key)
+        self.registry_version.bump()
+
+    def pop(self, *args: Any) -> Any:
+        had_key = bool(args) and args[0] in self
+        result = super().pop(*args)
+        if had_key:
+            self.registry_version.bump()
+        return result
+
+    def popitem(self) -> tuple[Any, Any]:
+        result = super().popitem()
+        self.registry_version.bump()
+        return result
+
+    def clear(self) -> None:
+        if self:
+            super().clear()
+            self.registry_version.bump()
+
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        items: list[tuple[Any, Any]] = []
+        if args:
+            if len(args) > 1:
+                msg = f"update expected at most 1 argument, got {len(args)}"
+                raise TypeError(msg)
+            other = args[0]
+            if isinstance(other, Mapping):
+                items.extend(other.items())
+            else:
+                items.extend(other)
+        if kwargs:
+            items.extend(kwargs.items())
+        if not items:
+            return
+        mutated = False
+        try:
+            for key, value in items:
+                super().__setitem__(key, _wrap_registry_value(value, self.registry_version, self.registry_depth + 1))
+                mutated = True
+        finally:
+            if mutated:
+                self.registry_version.bump()
+
+    def setdefault(self, key: Any, default: Any = None) -> Any:
+        if key in self:
+            return self[key]
+        wrapped = _wrap_registry_value(default, self.registry_version, self.registry_depth + 1)
+        super().__setitem__(key, wrapped)
+        self.registry_version.bump()
+        return wrapped
+
+    def __ior__(self, other: Any) -> Self:
+        self.update(other)
+        return self
+
+    def copy(self) -> dict[str, Any]:
+        return dict(self)
+
+
+def _wrap_registry_value(value: Any, version: _RegistryVersion, depth: int) -> Any:
+    if depth > _TRACKED_REGISTRY_MAX_DEPTH:
+        return value
+    if type(value) is dict:
+        return _TrackedRegistryDict(version, depth, value)
+    if isinstance(value, _TrackedRegistryDict):
+        if value.registry_version is version and value.registry_depth == depth:
+            return value
+        return _TrackedRegistryDict(version, depth, value)
+    if isinstance(value, Mapping):
+        version.has_custom_mapping = True
+        return value
+    return value
+
+
+def _wrap_registry_snapshot(all_types_dict: dict[str, Any]) -> _TrackedRegistryDict:
+    """Wrap a newly published registry dict in a tracked snapshot with its own version token."""
+    version = _RegistryVersion()
+    return _TrackedRegistryDict(version, 0, all_types_dict)
+
+
+def build_canonical_file_fields_index(
+    all_types_dict: Mapping[str, Any],
+) -> dict[str, dict[str, dict[str, Any]]]:
+    """Build an exact-source index of server-owned ``FileInput`` field metadata.
+
+    Traverses *all_types_dict* in registry order and merges duplicate component
+    sources with first-field-wins semantics, storing shallow field copies so
+    nested references match ``ParameterHandler._canonical_file_fields``.
+    """
+    index: dict[str, dict[str, dict[str, Any]]] = {}
+    for category_components in all_types_dict.values():
+        if not isinstance(category_components, Mapping):
+            continue
+        for component_data in category_components.values():
+            if not isinstance(component_data, Mapping):
+                continue
+            template = component_data.get("template")
+            if not isinstance(template, Mapping):
+                continue
+            server_code_field = template.get("code")
+            server_code = server_code_field.get("value") if isinstance(server_code_field, Mapping) else None
+            if not isinstance(server_code, str) or not server_code:
+                continue
+            source_fields: dict[str, dict[str, Any]] | None = index.get(server_code)
+            for field_name, field in template.items():
+                if not isinstance(field_name, str) or not isinstance(field, Mapping):
+                    continue
+                if field.get("type") == "file" or field.get("_input_type") == "FileInput":
+                    if source_fields is None:
+                        source_fields = index.setdefault(server_code, {})
+                    source_fields.setdefault(field_name, dict(field))
+    return index
+
+
+def _scan_canonical_file_fields(
+    trusted_code: str,
+    all_types_dict: Mapping[str, Any],
+) -> dict[str, dict[str, Any]]:
+    """Direct registry scan used for untracked dicts and custom ``Mapping`` instances."""
+    canonical_fields: dict[str, dict[str, Any]] = {}
+    for category_components in all_types_dict.values():
+        if not isinstance(category_components, Mapping):
+            continue
+        for component_data in category_components.values():
+            if not isinstance(component_data, Mapping):
+                continue
+            template = component_data.get("template")
+            if not isinstance(template, Mapping):
+                continue
+            server_code_field = template.get("code")
+            server_code = server_code_field.get("value") if isinstance(server_code_field, Mapping) else None
+            if server_code != trusted_code:
+                continue
+            for field_name, field in template.items():
+                if not isinstance(field_name, str) or not isinstance(field, Mapping):
+                    continue
+                if field.get("type") == "file" or field.get("_input_type") == "FileInput":
+                    canonical_fields.setdefault(field_name, dict(field))
+    return canonical_fields
+
+
 # Create a class to manage component cache instead of using globals
 class ComponentCache:
     def __init__(self):
@@ -88,6 +275,13 @@ class ComponentCache:
         # The upgrade lookup belongs to an exact published registry object.
         # Reloads publish a replacement, so readers rebuild lazily on identity change.
         self.upgrade_registry: tuple[dict[str, Any], dict[str, dict]] | None = None
+        # Source-keyed canonical FileInput metadata index bound to a single
+        # tracked registry snapshot and version: (registry, version, index).
+        # Replaced or cleared on any publication, reload, reset, or mutation so
+        # stale generations are immediately released.
+        self.canonical_file_fields_index: (
+            tuple[_TrackedRegistryDict, int, dict[str, dict[str, dict[str, Any]]]] | None
+        ) = None
         # Registry publication and every process-wide derived lookup share one
         # lock. Hot reload builds templates outside the lock, then swaps the
         # registry and invalidates its derived indexes atomically.
@@ -103,6 +297,32 @@ class ComponentCache:
         # Reloads that complete while initial discovery is in flight are folded
         # into the local registry before its one atomic publication.
         self.pending_bundle_updates: dict[str, dict[str, Any]] = {}
+
+    def publish_all_types_dict(
+        self,
+        all_types_dict: dict[str, Any],
+        *,
+        ready: bool = True,
+        prebuild_file_fields_index: bool = False,
+    ) -> _TrackedRegistryDict:
+        """Publish a tracked registry snapshot and invalidate stale derived indexes."""
+        tracked = _wrap_registry_snapshot(all_types_dict)
+        prebuilt = (
+            (tracked, tracked.registry_version.value, build_canonical_file_fields_index(tracked))
+            if prebuild_file_fields_index and not tracked.registry_version.has_custom_mapping
+            else None
+        )
+        with self.state_lock:
+            self.all_types_dict = tracked
+            self.all_types_ready = ready
+            self.upgrade_registry = None
+            self.canonical_file_fields_index = prebuilt
+        return tracked
+
+    def invalidate_canonical_file_fields_index(self) -> None:
+        """Drop any cached canonical FileInput metadata index."""
+        with self.state_lock:
+            self.canonical_file_fields_index = None
 
 
 # Singleton instance
@@ -850,7 +1070,48 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
         cache.code_by_hash = code_by_hash
         cache.type_to_code = type_to_code
         cache.component_identity_index = identity_index
+        cache.canonical_file_fields_index = None
         logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
+
+
+def get_canonical_file_fields_for_source(
+    trusted_code: str,
+    all_types_dict: Mapping[str, Any] | None = None,
+) -> dict[str, dict[str, Any]]:
+    """Return fresh shallow copies of canonical ``FileInput`` metadata for *trusted_code*.
+
+    When *all_types_dict* is a published :class:`_TrackedRegistryDict` without
+    nested custom ``Mapping`` instances, lookups use a version-checked
+    exact-source index stored on :data:`component_cache` (O(1) warm lookup,
+    automatic invalidation on replacement, reload, or nested mutation). Untracked
+    dicts and custom ``Mapping`` implementations fall back to a direct registry
+    scan to preserve observable lookup behavior and prevent staleness.
+    """
+    if not trusted_code:
+        return {}
+    registry = component_cache.all_types_dict if all_types_dict is None else all_types_dict
+    if not isinstance(registry, Mapping):
+        return {}
+
+    if isinstance(registry, _TrackedRegistryDict) and not registry.registry_version.has_custom_mapping:
+        version = registry.registry_version.value
+        cached = component_cache.canonical_file_fields_index
+        if cached is not None and cached[0] is registry and cached[1] == version:
+            indexed_fields = cached[2].get(trusted_code)
+            return {name: dict(field) for name, field in indexed_fields.items()} if indexed_fields else {}
+
+        built_index = build_canonical_file_fields_index(registry)
+        with component_cache.state_lock:
+            if (
+                registry is component_cache.all_types_dict
+                and not registry.registry_version.has_custom_mapping
+                and registry.registry_version.value == version
+            ):
+                component_cache.canonical_file_fields_index = (registry, version, built_index)
+        indexed_fields = built_index.get(trusted_code)
+        return {name: dict(field) for name, field in indexed_fields.items()} if indexed_fields else {}
+
+    return _scan_canonical_file_fields(trusted_code, registry)
 
 
 def get_component_identity_index(
@@ -1335,7 +1596,7 @@ def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
 
         # Copy-on-write keeps any reader that already holds the previous
         # registry paired with its previous immutable identity index.
-        component_cache.all_types_dict = {**current_types, bundle: bundle_dict}
+        component_cache.all_types_dict = _wrap_registry_snapshot({**current_types, bundle: bundle_dict})
         component_cache.all_types_ready = True
         component_cache.type_to_current_hash = None
         component_cache.all_known_hashes = None
@@ -1343,6 +1604,7 @@ def _publish_bundle_cache(bundle: str, bundle_dict: dict[str, Any]) -> bool:
         component_cache.type_to_code = None
         component_cache.component_identity_index = None
         component_cache.upgrade_registry = None
+        component_cache.canonical_file_fields_index = None
         return True
 
 
@@ -1553,7 +1815,17 @@ async def _initialize_component_cache(
         await logger.adebug(f"Loaded {component_count} components")
 
         while True:
-            lookups = _collect_component_cache_lookups(merged_types)
+            tracked_types = _wrap_registry_snapshot(merged_types)
+            lookups = _collect_component_cache_lookups(tracked_types)
+            file_fields_index = (
+                (
+                    tracked_types,
+                    tracked_types.registry_version.value,
+                    build_canonical_file_fields_index(tracked_types),
+                )
+                if not tracked_types.registry_version.has_custom_mapping
+                else None
+            )
             with cache.state_lock:
                 if cache.pending_bundle_updates:
                     pending_updates = dict(cache.pending_bundle_updates)
@@ -1561,7 +1833,7 @@ async def _initialize_component_cache(
                 else:
                     type_to_hash, all_hashes, code_by_hash, type_to_code, identity_index = lookups
                     clear_component_class_cache()
-                    cache.all_types_dict = merged_types
+                    cache.all_types_dict = tracked_types
                     cache.all_types_ready = True
                     cache.type_to_current_hash = type_to_hash
                     cache.all_known_hashes = all_hashes
@@ -1569,9 +1841,10 @@ async def _initialize_component_cache(
                     cache.type_to_code = type_to_code
                     cache.component_identity_index = identity_index
                     cache.upgrade_registry = None
+                    cache.canonical_file_fields_index = file_fields_index
                     cache.initialization_future = None
                     cache.initialization_task = None
-                    initialization_future.set_result(merged_types)
+                    initialization_future.set_result(tracked_types)
                     return
 
             # A reload completed while local discovery or lookup construction
@@ -1631,6 +1904,7 @@ async def get_and_cache_all_types_dict(
             cache.type_to_code = None
             cache.component_identity_index = None
             cache.upgrade_registry = None
+            cache.canonical_file_fields_index = None
             initialization_task = asyncio.create_task(
                 _initialize_component_cache(cache, settings_service, telemetry_service, initialization_future),
                 name="lfx-component-cache-initialization",
@@ -1810,12 +2084,22 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
         )
 
         if full_component:
+            hydrated = False
             with component_cache.state_lock:
-                registry[component_type][component_name] = full_component
-                registry[component_type][component_name].pop("lazy_loaded", None)
-                component_cache.upgrade_registry = None
-                component_cache.fully_loaded_components[component_key] = True
-            await logger.adebug(f"Component {component_type}:{component_name} fully loaded")
+                current_registry = component_cache.all_types_dict
+                if (
+                    current_registry
+                    and component_type in current_registry
+                    and component_name in current_registry[component_type]
+                ):
+                    current_registry[component_type][component_name] = full_component
+                    current_registry[component_type][component_name].pop("lazy_loaded", None)
+                    component_cache.upgrade_registry = None
+                    component_cache.canonical_file_fields_index = None
+                    component_cache.fully_loaded_components[component_key] = True
+                    hydrated = True
+            if hydrated:
+                await logger.adebug(f"Component {component_type}:{component_name} fully loaded")
         else:
             await logger.awarning(f"Failed to fully load component {component_type}:{component_name}")
 

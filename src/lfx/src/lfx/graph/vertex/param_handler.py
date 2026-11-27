@@ -126,30 +126,13 @@ class ParameterHandler:
         # submitted hash. Use that same trusted source for input classification;
         # an exact source comparison below prevents request metadata from
         # declaring what is or is not a FileInput.
-        from lfx.interface.components import component_cache
+        from lfx.interface.components import component_cache, get_canonical_file_fields_for_source
         from lfx.utils.flow_validation import get_trusted_code_for_validation
 
         trusted_code = get_trusted_code_for_validation(submitted_code) or submitted_code
         all_types_dict = component_cache.all_types_dict
         if isinstance(all_types_dict, Mapping):
-            for category_components in all_types_dict.values():
-                if not isinstance(category_components, Mapping):
-                    continue
-                for component_data in category_components.values():
-                    if not isinstance(component_data, Mapping):
-                        continue
-                    template = component_data.get("template")
-                    if not isinstance(template, Mapping):
-                        continue
-                    server_code_field = template.get("code")
-                    server_code = server_code_field.get("value") if isinstance(server_code_field, Mapping) else None
-                    if server_code != trusted_code:
-                        continue
-                    for field_name, field in template.items():
-                        if not isinstance(field_name, str) or not isinstance(field, Mapping):
-                            continue
-                        if field.get("type") == "file" or field.get("_input_type") == "FileInput":
-                            canonical_fields.setdefault(field_name, dict(field))
+            canonical_fields = get_canonical_file_fields_for_source(trusted_code, all_types_dict)
 
         # Direct declarations remain detectable while the component registry is
         # warming, and cover older trusted component versions absent from the
