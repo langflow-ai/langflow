@@ -249,3 +249,22 @@ No invalid fold reply is possible now: any reply that is not empty is a summary.
 The stress `pasted_log` run sent 2,716 history tokens against a bound of 2,700. The cap marker in the
 middle of a cut message adds about 15 tokens, and the budget counted only the cap. The next commit
 counts the marker too. This also explains the 1 or 2 tokens above the bound in run 2.
+
+## Concurrent turns and Ollama, on Postgres
+
+The Docker stack ran on Postgres 16 for this check. Each run starts with a fact in turn 1. Then it runs
+rounds of turns at the same time on one Auto session, with large messages so that several turns race to
+save a fold. After each round the probe reads `session_memory_state` from Postgres.
+
+| Model | Rounds x parallel turns | Failed turns | State rows | Version after each round | Turn-1 fact at the end |
+|---|---|---|---|---|---|
+| `gpt-4o-mini` | 5 x 4 | 0 of 20 | always 1 | 0, 1, 2, 3, 4 | recalled |
+| `qwen2.5:1.5b` on Ollama | 5 x 4 | 0 of 20 | always 1 | 1, 2, 3, 4, 5 | recalled |
+
+The cursor of the state row always pointed to a message that exists, and the version never went down.
+
+The first Ollama runs used Ollama in Docker on macOS, which has no GPU there. Each call took 1 to
+10 minutes, so every fold passed its 60-second timeout and was not saved. The turns still ran. With
+the native Ollama of the host, each turn took 0.5 to 10 seconds and every fold was saved. The same
+runs found that Ollama cuts every prompt to `num_ctx` tokens, 4,096 by default. Commit `5163a50119`
+makes Auto use that limit as the model window.
