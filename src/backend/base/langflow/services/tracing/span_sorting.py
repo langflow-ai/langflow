@@ -7,6 +7,8 @@ immediate foreign-key enforcement on ``span.parent_span_id → span.id``.
 
 from __future__ import annotations
 
+from collections import defaultdict
+from heapq import heappop, heappush
 from typing import Any
 from uuid import UUID, uuid5
 
@@ -68,53 +70,56 @@ def topological_sort_spans(
     immediate foreign-key constraint.
     """
     batch_ids = {span_uuid for _, span_uuid, _ in resolved}
-
-    normalized: list[tuple[dict[str, Any], UUID, UUID | None]] = []
+    sorted_spans: list[tuple[dict[str, Any], UUID, UUID | None]] = []
+    deferred: list[tuple[dict[str, Any], UUID, UUID | None]] = []
+    inserted: set[UUID] = set()
     missing_parent_count = 0
-    for span_data, span_uuid, parent_uuid in resolved:
-        normalized_parent_uuid = parent_uuid
-        if normalized_parent_uuid is not None and normalized_parent_uuid not in batch_ids:
-            normalized_parent_uuid = None
+
+    for item in resolved:
+        span_data, span_uuid, parent_uuid = item
+        if parent_uuid is not None and parent_uuid not in batch_ids:
+            sorted_spans.append((span_data, span_uuid, None))
             missing_parent_count += 1
-        normalized.append((span_data, span_uuid, normalized_parent_uuid))
+        elif parent_uuid is not None and parent_uuid not in inserted:
+            deferred.append(item)
+            continue
+        else:
+            sorted_spans.append(item)
+        inserted.add(span_uuid)
 
     if missing_parent_count:
         logger.warning(
             "Detached %d tracing spans from missing parents to preserve database integrity.",
             missing_parent_count,
         )
+    if not deferred:
+        return sorted_spans
 
-    sorted_spans: list[tuple[dict[str, Any], UUID, UUID | None]] = []
-    inserted: set[UUID] = set()
-    remaining = normalized
+    # (scan round, input position) reproduces the order of successive left-to-right scans.
+    ready: list[tuple[int, int]] = []
+    waiting: dict[UUID, list[int]] = defaultdict(list)
+    for position, (_, _, parent_uuid) in enumerate(deferred):
+        if parent_uuid is not None and parent_uuid not in inserted:
+            waiting[parent_uuid].append(position)
+        else:
+            ready.append((0, position))
 
-    while remaining:
-        next_round: list[tuple[dict[str, Any], UUID, UUID | None]] = []
-        progress = False
-        for item in remaining:
-            _, span_uuid, parent_uuid = item
-            if parent_uuid is None or parent_uuid in inserted:
-                sorted_spans.append(item)
-                inserted.add(span_uuid)
-                progress = True
-            else:
-                next_round.append(item)
+    # Initial positions are already ordered. Releasing each parent ID once avoids
+    # scheduling its children twice when multiple spans share the same ID.
+    while ready:
+        scan_round, position = heappop(ready)
+        item = deferred[position]
+        sorted_spans.append(item)
+        for child in waiting.pop(item[1], []):
+            child_round = scan_round + (child < position)
+            heappush(ready, (child_round, child))
 
-        if not progress:
-            # Cycle or unresolvable dependency detected.
-            # To avoid reintroducing foreign-key violations, break the cycle by
-            # nulling out parent_span_id for the remaining spans before inserting.
-            if next_round:
-                logger.warning(
-                    "Detected cycle or unresolvable span dependencies in tracing batch; "
-                    "breaking parent relationships for %d spans to preserve DB integrity.",
-                    len(next_round),
-                )
-            for span_data, span_uuid, _parent_uuid in next_round:
-                # Append with a nulled parent — do NOT mutate the original span_data
-                # dict because callers may still reference it after the sort.
-                sorted_spans.append((span_data, span_uuid, None))
-            break
-        remaining = next_round
+    if waiting:
+        logger.warning(
+            "Detected cycle or unresolvable span dependencies in tracing batch; "
+            "breaking parent relationships for %d spans to preserve DB integrity.",
+            len(resolved) - len(sorted_spans),
+        )
+        sorted_spans.extend((data, span_id, None) for data, span_id, parent in deferred if parent in waiting)
 
     return sorted_spans
