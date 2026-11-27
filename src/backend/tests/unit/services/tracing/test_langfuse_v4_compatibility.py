@@ -75,7 +75,12 @@ def mock_langfuse():
         legacy=types.SimpleNamespace(score_v1=types.SimpleNamespace(delete=MagicMock())),
         scores=object(),
     )
-    client.start_observation.return_value = root_observation
+
+    @contextmanager
+    def root_observation_context(**_kwargs):
+        yield root_observation
+
+    client.start_as_current_observation.side_effect = root_observation_context
     root_observation.id = "b" * 16
     root_observation.start_observation.return_value = child_observation
     child_observation.id = "c" * 16
@@ -283,7 +288,7 @@ class TestLangfuseTracerV4:
         )
 
         assert tracer.ready
-        root_kwargs = mock_langfuse["client"].start_observation.call_args.kwargs
+        root_kwargs = mock_langfuse["client"].start_as_current_observation.call_args.kwargs
         assert root_kwargs["as_type"] == "span"
         assert root_kwargs["name"] == "test-flow"
 
@@ -383,7 +388,7 @@ class TestLangfuseTracerV4:
             langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
             client = MagicMock()
             client.auth_check.return_value = True
-            client.start_observation.side_effect = RuntimeError("setup failed")
+            client.start_as_current_observation.side_effect = RuntimeError("setup failed")
             langfuse_class.return_value = client
 
             tracer = LangFuseTracer(

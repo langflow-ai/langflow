@@ -538,13 +538,20 @@ class LangFuseTracer(BaseTracer):
             # trace implicitly, and replaces the removed ``update_trace`` calls.
             # It is named after the flow so traces can be found by name in
             # Langfuse; the id stays in metadata.
-            with self._observation_attributes():
-                self._root_span = self._client.start_observation(
+            from opentelemetry import trace
+
+            with (
+                self._observation_attributes(),
+                self._client.start_as_current_observation(
                     name=self.flow_display_name,
                     as_type="span",
                     trace_context=self._trace_context,
                     metadata=self._trace_metadata,
-                )
+                    end_on_exit=False,
+                ) as root_span,
+            ):
+                self._root_span = root_span
+                self._root_otel_span = trace.get_current_span()
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
@@ -687,18 +694,14 @@ class LangFuseTracer(BaseTracer):
             return
 
         from langfuse import propagate_attributes
-        from opentelemetry import context, trace
+        from opentelemetry import trace
 
-        root_otel_span = getattr(self._root_span, "_otel_span", None)
+        root_otel_span = getattr(self, "_root_otel_span", None)
         if root_otel_span is None or not root_otel_span.is_recording():
             return
 
-        token = context.attach(trace.set_span_in_context(root_otel_span))
-        try:
-            with propagate_attributes(metadata=metadata):
-                pass
-        finally:
-            context.detach(token)
+        with trace.use_span(root_otel_span), propagate_attributes(metadata=metadata):
+            pass
 
     def _attributes(self) -> dict[str, Any]:
         return {
