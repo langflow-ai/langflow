@@ -198,13 +198,14 @@ def test_pre_fork_handles_gc_collect_exception(fake_server):
     mock_freeze.assert_called_once()
 
 
-def _make_app(options=None, env_args=None, monkeypatch=None):
+def _make_app(options=None, env_args=None, monkeypatch=None, shutdown_grace_s=0):
     """Create a LangflowApplication with a dummy WSGI app.
 
     Args:
         options: Programmatic options passed to LangflowApplication.
         env_args: If provided, set GUNICORN_CMD_ARGS env var before construction.
         monkeypatch: pytest monkeypatch fixture for env manipulation.
+        shutdown_grace_s: Seconds a stopping worker waits for its background jobs.
     """
     if env_args is not None and monkeypatch is not None:
         monkeypatch.setenv("GUNICORN_CMD_ARGS", env_args)
@@ -212,7 +213,7 @@ def _make_app(options=None, env_args=None, monkeypatch=None):
     def dummy_app(environ, start_response):
         pass
 
-    return LangflowApplication(dummy_app, options=options)
+    return LangflowApplication(dummy_app, options=options, shutdown_grace_s=shutdown_grace_s)
 
 
 class TestGunicornEnvArgs:
@@ -248,6 +249,19 @@ class TestGunicornEnvArgs:
         )
 
         assert app.cfg.settings["worker_class"].get() == "langflow.server.LangflowUvicornWorker"
+
+
+class TestShutdownGrace:
+    def test_without_a_grace_the_graceful_timeout_is_unchanged(self):
+        assert _make_app().cfg.graceful_timeout == 30
+
+    def test_the_grace_is_added_to_the_default_graceful_timeout(self):
+        assert _make_app(shutdown_grace_s=20).cfg.graceful_timeout == 50
+
+    def test_the_grace_is_added_to_a_configured_graceful_timeout(self, monkeypatch):
+        app = _make_app(env_args="--graceful-timeout 60", monkeypatch=monkeypatch, shutdown_grace_s=20)
+
+        assert app.cfg.graceful_timeout == 80
 
 
 def test_worker_starts_each_request_task_from_a_clean_context():

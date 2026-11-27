@@ -297,6 +297,8 @@ With the default backend (`LANGFLOW_BACKGROUND_BACKEND=default`), a background r
 
 The run's status, result, and events are stored in the database, so any worker can serve them. A worker that is not running the job reads new events from the database every 0.5 seconds. This works with multiple workers without extra configuration.
 
+A stopping API worker, for example during a rolling update, cancels the background runs it is executing, and they fail. To let them finish first, set `LANGFLOW_BACKGROUND_SHUTDOWN_GRACE_S` to the number of seconds the worker waits for them. Keep your orchestrator's stop timeout, such as Kubernetes `terminationGracePeriodSeconds`, above that value plus 30 seconds.
+
 ### Scaled backend
 
 With the scaled backend (`LANGFLOW_BACKGROUND_BACKEND=scaled`), API workers only queue background runs, and separate `langflow worker` processes execute them. The queue is the Langflow database itself, so no additional infrastructure is required.
@@ -379,6 +381,7 @@ These settings control background runs of the v2 workflows API. For details, see
 |---|---|---|
 | `LANGFLOW_BACKGROUND_BACKEND` | `default` | `default` runs background jobs inside API workers. `scaled` queues them in the database for `langflow worker` processes to run. |
 | `LANGFLOW_BACKGROUND_MAX_CONCURRENCY` | `5` | With the default backend, the number of background runs each API worker executes at once. |
+| `LANGFLOW_BACKGROUND_SHUTDOWN_GRACE_S` | `0` | With the default backend, how long in seconds a stopping API worker waits for its running and queued background runs to finish before it cancels them. `0` cancels running ones at once. `langflow run` adds this time to Gunicorn's graceful timeout. |
 | `LANGFLOW_BACKGROUND_POLL_INTERVAL_S` | `0.5` | With the scaled backend, how often in seconds an event stream checks the database for new events. |
 | `LANGFLOW_BACKGROUND_LEASE_TTL_S` | `45` | How long in seconds a running job can go without a heartbeat before it is considered lost. Keep it well above `LANGFLOW_BACKGROUND_HEARTBEAT_INTERVAL_S`. |
 | `LANGFLOW_BACKGROUND_HEARTBEAT_INTERVAL_S` | `15` | How often in seconds a running job refreshes its heartbeat. |

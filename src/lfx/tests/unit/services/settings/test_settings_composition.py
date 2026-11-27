@@ -303,6 +303,7 @@ EXPECTED_FIELDS = {
     "background_heartbeat_interval_s",
     "background_watchdog_interval_s",
     "background_backend",
+    "background_shutdown_grace_s",
     "background_poll_interval_s",
     "background_claim_candidates",
     "background_retention_days",

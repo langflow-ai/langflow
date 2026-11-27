@@ -23,6 +23,7 @@ import asyncio
 import dataclasses
 import inspect
 import json
+import math
 import os
 import platform
 import signal
@@ -111,6 +112,8 @@ class ProcessManager:
     def __init__(self):
         self.webapp_process = None
         self.shutdown_in_progress = False
+        # gunicorn's graceful timeout grows by this much; the wait below has to as well.
+        self.shutdown_grace_s = 0
         if platform.system() == "Windows":
             self._farewell_emoji = ":)"  # ASCII smiley
         else:
@@ -141,7 +144,7 @@ class ProcessManager:
             # The long wait allows the process to finish setup, preventing it from
             # getting in a state where background tasks continue to do work after termination
             # is sent.
-            self.webapp_process.join(timeout=30)
+            self.webapp_process.join(timeout=30 + self.shutdown_grace_s)
             if self.webapp_process.is_alive():
                 logger.warning("Process didn't terminate gracefully, killing it.")
                 self.webapp_process.kill()
@@ -744,7 +747,10 @@ def run(
                 "log_level": log_level.lower() if log_level is not None else "info",
                 "preload_app": os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true",
             }
-            server = LangflowApplication(app_factory, options)
+            # Whole seconds: gunicorn's graceful timeout is an int.
+            shutdown_grace_s = math.ceil(get_settings_service().settings.background_shutdown_grace_s)
+            server = LangflowApplication(app_factory, options, shutdown_grace_s=shutdown_grace_s)
+            process_manager.shutdown_grace_s = shutdown_grace_s
 
             # Start the webapp process
             process_manager.webapp_process = Process(target=server.run)

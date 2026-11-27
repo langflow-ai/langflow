@@ -205,6 +205,12 @@ class BackgroundExecutionService(Service):
         self._start_deadline_watchdog()
         self._start_retention_sweep()
 
+    async def drain(self) -> None:
+        """Give the jobs this process runs ``background_shutdown_grace_s`` to finish before ``stop()`` cancels them."""
+        grace_s = self._settings.background_shutdown_grace_s
+        if grace_s > 0:
+            await self._backend.drain(grace_s)
+
     async def stop(self) -> None:
         tasks = (
             self._deadline_task,

@@ -798,9 +798,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                 await log_exception_to_telemetry(exc, "lifespan")
             raise
         finally:
-            # CRITICAL: Cleanup MCP sessions FIRST, before any other shutdown logic.
-            # This ensures MCP subprocesses are killed even if shutdown is interrupted.
-            await cleanup_mcp_sessions()
+            # Let the background jobs this worker accepted finish while the MCP sessions, job
+            # queue and database they use are still up. Bounded by background_shutdown_grace_s
+            # (0 skips it), which gunicorn's graceful timeout already includes.
+            try:
+                await get_background_execution_service().drain()
+            except Exception as exc:  # noqa: BLE001 -- a failed drain must not stop the shutdown
+                await logger.awarning(f"Draining background jobs failed: {exc}")
+            finally:
+                # CRITICAL: Cleanup MCP sessions next, before any other shutdown logic.
+                # This ensures MCP subprocesses are killed even if shutdown is interrupted.
+                await cleanup_mcp_sessions()
 
             # Stop the background-execution metrics collector. No-op when it never
             # started, and it swallows its own errors: a collector that fails to stop
