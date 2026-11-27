@@ -5325,6 +5325,36 @@
       "bare_class_name": "SocialScrapeTranscriptComponent",
       "target": "ext:socialscrape:SocialScrapeTranscriptComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FirmaDownloadSignedDocumentComponent",
+      "target": "ext:firma:FirmaDownloadSignedDocumentComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FirmaGetSigningRequestComponent",
+      "target": "ext:firma:FirmaGetSigningRequestComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FirmaListSigningRequestsComponent",
+      "target": "ext:firma:FirmaListSigningRequestsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FirmaListTemplatesComponent",
+      "target": "ext:firma:FirmaListTemplatesComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FirmaSendDocumentComponent",
+      "target": "ext:firma:FirmaSendDocumentComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "FirmaSendTemplateComponent",
+      "target": "ext:firma:FirmaSendTemplateComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

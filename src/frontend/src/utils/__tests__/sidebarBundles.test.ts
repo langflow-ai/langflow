@@ -191,3 +191,11 @@ it("classifies SocialScrape as a sidebar bundle", () => {
     icon: "Share2",
   });
 });
+
+it("classifies Firma as a sidebar bundle", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "Firma",
+    name: "firma",
+    icon: "Firma",
+  });
+});

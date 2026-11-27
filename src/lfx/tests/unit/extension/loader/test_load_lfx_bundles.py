@@ -143,6 +143,17 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
             },
         ),
         (
+            "firma",
+            {
+                "FirmaDownloadSignedDocumentComponent",
+                "FirmaGetSigningRequestComponent",
+                "FirmaListSigningRequestsComponent",
+                "FirmaListTemplatesComponent",
+                "FirmaSendDocumentComponent",
+                "FirmaSendTemplateComponent",
+            },
+        ),
+        (
             "keenable",
             {
                 "KeenableFetchComponent",
