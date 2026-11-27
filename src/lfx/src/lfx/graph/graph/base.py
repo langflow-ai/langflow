@@ -589,9 +589,9 @@ class Graph:
                 and self._prepared_start_component_id == start_component_id
                 and self._prepared_stop_component_id is None
             )
-            self._prepared_for_next_run = False
             if not can_reuse_prepared:
                 self.prepare(start_component_id=start_component_id)
+            self._prepared_for_next_run = False
             if reset_output_values:
                 self._reset_all_output_values()
 

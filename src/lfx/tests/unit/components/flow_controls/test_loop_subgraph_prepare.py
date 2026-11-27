@@ -179,29 +179,35 @@ async def test_one_shot_skip_prepare_contract_reprepares_on_repeat_and_mutation(
 
     # 2. Second async_start(skip_prepare=True) without a new prepare() MUST re-prepare.
     second_run = [r async for r in graph.async_start(skip_prepare=True)]
-    assert len(second_run) > 0
+    assert any(getattr(r, "vertex", None) and r.vertex.id == out.get_id() for r in second_run)
     assert prepare_calls == 2
 
-    # 3. Mismatched start_component_id prepare() forces re-prepare even with skip_prepare=True.
-    graph.prepare()
+    # 3. Third consecutive async_start(skip_prepare=True) must ALSO re-prepare
+    # (fallback prepare in run 2 must not leave _prepared_for_next_run armed after queue drain).
+    third_run = [r async for r in graph.async_start(skip_prepare=True)]
+    assert any(getattr(r, "vertex", None) and r.vertex.id == out.get_id() for r in third_run)
     assert prepare_calls == 3
-    _ = [r async for r in graph.async_start(skip_prepare=True)]
+
+    # 4. Mismatched start_component_id prepare() forces re-prepare even with skip_prepare=True.
+    graph.prepare()
     assert prepare_calls == 4
-
-    # 4. Direct async_start() (default skip_prepare=False) always prepares even right after prepare().
-    graph.prepare(start_component_id=out.get_id())
+    _ = [r async for r in graph.async_start(skip_prepare=True)]
     assert prepare_calls == 5
-    _ = [r async for r in graph.async_start()]
-    assert prepare_calls == 6
 
-    # 5. Topology mutation after prepare() invalidates the handoff so skip_prepare=True re-prepares.
+    # 5. Direct async_start() (default skip_prepare=False) always prepares even right after prepare().
     graph.prepare(start_component_id=out.get_id())
+    assert prepare_calls == 6
+    _ = [r async for r in graph.async_start()]
     assert prepare_calls == 7
+
+    # 6. Topology mutation after prepare() invalidates the handoff so skip_prepare=True re-prepares.
+    graph.prepare(start_component_id=out.get_id())
+    assert prepare_calls == 8
     graph.add_edge({"source": "noop-a", "target": "noop-b", "data": {}})
     # Remove the synthetic edge before running so graph remains valid, keeping mutation invalidated.
     graph._edges.pop()
     _ = [r async for r in graph.async_start(skip_prepare=True)]
-    assert prepare_calls == 8
+    assert prepare_calls == 9
 
 
 @pytest.mark.asyncio
