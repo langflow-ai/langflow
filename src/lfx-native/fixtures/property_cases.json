@@ -1,0 +1,1130 @@
+{
+  "description": "Fixed property sequences: reviewed transactions over a small graph, with their invariants as data. For each sequence, apply each transaction in order to `base`, one apply call per transaction; every one is accepted, and the hash of the final graph is `graph_hash`: the SHA-256 of the final graph's canonical form (view state removed, handles canonical, nodes and edges ordered by id, table rows ordered by (__pos__, __id__), RFC 8785). Each case names the rule it checks in `rule`; README.md lists the rules. The expected outputs are reviewed data that every engine must meet.",
+  "base": {
+    "nodes": [
+      {"id": "src", "data": {"node": {"template": {"text": {"type": "str", "value": "hi"}}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "alt", "hidden": null, "__pos__": 2}]}}},
+      {
+        "id": "dst",
+        "data": {
+          "node": {
+            "template": {
+              "one": {"type": "str", "value": ""},
+              "many": {"type": "str", "list": true, "value": ""},
+              "num": {"type": "int", "value": 1},
+              "flag": {"type": "bool", "value": false, "advanced": false},
+              "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+              "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
+              "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}
+            },
+            "outputs": [{"name": "res", "__pos__": 1}]
+          }
+        }
+      },
+      {"id": "note", "type": "noteNode", "data": {"node": {"template": {}}}}
+    ],
+    "edges": [
+      {
+        "id": "e1",
+        "source": "src",
+        "target": "dst",
+        "sourceHandle": "{œnameœ:œoutœ}",
+        "targetHandle": "{œfieldNameœ:œoneœ,œinputTypesœ:[œMessageœ]}",
+        "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["Message"]}}
+      },
+      {
+        "id": "e2",
+        "source": "src",
+        "target": "dst",
+        "sourceHandle": "{œnameœ:œaltœ}",
+        "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+        "data": {"sourceHandle": {"name": "alt"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+      }
+    ],
+    "viewport": {"x": 0, "y": 0, "zoom": 1}
+  },
+  "sequences": [
+    {
+      "name": "sequence 1",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "FsH"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "note", "op": "set_field", "path": ["position"], "value": {"x": 293, "y": 556}}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "YhOWi N"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "otv"}]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œaltœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "alt"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "value"], "value": "cmfR u"}]}]
+      ],
+      "graph_hash": "969e6f917f1bc1f033673b1159148c4b28b6175b85bfc32d728690e82973c10e"
+    },
+    {
+      "name": "sequence 2",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "node-p1",
+                "data": {
+                  "node": {"template": {"text": {"type": "str", "value": "hi"}}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "alt", "hidden": null, "__pos__": 2}]},
+                  "id": "node-p1"
+                },
+                "position": {"x": 775, "y": 128}
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p2",
+                "source": "dst",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œresœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "search"}, "status"], "value": false}
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["position"], "value": {"x": 620, "y": -339}}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p3", "__pos__": 1}, {"v": "2", "__id__": "row-p4", "__pos__": 2}]
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "f86c51509489de4f09a85237693e655d6c9ac03bef9d6cd6ee9fcfc794829f2a"
+    },
+    {
+      "name": "sequence 3",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "opJUSZfPFXcV"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "alt"}]}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": true}
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "res"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "advanced"], "value": true}]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "c05d2a4f0d47ccf5b700de277e0b799d48d1ce86e3ec4ac21a5ca7a1a2a4b869"
+    },
+    {
+      "name": "sequence 4",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "alt"}, "hidden"], "value": true}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "search"}, "status"], "value": false}
+            ]
+          }
+        ],
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "node-p1",
+                "data": {
+                  "node": {
+                    "template": {
+                      "one": {"type": "str", "value": ""},
+                      "many": {"type": "str", "list": true, "value": ""},
+                      "num": {"type": "int", "value": 1},
+                      "flag": {"type": "bool", "value": false, "advanced": false},
+                      "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                      "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
+                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": false, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}
+                    },
+                    "outputs": [{"name": "res", "__pos__": 1}]
+                  },
+                  "id": "node-p1"
+                },
+                "position": {"x": 106, "y": 267}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "flag", "value"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "advanced"], "value": true}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "node-p1", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "advanced"], "value": true}]
+          }
+        ]
+      ],
+      "graph_hash": "b229b0859c56319feead1b4a21f3ea4be0b609b03ceb67fe0776ef814ee92f92"
+    },
+    {
+      "name": "sequence 5",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "many"]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "wXpmlusiujf"}]}],
+        [{"type": "delete_nodes", "ids": ["src"]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "flag", "value"], "value": true}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "search"}, "status"], "value": false}
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "17652b4dd619eeaed11afac3c71f722da96b1736250de9e4a798679b35f5e4f1"
+    },
+    {
+      "name": "sequence 6",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "advanced"], "value": true}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "zFRF"}]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": true}
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "xXRFTOEw Uk"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "alt"}]}]}],
+        [{"type": "delete_edges", "ids": ["e1"]}]
+      ],
+      "graph_hash": "f0177d8e944be1a85e59a3dc98b2ce87c9333faecfd75091a00550e9130a058a"
+    },
+    {
+      "name": "sequence 7",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "node-p1",
+                "data": {
+                  "node": {
+                    "template": {
+                      "one": {"type": "str", "value": ""},
+                      "many": {"type": "str", "list": true, "value": ""},
+                      "num": {"type": "int", "value": 1},
+                      "flag": {"type": "bool", "value": false, "advanced": false},
+                      "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                      "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
+                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}
+                    },
+                    "outputs": [{"name": "res", "__pos__": 1}]
+                  },
+                  "id": "node-p1"
+                },
+                "position": {"x": 315, "y": 822}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "alt"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "node-p1", "op": "delete_field", "path": ["data", "node", "template", "rows"]}]}],
+        [{"type": "delete_edges", "ids": ["e1"]}],
+        [{"type": "update_nodes", "updates": [{"id": "node-p1", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "res"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "NInvUgM"}]}]
+      ],
+      "graph_hash": "c830b2442fb5305dd232845f7094753d726ecba8e7e112c5467d9a0ddf08fa5b"
+    },
+    {
+      "name": "sequence 8",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "note", "op": "set_field", "path": ["position"], "value": {"x": 1122, "y": -50}}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "search"}, "status"], "value": false}
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["position"], "value": {"x": 619, "y": 842}}]}],
+        [{"type": "delete_nodes", "ids": ["src"]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "dst",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œresœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p2", "__pos__": 1}, {"v": "2", "__id__": "row-p3", "__pos__": 2}]
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "50892b2f554a5d150f6b6b1f1c5374eb4c353b93ba95c4d70c26e0f9b2cc3b45"
+    },
+    {
+      "name": "sequence 9",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "TrNijFVirW"}]}],
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "node-p1",
+                "data": {"node": {"template": {}, "outputs": [{"name": "out", "__pos__": 1}, {"name": "alt", "hidden": null, "__pos__": 2}]}, "id": "node-p1"},
+                "position": {"x": 593, "y": 131}
+              }
+            ]
+          }
+        ],
+        [{"type": "delete_nodes", "ids": ["note"]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "node-p1", "op": "set_field", "path": ["data", "node", "outputs", {"key": "alt"}, "hidden"], "value": true}]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p2", "__pos__": 1}, {"v": "2", "__id__": "row-p3", "__pos__": 2}]
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "9ae5bb985a4db6f972cce6e5b008b9338e0a16715d01aeb6a5cf7ea9111888fb"
+    },
+    {
+      "name": "sequence 10",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p1", "__pos__": 1}, {"v": "2", "__id__": "row-p2", "__pos__": 2}]
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "OTaQ"}]
+          }
+        ],
+        [
+          {"type": "delete_edges", "ids": ["e2"]},
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e2",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œaltœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ,œTextœ]}",
+                "data": {"sourceHandle": {"name": "alt"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message", "Text"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "delete_edges", "ids": ["e2"]}],
+        [{"type": "delete_edges", "ids": ["e1"]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "value"], "value": "P"}]}]
+      ],
+      "graph_hash": "433fc98bcb1c7a1ee8e8f73e788863c30324b1056dd04db3d4bb5b53f55e8c8c"
+    },
+    {
+      "name": "sequence 11",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "gkXMEnIpVX"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "v"], "value": "eRil"}]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "note", "op": "set_field", "path": ["position"], "value": {"x": 1117, "y": -74}}]}],
+        [{"type": "delete_nodes", "ids": ["note"]}]
+      ],
+      "graph_hash": "7e7c70ecfc30ac73517076bb9a23014b3155e48a5b67367fe5c0d8d6ac2f2034"
+    },
+    {
+      "name": "sequence 12",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": true}
+            ]
+          }
+        ],
+        [{"type": "delete_nodes", "ids": ["dst"]}],
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [{"id": "node-p1", "type": "noteNode", "data": {"node": {"template": {}}, "id": "node-p1"}, "position": {"x": 604, "y": 770}}]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}],
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [{"id": "node-p2", "type": "noteNode", "data": {"node": {"template": {}}, "id": "node-p2"}, "position": {"x": 331, "y": 408}}]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]}]
+      ],
+      "graph_hash": "2c801565c2342dfa813c72980350a639eea944524a5b69db4646f70cd1ccd100"
+    },
+    {
+      "name": "sequence 13",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {"type": "delete_edges", "ids": ["e1"]},
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e1",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œoneœ,œinputTypesœ:[œDataFrameœ,œMessageœ]}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["DataFrame", "Message"]}}
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "search"}, "status"], "value": false}
+            ]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "advanced"], "value": true}]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "PrEufu"}]}],
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "node-p1",
+                "data": {
+                  "node": {
+                    "template": {
+                      "one": {"type": "str", "value": ""},
+                      "many": {"type": "str", "list": true, "value": ""},
+                      "num": {"type": "int", "value": 1},
+                      "flag": {"type": "bool", "value": false, "advanced": false},
+                      "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                      "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
+                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": false, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}], "advanced": true}
+                    },
+                    "outputs": [{"name": "res", "__pos__": 1}]
+                  },
+                  "id": "node-p1"
+                },
+                "position": {"x": 85, "y": 782}
+              }
+            ]
+          }
+        ],
+        [
+          {"type": "delete_edges", "ids": ["e2"]},
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e2",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œaltœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œDataFrameœ,œMessageœ]}",
+                "data": {"sourceHandle": {"name": "alt"}, "targetHandle": {"fieldName": "many", "inputTypes": ["DataFrame", "Message"]}}
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "6a0c302c63fd2f0d929ce68cbfac23f0487425ff77c95c8a510f5d3416183e27"
+    },
+    {
+      "name": "sequence 14",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "search"}, "status"], "value": false}
+            ]
+          }
+        ],
+        [
+          {"type": "delete_edges", "ids": ["e1"]},
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e1",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œoneœ,œinputTypesœ:[œDataœ,œMessageœ]}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "one", "inputTypes": ["Data", "Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "OzuWROXsDvm"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "alt"}]}]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "dst",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œresœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "delete_nodes", "ids": ["note"]}]
+      ],
+      "graph_hash": "e1ddcaa8c6e3dd9edc5d9c3e3aab165458ef30868cf2e5bf5c7fe8cf005b9f8a"
+    },
+    {
+      "name": "sequence 15",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "advanced"], "value": true}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": true}
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "gzvzMisUrlz"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["position"], "value": {"x": 20, "y": 758}}]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "dst",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œresœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}]
+      ],
+      "graph_hash": "e96f9fba7fcf1f03ca6111749e8475a3c92fb85e96112db0200595320a3e43eb"
+    },
+    {
+      "name": "sequence 16",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "QhxtlBGOWJq"}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p1", "__pos__": 1}, {"v": "2", "__id__": "row-p2", "__pos__": 2}]
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": true}
+            ]
+          }
+        ],
+        [{"type": "delete_nodes", "ids": ["note"]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "legacy", "value", {"key": "row-p2"}, "v"], "value": "bDiDmcVnyDOV"}
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "res"}]}]}]
+      ],
+      "graph_hash": "86e7819e294cc80d8a5cf028fd920f0fa9316bd8a0bb30332b39d02d40f1f6fb"
+    },
+    {
+      "name": "sequence 17",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "IGLsnJTD X"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "flag"]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "res"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]}],
+        [{"type": "delete_nodes", "ids": ["dst"]}]
+      ],
+      "graph_hash": "bf85eff82486bf1dadfb9f96ef7723c8df77e4289a684899bfcef9dea8c29471"
+    },
+    {
+      "name": "sequence 18",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}]}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p1", "__pos__": 1}, {"v": "2", "__id__": "row-p2", "__pos__": 2}]
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "note", "op": "set_field", "path": ["position"], "value": {"x": 1492, "y": 182}}]}],
+        [{"type": "update_nodes", "updates": [{"id": "note", "op": "set_field", "path": ["position"], "value": {"x": -267, "y": 1289}}]}],
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [{"id": "node-p3", "type": "noteNode", "data": {"node": {"template": {}}, "id": "node-p3"}, "position": {"x": 603, "y": 735}}]
+          }
+        ],
+        [
+          {"type": "delete_edges", "ids": ["e2"]},
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e2",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œaltœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ,œTextœ]}",
+                "data": {"sourceHandle": {"name": "alt"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message", "Text"]}}
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "c66aa87d86c4b06907cdf417749a5edef03aad07e189f8edac7b4466d427724c"
+    },
+    {
+      "name": "sequence 19",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "note", "op": "set_field", "path": ["position"], "value": {"x": 273, "y": 425}}]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "dst",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œresœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "XUqqBNxHOW"}]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p2",
+                "source": "dst",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œresœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "advanced"], "value": true}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p3", "__pos__": 1}, {"v": "2", "__id__": "row-p4", "__pos__": 2}]
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "25615a03f48d9f9f1fdba75d9c6bffb6fcdac9a145a7789d5efc5e32f51103b6"
+    },
+    {
+      "name": "sequence 20",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": true}
+            ]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": false}
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "res"}]}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p1", "__pos__": 1}, {"v": "2", "__id__": "row-p2", "__pos__": 2}]
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "legacy"]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "advanced"], "value": true}]}]
+      ],
+      "graph_hash": "a68ee3eee45a2cdeefbda5a99d4c883ce0f006dc382ed24361c91d7250341c7f"
+    },
+    {
+      "name": "sequence 21",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p1", "__pos__": 1}, {"v": "2", "__id__": "row-p2", "__pos__": 2}]
+              }
+            ]
+          }
+        ],
+        [{"type": "delete_nodes", "ids": ["note"]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "rows", "value", {"key": "row-p3"}],
+                "value": {"__id__": "row-p3", "__pos__": 3, "name": "xc JXngoylMO"}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}]}]}]
+      ],
+      "graph_hash": "82d54e35c1d45201633c87bcc1623ec20706f24ca469c0e61bb2e100908e09e0"
+    },
+    {
+      "name": "sequence 22",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "legacy", "advanced"], "value": true}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p1", "__pos__": 1}, {"v": "2", "__id__": "row-p2", "__pos__": 2}]
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {"id": "dst", "op": "set_field", "path": ["data", "node", "template", "tools_metadata", "value", {"key": "fetch"}, "status"], "value": true}
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "oPbFdA"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}]
+      ],
+      "graph_hash": "d661e3838a495e659aea06e1a819c4fb75a0a056b0e2804edcdc1beeea20b21c"
+    },
+    {
+      "name": "sequence 23",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œaltœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "alt"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "many"]}]}],
+        [{"type": "delete_edges", "ids": ["e1"]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "outputs", {"key": "res"}, "hidden"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}]}]}]
+      ],
+      "graph_hash": "fb668bd5df6a7a3fe9090b9b21a8b5bc20b150093e41cd50ed32cc23995110fc"
+    },
+    {
+      "name": "sequence 24",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "node-p1",
+                "data": {
+                  "node": {
+                    "template": {
+                      "one": {"type": "str", "value": ""},
+                      "many": {"type": "str", "list": true, "value": ""},
+                      "num": {"type": "int", "value": 1},
+                      "flag": {"type": "bool", "value": false, "advanced": false},
+                      "rows": {"type": "table", "value": [{"__id__": "r1", "__pos__": 1, "v": "x"}, {"__id__": "r2", "__pos__": 2, "v": "y"}]},
+                      "legacy": {"type": "table", "value": [{"v": "1"}, {"v": "2"}]},
+                      "tools_metadata": {"type": "tools", "value": [{"tags": ["search"], "status": true, "__pos__": 1}, {"tags": ["fetch"], "status": false, "__pos__": 2}]}
+                    },
+                    "outputs": [{"name": "res", "__pos__": 1}]
+                  },
+                  "id": "node-p1"
+                },
+                "position": {"x": 255, "y": 677}
+              }
+            ]
+          }
+        ],
+        [{"type": "delete_nodes", "ids": ["node-p1"]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "alt"}, "hidden"], "value": true}]}],
+        [{"type": "delete_nodes", "ids": ["dst"]}],
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [{"id": "node-p2", "type": "noteNode", "data": {"node": {"template": {}}, "id": "node-p2"}, "position": {"x": 450, "y": 616}}]
+          }
+        ]
+      ],
+      "graph_hash": "5a737e64e9c7ac87263b0668286faac73980226c6d7ba08cc9136e5b25d6dbe4"
+    },
+    {
+      "name": "sequence 25",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "delete_nodes", "ids": ["dst"]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "advanced"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "advanced"], "value": false}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "alt"}, "hidden"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "alt"}, "hidden"], "value": false}]}]
+      ],
+      "graph_hash": "e347872109932e88e6b9b70ff3129bbed747abe1b9b6ac92f4f03a374b2fb09e"
+    },
+    {
+      "name": "sequence 26",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "RvBQH"}]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "out"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "outputs", {"key": "alt"}]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "HxdNsGgM"}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [
+              {
+                "id": "dst",
+                "op": "set_field",
+                "path": ["data", "node", "template", "legacy", "value"],
+                "value": [{"v": "1", "__id__": "row-p1", "__pos__": 1}, {"v": "2", "__id__": "row-p2", "__pos__": 2}]
+              }
+            ]
+          }
+        ],
+        [{"type": "delete_nodes", "ids": ["src"]}]
+      ],
+      "graph_hash": "58f34010a47e75e64c42f9e21743039849a48c0068207b67395523e7ee23f921"
+    },
+    {
+      "name": "sequence 27",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "value"], "value": "TcPneAP"}]}],
+        [{"type": "delete_edges", "ids": ["e2"]}],
+        [{"type": "delete_edges", "ids": ["e1"]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "Echu uHXp"}]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p2",
+                "source": "src",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œoutœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "out"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "121f3b3920dab1f3dd5ad88b98c4338a2e9d636537512436d61a85b330cf615a"
+    },
+    {
+      "name": "sequence 28",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "note", "op": "set_field", "path": ["position"], "value": {"x": -132, "y": -436}}]}],
+        [
+          {
+            "type": "add_edges",
+            "edges": [
+              {
+                "id": "e-p1",
+                "source": "dst",
+                "target": "dst",
+                "sourceHandle": "{œnameœ:œresœ}",
+                "targetHandle": "{œfieldNameœ:œmanyœ,œinputTypesœ:[œMessageœ]}",
+                "data": {"sourceHandle": {"name": "res"}, "targetHandle": {"fieldName": "many", "inputTypes": ["Message"]}}
+              }
+            ]
+          }
+        ],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r2"}, "v"], "value": "CgK"}]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "pt"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "value"], "value": " o"}]}]
+      ],
+      "graph_hash": "e7d8b01499d89f4a8051f1eb20b20bfaf61d6caaa27125999806aa7efbd03966"
+    },
+    {
+      "name": "sequence 29",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "delete_nodes", "ids": ["dst"]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "template", "text", "value"], "value": "XCUb"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "delete_field", "path": ["data", "node", "template", "text"]}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "out"}, "hidden"], "value": true}]}],
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["data", "node", "outputs", {"key": "alt"}, "hidden"], "value": true}]}],
+        [
+          {
+            "type": "add_nodes",
+            "nodes": [
+              {
+                "id": "node-p1",
+                "data": {"node": {"template": {}, "outputs": [{"name": "out", "hidden": true, "__pos__": 1}, {"name": "alt", "hidden": true, "__pos__": 2}]}, "id": "node-p1"},
+                "position": {"x": 169, "y": 732}
+              }
+            ]
+          }
+        ]
+      ],
+      "graph_hash": "62af213c5e878fc0be869da45b8a8d7e11ca8bf2327c9ae5b7868e821da12629"
+    },
+    {
+      "name": "sequence 30",
+      "rule": "replay-same-hash",
+      "transactions": [
+        [{"type": "update_nodes", "updates": [{"id": "src", "op": "set_field", "path": ["position"], "value": {"x": 16, "y": 92}}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "one", "value"], "value": "cgwKQH t"}]}],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "many", "value"], "value": "Izq"}]}],
+        [
+          {
+            "type": "update_nodes",
+            "updates": [{"id": "dst", "op": "set_field", "path": ["data", "node", "template", "rows", "value", {"key": "r1"}, "__pos__"], "value": 0}]
+          }
+        ],
+        [{"type": "update_nodes", "updates": [{"id": "dst", "op": "delete_field", "path": ["data", "node", "template", "rows"]}]}],
+        [{"type": "delete_edges", "ids": ["e1"]}]
+      ],
+      "graph_hash": "3159da13734b0b4f602bbfc88caf0bdfe41aae51c1ff49795f2f51f3e07862d4"
+    }
+  ]
+}

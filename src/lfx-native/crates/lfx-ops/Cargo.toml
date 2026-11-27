@@ -1,0 +1,38 @@
+[package]
+name = "lfx-ops"
+description = "Langflow's native core: the flow operation engine."
+version.workspace = true
+authors.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = "1"
+# Parses JSON and prints doubles. arbitrary_precision keeps a number's exact text.
+serde_json = { version = "1", features = ["arbitrary_precision"] }
+sha2 = "0.10"
+indexmap = "2"
+hashbrown = { version = "0.17", default-features = false }
+ahash = "0.8.12"
+compact_str = "0.9"
+getrandom = "0.3"
+thiserror = "2"
+
+[features]
+# The functions the Python and browser bindings call, and the JSON they return.
+bindings = []
+
+[dev-dependencies]
+libtest-mimic = "0.8"
+# The tests call the bindings module too.
+lfx-ops = { path = ".", features = ["bindings"] }
+
+[[test]]
+name = "fixtures"
+path = "tests/fixtures/main.rs"
+harness = false
+
+[lints]
+workspace = true

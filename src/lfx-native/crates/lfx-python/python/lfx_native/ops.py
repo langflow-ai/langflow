@@ -1,0 +1,75 @@
+"""The flow operation engine: apply, replay, diff, validate, repair and hash flow graphs.
+
+A ``bytes`` argument is UTF-8 JSON text. Any other argument is a JSON value
+(dict, list, tuple, str, int, float, bool or None). A ``str`` is a JSON
+string, never text to parse. Values have the limits of text: at most 127
+levels deep, no lone surrogate, and finite numbers.
+
+An engine error raises ``EngineError``. Its ``kind`` names the matching
+Python exception class, for example ``FlowOperationValidationError``. Its
+``code`` is a stable code, and ``details`` is the whole error as a dict.
+"""
+
+from lfx_native._native import (
+    EngineError,
+    GraphPlain,
+    GraphSnapshot,
+    GraphState,
+    append_table_rows,
+    apply,
+    apply_restore_fixes,
+    assign_changed_node_table_row_ids,
+    assign_changed_table_row_ids,
+    assign_row_ids,
+    assign_table_row_ids,
+    canonical_json,
+    edge_fixes,
+    fixes_for_edges,
+    graph_hash,
+    graphs_equal,
+    new_edge_id,
+    new_table_row_id,
+    node_schema,
+    ops_diff,
+    ordered_rows,
+    repair,
+    replay,
+    strip_flow_table_row_keys,
+    strip_row_keys,
+    table_fields,
+    text_sha256,
+    validate,
+    values_equal,
+)
+
+__all__ = [
+    "EngineError",
+    "GraphPlain",
+    "GraphSnapshot",
+    "GraphState",
+    "append_table_rows",
+    "apply",
+    "apply_restore_fixes",
+    "assign_changed_node_table_row_ids",
+    "assign_changed_table_row_ids",
+    "assign_row_ids",
+    "assign_table_row_ids",
+    "canonical_json",
+    "edge_fixes",
+    "fixes_for_edges",
+    "graph_hash",
+    "graphs_equal",
+    "new_edge_id",
+    "new_table_row_id",
+    "node_schema",
+    "ops_diff",
+    "ordered_rows",
+    "repair",
+    "replay",
+    "strip_flow_table_row_keys",
+    "strip_row_keys",
+    "table_fields",
+    "text_sha256",
+    "validate",
+    "values_equal",
+]

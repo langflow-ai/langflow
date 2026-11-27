@@ -1,0 +1,150 @@
+# lfx-native
+
+The native core of lfx, written in Rust. It is one crate, `lfx-ops`, the flow operation engine. It applies, replays, diffs, validates, repairs and hashes flow graphs. It knows flow graphs, not storage: the flow history service owns stored rows, revision numbers, requests, actors and damaged history.
+
+The server and the editor use the same engine, through two thin bindings:
+
+- `lfx-python`: the Python package `lfx-native` (`import lfx_native`).
+- `lfx-wasm`: the npm package `lfx-native`, a WebAssembly build for the editor and for Node.
+
+The bindings hold no rules. Each binding function calls one function of `lfx_ops::bindings`, which takes JSON text or an already read value and returns a value. The browser binding takes and returns JSON text. The Python binding takes Python values, with `bytes` as JSON text, and returns Python values.
+
+## Layout
+
+```text
+src/lfx-native/
+  Cargo.toml             the Cargo workspace (not a uv workspace member)
+  rust-toolchain.toml    the pinned Rust toolchain, with the wasm32 target
+  crates/
+    lfx-ops/             the `lfx-ops` crate, the flow operation engine
+      src/               see "The crate" below
+      tests/fixtures/    runs every shared fixture file, one test per case
+      tests/layers.rs    checks that each folder imports only from the folders before it
+    lfx-python/          the Python binding (PyO3, maturin)
+      python/lfx_native/ the Python package around the native module
+      tests/             runs every shared fixture file through Python
+    lfx-wasm/            the browser binding (wasm-bindgen)
+      tests/             runs every shared fixture file through Node
+  fixtures/              the shared golden fixtures: the engine's specification
+    tools/               the scripts that check an engine against them
+```
+
+## The crate
+
+Each folder of `src/` imports only from the folders before it: `types`, `map`, `json`, `flow`, `compare`, `node_input`, `violation`, `invariant`, `rule`, `validate.rs`, `snapshot`, `state`, `op`, then `bindings.rs`. `tests/layers.rs` checks this. `lib.rs` re-exports the public API, such as `lfx_ops::GraphState` and `lfx_ops::apply_flow_operations`.
+
+| Folder | What it holds |
+| --- | --- |
+| `types/` | the engine's value types, including `FlowValue`, `FlowObj`, `FlowStr`, and `Number` |
+| `map/` | ordered maps, pending batch writes and path trees |
+| `json/` | JSON parsing, serialization and pointers into values |
+| `flow/` | what a flow looks like: `model` (`model.json`: view state and keyed lists), `node`, `edge`, `path`, `deserialize`, `list` (every keyed list: lookup by key and `__pos__` order), `edge_handle`, `id` |
+| `compare/` | when two flows are equal: `canonical_form`, `graph_hash` |
+| `node_input/` | what only some node inputs do: `table_input` (row ids, table input fields, stripping row keys for export) |
+| `violation/` | what a broken rule looks like (`Violation`, `ViolationCode`), and the engine's `Error` |
+| `invariant/` | what is true of every stored flow, checked on every load: `graph`, `number` |
+| `rule/` | the rules a write must follow, checked only on what it adds or changes: `edge`, `list` |
+| `validate.rs` | runs the invariants and the rules |
+| `snapshot/` | `GraphSnapshot`, the committed flow that other threads read |
+| `state/` | the flow in memory: `GraphState`, its indexes, field reads and writes, and `GraphPlain` |
+| `op/` | what you do to a flow: the operation types and their parser and dump, `apply`, `replay`, `field_update` (what apply and replay share), `diff`, `repair`, `restore` |
+| `bindings.rs` | the functions the bindings call: JSON text or values in, values out. It is behind the `bindings` feature, which both bindings turn on, so it is their one shared conversion layer. It turns an `Error` into a `BindingError`, with the Python exception class name and the error as JSON |
+
+The public modules are `bindings`, `types`, `json`, `flow`, `compare`, `node_input`, `validate`, `repair` and `restore`.
+
+Each folder raises its own errors: `json` a `NonFinite` number, `flow` a `DeserializeError` or a `ListError`, and `compare` and `node_input` only `NonFinite`. `violation` turns each of them into the one `Error` the bindings see.
+
+### Terms
+
+The engine uses the words of Langflow: flow, node, edge, field, output, operation, table input row. It adds only these:
+
+| Term | Meaning |
+| --- | --- |
+| batch | operations applied together, all or none |
+| staged batch | a batch that is applied but not yet kept or dropped |
+| backward operations | the operations that undo a batch |
+| keyed list | a list whose items are found by a key: outputs by `name`, tool actions by `tags[0]`, table input rows by `__id__` |
+| view state | keys the engine keeps but never records or compares, such as `selected` or `viewport` |
+| canonical form | a flow without its view state, which equality and the hash use |
+| snapshot | a read-only view of the committed flow that other threads can read |
+
+## Who uses what
+
+This table maps each part of the engine to its callers today, in the Python engine and the editor's engine at `ad19da0df4` (`oplog-history-ui`). After the switch, the same callers use the bindings.
+
+### Used by both sides
+
+| Part | Python (`lfx_native.ops`) | Browser (`lfx-native`) | Backend callers | Editor callers |
+| --- | --- | --- | --- | --- |
+| Apply operations, with every rule | `apply`, `GraphState.apply` | `apply`, `GraphState.apply` | restore fixes (`flow_history/restore_fixes.py`) | none yet |
+| Replay stored operations, with no rule | `replay`, `GraphState.replay` | `replay`, `GraphState.replay` | replay (`flow_history/replay.py`) | history playback (`flow-operations/history.ts`) |
+| Assign row ids to a table | `assign_row_ids`, `assign_changed_table_row_ids` | `assignRowIds`, `assignChangedTableRowIds`, `assignChangedNodeTableRowIds` | the assistant (`agentic/utils/assistant_runner.py`, `flow_component.py`), the MCP patch (`lfx/mcp/server.py`) | `flowStore.ts`, `use-add-flow.ts`, template hooks, `mutate-template.ts`, `TableNodeComponent` |
+| Strip row ids and order rows | `strip_row_keys`, `strip_flow_table_row_keys`, `ordered_rows` | `stripRowKeys`, `stripFlowTableRowKeys`, `orderedRows` | flow export (`api/utils/core.py`), MCP export, the component run (`lfx/graph/vertex/param_handler.py`), the refresh endpoint (`api/v1/endpoints.py`) | download and export (`reactflowUtils.ts`), `TableNodeComponent` |
+| Canonical equality | `graphs_equal`, `values_equal` | `graphsEqual`, `valuesEqual` | the save's no-op check and the check that the stored graph matches its latest revision (`flow_history/recorder.py`) | inside the editor's engine only |
+| Flow model | `table_fields`, `node_schema` | `tableFields`, `nodeSchema` | the refresh endpoint finds table fields (`api/v1/endpoints.py`) | inside the editor's engine only |
+
+### Used only by the backend
+
+| Part | Python (`lfx_native.ops`) | Backend callers |
+| --- | --- | --- |
+| The save: validate, repair, diff | `validate`, `repair`, `ops_diff`, or the same methods on `GraphPlain`, which reads each graph once | `flow_history/recorder.py` (every graph write: PATCH, PUT, import, version activation, the assistant, file sync). The recorder calls them in turn, and numbers the operations and packs them into rows itself. |
+| Graph hash | `graph_hash` | checkpoints and the check that the stored graph matches its latest revision (`recorder.py`), replay (`flow_history/replay.py`) |
+| Restore fix check | `apply_restore_fixes` | revision restore (`api/v1/flow_revisions.py`), version restore (`api/v1/flow_version.py`) |
+| New edge ids | `new_edge_id` | flow expansion (`processing/expand_flow.py`), the flow builder (`lfx/graph/flow_builder/connect.py`) |
+
+### Used only by the editor
+
+| Part | Browser (`lfx-native`) | Editor callers |
+| --- | --- | --- |
+| Backward operations, and replaying them | `GraphState.replay` with `backward`, then `GraphState.replay` of each list | history timeline (`buildHistoryTimeline` and `graphAt` in `history.ts`) |
+| A user's undo and redo | `GraphState.apply` with `backward`; the backward operation lists, last first, sent as one ordinary batch | none yet; for multiplayer undo and redo |
+| Append rows, and renumber a full gap | `appendTableRows`, and `assignRowIds` with renumbering (the default in the browser) | `TableNodeComponent` |
+| Edge fixes for a refused restore | `edgeFixes`, `fixesForEdges` | `use-flow-version-sidebar.ts`, `refused-restore.ts` |
+
+These stay in TypeScript, because they are not engine rules: the history descriptions (`describe.ts`), node changes (`changes.ts`), names (`names.ts`) and timeline folding (`fold.ts`).
+
+Only the editor renumbers table positions. The server never changes a position, so the Python binding's table functions do not renumber unless a caller passes `editor=True`.
+
+## Commands
+
+Run these in `src/lfx-native/`.
+
+Test, lint and format the crate:
+
+```bash
+cargo test
+```
+
+```bash
+cargo clippy --workspace --all-targets -- -D warnings
+```
+
+```bash
+cargo fmt --check
+```
+
+Build the Python binding into a virtual environment, and run its fixture runner. `VIRTUAL_ENV` names the environment to install into:
+
+```bash
+maturin develop --release --uv --manifest-path crates/lfx-python/Cargo.toml
+```
+
+```bash
+python -m pytest crates/lfx-python
+```
+
+Build the browser binding and run its fixture runner. This needs `wasm-bindgen-cli` at the version of the `wasm-bindgen` crate:
+
+```bash
+npm --prefix crates/lfx-wasm run build
+```
+
+```bash
+npm --prefix crates/lfx-wasm test
+```
+
+## Fixtures
+
+The fixture files are the specification of the engine. Their expected outputs are written data that people review, and every engine must meet them. Every runtime runs every file: the Rust runner, the Python runner and the Node runner. Each case names the rule it checks, and every runner fails on a case without one.
+
+To add or change a case, write it by hand with its rule, as `fixtures/README.md` says. A rule change is a reviewed edit to the cases of that rule. The tools in `fixtures/tools/` only check an engine against the fixtures, and never write them.

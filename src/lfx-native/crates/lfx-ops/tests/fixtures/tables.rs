@@ -1,0 +1,101 @@
+//! `table_cases.json`: ordering, stripping and assigning table row ids and positions.
+
+use lfx_ops::flow::list::{Renumber, fill_missing_positions};
+use lfx_ops::flow::model::FLOW_MODEL;
+use lfx_ops::flow_value;
+use lfx_ops::json::FlowValue;
+use lfx_ops::node_input::table_input::{
+    assign_changed_table_row_ids, assign_row_ids, assign_table_row_ids, ordered_rows,
+    strip_flow_table_row_keys, strip_row_keys,
+};
+use libtest_mimic::{Failed, Trial};
+
+use crate::support::{assert_json_matches, load, section_cases};
+
+type Check = fn(&FlowValue) -> Result<(), Failed>;
+
+fn rows(case: &FlowValue, key: &str) -> Vec<FlowValue> {
+    case[key].as_array().map(<[_]>::to_vec).unwrap_or_default()
+}
+
+fn strip(case: &FlowValue) -> Result<(), Failed> {
+    assert_json_matches(
+        "stripped rows",
+        &strip_row_keys(&case["rows"]),
+        &case["expected"],
+    )
+}
+
+fn ordered(case: &FlowValue) -> Result<(), Failed> {
+    let rows = rows(case, "rows");
+    let ordered: Vec<FlowValue> = ordered_rows(&rows).into_iter().cloned().collect();
+    assert_json_matches(
+        "ordered rows",
+        &FlowValue::Array(ordered),
+        &case["expected"],
+    )
+}
+
+fn fill_positions(case: &FlowValue) -> Result<(), Failed> {
+    let mut rows = rows(case, "rows");
+    let filled = fill_missing_positions(&FLOW_MODEL.table_input, &mut rows, Renumber::Never);
+    assert_json_matches(
+        "filled positions",
+        &flow_value!({"rows": rows, "filled": filled}),
+        &flow_value!({"rows": &case["expected"], "filled": &case["filled"]}),
+    )
+}
+
+fn assign(case: &FlowValue) -> Result<(), Failed> {
+    let mut rows = rows(case, "rows");
+    assign_row_ids(
+        &mut rows,
+        case.get("previous").filter(|previous| !previous.is_null()),
+        Renumber::Never,
+    )
+    .map_err(|error| error.to_string())?;
+    assert_json_matches("assigned rows", &FlowValue::Array(rows), &case["expected"])
+}
+
+fn assign_node(case: &FlowValue) -> Result<(), Failed> {
+    let mut node = case["node"].clone();
+    assign_table_row_ids(&mut node, Renumber::Never).map_err(|error| error.to_string())?;
+    assert_json_matches("node", &node, &case["expected"])
+}
+
+fn assign_changed(case: &FlowValue) -> Result<(), Failed> {
+    let mut target = case["target"].clone();
+    assign_changed_table_row_ids(&case["base"], &mut target, Renumber::Never)
+        .map_err(|error| error.to_string())?;
+    assert_json_matches("target", &target, &case["expected"])
+}
+
+fn strip_flow(case: &FlowValue) -> Result<(), Failed> {
+    let mut flow = case["flow"].clone();
+    strip_flow_table_row_keys(&mut flow);
+    assert_json_matches("flow", &flow, &case["expected"])
+}
+
+/// Every table case.
+pub fn trials() -> Vec<Trial> {
+    let document = load("table_cases.json");
+    let sections: [(&str, Check); 7] = [
+        ("strip", strip),
+        ("ordered", ordered),
+        ("fill_positions", fill_positions),
+        ("assign", assign),
+        ("assign_node", assign_node),
+        ("assign_changed", assign_changed),
+        ("strip_flow", strip_flow),
+    ];
+    let mut trials = Vec::new();
+    for (section, check) in sections {
+        for (name, case) in section_cases(&document, section) {
+            trials.push(Trial::test(
+                format!("table_cases::{section}::{name}"),
+                move || check(&case),
+            ));
+        }
+    }
+    trials
+}
