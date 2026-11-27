@@ -9,10 +9,12 @@ if TYPE_CHECKING:
     from lfx.components.models_and_agents.a2a_agent import A2AAgentComponent
     from lfx.components.models_and_agents.agent import AgentComponent
     from lfx.components.models_and_agents.agent_context import AgentContextComponent
+    from lfx.components.models_and_agents.agent_step import AgentStepComponent
     from lfx.components.models_and_agents.compaction_input import CompactionInputComponent
     from lfx.components.models_and_agents.compactor import CompactorComponent
     from lfx.components.models_and_agents.context_manager import ContextManagerComponent
     from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
+    from lfx.components.models_and_agents.execute_tool import ExecuteToolComponent
     from lfx.components.models_and_agents.hook import HookComponent
     from lfx.components.models_and_agents.hook_event import HookEventComponent
     from lfx.components.models_and_agents.language_model import LanguageModelComponent
@@ -27,10 +29,12 @@ _dynamic_imports = {
     "A2AAgentComponent": "a2a_agent",
     "AgentComponent": "agent",
     "AgentContextComponent": "agent_context",
+    "AgentStepComponent": "agent_step",
     "CompactionInputComponent": "compaction_input",
     "CompactorComponent": "compactor",
     "ContextManagerComponent": "context_manager",
     "EmbeddingModelComponent": "embedding_model",
+    "ExecuteToolComponent": "execute_tool",
     "HookComponent": "hook",
     "HookEventComponent": "hook_event",
     "LanguageModelComponent": "language_model",
@@ -46,10 +50,12 @@ __all__ = [
     "A2AAgentComponent",
     "AgentComponent",
     "AgentContextComponent",
+    "AgentStepComponent",
     "CompactionInputComponent",
     "CompactorComponent",
     "ContextManagerComponent",
     "EmbeddingModelComponent",
+    "ExecuteToolComponent",
     "HookComponent",
     "HookEventComponent",
     "LanguageModelComponent",
