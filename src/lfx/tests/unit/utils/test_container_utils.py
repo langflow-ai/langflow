@@ -4,6 +4,7 @@ import socket
 from pathlib import Path
 from unittest.mock import mock_open, patch
 
+import pytest
 from lfx.utils.util import detect_container_environment, get_container_host, transform_localhost_url
 
 
@@ -174,6 +175,26 @@ eth0	0011A8C0	00000000	0001	0	0	0	00FFFFFF	0	0	0"""
 
 class TestTransformLocalhostUrl:
     """Test the transform_localhost_url function."""
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://api.example.com/localhost/v1",
+            "https://api.example.com/v1?redirect=http://127.0.0.1:8000",
+            "https://localhost.example.com/v1",
+            "http://127.0.0.10:8000/v1",
+        ],
+    )
+    def test_preserves_non_loopback_hosts(self, url):
+        with patch("lfx.utils.util.get_container_host", return_value="host.docker.internal"):
+            assert transform_localhost_url(url) == url
+
+    @pytest.mark.parametrize("host", ["localhost", "127.0.0.1"])
+    def test_only_replaces_hostname(self, host):
+        url = f"http://localhost@{host}:8000/localhost?callback=127.0.0.1#localhost"
+        expected = "http://localhost@host.docker.internal:8000/localhost?callback=127.0.0.1#localhost"
+        with patch("lfx.utils.util.get_container_host", return_value="host.docker.internal"):
+            assert transform_localhost_url(url) == expected
 
     def test_returns_original_url_when_not_in_container(self):
         """Test returns original URL when not in a container."""
