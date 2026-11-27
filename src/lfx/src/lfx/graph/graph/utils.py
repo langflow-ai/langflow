@@ -545,6 +545,7 @@ def layered_topological_sort(
     is_input_vertex: Callable[[str], bool] | None = None,  # noqa: ARG001
     *,
     is_cyclic: bool = False,
+    loop_entry_ids: list[str] | None = None,
 ) -> list[list[str]]:
     """Performs a layered topological sort of the vertices in the graph.
 
@@ -557,6 +558,7 @@ def layered_topological_sort(
         start_id: ID of the start vertex (if any)
         cycle_vertices: Set of vertices that form a cycle
         is_input_vertex: Function to check if a vertex is an input vertex
+        loop_entry_ids: Loops that receive no edge except their own feedback; they start the sort too
 
     Returns:
         List of layers, where each layer is a list of vertex IDs
@@ -564,6 +566,9 @@ def layered_topological_sort(
     # Queue for vertices with no incoming edges
     cycle_vertices = cycle_vertices or set()
     in_degree_map = in_degree_map.copy()
+    loop_entry_ids = [vertex_id for vertex_id in loop_entry_ids or [] if vertex_id in vertices_ids]
+    for vertex_id in loop_entry_ids:
+        in_degree_map[vertex_id] = 0
 
     if is_cyclic and all(in_degree_map.values()):
         # This means we have a cycle because all vertex have in_degree_map > 0
@@ -881,7 +886,7 @@ def get_sorted_vertices(
     get_vertex_successors: Callable[[str], list[str]] | None = None,
     *,
     is_cyclic: bool = False,
-    cycle_start_id: str | None = None,
+    loop_entry_ids: list[str] | None = None,
 ) -> tuple[list[str], list[list[str]]]:
     """Get sorted vertices in a graph.
 
@@ -898,8 +903,8 @@ def get_sorted_vertices(
         get_vertex_predecessors: Function to get predecessors of a vertex
         get_vertex_successors: Function to get successors of a vertex
         is_cyclic: Whether the graph is cyclic
-        cycle_start_id: Where to start when every vertex has a predecessor and no start component is given.
-            Unlike start_component_id, it does not filter the vertices.
+        loop_entry_ids: Loops that receive no edge except their own feedback. They join the first layer
+            when no start component is given.
 
     Returns:
         Tuple of (first layer vertices, remaining layer vertices)
@@ -979,10 +984,11 @@ def get_sorted_vertices(
         in_degree_map=in_degree_map,
         successor_map=successor_map,
         predecessor_map=predecessor_map,
-        start_id=start_component_id if start_component_id is not None else cycle_start_id,
+        start_id=start_component_id,
         is_input_vertex=is_input_vertex,
         cycle_vertices=cycle_vertices,
         is_cyclic=is_cyclic,
+        loop_entry_ids=loop_entry_ids if start_component_id is None else None,
     )
 
     # Split into first layer and remaining layers

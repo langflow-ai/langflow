@@ -3310,7 +3310,7 @@ class Graph:
             get_vertex_predecessors=self.get_vertex_predecessors_ids,
             get_vertex_successors=self.get_vertex_successors_ids,
             is_cyclic=self.is_cyclic,
-            cycle_start_id=self._loop_entry_vertex_id() if self.is_cyclic else None,
+            loop_entry_ids=self._loop_entry_vertex_ids() if self._is_subgraph and self.is_cyclic else None,
         )
 
         # A run that explicitly targets the tool-mode node (the node's play button sets
@@ -3330,23 +3330,22 @@ class Graph:
         self._first_layer = first_layer
         return first_layer
 
-    def _loop_entry_vertex_id(self) -> str | None:
-        """The Loop whose only incoming edges are its own feedback, as in a loop-body subgraph.
+    def _loop_entry_vertex_ids(self) -> list[str]:
+        """Loops whose only incoming edges are their own feedback, as in a loop-body subgraph.
 
-        Such a Loop received its items from outside the graph, so a run must start there. Without it,
-        a graph in which every vertex has a predecessor would start at an arbitrary vertex.
+        Such a Loop received its items from outside the graph, so a run must start there. No other
+        vertex leads to it, so a sort that does not start there never reaches it.
         """
+        entry_ids = []
         for vertex in self.vertices:
+            if not vertex.is_loop:
+                continue
             feedback_inputs = {output["name"] for output in vertex.outputs if output.get("allows_loop")}
-            if (
-                feedback_inputs
-                and vertex.incoming_edges
-                and all(
-                    getattr(edge.target_handle, "field_name", None) in feedback_inputs for edge in vertex.incoming_edges
-                )
+            if vertex.incoming_edges and all(
+                getattr(edge.target_handle, "field_name", None) in feedback_inputs for edge in vertex.incoming_edges
             ):
-                return vertex.id
-        return None
+                entry_ids.append(vertex.id)
+        return entry_ids
 
     @staticmethod
     def sort_interface_components_first(vertices_layers: list[list[str]]) -> list[list[str]]:

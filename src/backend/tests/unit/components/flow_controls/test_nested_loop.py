@@ -44,9 +44,41 @@ config:
   POST.mode: Stringify
 """
 
+FAN_OUT_SPEC = """\
+name: Nested Loop Fan-out
+nodes:
+  CL: CreateList
+  OUTER: LoopComponent
+  IN1: LoopComponent
+  P1: ParserComponent
+  TC1: TypeConverterComponent
+  IN2: LoopComponent
+  P2: ParserComponent
+  TC2: TypeConverterComponent
+  OUTER_TC: TypeConverterComponent
+edges:
+  CL.list -> OUTER.data
+  OUTER.item -> IN1.data
+  OUTER.item -> IN2.data
+  IN1.item -> P1.input_data
+  P1.parsed_text -> TC1.input_data
+  TC1.data_output -> IN1.item
+  IN2.item -> P2.input_data
+  P2.parsed_text -> TC2.input_data
+  TC2.data_output -> IN2.item
+  IN1.done -> OUTER_TC.input_data
+  OUTER_TC.data_output -> OUTER.item
+config:
+  P1.mode: Stringify
+  P2.mode: Stringify
+  TC1.output_type: JSON
+  TC2.output_type: JSON
+  OUTER_TC.output_type: JSON
+"""
 
-def _nested_loop_graph(*, failing: bool = False) -> tuple[Graph, dict[str, str]]:
-    built = build_flow_from_spec(NESTED_LOOP_SPEC)
+
+def _nested_loop_graph(spec: str = NESTED_LOOP_SPEC, *, failing: bool = False) -> tuple[Graph, dict[str, str]]:
+    built = build_flow_from_spec(spec)
     templates = {node["id"]: node["data"]["node"]["template"] for node in built["flow"]["data"]["nodes"]}
     ids = built["node_id_map"]
     templates[ids["CL"]]["texts"]["value"] = ITEMS
@@ -69,6 +101,20 @@ async def test_should_start_each_outer_iteration_at_the_inner_loop(_id_set):
         iteration_subgraph.prepare()
 
         assert iteration_subgraph._first_layer == [ids["INNER"]]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("_id_set", ID_SETS)
+async def test_should_start_each_outer_iteration_at_every_inner_loop_it_feeds(_id_set):
+    graph, ids = _nested_loop_graph(FAN_OUT_SPEC)
+    outer = graph.get_vertex(ids["OUTER"])
+    outer.instantiate_component(user_id=graph.user_id)
+    body = outer.custom_component.get_loop_body_vertices()
+
+    async with graph.create_subgraph(body) as iteration_subgraph:
+        iteration_subgraph.prepare()
+
+        assert iteration_subgraph._first_layer == sorted([ids["IN1"], ids["IN2"]])
 
 
 @pytest.mark.asyncio
