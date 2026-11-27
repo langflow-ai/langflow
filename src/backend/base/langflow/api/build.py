@@ -556,6 +556,11 @@ async def _generate_flow_events(
         if sanitized_payload is not None:
             checkpoint = checkpoint.model_copy(update={"flow_payload": sanitized_payload})
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+        # The checkpoint stores the flow's raw graph data, which never received this
+        # run's tweaks (the fresh path applies them after construction), so re-apply
+        # them here or every vertex after the pause runs with the saved defaults.
+        if tweaks:
+            process_tweaks_on_graph(graph, tweaks)
         # A checkpoint stores flow payload + user_id and deliberately never persists an
         # execution principal, so a restored graph carries ``unknown()`` and would deny
         # every connection. Re-stamp from the principal admitted for THIS resume request.
