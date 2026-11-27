@@ -723,6 +723,12 @@ class RunFlowBaseComponent(Component):
 
             if isinstance(exc, NestedHITLUnsupportedError):
                 raise
+            # A refusal raised deeper in the child (a Loop body) arrives wrapped. Its words are for the user.
+            cause = exc.__cause__
+            while cause is not None:
+                if isinstance(cause, NestedHITLUnsupportedError):
+                    raise type(cause)(*cause.args) from None
+                cause = cause.__cause__
             # A refused tweak is a caller error, not a flow failure. Collapsing it
             # into a generic RuntimeError would discard the refused field names and
             # the reason, and the caller would never learn which key was rejected.

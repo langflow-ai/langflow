@@ -906,6 +906,11 @@ class Graph:
         self._run_id = str(run_id)
 
     def request_pause(self, reason: str = "pause_requested", data: dict[str, Any] | None = None) -> None:
+        if self._is_subgraph and not self.checkpointing_enabled:
+            from lfx.run.hitl import LOOP_BODY_HITL_UNSUPPORTED, NestedHITLUnsupportedError
+
+            # Nothing suspends a loop iteration, so the step would carry on undecided and run every branch.
+            raise NestedHITLUnsupportedError(LOOP_BODY_HITL_UNSUPPORTED)
         self.pause_requested = True
         self.pause_info = {"reason": reason, "data": data or {}}
 
