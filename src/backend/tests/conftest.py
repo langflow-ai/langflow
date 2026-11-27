@@ -1080,3 +1080,17 @@ async def get_starter_project(client, active_user):  # noqa: ARG001
         yield new_flow_dict
         # Clean up
         await session.delete(new_flow)
+
+
+@pytest.fixture
+def deletion_registry():
+    """The deletion hook registries, restored after the test; tests register their own hooks on the module."""
+    from langflow.services import deletion_hooks
+
+    pre = {resource: list(hooks) for resource, hooks in deletion_hooks._pre_deletion_hooks.items()}
+    post = {resource: list(hooks) for resource, hooks in deletion_hooks._post_deletion_hooks.items()}
+    yield deletion_hooks
+    for resource, hooks in pre.items():
+        deletion_hooks._pre_deletion_hooks[resource][:] = hooks
+    for resource, hooks in post.items():
+        deletion_hooks._post_deletion_hooks[resource][:] = hooks

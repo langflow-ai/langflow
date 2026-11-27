@@ -85,6 +85,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Flows/evaluations",
+          label: "Evaluate flows"
+        },
+        {
+          type: "doc",
           id: "Flows/concepts-flows-import",
           label: "Import and export flows"
         },
@@ -407,6 +412,11 @@ module.exports = {
           type: "doc",
           id: "Lfx/lfx-run",
           label: "Run flows with LFX"
+        },
+        {
+          type: "doc",
+          id: "Lfx/lfx-dependency-ready",
+          label: "Dependency-ready Python graphs"
         },
         {
           type: "doc",

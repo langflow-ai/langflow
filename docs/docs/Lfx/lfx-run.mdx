@@ -113,13 +113,49 @@ uv run lfx run simple_agent.py "How are you?" --verbose
 
 For more examples, see the [Complete Agent Example on PyPI](https://pypi.org/project/lfx).
 
+### Control automatic graph history in Python
+
+Direct Python callers can set `snapshot_history_limit` when constructing a `Graph`
+or calling `Graph.from_payload`:
+
+```python
+graph = Graph(chat_input, chat_output, snapshot_history_limit=0)
+# Or retain only the newest 16 automatic snapshots:
+graph = Graph(chat_input, chat_output, snapshot_history_limit=16)
+```
+
+The default, `None`, keeps the existing full history across prepares and runs.
+`0` skips automatic snapshots, including constructor preparation. A positive
+built-in integer keeps the newest N snapshots across runs, evicting older entries
+in place. The retained limit holds after recording; appending can temporarily
+hold N+1 snapshot references. Boolean values, integer subclasses and other types
+raise `TypeError`; negative integers raise `ValueError`. Configuration is read-only.
+Explicit `get_snapshot()` still returns the same detached scheduler-state snapshot,
+and checkpoint call order is unchanged.
+
+Copies, run copies, graph addition (left-hand policy), and `create_subgraph`
+inherit the policy. This is per Graph, not a recursive component setting:
+RunFlow components that construct independent child graphs keep the full default.
+A disabled parent does not disable those children's history. Existing application,
+UI and CLI callers are unchanged; no application throughput improvement is implied.
+
+Checkpoint configuration is not persisted in the checkpoint schema. Pass the
+option again to `Graph.resume_from_checkpoint`, `restore_graph_from_checkpoint`,
+or `resume_graph_with_decision`; omitting it restores full history. Graph cache
+serialization preserves the option, not accumulated diagnostic history. Missing
+policy in old serialized state defaults to `None`; an invalid stored policy fails
+with `TypeError` or `ValueError`, which Redis cache reads may propagate. This does
+not add support for running arbitrary unpickled graphs through `async_start`.
+
 ## lfx run options
 
 | Option | Description |
 |---|---|
+| `--check-dependencies` / `--no-check-dependencies` | Best-effort preflight of a JSON flow's required packages; fails fast with install guidance when packages are positively identified as missing. Skipped for `.py` scripts and when the analysis itself can't complete. Default: check. |
 | `--check-variables` / `--no-check-variables` | Validate the flow's global variables and [connection references](./lfx-connections) before execution. Default: check. |
 | `--flow-json` | Load inline JSON flow content as a string. |
 | `--format`, `-f` | Output format: `json`, `text`, `message`, or `result`. Default: `json`. |
+| `--human-input` / `--no-human-input` | Interactive human-in-the-loop. Default auto-enables it when the flow has a pausing node and the terminal is interactive; with `--stdin`, stdin isn't a terminal, so a pausing node doesn't wait for a decision unless `--human-input` is passed explicitly. |
 | `--input-value` | Input value to pass to the graph. Required with `--stdin` and `--flow-json`. |
 | `--session-id` | Session ID for conversation tracking. Auto-generated if not set. |
 | `--stdin` | Read JSON flow content from `stdin`. |

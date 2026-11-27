@@ -81,7 +81,7 @@ class ComponentStructuredTool(StructuredTool):
         except Exception as exc:
             msg = "Execution user is inactive or unavailable"
             raise ToolException(msg) from exc
-        if not graph.flow_id:
+        if not graph.flow_id or not graph.runs_stored_flow:
             return
         try:
             await auth.validate_tool_call(

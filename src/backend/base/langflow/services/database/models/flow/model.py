@@ -53,10 +53,11 @@ def _validate_endpoint_name_value(v: str | None) -> str | None:
 def _normalize_flow_data_for_write(value: dict | None) -> dict | None:
     if value is None:
         return None
-    from langflow.services.triggers.reconciliation import validate_single_trigger_per_flow
+    from langflow.services.triggers.reconciliation import validate_no_grouped_trigger, validate_single_trigger_per_flow
 
     normalized = normalize_code_for_import(value)
     validate_single_trigger_per_flow(normalized)
+    validate_no_grouped_trigger(normalized)
     return normalized
 
 
@@ -251,6 +252,10 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
     workspace_id: UUID | None = Field(default=None, nullable=True, index=True)
     fs_path: str | None = Field(default=None, nullable=True)
+    anonymous_access_revoked: bool | None = Field(
+        default=False, sa_column=Column(Boolean, nullable=True, server_default=false())
+    )
+    revoked_public_share_id: UUID | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
     version_token: UUID | None = Field(
         default=None,

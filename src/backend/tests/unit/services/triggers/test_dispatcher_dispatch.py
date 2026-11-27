@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timedelta, timezone
+from unittest.mock import AsyncMock
+from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.flow.model import Flow
@@ -21,7 +23,7 @@ from langflow.services.database.models.trigger.schemas import (
     TriggerState,
 )
 from langflow.services.database.models.user.model import User
-from langflow.services.deps import session_scope
+from langflow.services.deps import get_trigger_service, session_scope
 from langflow.services.triggers import dispatcher, ledger
 from langflow.services.triggers.constants import TRIGGER_EVENT_FIELD
 
@@ -225,6 +227,35 @@ async def test_a_deactivated_owner_runs_nothing(make_trigger, fake_background_se
     row = await _event(event_id)
     assert row.state == TriggerEventState.FAILED.value
     assert row.error == "owner_inactive"
+
+
+@pytest.mark.parametrize("result", ["unbound", "missing", "inactive", "lookup_error"])
+async def test_unavailable_run_account_never_falls_back_to_the_owner(
+    result, make_trigger, fake_background_service, active_user, monkeypatch
+) -> None:
+    trigger_id = await make_trigger()
+    event_id = await _append(trigger_id)
+    resolver = AsyncMock(return_value=None)
+    if result == "missing":
+        resolver.return_value = uuid4()
+    elif result == "inactive":
+        async with session_scope() as session:
+            account = await session.get(User, active_user.id)
+            account.is_active = False
+        resolver.return_value = active_user.id
+    elif result == "lookup_error":
+        resolver.side_effect = RuntimeError("binding lookup failed")
+    monkeypatch.setattr(get_trigger_service(), "resolve_run_user_id", resolver)
+
+    assert await dispatcher.run_once(owner="solo") == 0
+    assert fake_background_service.submits == []
+    row = await _event(event_id)
+    if result == "lookup_error":
+        assert row.state == TriggerEventState.PENDING.value
+        assert row.attempt == 1
+    else:
+        assert row.state == TriggerEventState.FAILED.value
+        assert row.error == "run_user_unavailable"
 
 
 async def test_a_pinned_trigger_runs_the_pinned_canvas(make_trigger, fake_background_service) -> None:
