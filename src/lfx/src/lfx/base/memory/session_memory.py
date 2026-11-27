@@ -38,6 +38,8 @@ HIGH_MARK_SHARE = 0.2
 HIGH_MARK_CAP = 12_000
 UNKNOWN_WINDOW_HIGH_MARK = 8_000
 MESSAGE_CAP_TOKENS = 4_000
+# Context length of an Ollama server when the client sets no num_ctx.
+OLLAMA_DEFAULT_NUM_CTX = 4_096
 # Bounded reads: rows after the cursor for one turn, and rows for one fold.
 MAX_UNFOLDED_ROWS = 200
 SUMMARY_WORD_BUDGET = 300
@@ -77,10 +79,20 @@ def budget_for_window(window: int | None) -> Budget:
 
 
 def model_window(llm: Any) -> int | None:
-    """The input window of `llm` from its LangChain model profile, or None when the provider has none."""
+    """The input window of `llm`, or None when it is not known.
+
+    The LangChain model profile gives it for most providers. Ollama has no profile, and the server cuts
+    every prompt to `num_ctx` tokens, 4,096 when the client sets none. The start of the prompt goes
+    first, which is where the session notes are, so the budget must use that limit.
+    """
     profile = getattr(llm, "profile", None)
     value = profile.get("max_input_tokens") if isinstance(profile, dict) else None
-    return value if isinstance(value, int) and value > 0 else None
+    if isinstance(value, int) and value > 0:
+        return value
+    if type(llm).__name__ == "ChatOllama":
+        num_ctx = getattr(llm, "num_ctx", None)
+        return num_ctx if isinstance(num_ctx, int) and num_ctx > 0 else OLLAMA_DEFAULT_NUM_CTX
+    return None
 
 
 # (previous state, batch) -> the new summary text, or None when the reply is not usable.

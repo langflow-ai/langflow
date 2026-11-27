@@ -237,3 +237,19 @@ async def test_history_bound_counts_the_cap_marker_of_cut_messages():
     loaded = await _load(store, current, budget)
     sent = sum(estimate_tokens(m.text) for m in loaded.history)
     assert sent <= budget.high + budget.message_cap
+
+
+class ChatOllama:
+    """Stand-in for langchain_ollama.ChatOllama, which lfx does not install: no profile, an optional num_ctx."""
+
+    profile = None
+
+    def __init__(self, num_ctx: int | None = None) -> None:
+        self.num_ctx = num_ctx
+
+
+def test_ollama_window_is_its_context_length_not_unknown():
+    assert sm.model_window(ChatOllama()) == sm.OLLAMA_DEFAULT_NUM_CTX
+    assert sm.model_window(ChatOllama(num_ctx=16_384)) == 16_384
+    budget = sm.budget_for_window(sm.model_window(ChatOllama()))
+    assert budget.high + budget.message_cap < sm.OLLAMA_DEFAULT_NUM_CTX // 2
