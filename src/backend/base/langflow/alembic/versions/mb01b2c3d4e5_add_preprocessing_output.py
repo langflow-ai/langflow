@@ -16,6 +16,7 @@ Create Date: 2026-05-01 00:00:00.000000
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from langflow.utils import migration
 
@@ -33,7 +34,7 @@ def upgrade() -> None:
     # ------------------------------------------------------------------ #
     with op.batch_alter_table("memory_base", schema=None) as batch_op:
         if not migration.column_exists("memory_base", "preproc_kill_phrase", conn):
-            batch_op.add_column(sa.Column("preproc_kill_phrase", sa.String(), nullable=True))
+            batch_op.add_column(sa.Column("preproc_kill_phrase", sqlmodel.sql.sqltypes.AutoString(), nullable=True))
 
     # ------------------------------------------------------------------ #
     #  memory_base_preprocessing_output                                    #
@@ -48,17 +49,17 @@ def upgrade() -> None:
                 sa.ForeignKey("memory_base.id", ondelete="CASCADE"),
                 nullable=False,
             ),
-            sa.Column("session_id", sa.String(), nullable=False),
+            sa.Column("session_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column(
                 "job_id",
                 sa.Uuid(),
                 sa.ForeignKey("job.job_id", ondelete="SET NULL"),
                 nullable=True,
             ),
-            sa.Column("status", sa.String(), nullable=False),
+            sa.Column("status", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("output_text", sa.Text(), nullable=True),
             sa.Column("source_message_ids", sa.JSON(), nullable=False),
-            sa.Column("model_used", sa.String(), nullable=False),
+            sa.Column("model_used", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
             sa.PrimaryKeyConstraint("id"),

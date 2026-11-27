@@ -218,6 +218,13 @@ class _SSOClientSecretEnvelope(sa.TypeDecorator):
     impl = sa.String
     cache_ok = True
 
+    def load_dialect_impl(self, dialect: sa.engine.Dialect) -> sa.types.TypeEngine:
+        # MySQL/MariaDB reject a VARCHAR without a length, and the envelope grows
+        # with the secret, so store it as TEXT there instead of capping it.
+        if dialect.name == "mysql":
+            return dialect.type_descriptor(sa.Text())
+        return dialect.type_descriptor(sa.String())
+
     def process_bind_param(self, value: str | None, _dialect: sa.engine.Dialect) -> str | None:
         if value is not None and not is_sso_client_secret_envelope(value):
             msg = "client_secret_encrypted must be a versioned SSO secret envelope"

@@ -26,7 +26,10 @@ class PolicyBundleRevision(SQLModel, table=True):  # type: ignore[call-arg]
         sa.CheckConstraint("length(content_hash) = 64", name=conv("ck_policy_bundle_revision_hash_length")),
     )
 
-    revision: int = Field(primary_key=True, ge=1)
+    # Assigned by the application (expected_revision + 1), never by the database.
+    # Without autoincrement=False MySQL/MariaDB emit AUTO_INCREMENT, which MariaDB
+    # refuses on a column referenced by a CHECK constraint.
+    revision: int = Field(ge=1, sa_column=sa.Column(sa.Integer(), primary_key=True, autoincrement=False))
     initialized: bool = Field(default=True, sa_column=sa.Column(sa.Boolean(), nullable=False))
     approved_provider_ids: list[str] = Field(default_factory=list, sa_column=sa.Column(sa.JSON, nullable=False))
     blocked_component_keys: list[str] = Field(default_factory=list, sa_column=sa.Column(sa.JSON, nullable=False))

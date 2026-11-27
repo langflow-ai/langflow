@@ -78,7 +78,9 @@ def upgrade() -> None:
     )
 
     with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:
-        batch_op.alter_column(COLUMN_NAME, nullable=False)
+        batch_op.alter_column(
+            COLUMN_NAME, existing_type=sa.String().with_variant(sa.String(255), "mysql"), nullable=False
+        )
 
     if not migration.constraint_exists(TABLE_NAME, UNIQUE_CONSTRAINT_NAME, conn):
         with op.batch_alter_table(TABLE_NAME, schema=None) as batch_op:

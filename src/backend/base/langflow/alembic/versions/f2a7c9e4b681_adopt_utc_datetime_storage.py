@@ -12,8 +12,9 @@ both directions, independently of the PostgreSQL session timezone.
 Stop all older application instances before upgrading or downgrading: their
 schema checks expect the previous types. PostgreSQL takes exclusive table
 locks and may rewrite populated tables. SELECT COUNT checks preserve row and
-non-null value counts under those locks. SQLite storage already holds UTC
-without an offset and needs no DDL; the new type restores UTC when reading.
+non-null value counts under those locks. SQLite and MySQL/MariaDB storage
+already holds UTC without an offset and needs no DDL; the new type restores UTC
+when reading.
 """
 
 import sqlalchemy as sa
@@ -77,19 +78,23 @@ def _convert_timestamps(connection: sa.Connection, *, timezone_aware: bool) -> N
 
 def upgrade() -> None:
     connection = op.get_bind()
-    if connection.dialect.name == "sqlite":
+    if connection.dialect.name in {"sqlite", "mysql"}:
+        # Neither stores an offset (MySQL/MariaDB DATETIME behaves like SQLite here),
+        # so there is no DDL to run; the UTCDateTime type restores UTC on read.
         return
     if connection.dialect.name != "postgresql":
-        msg = "UTC datetime migration supports PostgreSQL and SQLite only"
+        msg = "UTC datetime migration supports PostgreSQL, SQLite and MySQL/MariaDB only"
         raise NotImplementedError(msg)
     _convert_timestamps(connection, timezone_aware=True)
 
 
 def downgrade() -> None:
     connection = op.get_bind()
-    if connection.dialect.name == "sqlite":
+    if connection.dialect.name in {"sqlite", "mysql"}:
+        # Neither stores an offset (MySQL/MariaDB DATETIME behaves like SQLite here),
+        # so there is no DDL to run; the UTCDateTime type restores UTC on read.
         return
     if connection.dialect.name != "postgresql":
-        msg = "UTC datetime downgrade supports PostgreSQL and SQLite only"
+        msg = "UTC datetime downgrade supports PostgreSQL, SQLite and MySQL/MariaDB only"
         raise NotImplementedError(msg)
     _convert_timestamps(connection, timezone_aware=False)

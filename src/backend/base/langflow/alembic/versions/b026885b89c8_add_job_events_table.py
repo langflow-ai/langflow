@@ -10,6 +10,7 @@ Phase: EXPAND
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
@@ -32,7 +33,7 @@ def upgrade() -> None:
             sa.Column("id", sa.Uuid(), nullable=False),
             sa.Column("job_id", sa.Uuid(), nullable=False),
             sa.Column("seq", sa.Integer(), nullable=False),
-            sa.Column("event_type", sa.String(), nullable=False),
+            sa.Column("event_type", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("payload", _JSON, nullable=True),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
             sa.PrimaryKeyConstraint("id"),

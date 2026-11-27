@@ -5,6 +5,7 @@ import sqlalchemy as sa
 from pydantic import model_validator
 from sqlalchemy import JSON, Column, DateTime, ForeignKey, Index, Text, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel.sql.sqltypes import AutoString
 
 
 class MemoryBaseBase(SQLModel):
@@ -174,7 +175,7 @@ class MemoryBaseWorkflowRun(SQLModel, table=True):  # type: ignore[call-arg]
             nullable=False,
         )
     )
-    session_id: str = Field(sa_column=Column(sa.String(), nullable=False))
+    session_id: str = Field(sa_column=Column(AutoString(), nullable=False))
     workflow_job_id: UUID | None = Field(
         default=None,
         sa_column=Column(
@@ -236,7 +237,7 @@ class MessageIngestionRecord(SQLModel, table=True):  # type: ignore[call-arg]
         ),
     )
     # Denormalized from MessageTable.session_id — immutable, avoids JOIN on the hot query path
-    session_id: str = Field(sa_column=Column(sa.String(), nullable=False))
+    session_id: str = Field(sa_column=Column(AutoString(), nullable=False))
     ingested_at: datetime = Field(sa_column=Column(DateTime(timezone=True), nullable=False))
 
 
@@ -279,7 +280,7 @@ class MemoryBasePreprocessingOutput(SQLModel, table=True):  # type: ignore[call-
         )
     )
     # Denormalized — immutable for the row's lifetime
-    session_id: str = Field(sa_column=Column(sa.String(), nullable=False))
+    session_id: str = Field(sa_column=Column(AutoString(), nullable=False))
     job_id: UUID | None = Field(
         default=None,
         sa_column=Column(
@@ -288,11 +289,11 @@ class MemoryBasePreprocessingOutput(SQLModel, table=True):  # type: ignore[call-
             nullable=True,
         ),
     )
-    status: str = Field(sa_column=Column(sa.String(), nullable=False))
+    status: str = Field(sa_column=Column(AutoString(), nullable=False))
     output_text: str | None = Field(default=None, sa_column=Column(Text(), nullable=True))
     # Canonical batch identity — JSON list of message UUIDs as strings.
     source_message_ids: list = Field(default_factory=list, sa_column=Column(JSON(), nullable=False))
-    model_used: str = Field(sa_column=Column(sa.String(), nullable=False))
+    model_used: str = Field(sa_column=Column(AutoString(), nullable=False))
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False),

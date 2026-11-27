@@ -26,6 +26,7 @@ from langflow.services.database.models.memory_base.model import (
     MemoryBaseSession,
     MemoryBaseWorkflowRun,
 )
+from langflow.services.database.utils import insert_ignoring_conflicts
 from langflow.services.deps import get_job_service, get_task_service, session_scope
 from langflow.services.jobs import DuplicateJobError
 from langflow.services.memory_base.kb_path_helpers import (
@@ -694,14 +695,7 @@ async def _insert_workflow_run(
         "recorded_at": datetime.now(timezone.utc),
     }
     conn = await db.connection()
-    if conn.dialect.name == "postgresql":
-        from sqlalchemy.dialects.postgresql import insert as pg_insert
-
-        stmt = pg_insert(MemoryBaseWorkflowRun).values([row]).on_conflict_do_nothing()
-    else:
-        from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-
-        stmt = sqlite_insert(MemoryBaseWorkflowRun).values([row]).on_conflict_do_nothing()
+    stmt = insert_ignoring_conflicts(conn.dialect.name, MemoryBaseWorkflowRun, [row])
     await db.exec(stmt)  # type: ignore[call-overload]
     await db.commit()
 

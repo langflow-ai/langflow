@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from langflow.alembic.expand_compat import filter_expand_revision_directives
 from langflow.alembic.warning_filters import filter_known_sqlite_reflection_warnings
 from langflow.services.database.service import SQLModel
+from langflow.services.database.utils import SKIP_ON_MYSQL_INFO_KEY
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -68,6 +69,18 @@ def include_name(name: str | None, type_: str, parent_names: dict[str, str | Non
     return qualified in target_metadata.tables
 
 
+def include_object(obj: Any, name: str | None, type_: str, reflected: bool, compare_to: Any) -> bool:  # noqa: ARG001, FBT001
+    """Skip model indexes that are intentionally not created on MySQL/MariaDB.
+
+    Expression indexes marked with ``skip_index_on_mysql`` are never created
+    there (MariaDB has no expression indexes), so autogenerate must not report
+    them as missing.
+    """
+    if type_ == "index" and not reflected and obj.info.get(SKIP_ON_MYSQL_INFO_KEY):
+        return context.get_context().dialect.name != "mysql"
+    return True
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -88,6 +101,7 @@ def run_migrations_offline() -> None:
         "dialect_opts": {"paramstyle": "named"},
         "render_as_batch": True,
         "include_name": include_name,
+        "include_object": include_object,
         "process_revision_directives": filter_expand_revision_directives,
     }
 
@@ -122,6 +136,7 @@ def _do_run_migrations(connection):
         "target_metadata": target_metadata,
         "render_as_batch": True,
         "include_name": include_name,
+        "include_object": include_object,
         "process_revision_directives": filter_expand_revision_directives,
     }
 

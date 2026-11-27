@@ -14,6 +14,7 @@ Phase: EXPAND
 from collections.abc import Sequence
 
 import sqlalchemy as sa
+import sqlmodel
 from alembic import op
 
 revision: str = "a1f4c9d27b30"  # pragma: allowlist secret
@@ -31,7 +32,7 @@ def upgrade() -> None:
             "job_checkpoints",
             sa.Column("id", sa.Uuid(), nullable=False),
             sa.Column("job_id", sa.Uuid(), nullable=False),
-            sa.Column("kind", sa.String(), nullable=False),
+            sa.Column("kind", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column("blob", sa.Text(), nullable=False),
             sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
             sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
