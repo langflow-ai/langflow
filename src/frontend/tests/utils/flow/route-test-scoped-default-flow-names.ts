@@ -8,11 +8,15 @@ const DEFAULT_FLOW_NAME = /^New Flow(?: \(\d+\))?$/;
  * The product computes `New Flow (n)` from a client-side inventory snapshot.
  * Parallel tests can choose the same suffix before either POST commits, so
  * suites that do not exercise naming should isolate those generated names.
+ *
+ * A starter template's name, such as `Support Ticket Routing (n)`, races the same
+ * way; pass its pattern as `names` to isolate it too.
  */
 export async function routeTestScopedDefaultFlowNames(
   page: Page,
   testInfo: TestInfo,
   prefix: string,
+  names: RegExp = DEFAULT_FLOW_NAME,
 ): Promise<void> {
   let flowCreationIndex = 0;
   await page.route("**/api/v1/flows/", async (route) => {
@@ -23,7 +27,7 @@ export async function routeTestScopedDefaultFlowNames(
     }
 
     const body = request.postDataJSON() as Record<string, unknown>;
-    if (typeof body.name !== "string" || !DEFAULT_FLOW_NAME.test(body.name)) {
+    if (typeof body.name !== "string" || !names.test(body.name)) {
       await route.continue();
       return;
     }
