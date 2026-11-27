@@ -10,10 +10,12 @@ from sqlmodel import col, select
 
 from langflow.services.database.models.evaluation import EvaluationRun
 from langflow.services.database.models.jobs.model import Job, JobStatus
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_job_service, get_settings_service
 from langflow.services.jobs.service import JobService
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 WORKER_LOST_ERROR = "The server stopped while this run was in progress. Finished rows are kept."
@@ -30,12 +32,17 @@ def _as_utc(value: datetime) -> datetime:
     return value if value.tzinfo is not None else value.replace(tzinfo=timezone.utc)
 
 
-def _is_lost(run: EvaluationRun, jobs: dict[Any, Job], lease_ttl_s: float) -> bool:
+def _is_lost(
+    run: EvaluationRun, jobs: dict[Any, Job], lease_ttl_s: float, kept_alive_here: Callable[[Any], bool]
+) -> bool:
     job = jobs.get(run.job_id)
     if job is None:
         return _as_utc(run.created_at) < _now() - LAUNCH_GRACE
     if job.status not in (JobStatus.QUEUED, JobStatus.IN_PROGRESS):
         return True
+    # This process is still running it: a heartbeat delayed by a stalled event loop is not a dead worker.
+    if kept_alive_here(job.job_id):
+        return False
     # A pod that died mid-run leaves its job IN_PROGRESS until some process restarts (the default
     # mode has no periodic sweep); a heartbeat older than the lease is the reliable death signal.
     return JobService.is_lease_stale(job, lease_ttl_s=lease_ttl_s)
@@ -49,7 +56,8 @@ async def reconcile_runs(session: AsyncSession, runs: list[EvaluationRun]) -> No
     job_ids = [run.job_id for run in active if run.job_id is not None]
     jobs = {job.job_id: job for job in (await session.exec(select(Job).where(col(Job.job_id).in_(job_ids)))).all()}
     lease_ttl_s = get_settings_service().settings.background_lease_ttl_s
-    lost = [run for run in active if _is_lost(run, jobs, lease_ttl_s)]
+    kept_alive_here = get_job_service().is_kept_alive_here
+    lost = [run for run in active if _is_lost(run, jobs, lease_ttl_s, kept_alive_here)]
     if not lost:
         return
     await session.exec(

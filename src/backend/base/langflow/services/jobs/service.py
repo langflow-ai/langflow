@@ -979,6 +979,10 @@ class JobService(Service):
         self._keep_alives[job_id] = (task, stop)
         task.add_done_callback(lambda done: self._forget_keep_alive(job_id, done))
 
+    def is_kept_alive_here(self, job_id: UUID) -> bool:
+        """True while this process heartbeats ``job_id``, so its owner is alive whatever the heartbeat's age."""
+        return job_id in self._keep_alives
+
     async def stop_keep_alive(self, job_id: UUID) -> None:
         """Stop ``job_id``'s heartbeat, returning only once no heartbeat write is in flight."""
         entry = self._keep_alives.pop(job_id, None)
@@ -1671,8 +1675,8 @@ class JobService(Service):
             now = datetime.now(timezone.utc)
             hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
             for job in in_progress:
-                if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
-                    # Live owner still heartbeating — leave the run alone.
+                if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s) or self.is_kept_alive_here(job.job_id):
+                    # Live owner still heartbeating (or this very process, its beat late from a stalled loop).
                     continue
                 prior_heartbeat = (job.job_metadata or {}).get("heartbeat_at")
                 if require_heartbeat and prior_heartbeat is None:

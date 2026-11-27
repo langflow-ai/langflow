@@ -144,34 +144,34 @@ async def _load_context(run_id: UUID) -> RunContext | None:
     )
 
 
-class _RowNotStoredError(Exception):
-    """Roll back a row save when its run is inactive or its position is already stored."""
-
-
 async def _store_result(run_id: UUID, result: EvaluationResult) -> bool:
     """Persist one row only while its run is active and its position is not already stored."""
     errored = result.error is not None
-    try:
-        # Write first: on SQLite a read that later upgrades to a write fails at once instead of waiting.
-        async with session_scope() as session:
-            counted = await session.exec(
-                update(EvaluationRun)
-                .where(EvaluationRun.id == run_id, col(EvaluationRun.status).in_(ACTIVE_STATUSES))
-                .values(
-                    completed_items=EvaluationRun.completed_items + 1,
-                    failed_items=EvaluationRun.failed_items + (1 if errored else 0),
-                    passed_items=EvaluationRun.passed_items + (1 if result.passed else 0),
-                )
+    # Write first: on SQLite a read that later upgrades to a write fails at once instead of waiting.
+    async with session_scope() as session:
+        counted = await session.exec(
+            update(EvaluationRun)
+            .where(EvaluationRun.id == run_id, col(EvaluationRun.status).in_(ACTIVE_STATUSES))
+            .values(
+                completed_items=EvaluationRun.completed_items + 1,
+                failed_items=EvaluationRun.failed_items + (1 if errored else 0),
+                passed_items=EvaluationRun.passed_items + (1 if result.passed else 0),
             )
-            if not counted.rowcount:
-                raise _RowNotStoredError
-            session.add(result)
-            try:
-                await session.flush()
-            except IntegrityError as exc:
-                raise _RowNotStoredError from exc
-    except _RowNotStoredError:
-        return False
+        )
+        if not counted.rowcount:
+            # The run stopped (cancelled, failed or deleted): an expected outcome, not an error to log.
+            await session.rollback()
+            return False
+        session.add(result)
+        try:
+            await session.flush()
+        except IntegrityError as exc:
+            # Usually a timeout racing the save for the same position; anything else should stay visible.
+            await session.rollback()
+            await logger.awarning(
+                f"evals_row_not_stored run_id={run_id} position={result.position} error={type(exc.orig).__name__}"
+            )
+            return False
     return True
 
 
