@@ -134,6 +134,80 @@ function FlowEditCard({
   );
 }
 
+type ToolMetadataRow = Record<string, unknown>;
+
+function isToolMetadataRow(value: unknown): value is ToolMetadataRow {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toolMetadataRowId(row: ToolMetadataRow): string | undefined {
+  const tags = row.tags;
+  return Array.isArray(tags) && typeof tags[0] === "string"
+    ? tags[0]
+    : undefined;
+}
+
+function metadataValuesEqual(left: unknown, right: unknown): boolean {
+  try {
+    return JSON.stringify(left) === JSON.stringify(right);
+  } catch {
+    return Object.is(left, right);
+  }
+}
+
+function mergeAcceptedToolMetadata(
+  currentValue: unknown,
+  oldValue: unknown,
+  proposedValue: unknown,
+): unknown {
+  if (
+    !Array.isArray(currentValue) ||
+    !Array.isArray(oldValue) ||
+    !Array.isArray(proposedValue)
+  ) {
+    return currentValue;
+  }
+
+  const oldRows = new Map<string, ToolMetadataRow>();
+  for (const row of oldValue) {
+    if (!isToolMetadataRow(row)) return currentValue;
+    const id = toolMetadataRowId(row);
+    if (!id) return currentValue;
+    oldRows.set(id, row);
+  }
+
+  const changes = new Map<string, ToolMetadataRow>();
+  for (const row of proposedValue) {
+    if (!isToolMetadataRow(row)) return currentValue;
+    const id = toolMetadataRowId(row);
+    const oldRow = id ? oldRows.get(id) : undefined;
+    if (!id || !oldRow) return currentValue;
+
+    const changedFields = Object.fromEntries(
+      Object.entries(row).filter(
+        ([key, value]) => !metadataValuesEqual(oldRow[key], value),
+      ),
+    );
+    if (Object.keys(changedFields).length > 0) changes.set(id, changedFields);
+  }
+
+  const currentIds = new Set(
+    currentValue
+      .filter(isToolMetadataRow)
+      .map(toolMetadataRowId)
+      .filter((id): id is string => id !== undefined),
+  );
+  if ([...changes.keys()].some((id) => !currentIds.has(id)))
+    return currentValue;
+
+  return currentValue.map((row) => {
+    if (!isToolMetadataRow(row)) return row;
+    const id = toolMetadataRowId(row);
+    const changedFields = id ? changes.get(id) : undefined;
+    return changedFields ? { ...row, ...changedFields } : row;
+  });
+}
+
 export function FlowEditCarousel({
   actions,
   onUpdateAction,
@@ -170,6 +244,14 @@ export function FlowEditCarousel({
                 Record<string, unknown>
               >;
               if (!tmpl[field]) return node;
+              const nextValue =
+                field === "tools_metadata"
+                  ? mergeAcceptedToolMetadata(
+                      tmpl[field].value,
+                      action.old_value,
+                      op.value,
+                    )
+                  : op.value;
               return {
                 ...node,
                 data: {
@@ -178,7 +260,7 @@ export function FlowEditCarousel({
                     ...(node.data as Record<string, unknown>).node,
                     template: {
                       ...tmpl,
-                      [field]: { ...tmpl[field], value: op.value },
+                      [field]: { ...tmpl[field], value: nextValue },
                     },
                   },
                 },
