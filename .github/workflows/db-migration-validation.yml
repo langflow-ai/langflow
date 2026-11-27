@@ -121,15 +121,28 @@ jobs:
           fi
           echo "✅ Authentication token obtained"
 
-          # Create a witness flow (proves row persistence)
+          # Create a witness flow (proves row persistence). Real starter nodes plus a retired
+          # Chroma node give upgrade-check both a component to judge and a problem to catch.
+          python - <<'PY'
+          import json
+          from importlib.resources import files
+
+          starter = files("langflow.initial_setup") / "starter_projects" / "Basic Prompting.json"
+          data = json.loads(starter.read_text())["data"]
+          chat_input = next(node for node in data["nodes"] if node["data"].get("type") == "ChatInput")
+          chat_input["data"]["type"] = "Chroma"
+          witness = {
+              "name": "Migration Witness Flow",
+              "description": "Test flow to verify data persistence across migration",
+              "data": data,
+          }
+          with open("witness_flow.json", "w") as output:
+              json.dump(witness, output)
+          PY
           curl -fsSL -X POST http://127.0.0.1:7860/api/v1/flows/ \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{
-              "name": "Migration Witness Flow",
-              "description": "Test flow to verify data persistence across migration",
-              "data": {"nodes": [], "edges": []}
-            }' > flow_response.json
+            -d @witness_flow.json > flow_response.json
 
           if ! grep -q '"id"' flow_response.json; then
             echo "❌ Flow creation failed - no id in response"
@@ -219,25 +232,18 @@ jobs:
         run: |
           source .venv/bin/activate
 
-          # Older selected nightlies still need migration validation even before this command existed.
-          python -m langflow --help > langflow-help.txt
-          if ! grep -Fq 'upgrade-check' langflow-help.txt; then
-            echo "Selected nightly predates upgrade-check; continuing with migration validation."
-            exit 0
-          fi
-
-          # Exit 0 or 1 is a finished check (1 means a flow needs action). Exit 2 means it could not finish.
+          # The witness flow holds a retired node, so a finished check exits 1.
           status=0
           python -m langflow upgrade-check --database-url "$SOURCE_DATABASE_URL" --json \
             --output upgrade-check-report.json > upgrade-check.jsonl || status=$?
           echo "upgrade-check exited with $status"
-          if [ "$status" -ne 0 ] && [ "$status" -ne 1 ]; then
-            echo "❌ upgrade-check could not finish on a database the stable release created"
+          if [ "$status" -ne 1 ]; then
+            echo "❌ upgrade-check did not flag the witness flow's retired node"
             tail -n 1 upgrade-check.jsonl || true
             exit 1
           fi
 
-          # The report file parses, and the stream ends with the same report.
+          # Live starter components can be outdated, but the nightly must still recognize them.
           python - <<'PY'
           import json
 
@@ -245,6 +251,12 @@ jobs:
           last = json.loads(open("upgrade-check.jsonl").read().splitlines()[-1])
           assert report["format_version"] == 1, report["format_version"]
           assert last == {"event": "report", "report": report}, "the last --json line is not the report"
+          witness = next(flow for flow in report["flows"] if flow["name"] == "Migration Witness Flow")
+          assert witness["ok_nodes"] + len(witness["nodes"]) > 1, witness
+          retired = [node["type"] for node in witness["nodes"] if node["status"] == "retired"]
+          assert retired == ["Chroma"], witness["nodes"]
+          blocked = [node["type"] for node in witness["nodes"] if node["status"] == "blocked"]
+          assert not blocked, f"Blocked witness components: {blocked}"
           print(json.dumps(report["summary"]))
           PY
 
