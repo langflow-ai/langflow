@@ -101,11 +101,14 @@ def _expand_node(
     # Use items() directly, reduce field lookups
     for field_name, field_value in compact_node.values.items():
         t_value = template.get(field_name)
-        if t_value is not None:
-            if isinstance(t_value, dict):
-                t_value["value"] = field_value
-            else:
-                template[field_name] = field_value
+        if isinstance(t_value, dict):
+            # Copy the field before assigning: `template` is only a shallow copy of
+            # the shared component index, so writing into `t_value` would leak this
+            # request's value into the process-wide template and become the default
+            # for every node of this type expanded afterwards.
+            template[field_name] = {**t_value, "value": field_value}
+        elif t_value is not None:
+            template[field_name] = field_value
         else:
             # Add as new field if not in template
             template[field_name] = {"value": field_value}
