@@ -40,6 +40,7 @@ async def validation_db(request, tmp_path, monkeypatch):
         database_connection_retry=False,
         db_connection_settings=pool_settings,
         db_driver_connection_settings=connect_args,
+        pool_pre_ping_idle_seconds=0.0,
         model_fields_set=set(),
         sqlite_pragmas={"busy_timeout": 2000},
         use_noop_database=False,
