@@ -115,14 +115,24 @@ class TestWindowsZombieProcessDetection:
 
     @pytest.mark.asyncio
     async def test_kill_zombie_mcp_processes_windows_powershell_timeout(self, mcp_service):
-        """Test that PowerShell timeout is handled gracefully."""
+        """Test that a PowerShell subprocess timeout hits the dedicated timeout handler."""
+        mock_netstat_result = MagicMock()
+        mock_netstat_result.returncode = 0
+        mock_netstat_result.stdout = ""
+        ps_timeout = subprocess.TimeoutExpired(cmd=["powershell.exe"], timeout=5)
+
         with (
             patch("platform.system", return_value="Windows"),
-            patch("asyncio.to_thread", side_effect=asyncio.TimeoutError("PowerShell timed out")),
+            patch("asyncio.to_thread", side_effect=[mock_netstat_result, ps_timeout]) as mock_to_thread,
+            patch("lfx.services.mcp_composer.service.logger.adebug", new_callable=AsyncMock) as mock_adebug,
         ):
-            # Should not raise, just return False
             result = await mcp_service._kill_zombie_mcp_processes(2000)
-            assert result is False
+
+        assert result is False
+        assert mock_to_thread.call_args.args[1][0] == "powershell.exe"
+        messages = [call.args[0] for call in mock_adebug.call_args_list]
+        assert "PowerShell command timed out while checking for orphaned processes" in messages
+        assert not any("Error using PowerShell" in m for m in messages)
 
     @pytest.mark.asyncio
     async def test_kill_zombie_mcp_processes_windows_invalid_json(self, mcp_service):
