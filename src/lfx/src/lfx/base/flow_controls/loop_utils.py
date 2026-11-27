@@ -259,13 +259,26 @@ async def execute_loop_body(
             if len(sources) > 1:
                 list_sources[(target_id, target_param)] = sources
 
+    from lfx.graph.graph.base import Graph
+
     aggregated_results = []
+    defer_subgraph_init = getattr(graph.create_subgraph, "__func__", None) is Graph.create_subgraph
 
     for item in data_list:
         # Create fresh subgraph for each iteration. This gives clean vertex/edge state
         # while sharing context between iterations (intentional for loop state).
         # Using async context manager ensures proper cleanup of trace tasks on exit.
-        async with graph.create_subgraph(loop_body_vertex_ids) as iteration_subgraph:
+        # Preparation contract: execute_loop_body defers initial Graph.initialize() until
+        # after template item injection, calls iteration_subgraph.prepare() once, injects
+        # raw_params, and signals _skip_prepare=True to the coordinator/executor so
+        # InProcessExecutor consumes that single prepared state instead of preparing again.
+        # Custom executors that ignore _skip_prepare still receive a prepared subgraph.
+        subgraph_cm = (
+            graph.create_subgraph(loop_body_vertex_ids, initialize=False)
+            if defer_subgraph_init
+            else graph.create_subgraph(loop_body_vertex_ids)
+        )
+        async with subgraph_cm as iteration_subgraph:
             # Inject current item into vertex data BEFORE preparing the subgraph.
             # This ensures components have data during build/validation.
             for vertex_data in iteration_subgraph._vertices:  # noqa: SLF001
@@ -275,7 +288,7 @@ async def execute_loop_body(
                         if target_param in template:
                             template[target_param]["value"] = item
 
-            # Prepare the subgraph - components will be built with the injected data
+            # Prepare the subgraph once - components are built with the injected data.
             iteration_subgraph.prepare()
 
             # CRITICAL: Also set the value in the vertex's raw_params
@@ -301,7 +314,12 @@ async def execute_loop_body(
             # on an invalid result, so the underlying subgraph generator's cleanup runs.
             coordinator = await aget_default_coordinator()
             async with aclosing(
-                coordinator.stream(iteration_subgraph, user_id=user_id, event_manager=event_manager)
+                coordinator.stream(
+                    iteration_subgraph,
+                    user_id=user_id,
+                    event_manager=event_manager,
+                    _skip_prepare=True,
+                )
             ) as stream:
                 async for result in stream:
                     results.append(result)

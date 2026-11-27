@@ -159,6 +159,9 @@ class Graph:
         self._state_model = None
         self._end = end
         self._prepared = False
+        self._prepared_for_next_run = False
+        self._prepared_start_component_id: str | None = None
+        self._prepared_stop_component_id: str | None = None
         self._runs = 0
         self._updates = 0
         self.flow_id = flow_id
@@ -386,7 +389,17 @@ class Graph:
             graph_dict["endpoint_name"] = str(endpoint_name)
         return graph_dict
 
-    def add_nodes_and_edges(self, nodes: list[NodeData], edges: list[EdgeData]) -> None:
+    def add_nodes_and_edges(
+        self,
+        nodes: list[NodeData],
+        edges: list[EdgeData],
+        *,
+        initialize: bool = True,
+    ) -> None:
+        self._prepared = False
+        self._prepared_for_next_run = False
+        self._prepared_start_component_id = None
+        self._prepared_stop_component_id = None
         self._vertices = nodes
         self._edges = edges
         self.raw_graph_data = {"nodes": nodes, "edges": edges}
@@ -427,7 +440,8 @@ class Graph:
         self._cycle_vertices = None
         self._is_cyclic = None
         self.run_manager.cycle_vertices.clear()
-        self.initialize()
+        if initialize:
+            self.initialize()
 
     def add_component(self, component: Component, component_id: str | None = None) -> str:
         component_id = component_id or component.get_id()
@@ -543,6 +557,7 @@ class Graph:
         reset_output_values: bool = True,
         fallback_to_env_vars: bool = False,
         open_flow_span: bool = True,
+        skip_prepare: bool = False,
     ):
         """Run the graph, yielding each step.
 
@@ -557,11 +572,26 @@ class Graph:
 
         Left defaulting to True so a caller that has not been converted still gets a span rather
         than silently none. Those runs keep the flat shape.
+
+        skip_prepare=True opts into a one-shot prepared-run handoff: if the caller just
+        called ``prepare()`` for the same ``start_component_id`` (with no ``stop_component_id``
+        and no intervening topology mutations), ``async_start`` consumes that prepared state
+        instead of running ``prepare()`` a second time. Repeated runs or mutated graphs always
+        re-prepare safely.
         """
         with self._flow_span_scope(open_flow_span=open_flow_span):
             # Preserve start_component_id from constructor if available
             start_component_id = self._start.get_id() if self._start else None
-            self.prepare(start_component_id=start_component_id)
+            can_reuse_prepared = (
+                skip_prepare
+                and self._prepared
+                and self._prepared_for_next_run
+                and self._prepared_start_component_id == start_component_id
+                and self._prepared_stop_component_id is None
+            )
+            if not can_reuse_prepared:
+                self.prepare(start_component_id=start_component_id)
+            self._prepared_for_next_run = False
             if reset_output_values:
                 self._reset_all_output_values()
 
@@ -751,12 +781,14 @@ class Graph:
         self.parent_child_map[source_id].append(target_id)
 
     def add_node(self, node: NodeData) -> None:
+        self._prepared_for_next_run = False
         self._vertices.append(node)
 
     def add_edge(self, edge: EdgeData) -> None:
         # Check if the edge already exists
         if edge in self._edges:
             return
+        self._prepared_for_next_run = False
         self._edges.append(edge)
 
     def initialize(self) -> None:
@@ -2241,6 +2273,7 @@ class Graph:
 
     def _add_vertex(self, vertex: Vertex) -> None:
         """Adds a vertex to the graph."""
+        self._prepared_for_next_run = False
         self.vertices.append(vertex)
         self.vertex_map[vertex.id] = vertex
 
@@ -2315,6 +2348,7 @@ class Graph:
         vertex = self.get_vertex(vertex_id)
         if vertex is None:
             return
+        self._prepared_for_next_run = False
         self.vertices.remove(vertex)
         self.vertex_map.pop(vertex_id)
         self.edges = [edge for edge in self.edges if vertex_id not in {edge.source_id, edge.target_id}]
@@ -3210,6 +3244,9 @@ class Graph:
         self._first_layer = sorted(first_layer)
         self._run_queue = deque(self._first_layer)
         self._prepared = True
+        self._prepared_for_next_run = True
+        self._prepared_start_component_id = start_component_id
+        self._prepared_stop_component_id = stop_component_id
         self._record_snapshot()
         return self
 
@@ -3450,7 +3487,12 @@ class Graph:
         return in_degree
 
     @contextlib.asynccontextmanager
-    async def create_subgraph(self, vertex_ids: set[str]) -> AsyncIterator[Graph]:
+    async def create_subgraph(
+        self,
+        vertex_ids: set[str],
+        *,
+        initialize: bool = True,
+    ) -> AsyncIterator[Graph]:
         """Create an isolated subgraph containing only specified vertices.
 
         This creates a new Graph instance with only the vertices and edges
@@ -3462,6 +3504,8 @@ class Graph:
 
         Args:
             vertex_ids: Set of vertex IDs to include in the subgraph
+            initialize: Whether to initialize vertices and edges immediately. Set to False
+                when the caller mutates node templates before calling ``prepare()``.
 
         Yields:
             A new Graph instance containing only the specified vertices
@@ -3507,7 +3551,7 @@ class Graph:
         subgraph._is_subgraph = True
 
         # Add the filtered nodes and edges
-        subgraph.add_nodes_and_edges(subgraph_nodes, subgraph_edges)
+        subgraph.add_nodes_and_edges(subgraph_nodes, subgraph_edges, initialize=initialize)
 
         yield subgraph
 

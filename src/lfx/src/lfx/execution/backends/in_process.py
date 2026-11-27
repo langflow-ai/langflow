@@ -40,17 +40,23 @@ class InProcessExecutor(Executor):
         # explicit try/finally below, the inner generator's ``finally:`` block --
         # which is where event managers, connections, or vertex finalizers run --
         # would only execute on GC, leaking resources for an unpredictable window.
-        inner = graph.async_start(
-            inputs=opts.get("initial_inputs"),
-            max_iterations=opts.get("max_iterations"),
-            config=opts.get("config"),
-            event_manager=opts.get("event_manager"),
-            user_id=opts.get("user_id"),
-            reset_output_values=opts.get("reset_output_values", True),
-            fallback_to_env_vars=opts.get("fallback_to_env_vars", False),
+        from lfx.graph.graph.base import Graph
+
+        async_start_kwargs = {
+            "inputs": opts.get("initial_inputs"),
+            "max_iterations": opts.get("max_iterations"),
+            "config": opts.get("config"),
+            "event_manager": opts.get("event_manager"),
+            "user_id": opts.get("user_id"),
+            "reset_output_values": opts.get("reset_output_values", True),
+            "fallback_to_env_vars": opts.get("fallback_to_env_vars", False),
             # Defaults True, so a consumer that has not been converted still gets a span.
-            open_flow_span=opts.get("open_flow_span", True),
-        )
+            "open_flow_span": opts.get("open_flow_span", True),
+        }
+        if opts.get("_skip_prepare") and getattr(graph.async_start, "__func__", None) is Graph.async_start:
+            async_start_kwargs["skip_prepare"] = True
+
+        inner = graph.async_start(**async_start_kwargs)
         try:
             async for result in inner:
                 yield StepResult(payload=result)
