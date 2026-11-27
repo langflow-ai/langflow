@@ -4139,5 +4139,7 @@
   "settings.upgrade.check.error.unsupported_upgrade_report_format": "La comprobación terminó, pero la versión de destino escribió un formato de informe que este servidor no puede importar. Ejecuta langflow upgrade-check a mano para obtener el archivo del informe.",
   "settings.upgrade.check.error.subprocess_unavailable": "Este servidor no puede iniciar la comprobación desde esta página. Ejecuta langflow upgrade-check en una terminal e importa el informe.",
   "settings.upgrade.check.error.connection_lost": "La conexión se cerró antes de que terminara la comprobación. Ejecútala de nuevo.",
-  "settings.upgrade.check.error.refused": "El servidor no inició la comprobación. Inténtalo más tarde."
+  "settings.upgrade.check.error.refused": "El servidor no inició la comprobación. Inténtalo más tarde.",
+  "updateComponent.customizedUpdateDesc": "Al actualizar un componente personalizado, su código guardado se sustituye por la versión del catálogo de componentes.",
+  "settings.upgrade.duplicateImport": "Importación duplicada"
 }
