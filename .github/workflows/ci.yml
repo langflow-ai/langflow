@@ -501,7 +501,8 @@ jobs:
         run: |
           mkdir -p coverage/combined
           npx nyc merge coverage/playwright/individual-test coverage/combined/playwright.json || echo "Failed to merge Playwright coverage"
-          npx nyc merge coverage/jest coverage/combined/jest.json || echo "Failed to merge Jest coverage"
+          # Copy only the coverage map. nyc merge also reads coverage-summary.json and fails on it.
+          cp coverage/jest/coverage-final.json coverage/combined/jest.json
           npx nyc merge coverage/combined coverage/combined/total-frontend-coverage.json || echo "Failed to combine Playwright + Jest coverage"
 
       - name: Generate Combined Report
