@@ -5325,6 +5325,16 @@
       "bare_class_name": "SocialScrapeTranscriptComponent",
       "target": "ext:socialscrape:SocialScrapeTranscriptComponent@official",
       "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "WebRouterExtractComponent",
+      "target": "ext:webrouter:WebRouterExtractComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "WebRouterSearchComponent",
+      "target": "ext:webrouter:WebRouterSearchComponent@official",
+      "added_in": "1.14.0"
     }
   ],
   "ambiguous_bare_names": [

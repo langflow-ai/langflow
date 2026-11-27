@@ -551,6 +551,8 @@ export const lazyIconsMapping = {
     import("@/icons/vectorstores").then((mod) => ({
       default: mod.VectorStoresIcon,
     })),
+  WebRouter: () =>
+    import("@/icons/WebRouter").then((mod) => ({ default: mod.WebRouterIcon })),
   Windsurf: () =>
     import("@/icons/Windsurf").then((mod) => ({ default: mod.WindsurfIcon })),
   Wolfram: () =>

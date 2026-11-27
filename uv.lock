@@ -9977,7 +9977,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.3.11"
+version = "1.3.12"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10051,6 +10051,7 @@ all = [
     { name = "upstash-vector" },
     { name = "vlmrun", extra = ["all"] },
     { name = "weaviate-client" },
+    { name = "webrouter" },
     { name = "wikipedia" },
     { name = "wolframalpha" },
     { name = "yfinance" },
@@ -10115,6 +10116,7 @@ all-no-torch = [
     { name = "upstash-vector" },
     { name = "vlmrun", extra = ["all"] },
     { name = "weaviate-client" },
+    { name = "webrouter" },
     { name = "wikipedia" },
     { name = "wolframalpha" },
     { name = "yfinance" },
@@ -10330,6 +10332,9 @@ vlmrun = [
 weaviate = [
     { name = "langchain-weaviate" },
     { name = "weaviate-client" },
+]
+webrouter = [
+    { name = "webrouter" },
 ]
 wikipedia = [
     { name = "langchain-community" },
@@ -10564,6 +10569,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["vlmrun"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["weaviate"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["weaviate"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["webrouter"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
+    { name = "lfx-bundles", extras = ["webrouter"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["wikipedia"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["wikipedia"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-bundles", extras = ["wolframalpha"], marker = "extra == 'all'", editable = "src/bundles/lfx-bundles" },
@@ -10613,13 +10620,14 @@ requires-dist = [
     { name = "upstash-vector", marker = "extra == 'upstash'", specifier = "==0.6.0" },
     { name = "vlmrun", extras = ["all"], marker = "extra == 'vlmrun'", specifier = ">=0.2.0" },
     { name = "weaviate-client", marker = "extra == 'weaviate'", specifier = ">=4.10.2,<5.0.0" },
+    { name = "webrouter", marker = "python_full_version >= '3.11' and extra == 'webrouter'", specifier = ">=0.16.0,<1.0.0" },
     { name = "wikipedia", marker = "extra == 'wikipedia'", specifier = "==1.4.0" },
     { name = "wolframalpha", marker = "extra == 'wolframalpha'", specifier = "==5.1.3" },
     { name = "yfinance", marker = "extra == 'yahoosearch'", specifier = "==0.2.50" },
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "olostep", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "popnow", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "socialscrape", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
+provides-extras = ["agentql", "aiml", "altk", "apify", "assemblyai", "azure", "baidu", "bing", "chroma", "cleanlab", "clickhouse", "cloudflare", "codeagents", "cometapi", "composio", "confluence", "couchbase", "cuga", "deepseek", "elastic", "faiss", "figranium", "funasr", "git", "glean", "google", "groq", "homeassistant", "huggingface", "icosacomputing", "jigsawstack", "keenable", "langwatch", "litellm", "lmstudio", "maritalk", "mem0", "milvus", "mistral", "mongodb", "mrscraper", "needle", "notdiamond", "notion", "novita", "nvidia", "olivya", "ollama", "olostep", "openrouter", "orcarouter", "perplexity", "pgvector", "pinecone", "plivo", "popnow", "qdrant", "redis", "sambanova", "scrapegraph", "searchapi", "serpapi", "socialscrape", "spider", "supabase", "tavily", "twelvelabs", "unstructured", "upstash", "vectara", "vertexai", "vlmrun", "weaviate", "webrouter", "wikipedia", "wolframalpha", "xai", "yahoosearch", "youtube", "zep", "all", "all-no-torch"]
 
 [[package]]
 name = "lfx-cohere"
@@ -13392,6 +13400,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/6a/51/63fe664f3908c97be9d2e4f1158eb633317598cfa6e1fc14af5383f17512/networkx-3.6.1.tar.gz", hash = "sha256:26b7c357accc0c8cde558ad486283728b65b6a95d85ee1cd66bafab4c8168509", size = 2517025, upload-time = "2025-12-08T17:02:39.908Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/9e/c9/b2622292ea83fbb4ec318f5b9ab867d0a28ab43c5717bb85b0a5f6b3b0a4/networkx-3.6.1-py3-none-any.whl", hash = "sha256:d47fbf302e7d9cbbb9e2555a0d267983d2aa476bac30e90dfbe5669bd57f3762", size = 2068504, upload-time = "2025-12-08T17:02:38.159Z" },
+]
+
+[[package]]
+name = "nimble-python"
+version = "1.6.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c4/91/988c3173670bb1f1682ba497f5aeecf58ebfd9072253b3ef3f126d46e77f/nimble_python-1.6.0.tar.gz", hash = "sha256:f746b55244034e2ec427ed04c8fe0a5ff8f05d78e4a0e94ffa6870493b90734f", size = 325482, upload-time = "2026-09-07T13:54:48.917Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/af/2d/e95228afc8b64bfa0a5327978a44ae9d57b16f633caef16b7f7aa49a3260/nimble_python-1.6.0-py3-none-any.whl", hash = "sha256:b0f0700232e19d45e59dd24fd748c5b0f9bd796520aa878e3a2ef2c7ef82a2d1", size = 265483, upload-time = "2026-09-07T13:54:49.907Z" },
 ]
 
 [[package]]
@@ -22265,6 +22290,22 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0b/02/ae6ceac1baeda530866a85075641cec12989bd8d31af6d5ab4a3e8c92f47/webencodings-0.5.1.tar.gz", hash = "sha256:b36a1c245f2d304965eb4e0a82848379241dc04b865afcc4aab16748587e1923", size = 9721, upload-time = "2017-04-05T20:21:34.189Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f4/24/2a3e3df732393fed8b3ebf2ec078f05546de641fe1b667ee316ec1dcf3b7/webencodings-0.5.1-py2.py3-none-any.whl", hash = "sha256:a0af1213f3c2226497a97e2b3aa01a7e4bee4f403f95be16fc9acd2947514a78", size = 11774, upload-time = "2017-04-05T20:21:32.581Z" },
+]
+
+[[package]]
+name = "webrouter"
+version = "0.16.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "nimble-python" },
+    { name = "pydantic" },
+    { name = "tavily-python" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/b5/99/36761b9dc59da714220c9932d5834d482100b3b2cab255c7f929be5f8dad/webrouter-0.16.0.tar.gz", hash = "sha256:26adcd03503a5f7459f495f84735992c2720951932d986004eeeb99d8dd747f9", size = 2590504, upload-time = "2026-11-26T10:54:16.157Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ae/a4/6f828230bad39ef6ac37ec0246fb4480611199b63f330e7dc2953af86e37/webrouter-0.16.0-py3-none-any.whl", hash = "sha256:3ee89bae0fd054501914447e42ace2d93f239295c3e1a9b01b3eeead204f311d", size = 2164450, upload-time = "2026-11-26T10:54:14.553Z" },
 ]
 
 [[package]]

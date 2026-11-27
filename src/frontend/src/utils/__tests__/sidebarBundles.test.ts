@@ -191,3 +191,11 @@ it("classifies SocialScrape as a sidebar bundle", () => {
     icon: "Share2",
   });
 });
+
+it("classifies WebRouter as a sidebar bundle", () => {
+  expect(SIDEBAR_BUNDLES).toContainEqual({
+    display_name: "WebRouter",
+    name: "webrouter",
+    icon: "WebRouter",
+  });
+});
