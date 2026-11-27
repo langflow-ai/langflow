@@ -62,12 +62,17 @@ async def test_startup_failure_does_not_mask_error_with_unbound_temp_dirs(monkey
 async def test_environment_import_failure_does_not_abort_worker_startup(monkeypatch):
     """The real worker lifespan continues past a failed environment sweep."""
     from langflow.preload import _STATE
+    from langflow.services.knowledge_base_storage import coordinator
 
     monkeypatch.setattr(_STATE, "environment_variables_initialized", False)
     sweep = AsyncMock(side_effect=RuntimeError("environment import failed"))
     variable_service = AsyncMock(initialize_all_user_variables=sweep)
     monkeypatch.setattr("langflow.services.deps.get_variable_service", lambda: variable_service)
     monkeypatch.setattr(main_module, "initialize_services", AsyncMock())
+    # Keep this startup-isolation test focused on environment import handling;
+    # the storage fence requires the database schema that mocked initialization
+    # intentionally does not create.
+    monkeypatch.setattr(coordinator, "fence_legacy_records", AsyncMock())
     reached_next_step = RuntimeError("reached next startup step")
 
     async def stop_after_services(message, *_args, **_kwargs):
