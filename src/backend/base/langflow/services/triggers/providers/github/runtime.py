@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from lfx.integrations.errors import ProviderUnavailableError, ResourceNotFoundError
-from lfx.services.deps import session_scope_readonly
+from lfx.services.deps import session_scope_autocommit
 from lfx_github.client import GitHubClient, positive_id, repository_path
 from sqlmodel import select
 
@@ -209,7 +209,7 @@ async def ingress_secrets(session: AsyncSession, trigger: Trigger) -> IngressSec
 
 
 async def _setup_in_progress(task: TriggerCleanup) -> bool:
-    async with session_scope_readonly() as session:
+    async with session_scope_autocommit() as session:
         return await leases.holder(session, name=f"trigger-source:{task.trigger_id}") is not None
 
 

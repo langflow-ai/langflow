@@ -172,6 +172,13 @@ dev = [
     # still ships without them: the tests that assert the no-otel path force the condition by
     # blocking the import rather than by relying on the extra being absent here.
     "lfx[otel]",
+    # Real-PostgreSQL driver for the session_scope_autocommit mechanics tests
+    # (tests/unit/services/test_session_scope_autocommit.py); the LFX Tests CI
+    # job pairs it with a postgres:16 service via LANGFLOW_TEST_DATABASE_URI.
+    "psycopg[binary]>=3.1,<4.0",
+    # Async SQLite driver for the same test module's SQLite-layer tests, which
+    # build real sqlite+aiosqlite engines. Same pin as langflow-base.
+    "aiosqlite>=0.20.0,<1.0.0",
     "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",

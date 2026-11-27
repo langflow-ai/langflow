@@ -61,7 +61,7 @@ from lfx.schema.workflow import (
     WorkflowExecutionResponse,
     WorkflowRunRequest,
 )
-from lfx.services.deps import get_settings_service, session_scope, session_scope_readonly
+from lfx.services.deps import get_settings_service, session_scope, session_scope_autocommit, session_scope_readonly
 from lfx.utils.flow_validation import (
     prepare_flow_build_for_user_from_cache,
     prepare_public_flow_build,
@@ -675,7 +675,7 @@ class A2ACheckpointStore(CheckpointStore):
                 row.checkpoint = blob  # fresh dict reference flags the JSON column dirty
 
     async def load_by_run_id(self, run_id: str) -> GraphCheckpoint | None:
-        async with session_scope_readonly() as session:  # pure read, no commit
+        async with session_scope_autocommit() as session:  # pure read, no commit
             row = await session.get(A2ACheckpoint, run_id)
             blob = row.checkpoint if row is not None else None
         return GraphCheckpoint.model_validate(blob) if blob is not None else None

@@ -183,6 +183,19 @@ async def session_scope() -> AsyncGenerator[AsyncSession, None]:
         yield session
 
 
+@asynccontextmanager
+async def session_scope_autocommit() -> AsyncGenerator[AsyncSession, None]:
+    """Context manager for audited single-statement read scopes without a transaction.
+
+    Delegates to lfx.services.deps.session_scope_autocommit; see its docstring for
+    the supported contract and limitations.
+    """
+    from lfx.services.deps import session_scope_autocommit as lfx_session_scope_autocommit
+
+    async with lfx_session_scope_autocommit() as session:
+        yield session
+
+
 def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: UP007
     """Retrieves the cache service from the service manager.
 

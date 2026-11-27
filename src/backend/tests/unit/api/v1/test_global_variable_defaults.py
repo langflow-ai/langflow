@@ -322,7 +322,7 @@ class TestApplyGlobalVariableDefaultsAsync:
         mock_service.get_default_field_bindings = AsyncMock(return_value=[("OPENAI_API_KEY", ["OpenAI API Key"])])
         mock_service.get_all = AsyncMock(side_effect=AssertionError("variable values must not be materialized"))
 
-        # session_scope is an async context manager -- give it the minimum protocol.
+        # session_scope_autocommit is an async context manager -- give it the minimum protocol.
         mock_session_cm = MagicMock()
         mock_session_cm.__aenter__ = AsyncMock(return_value=MagicMock())
         mock_session_cm.__aexit__ = AsyncMock(return_value=None)
@@ -333,7 +333,7 @@ class TestApplyGlobalVariableDefaultsAsync:
                 return_value=mock_service,
             ),
             patch(
-                "langflow.api.v1.global_variable_defaults.session_scope",
+                "langflow.api.v1.global_variable_defaults.session_scope_autocommit",
                 return_value=mock_session_cm,
             ),
         ):

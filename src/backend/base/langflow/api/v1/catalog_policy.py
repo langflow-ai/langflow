@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from lfx.services.catalog_policy import BaseCatalogPolicyService, CatalogPolicySnapshot
-from lfx.services.deps import session_scope_readonly
+from lfx.services.deps import session_scope_autocommit
 from lfx.utils.component_aliases import build_component_identity_index
 from lfx.utils.flow_validation import collect_catalog_component_keys
 from sqlmodel import col, select
@@ -191,7 +191,7 @@ async def _load_flow_component_usage() -> tuple[list[_FlowUsage], int]:
     flow's full ``data`` payload, so it is reserved for the superuser
     governance endpoints below rather than any per-request path.
     """
-    async with session_scope_readonly() as session:
+    async with session_scope_autocommit() as session:
         rows = (
             await session.exec(
                 select(Flow.id, Flow.name, Flow.data).where(
