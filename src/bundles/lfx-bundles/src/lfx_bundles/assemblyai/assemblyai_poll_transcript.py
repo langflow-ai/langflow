@@ -45,7 +45,7 @@ class AssemblyAITranscriptionJobPoller(Component):
         aai.settings.polling_interval = self.polling_interval
 
         # check if it's an error message from the previous step
-        if self.transcript_id.data.get("error"):
+        if self.transcript_id and self.transcript_id.data.get("error"):
             self.status = self.transcript_id.data["error"]
             return self.transcript_id
 
@@ -67,5 +67,6 @@ class AssemblyAITranscriptionJobPoller(Component):
             data = Data(data=sorted_data)
             self.status = data
             return data
-        self.status = transcript.error
-        return Data(data={"error": transcript.error})
+        error = transcript.error or f"Transcription ended with status: {transcript.status}"
+        self.status = error
+        return Data(data={"error": error})
