@@ -3,7 +3,9 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import { migrationKeys } from "@/controllers/API/queries/migration";
+import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import type { Users } from "@/types/api";
 import { axe } from "@/utils/a11y-test";
 import { ChangesPausedNotice } from "..";
 
@@ -11,6 +13,7 @@ jest.mock("@/controllers/API/api", () => ({ api: { get: jest.fn() } }));
 
 const clients: QueryClient[] = [];
 afterEach(() => {
+  useAuthStore.setState({ userData: null });
   clients.forEach((client) => client.clear());
   clients.length = 0;
   jest.clearAllMocks();
@@ -65,6 +68,35 @@ function showWith(
 }
 
 describe("ChangesPausedNotice", () => {
+  it.each([
+    [true, "/flows", true],
+    [false, "/flows", false],
+    [true, "/settings/upgrade-reports", false],
+  ])(
+    "links an admin (%s) on %s to maintenance controls: %s",
+    (admin, page, linked) => {
+      useAuthStore.setState({ userData: { is_superuser: admin } as Users });
+      showWith(true, true, page, true, false);
+
+      const link = screen.queryByRole("link", { name: "Manage maintenance" });
+      if (linked)
+        expect(link).toHaveAttribute(
+          "href",
+          "/settings/upgrade-reports#upgrade-maintenance",
+        );
+      else expect(link).not.toBeInTheDocument();
+    },
+  );
+
+  it("does not offer maintenance controls during a migration pause", () => {
+    useAuthStore.setState({ userData: { is_superuser: true } as Users });
+    showWith(true);
+
+    expect(
+      screen.queryByRole("link", { name: "Manage maintenance" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("tells every signed-in user, on every page, that changes are paused", () => {
     showWith(true);
 

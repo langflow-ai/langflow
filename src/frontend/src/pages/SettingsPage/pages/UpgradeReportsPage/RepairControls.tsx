@@ -11,9 +11,8 @@ import {
   useUpgradeMaintenance,
 } from "@/controllers/API/queries/upgrade-reports";
 import { CustomLink } from "@/customization/components/custom-link";
-import { DOCS_LINK } from "@/customization/config-constants";
 import { reportTime } from "./format";
-import MaintenanceControls from "./MaintenanceControls";
+import { scrollToMaintenance, verifiedStatus } from "./MaintenanceControls";
 import { repairReasonKey, repairRequestErrorKey } from "./reasons";
 
 export default function RepairControls({
@@ -50,20 +49,9 @@ export default function RepairControls({
       (item): item is RepairResult & { data_sha256: string } =>
         item.status === "ready" && typeof item.data_sha256 === "string",
     ) ?? [];
-  const runningJobs = maintenance.data?.running_jobs;
-  const statusKnown = Boolean(
-    !maintenance.isError &&
-      typeof maintenance.data?.maintenance === "boolean" &&
-      typeof maintenance.data?.migration === "boolean" &&
-      typeof runningJobs === "number" &&
-      Number.isSafeInteger(runningJobs) &&
-      runningJobs >= 0,
-  );
+  const status = verifiedStatus(maintenance);
   const canApply = Boolean(
-    statusKnown &&
-      maintenance.data?.maintenance === true &&
-      maintenance.data?.migration === false &&
-      runningJobs === 0,
+    status?.maintenance && !status.migration && status.running_jobs === 0,
   );
   const busy = preview.isPending || apply.isPending;
   const flowName = (flowId: string) =>
@@ -117,30 +105,6 @@ export default function RepairControls({
         {t("settings.upgrade.repairTitle")}
       </h3>
       <p>{t("settings.upgrade.repairExplanation")}</p>
-      <details>
-        <summary className="cursor-pointer">
-          {t("settings.upgrade.maintenanceSetup")}
-        </summary>
-        <div className="mt-2 space-y-2 text-sm">
-          <p>{t("settings.upgrade.maintenanceHelp")}</p>
-          <pre className="whitespace-pre-wrap break-all rounded bg-muted p-3">
-            <code>
-              {
-                'langflow maintenance on --reason "Flow upgrade"\nlangflow maintenance status'
-              }
-            </code>
-          </pre>
-          <p>{t("settings.upgrade.maintenanceDrainHelp")}</p>
-          <a
-            href={`${DOCS_LINK}/maintenance-mode`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-primary underline"
-          >
-            {t("settings.upgrade.maintenanceGuide")}
-          </a>
-        </div>
-      </details>
       <p>{t("settings.upgrade.selected", { count: selected.size })}</p>
       <Button
         variant="outline"
@@ -164,25 +128,29 @@ export default function RepairControls({
       >
         {t("settings.upgrade.preview")}
       </Button>
-      {statusKnown &&
-        !maintenance.data?.maintenance &&
-        !maintenance.data?.migration &&
-        !apply.isError && (
-          <p role="note">{t("settings.upgrade.freezeRequired")}</p>
-        )}
-      {statusKnown &&
-        maintenance.data?.migration &&
-        !preview.isError &&
-        !apply.isError && (
-          <p role="note">{t("settings.upgrade.migrationPause")}</p>
-        )}
-      {statusKnown && runningJobs !== undefined && runningJobs > 0 && (
+      {status && !status.maintenance && !status.migration && !apply.isError && (
+        <p role="note">{t("settings.upgrade.freezeRequired")}</p>
+      )}
+      {status?.migration && !preview.isError && !apply.isError && (
+        <p role="note">{t("settings.upgrade.migrationPause")}</p>
+      )}
+      {status && status.running_jobs > 0 && (
         <p role="status">
-          {t("settings.upgrade.runningJobs", { count: runningJobs })}
+          {t("settings.upgrade.runningJobs", { count: status.running_jobs })}
         </p>
       )}
-      {(maintenance.isError || (!maintenance.isPending && !statusKnown)) && (
+      {!maintenance.isPending && !status && (
         <p role="alert">{t("settings.upgrade.freezeUnknown")}</p>
+      )}
+      {!maintenance.isPending && !canApply && (
+        <Button
+          variant="link"
+          className="h-auto p-0"
+          onClick={scrollToMaintenance}
+          ignoreTitleCase
+        >
+          {t("settings.upgrade.maintenance.manage")}
+        </Button>
       )}
       {(preview.isError || apply.isError) && (
         <p role="alert">
@@ -192,9 +160,6 @@ export default function RepairControls({
         </p>
       )}
       {busy && <p role="status">{t("settings.upgrade.repairBusy")}</p>}
-      {statusKnown && maintenance.data && (
-        <MaintenanceControls status={maintenance.data} busy={busy} />
-      )}
       {result && (
         <>
           <p role="status">

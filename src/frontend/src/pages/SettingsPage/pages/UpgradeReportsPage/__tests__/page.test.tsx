@@ -13,7 +13,10 @@ import FlowList from "../FlowList";
 import { reportReason } from "../format";
 import { history, preview, report } from "./fixture";
 
-function open(admin: boolean | null = true) {
+function open(
+  admin: boolean | null = true,
+  entry = "/settings/upgrade-reports",
+) {
   useAuthStore.setState({
     userData: admin === null ? null : ({ is_superuser: admin } as Users),
   });
@@ -25,7 +28,7 @@ function open(admin: boolean | null = true) {
   });
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/settings/upgrade-reports"]}>
+      <MemoryRouter initialEntries={[entry]}>
         <Routes>
           <Route
             path="/settings/upgrade-reports"
@@ -563,7 +566,9 @@ it.each([undefined, null, -1, Number.NaN, "0"])(
 
     expect(apply).toBeDisabled();
     expect(
-      await screen.findByText(/Maintenance status could not be verified/),
+      await screen.findByText(
+        "Maintenance status could not be verified. Updates are disabled.",
+      ),
     ).toBeVisible();
   },
 );
@@ -645,10 +650,35 @@ it.each([
   },
 );
 
+const maintenanceSection = () =>
+  within(screen.getByRole("region", { name: "Database maintenance" }));
+
+it("lets an admin manage maintenance before any report exists", async () => {
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : { items: [], total: 0 },
+  }));
+  open();
+  expect(
+    await screen.findByRole("button", { name: "Enable maintenance" }),
+  ).toBeEnabled();
+  const section = maintenanceSection();
+  expect(section.getByText("Maintenance off")).toBeVisible();
+  expect(
+    section.getByText(/Changes and flow runs are not restricted/),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "Customer support" }),
+  ).not.toBeInTheDocument();
+});
+
 it("explains maintenance against the live database and links its instructions", async () => {
   open();
   await screen.findByRole("heading", { name: "Customer support" });
-  await userEvent.click(screen.getByText("How to enable maintenance"));
+  await userEvent.click(
+    screen.getByText("Manage maintenance from the terminal"),
+  );
 
   expect(screen.getByText(/this installation’s live database/)).toBeVisible();
   expect(screen.getByText(/langflow maintenance on --reason/)).toBeVisible();
@@ -682,10 +712,13 @@ it("changes maintenance only after confirmation and refreshes the shared status"
   });
   open();
   const start = await screen.findByRole("button", {
-    name: "Turn maintenance on",
+    name: "Enable maintenance",
   });
   await userEvent.click(start);
   let dialog = screen.getByRole("dialog");
+  expect(
+    within(dialog).getByText("Enable database maintenance?"),
+  ).toBeVisible();
   await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
   expect(post).not.toHaveBeenCalled();
   await userEvent.click(start);
@@ -695,32 +728,50 @@ it("changes maintenance only after confirmation and refreshes the shared status"
     "Repair review",
   );
   await userEvent.click(
-    within(dialog).getByRole("button", { name: "Turn maintenance on" }),
+    within(dialog).getByRole("button", { name: "Enable maintenance" }),
   );
   expect(post).toHaveBeenCalledWith(expect.stringMatching(/maintenance\/on$/), {
     reason: "Repair review",
   });
-  expect(await screen.findByText("Repair review")).toBeVisible();
+  const section = maintenanceSection();
+  expect(await section.findByText("Repair review")).toBeVisible();
+  expect(section.getByText("Maintenance on")).toBeVisible();
+  expect(section.getByText("Maintenance requirements met")).toBeVisible();
   await userEvent.click(
-    await screen.findByRole("button", { name: "Turn maintenance off" }),
+    await screen.findByRole("button", { name: "Disable maintenance" }),
   );
   await userEvent.click(
     within(screen.getByRole("dialog")).getByRole("button", {
-      name: "Turn maintenance off",
+      name: "Disable maintenance",
     }),
   );
-  expect(await screen.findByText("Maintenance is off.")).toBeVisible();
+  expect(await section.findByText("Maintenance off")).toBeVisible();
+});
+
+it("shows running jobs in the maintenance section", async () => {
+  const { client } = open();
+  await screen.findByRole("button", { name: "Enable maintenance" });
+  act(() =>
+    client.setQueryData(migrationKeys.pause, {
+      maintenance: true,
+      migration: false,
+      running_jobs: 3,
+    }),
+  );
+  const section = maintenanceSection();
+  expect(await section.findByText("Jobs are still running")).toBeVisible();
+  expect(section.getByText("3")).toBeVisible();
 });
 
 it.each([false, true])(
   "blocks maintenance changes during a migration pause (maintenance %s)",
   async (maintenance) => {
     const { client } = open();
-    await screen.findByRole("button", { name: "Turn maintenance on" });
+    await screen.findByRole("button", { name: "Enable maintenance" });
     const status = { maintenance, migration: false, running_jobs: 0 };
     act(() => client.setQueryData(migrationKeys.pause, status));
     const toggle = await screen.findByRole("button", {
-      name: maintenance ? "Turn maintenance off" : "Turn maintenance on",
+      name: maintenance ? "Disable maintenance" : "Enable maintenance",
     });
     await userEvent.click(toggle);
     expect(screen.getByRole("dialog")).toBeVisible();
@@ -731,27 +782,141 @@ it.each([false, true])(
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
     expect(toggle).toBeDisabled();
-    expect(screen.getByText(/before changing maintenance mode/)).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Database maintenance" }),
+    ).toHaveFocus();
+    expect(
+      maintenanceSection().getByText(/before changing maintenance mode/),
+    ).toBeVisible();
     expect(api.post).not.toHaveBeenCalled();
   },
 );
 
-it("shows a failed maintenance change and leaves the admin able to retry", async () => {
-  jest.spyOn(api, "post").mockRejectedValue(new Error("offline"));
+it("shows a failed maintenance change on the page and lets the admin retry", async () => {
+  const post = jest.spyOn(api, "post").mockRejectedValue(new Error("offline"));
   open();
   await userEvent.click(
-    await screen.findByRole("button", { name: "Turn maintenance on" }),
+    await screen.findByRole("button", { name: "Enable maintenance" }),
   );
-  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.type(
+    within(screen.getByRole("dialog")).getByLabelText("Reason (optional)"),
+    "Repair review",
+  );
   await userEvent.click(
-    dialog.getByRole("button", { name: "Turn maintenance on" }),
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Enable maintenance",
+    }),
   );
-  expect(await dialog.findByRole("alert")).toHaveTextContent(
-    "Could not change maintenance mode",
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  const section = maintenanceSection();
+  expect(section.getByRole("alert")).toHaveTextContent(
+    "Could not enable database maintenance",
+  );
+  expect(section.getByText(/still off/)).toBeVisible();
+  const retry = section.getByRole("button", {
+    name: "Retry enabling maintenance",
+  });
+  expect(retry).toHaveFocus();
+  await userEvent.click(retry);
+  const dialog = within(screen.getByRole("dialog"));
+  expect(dialog.getByLabelText("Reason (optional)")).toHaveValue(
+    "Repair review",
+  );
+  await userEvent.click(
+    dialog.getByRole("button", { name: "Enable maintenance" }),
+  );
+  expect(post).toHaveBeenCalledTimes(2);
+});
+
+it("drops a failed change once the server reports the requested status", async () => {
+  jest.spyOn(api, "post").mockRejectedValue(new Error("timeout"));
+  const { client } = open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Enable maintenance" }),
+  );
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Enable maintenance",
+    }),
   );
   expect(
-    dialog.getByRole("button", { name: "Turn maintenance on" }),
+    await maintenanceSection().findByText(
+      "Could not enable database maintenance",
+    ),
+  ).toBeVisible();
+  act(() =>
+    client.setQueryData(migrationKeys.pause, {
+      maintenance: true,
+      migration: false,
+      running_jobs: 0,
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      maintenanceSection().queryByText("Could not enable database maintenance"),
+    ).not.toBeInTheDocument(),
+  );
+  expect(
+    screen.getByRole("button", { name: "Disable maintenance" }),
   ).toBeEnabled();
+});
+
+it("lets the admin retry an unverified maintenance status", async () => {
+  let reachable = false;
+  const get = jest.spyOn(api, "get").mockImplementation(async (url) => {
+    if (url.endsWith("/maintenance/status")) {
+      if (!reachable) throw new Error("offline");
+      return {
+        data: { maintenance: false, migration: false, running_jobs: 0 },
+      };
+    }
+    return { data: { items: [], total: 0 } };
+  });
+  open();
+  const section = maintenanceSection();
+  const retry = await section.findByRole("button", {
+    name: "Retry status check",
+  });
+  expect(section.getByText("Status unknown")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Enable maintenance" }),
+  ).not.toBeInTheDocument();
+  reachable = true;
+  await userEvent.click(retry);
+  expect(
+    await screen.findByRole("button", { name: "Enable maintenance" }),
+  ).toBeEnabled();
+  expect(
+    get.mock.calls.filter(([url]) =>
+      String(url).endsWith("/maintenance/status"),
+    ).length,
+  ).toBeGreaterThan(1);
+});
+
+it("opens on the maintenance section when the link asks for it", async () => {
+  Element.prototype.scrollIntoView ??= jest.fn();
+  const scroll = jest
+    .spyOn(Element.prototype, "scrollIntoView")
+    .mockImplementation(() => {});
+  open(true, "/settings/upgrade-reports#upgrade-maintenance");
+  const heading = await screen.findByRole("heading", {
+    name: "Database maintenance",
+  });
+  expect(heading).toHaveFocus();
+  expect(scroll).toHaveBeenCalled();
+});
+
+it("links the update section back to maintenance", async () => {
+  open();
+  await screen.findByRole("heading", { name: "Customer support" });
+  const heading = screen.getByRole("heading", { name: "Database maintenance" });
+  heading.scrollIntoView = jest.fn();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Manage maintenance" }),
+  );
+  expect(heading).toHaveFocus();
 });
 
 it.each([

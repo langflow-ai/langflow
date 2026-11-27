@@ -3,9 +3,10 @@ title: Maintenance mode
 slug: /maintenance-mode
 ---
 
-In **Settings > Upgrade reports**, open a report and go to **Update selected flows**.
-Choose **Turn maintenance on**, optionally enter a reason, and confirm.
-Wait for running jobs to finish before applying reviewed updates. Verify the updated flows, then choose **Turn maintenance off** and confirm to resume queued work.
+In **Settings > Upgrade reports**, go to **Database maintenance** at the top of the page. You don't need a report to change it.
+Choose **Enable maintenance**, optionally enter a reason, and confirm. The section shows the reason, when maintenance started, and how many jobs are still running.
+Wait for running jobs to finish before applying reviewed updates. Verify the updated flows, then choose **Disable maintenance** and confirm to resume queued work.
+While maintenance is on, administrators can open this section from the **Manage maintenance** link in the maintenance notice.
 You can also manage maintenance from a terminal.
 
 ```bash
