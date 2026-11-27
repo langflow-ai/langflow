@@ -584,6 +584,38 @@ def test_launch_workers_sync_workers_uses_sync_worker(monkeypatch):
     assert captured["options"]["worker_class"] == "sync"
 
 
+# The sync worker serves through the WSGI bridge, which builds its own event loop, so no
+# uvicorn config is involved and LFX_EVENT_LOOP cannot apply. Warn rather than look honored.
+_IGNORED_LOOP_WARNING = "serves through the WSGI bridge"
+
+
+def test_launch_workers_sync_workers_warns_that_event_loop_is_ignored(monkeypatch, capsys):
+    """--use-sync-workers says so instead of silently ignoring LFX_EVENT_LOOP."""
+    from lfx.cli.serve_loop import EVENT_LOOP_ENV
+
+    monkeypatch.setenv(EVENT_LOOP_ENV, "zuvloop")
+    _capture_gunicorn_launch(monkeypatch, sync_workers=True)
+    assert _IGNORED_LOOP_WARNING in capsys.readouterr().err
+
+
+def test_launch_workers_async_worker_does_not_warn_about_event_loop(monkeypatch, capsys):
+    """The async worker does carry the selection, so there is nothing to warn about."""
+    from lfx.cli.serve_loop import EVENT_LOOP_ENV
+
+    monkeypatch.setenv(EVENT_LOOP_ENV, "zuvloop")
+    _capture_gunicorn_launch(monkeypatch)
+    assert _IGNORED_LOOP_WARNING not in capsys.readouterr().err
+
+
+def test_launch_workers_sync_workers_quiet_without_the_env(monkeypatch, capsys):
+    """No warning when the knob was never set."""
+    from lfx.cli.serve_loop import EVENT_LOOP_ENV
+
+    monkeypatch.delenv(EVENT_LOOP_ENV, raising=False)
+    _capture_gunicorn_launch(monkeypatch, sync_workers=True)
+    assert _IGNORED_LOOP_WARNING not in capsys.readouterr().err
+
+
 def test_launch_workers_sync_workers_without_a2wsgi_errors(monkeypatch, capsys):
     """--use-sync-workers fails fast in the parent when a2wsgi is not installed."""
     import typer
