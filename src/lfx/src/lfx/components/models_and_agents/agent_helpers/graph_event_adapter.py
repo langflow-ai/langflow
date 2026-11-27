@@ -26,10 +26,13 @@ from langchain_core.messages import AIMessage, HumanMessage
 async def adapt_graph_events_to_executor_shape(
     stream: AsyncIterator[dict[str, Any]],
 ) -> AsyncIterator[dict[str, Any]]:
-    """Re-shape outermost graph events; pass everything else through unchanged."""
+    """Re-shape outermost graph events and drop compaction events; pass everything else through unchanged."""
     outer_run_id: str | None = None
     last_model_output: AIMessage | None = None
     async for event in stream:
+        if (event.get("metadata") or {}).get("lc_source") == "summarization":
+            # The in-run compaction call: its summary is not part of the answer.
+            continue
         if outer_run_id is None and event.get("event") == "on_chain_start":
             outer_run_id = event.get("run_id")
         if event.get("event") == "on_chat_model_end":

@@ -11,6 +11,7 @@ from __future__ import annotations
 import memstore
 import pr16515_compressor as pr
 from lfx.base.memory import session_memory as sm
+from lfx.components.models_and_agents.agent_helpers.in_run_compaction_middleware import InRunCompactionMiddleware
 from lfx.components.models_and_agents.agent_helpers.tool_result_cap_middleware import ToolResultCapMiddleware
 from run_eval import MODEL, FoldRun, Policy, Prepared
 
@@ -61,8 +62,11 @@ class Auto(Policy):
             )
         return Prepared(loaded.history, fold)
 
-    def middleware(self, llm) -> list:  # noqa: ARG002
-        return [ToolResultCapMiddleware()]
+    def middleware(self, llm) -> list:
+        """The Auto middleware of the Agent: the tool result cap, and compaction when the window is known."""
+        window = sm.model_window(llm)
+        compaction = [InRunCompactionMiddleware(self.llm, window)] if window else []
+        return [ToolResultCapMiddleware(), *compaction]
 
     def describe_state(self, store) -> dict:
         state = store.state

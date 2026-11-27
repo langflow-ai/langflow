@@ -18,6 +18,7 @@ from langgraph.types import Command
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
     adapt_graph_events_to_executor_shape,
 )
+from lfx.components.models_and_agents.agent_helpers.in_run_compaction_middleware import InRunCompactionMiddleware
 from lfx.components.models_and_agents.agent_helpers.messages_input_builder import (
     build_initial_messages,
 )
@@ -721,6 +722,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if is_watsonx_model(llm):
             middleware.append(SingleToolCallMiddleware())
             middleware.append(WatsonXPlaceholderMiddleware())
+        # Auto mode compacts a run that reaches 80% of the model window. Off when the window is unknown.
+        window = self._model_window(llm) if self._auto_mode() else None
+        if window:
+            middleware.append(InRunCompactionMiddleware(self._get_llm(stream=False), window))
         # Human-in-the-loop: attach only when a tool is gated AND interrupts are allowed
         # (the structured-output path disables them), keeping ungated flows unchanged.
         interrupt_on = self._gated_interrupt_on() if allow_interrupts else {}
@@ -1119,7 +1124,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             "context_id": self.context_id,
         }
         loaded = await load_auto_history(
-            scope=scope, current_input_id=input_id, budget=budget_for_window(model_window(llm))
+            scope=scope, current_input_id=input_id, budget=budget_for_window(self._model_window(llm))
         )
         if loaded is None:
             return await self.get_memory_data()
@@ -1180,6 +1185,14 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 output_tokens=((own.output_tokens or 0) if own else 0) + (fold_usage.output_tokens or 0),
                 total_tokens=((own.total_tokens or 0) if own else 0) + (fold_usage.total_tokens or 0),
             )
+
+    def _model_window(self, llm: Any) -> int | None:
+        """The model input window: the LangChain model profile first, then the catalog metadata of the model."""
+        window = model_window(llm)
+        if window is None and isinstance(self.model, list) and self.model and isinstance(self.model[0], dict):
+            value = (self.model[0].get("metadata") or {}).get("context_window")
+            window = value if isinstance(value, int) and value > 0 else None
+        return window
 
     def _pinned_keys(self) -> list[str]:
         raw = getattr(self, "pinned_keys", "") or ""

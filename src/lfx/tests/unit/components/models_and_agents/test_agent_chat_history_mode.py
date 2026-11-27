@@ -7,9 +7,14 @@ import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
+from langchain.agents import create_agent
+from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
+from langchain_core.messages import AIMessage
+from langchain_core.tools import tool
 from lfx.base.memory.session_memory import AutoHistory, Budget
 from lfx.components.models_and_agents import agent as agent_module
 from lfx.components.models_and_agents.agent import CHAT_HISTORY_AUTO, CHAT_HISTORY_LAST_N, AgentComponent
+from lfx.components.models_and_agents.agent_helpers.in_run_compaction_middleware import InRunCompactionMiddleware
 from lfx.components.models_and_agents.agent_helpers.tool_result_cap_middleware import ToolResultCapMiddleware
 from lfx.memory.session_state import SessionMemoryState
 from lfx.schema.message import Message
@@ -118,3 +123,57 @@ def test_tool_result_cap_is_added_only_in_auto_mode():
         component.tools = [MagicMock(name="tool")]
         middleware = component._build_middleware(MagicMock())
         assert any(isinstance(m, ToolResultCapMiddleware) for m in middleware) is expected
+
+
+class FakeChatWatsonx(FakeMessagesListChatModel):
+    """Named like ChatWatsonx, so `is_watsonx_model` adds the two WatsonX middleware."""
+
+    def bind_tools(self, _tools, **_kwargs):  # type: ignore[override]
+        return self
+
+
+@tool
+def lookup(query: str) -> str:
+    """Look something up."""
+    return f"result for {query}"
+
+
+def test_compaction_is_added_only_in_auto_mode_with_a_known_window():
+    for mode, window, expected in (
+        (CHAT_HISTORY_LAST_N, 128_000, False),
+        (CHAT_HISTORY_AUTO, None, False),
+        (CHAT_HISTORY_AUTO, 128_000, True),
+    ):
+        component = _component(mode)
+        component._get_llm = lambda **_kwargs: FakeMessagesListChatModel(responses=[])
+        middleware = component._build_middleware(_llm(window))
+        assert any(isinstance(m, InRunCompactionMiddleware) for m in middleware) is expected
+
+
+def test_window_falls_back_to_the_catalog_metadata_of_the_selected_model():
+    component = _component(CHAT_HISTORY_AUTO)
+    component.model = [{"name": "granite", "provider": "IBM watsonx.ai", "metadata": {"context_window": 131_072}}]
+    assert component._model_window(_llm(None)) == 131_072
+
+
+async def test_watsonx_middleware_run_together_with_compaction():
+    component = _component(CHAT_HISTORY_AUTO)
+    component.tools = [lookup]
+    component._get_llm = lambda **_kwargs: FakeMessagesListChatModel(responses=[AIMessage(content="summary")])
+    model = FakeChatWatsonx(
+        responses=[
+            AIMessage(
+                content="", tool_calls=[{"id": "c1", "name": "lookup", "args": {"query": "q"}, "type": "tool_call"}]
+            ),
+            AIMessage(content="answer"),
+        ]
+    )
+    model.profile = {"max_input_tokens": 128_000}
+    middleware = component._build_middleware(model)
+    names = [type(m).__name__ for m in middleware]
+    assert names.index("WatsonXPlaceholderMiddleware") < names.index("InRunCompactionMiddleware")
+
+    state = await create_agent(model=model, tools=[lookup], middleware=middleware).ainvoke(
+        {"messages": [("user", "go")]}
+    )
+    assert state["messages"][-1].content == "answer"
