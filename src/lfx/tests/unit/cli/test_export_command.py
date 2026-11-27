@@ -721,3 +721,31 @@ class TestExportCommandRemoteProject:
                 indent=2,
             )
         client.get_project.assert_called_once()
+
+
+def test_in_place_write_failure_leaves_the_source_flow_intact(tmp_path, monkeypatch):
+    """A failed publish must not destroy the flow being exported.
+
+    ``--in-place`` overwrites the source file, which may be the only copy of
+    the flow.  Publishing through a sibling file that is swapped in with
+    ``Path.replace`` keeps the original until the swap succeeds.
+    """
+    from pathlib import Path as _Path
+
+    from lfx.cli.export import _write_flow
+
+    source = tmp_path / "flow.json"
+    source.write_text('{"original": true}', encoding="utf-8")
+
+    def boom(_self, _target):
+        raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(_Path, "replace", boom)
+
+    sdk = MagicMock()
+    sdk.flow_to_json.return_value = '{"changed": true}'
+
+    with pytest.raises(OSError, match="No space left on device"):
+        _write_flow({}, sdk=sdk, output=None, in_place=True, source_path=source, indent=2)
+
+    assert source.read_text(encoding="utf-8") == '{"original": true}'
