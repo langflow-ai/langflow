@@ -136,9 +136,14 @@ class _TrackedRegistryDict(dict[str, Any]):
             items.extend(kwargs.items())
         if not items:
             return
-        for key, value in items:
-            super().__setitem__(key, _wrap_registry_value(value, self.registry_version, self.registry_depth + 1))
-        self.registry_version.bump()
+        mutated = False
+        try:
+            for key, value in items:
+                super().__setitem__(key, _wrap_registry_value(value, self.registry_version, self.registry_depth + 1))
+                mutated = True
+        finally:
+            if mutated:
+                self.registry_version.bump()
 
     def setdefault(self, key: Any, default: Any = None) -> Any:
         if key in self:
@@ -2079,13 +2084,22 @@ async def ensure_component_loaded(component_type: str, component_name: str, sett
         )
 
         if full_component:
+            hydrated = False
             with component_cache.state_lock:
-                registry[component_type][component_name] = full_component
-                registry[component_type][component_name].pop("lazy_loaded", None)
-                component_cache.upgrade_registry = None
-                component_cache.canonical_file_fields_index = None
-                component_cache.fully_loaded_components[component_key] = True
-            await logger.adebug(f"Component {component_type}:{component_name} fully loaded")
+                current_registry = component_cache.all_types_dict
+                if (
+                    current_registry
+                    and component_type in current_registry
+                    and component_name in current_registry[component_type]
+                ):
+                    current_registry[component_type][component_name] = full_component
+                    current_registry[component_type][component_name].pop("lazy_loaded", None)
+                    component_cache.upgrade_registry = None
+                    component_cache.canonical_file_fields_index = None
+                    component_cache.fully_loaded_components[component_key] = True
+                    hydrated = True
+            if hydrated:
+                await logger.adebug(f"Component {component_type}:{component_name} fully loaded")
         else:
             await logger.awarning(f"Failed to fully load component {component_type}:{component_name}")
 

@@ -314,3 +314,82 @@ def test_build_index_reused_across_handlers_without_rescanning(isolated_componen
     assert build_calls == 1
     assert get_canonical_file_fields_for_source("nonexistent", isolated_component_cache.all_types_dict) == {}
     assert build_calls == 1
+
+
+def test_partial_update_failure_advances_version_and_invalidates_index(isolated_component_cache):
+    src = "class PartialUpdate:\n    pass\n"
+    tracked = isolated_component_cache.publish_all_types_dict(
+        {
+            "files": {
+                "PartialUpdate": {
+                    "template": {
+                        "code": {"value": src},
+                        "doc": {"type": "file", "list": False, "required": True},
+                    }
+                }
+            }
+        }
+    )
+
+    assert _make_handler(src)._canonical_file_fields()["doc"]["list"] is False
+    field = tracked["files"]["PartialUpdate"]["template"]["doc"]
+    version_before_noop = tracked.registry_version.value
+
+    # Failing before any write leaves the version unchanged.
+    with pytest.raises(ValueError, match="not enough values to unpack"):
+        field.update([("broken",)])
+    assert tracked.registry_version.value == version_before_noop
+
+    # Failing after a partial write must still bump the version so the next handler sees list=True.
+    with pytest.raises(ValueError, match="not enough values to unpack"):
+        field.update([("list", True), ("broken",)])
+    assert tracked.registry_version.value > version_before_noop
+    assert _make_handler(src)._canonical_file_fields()["doc"]["list"] is True
+
+
+@pytest.mark.asyncio
+async def test_ensure_component_loaded_hydrates_republished_registry_after_bundle_reload(
+    isolated_component_cache,
+    monkeypatch,
+):
+    from types import SimpleNamespace
+
+    src = "class LazyUploader:\n    pass\n"
+    isolated_component_cache.publish_all_types_dict(
+        {
+            "files": {
+                "LazyUploader": {
+                    "lazy_loaded": True,
+                    "template": {
+                        "code": {"value": src},
+                    },
+                }
+            }
+        }
+    )
+    isolated_component_cache.fully_loaded_components.clear()
+    # Warm index while component is still a lazy stub without FileInput metadata.
+    assert _make_handler(src)._canonical_file_fields() == {}
+
+    async def fake_load_single_component(component_type, component_name, _paths):
+        assert (component_type, component_name) == ("files", "LazyUploader")
+        # Simulate a concurrent bundle reload publishing a fresh tracked registry during the await.
+        assert _publish_bundle_cache("other_bundle", {})
+        return {
+            "template": {
+                "code": {"value": src},
+                "upload": {"type": "file", "_input_type": "FileInput", "list": True, "required": True},
+            }
+        }
+
+    monkeypatch.setattr(components_module, "load_single_component", fake_load_single_component)
+    settings_service = SimpleNamespace(settings=SimpleNamespace(components_path=[]))
+
+    await components_module.ensure_component_loaded("files", "LazyUploader", settings_service)
+
+    assert "files:LazyUploader" in isolated_component_cache.fully_loaded_components
+    assert isolated_component_cache.all_types_dict is not None
+    assert "lazy_loaded" not in isolated_component_cache.all_types_dict["files"]["LazyUploader"]
+    hydrated_fields = _make_handler(src)._canonical_file_fields()
+    assert set(hydrated_fields) == {"upload"}
+    assert hydrated_fields["upload"]["list"] is True
