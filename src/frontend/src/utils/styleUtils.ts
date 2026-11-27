@@ -449,6 +449,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "Cassandra", name: "cassandra", icon: "Cassandra" },
   { display_name: "Chroma", name: "chroma", icon: "Chroma" },
   { display_name: "ClickHouse", name: "clickhouse", icon: "Clickhouse" },
+  { display_name: "CleanedWeb", name: "cleanedweb", icon: "Globe" },
   { display_name: "Cleanlab", name: "cleanlab", icon: "Cleanlab" },
   { display_name: "Cloudflare", name: "cloudflare", icon: "Cloudflare" },
   { display_name: "Cohere", name: "cohere", icon: "Cohere" },

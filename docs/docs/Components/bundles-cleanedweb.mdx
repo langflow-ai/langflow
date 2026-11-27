@@ -1,0 +1,57 @@
+---
+title: CleanedWeb
+slug: /bundles-cleanedweb
+---
+
+import Icon from "@site/src/components/icon";
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **CleanedWeb** bundle.
+
+[CleanedWeb](https://cleanedweb.com) is a catalog of maintained REST APIs for public websites, such as listings, products, jobs, reviews and repositories. Each API returns structured records with known fields, and CleanedWeb rebuilds an API when its site changes. Use **CleanedWeb Find API** to find an API, then **CleanedWeb Run API** to run it.
+
+## CleanedWeb Find API
+
+This component searches the CleanedWeb catalog by query or site. It needs no API key.
+
+It outputs a [`Table`](/data-types#table) with one row per API: `api_id`, `slug`, `name`, `site`, `category`, `description`, `key_fields` and `endpoints`. The `endpoints` column is a JSON list of each endpoint's `endpoint_id`, name, description and, when **Include Endpoint Inputs** is on, the inputs it accepts.
+If the search fails, the table contains a single row with an `error` column that describes the problem.
+
+In [tool mode](/agents-tools), the component exposes a tool named `cleanedweb_find_api`.
+
+### CleanedWeb Find API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Query (`query`) | String | Input parameter. What to look for, for example `steam reviews`. Set a query, a site, or both. |
+| Site (`site`) | String | Input parameter. Only APIs for this site: a domain, URL or name, for example `github.com`. |
+| Max Results (`limit`) | Integer | Input parameter. The maximum number of APIs to return, from `1` to `20`. Default: `5`. |
+| Include Endpoint Inputs (`include_inputs`) | Boolean | Input parameter. Read each API's contract to list the inputs of every endpoint. Default: `true`. |
+
+## CleanedWeb Run API
+
+This component runs one endpoint of a CleanedWeb API and returns its records. Get an API key with the `run` scope from the [CleanedWeb console](https://app.cleanedweb.com); enter it in the **CleanedWeb API Key** field, or store it in a [global variable](/configuration-global-variables) named `CLEANEDWEB_API_KEY`. Runs are charged per record delivered; new accounts get 5,000 free records.
+
+It outputs the records as a [`Table`](/data-types#table) whose columns are the API's output fields.
+If the run fails, for example because the key is missing or the input is invalid, the table contains a single row with an `error` column that describes the problem.
+
+In [tool mode](/agents-tools), the component exposes a tool named `cleanedweb_run_api`. An [**Agent** component](/agents) can call `cleanedweb_find_api` first and then run the API it found.
+
+### CleanedWeb Run API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| API (`api`) | String | Input parameter. The API's `api_id` or `slug` from **CleanedWeb Find API**. |
+| Endpoint (`endpoint_id`) | String | Input parameter. The endpoint to run. Leave empty to use the API's first endpoint. |
+| Run Input (`run_input`) | String | Input parameter. The endpoint's input as a JSON object, for example `{"search": "http"}`. |
+| Max Records (`max_items`) | Integer | Input parameter. The maximum number of records to return, from `1` to `1000`. Default: `5`. |
+| CleanedWeb API Key (`api_key`) | SecretString | Input parameter. Your CleanedWeb API key. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**Firecrawl** bundle](/bundles-firecrawl)
