@@ -36,7 +36,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.middleware.gzip import DEFAULT_EXCLUDED_CONTENT_TYPES, GZipMiddleware
 
 from langflow.api import log_router
-from langflow.api.health_check_router import health_check_router
+from langflow.api.health_check_router import health, health_check, health_check_router, healthz
 from langflow.api.router import router
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware
 from langflow.api.v1 import connections
@@ -1078,14 +1078,6 @@ def create_app():
     if isinstance(origins, str) and origins != "*":
         origins = [origins]
 
-    # Apply current CORS configuration (maintains backward compatibility)
-    app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=allow_credentials,
-        allow_methods=settings.cors_allow_methods,
-        allow_headers=settings.cors_allow_headers,
-    )
     app.add_middleware(JavaScriptMIMETypeMiddleware)
     app.add_middleware(AuditRequestContextMiddleware)
 
@@ -1204,6 +1196,20 @@ def create_app():
             locale = "en"
         request.state.locale = locale
         return await call_next(request)
+
+    from langflow.services.security import attach_guard
+
+    # Guard must see the request before middleware that reads the body.
+    attach_guard(app, health_endpoints=(health, health_check, healthz))
+
+    # Apply the same origin policy to Guard's early responses and router responses.
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=allow_credentials,
+        allow_methods=settings.cors_allow_methods,
+        allow_headers=settings.cors_allow_headers,
+    )
 
     if prome_port_str := os.environ.get("LANGFLOW_PROMETHEUS_PORT"):
         # set here for create_app() entry point
