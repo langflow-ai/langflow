@@ -59,6 +59,11 @@ def test_span_order_matches_scan(monkeypatch):
         for graph in product(edges, repeat=size):
             check(graph)
 
+    # Distinct IDs expose scan-round ordering differences that duplicate IDs can mask.
+    for size in range(5):
+        for parents in product([None, ids[-1], *ids[:size]], repeat=size):
+            check(list(zip(ids[:size], parents, strict=True)))
+
     rng = Random(16262)  # noqa: S311 - reproduce the same graph fixtures across runs
     for _ in range(100):
         check([(rng.choice(ids[:-1]), rng.choice([None, *ids])) for _ in range(30)])
