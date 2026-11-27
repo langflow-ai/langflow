@@ -77,8 +77,8 @@ export function Usage({ usage }: { usage?: JobUsage }) {
 const COLUMNS =
   "lg:grid-cols-[2rem_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_8rem_8rem]";
 
-const STATUS_TONE: Record<ReportFlow["status"], string> = {
-  ok: "bg-muted",
+export const STATUS_TONE: Record<ReportFlow["status"], string> = {
+  ok: "bg-accent-emerald text-accent-emerald-foreground",
   warn: "bg-accent-amber text-accent-amber-foreground",
   fail: "bg-destructive text-destructive-foreground",
 };

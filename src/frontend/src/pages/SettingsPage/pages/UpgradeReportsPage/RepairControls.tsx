@@ -57,10 +57,28 @@ export default function RepairControls({
     return () => onUnappliedUpdatesChange(false);
   }, [hasUnappliedUpdates, onUnappliedUpdatesChange]);
   const status = verifiedStatus(maintenance);
-  const canApply = Boolean(
-    status?.maintenance && !status.migration && status.running_jobs === 0,
-  );
+  const maintenanceReason = !status
+    ? t("settings.upgrade.freezeUnknown")
+    : status.migration
+      ? t("settings.upgrade.migrationPause")
+      : !status.maintenance
+        ? t("settings.upgrade.freezeRequired")
+        : status.running_jobs > 0
+          ? t("settings.upgrade.runningJobs", { count: status.running_jobs })
+          : null;
   const busy = preview.isPending || apply.isPending;
+  // One rule both disables Apply and explains why. The maintenance note above already says that reason.
+  const applyBlocker = !result
+    ? "applyNeedsPreview"
+    : !ready.length
+      ? "applyNothingReady"
+      : maintenanceReason
+        ? "maintenance"
+        : !confirmed
+          ? "applyNeedsConfirmation"
+          : null;
+  // After an apply nothing is ready, and the outcome above says why.
+  const applyReason = busy || applied ? null : applyBlocker;
   const flowName = (flowId: string) =>
     (
       flows.find((flow) => flow.kind === "flow" && flow.id === flowId) ??
@@ -144,17 +162,9 @@ export default function RepairControls({
       >
         {t("settings.upgrade.preview")}
       </Button>
-      {!maintenance.isPending && !canApply && (
+      {!maintenance.isPending && maintenanceReason && (
         <p role="note">
-          {!status
-            ? t("settings.upgrade.freezeUnknown")
-            : status.migration
-              ? t("settings.upgrade.migrationPause")
-              : !status.maintenance
-                ? t("settings.upgrade.freezeRequired")
-                : t("settings.upgrade.runningJobs", {
-                    count: status.running_jobs,
-                  })}{" "}
+          <span id="upgrade-maintenance-reason">{maintenanceReason}</span>{" "}
           <Button
             variant="link"
             className="h-auto p-0"
@@ -221,46 +231,63 @@ export default function RepairControls({
             ))}
           </ul>
           {ready.length > 0 && (
-            <>
-              <label className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(event) => setConfirmed(event.target.checked)}
-                />
-                {t("settings.upgrade.confirmRepair", { count: ready.length })}
-              </label>
-              <Button
-                disabled={!confirmed || !canApply || busy}
-                onClick={() => {
-                  if (!result) return;
-                  apply.mutate(
-                    {
-                      flows: ready.map((item) => ({
-                        flow_id: item.flow_id,
-                        version_token: item.version_token,
-                        data_sha256: item.data_sha256,
-                      })),
-                      target_sha256: result.target_sha256,
-                      report_id: reportId,
-                    },
-                    {
-                      onSuccess: (response) => {
-                        setResult(response);
-                        setConfirmed(false);
-                        setApplied(true);
-                      },
-                    },
-                  );
-                }}
-                ignoreTitleCase
-              >
-                {t("settings.upgrade.apply", { count: ready.length })}
-              </Button>
-            </>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(event) => setConfirmed(event.target.checked)}
+              />
+              {t("settings.upgrade.confirmRepair", { count: ready.length })}
+            </label>
           )}
         </>
       )}
+      <div className="flex flex-wrap items-center gap-3 border-t pt-3">
+        <Button
+          disabled={busy || applyBlocker !== null}
+          aria-describedby={
+            applyReason === "maintenance"
+              ? "upgrade-maintenance-reason"
+              : applyReason
+                ? "upgrade-apply-reason"
+                : undefined
+          }
+          onClick={() => {
+            if (!result) return;
+            apply.mutate(
+              {
+                flows: ready.map((item) => ({
+                  flow_id: item.flow_id,
+                  version_token: item.version_token,
+                  data_sha256: item.data_sha256,
+                })),
+                target_sha256: result.target_sha256,
+                report_id: reportId,
+              },
+              {
+                onSuccess: (response) => {
+                  setResult(response);
+                  setConfirmed(false);
+                  setApplied(true);
+                },
+              },
+            );
+          }}
+          ignoreTitleCase
+        >
+          {ready.length
+            ? t("settings.upgrade.apply", { count: ready.length })
+            : t("settings.upgrade.applyUpdates")}
+        </Button>
+        {applyReason && applyReason !== "maintenance" && (
+          <p
+            id="upgrade-apply-reason"
+            className="text-sm text-muted-foreground"
+          >
+            {t(`settings.upgrade.${applyReason}`)}
+          </p>
+        )}
+      </div>
       <details aria-label={t("settings.upgrade.repairHistory")}>
         <summary className="cursor-pointer">
           {t("settings.upgrade.repairHistory")}

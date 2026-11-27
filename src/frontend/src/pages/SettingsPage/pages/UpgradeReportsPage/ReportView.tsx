@@ -5,7 +5,7 @@ import {
   type ReportDetail,
   useExportUpgradeReport,
 } from "@/controllers/API/queries/upgrade-reports";
-import FlowList from "./FlowList";
+import FlowList, { STATUS_TONE } from "./FlowList";
 import {
   downloadReport,
   reportAge,
@@ -157,18 +157,22 @@ export default function ReportView({
             {t("settings.upgrade.resultHelp")}
           </summary>
           <dl className="mt-3 grid grid-cols-[max-content_minmax(0,1fr)] items-baseline gap-x-4 gap-y-3 text-sm">
-            {["ok", "warn", "fail", "could_not_verify"].map((status) => (
-              <Fragment key={status}>
-                <dt>
-                  <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
-                    {t(`settings.upgrade.status.${status}`)}
-                  </span>
-                </dt>
-                <dd className="text-muted-foreground">
-                  {t(`settings.upgrade.resultMeaning.${status}`)}
-                </dd>
-              </Fragment>
-            ))}
+            {(["ok", "warn", "fail", "could_not_verify"] as const).map(
+              (status) => (
+                <Fragment key={status}>
+                  <dt>
+                    <span
+                      className={`rounded px-2 py-0.5 text-xs font-medium ${status === "could_not_verify" ? "bg-muted" : STATUS_TONE[status]}`}
+                    >
+                      {t(`settings.upgrade.status.${status}`)}
+                    </span>
+                  </dt>
+                  <dd className="text-muted-foreground">
+                    {t(`settings.upgrade.resultMeaning.${status}`)}
+                  </dd>
+                </Fragment>
+              ),
+            )}
           </dl>
         </details>
         {document.errors.length > 0 && (

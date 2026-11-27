@@ -14,11 +14,11 @@ Create an active administrator and a regular user. Include an unchanged flow, a 
 
 | ID | Action | Expected result |
 | --- | --- | --- |
-| UX-01 | Open Settings > Upgrade reports with no reports. | The page explains how to generate a report and the sequence from assessment through verification. Import stays disabled until a file is selected. |
+| UX-01 | Open Settings > Upgrade compatibility with no reports. | The page explains how to generate a report and the sequence from assessment through verification. Import stays disabled until a file is selected. |
 | UX-02 | Generate a report with the target installation and import the JSON file. | A success message confirms import and explains that flows have not changed. The selected report shows the source, target, time, and assessment. |
 | UX-03 | Import malformed JSON, an unsupported format, or a file larger than 20 MiB. | An error describes the problem. Nothing is added to history. The file input identifies its error for assistive technology. |
 | UX-04 | Review complete clear, warning, blocking, and incomplete reports. | Each assessment gives a next action. A missing or unverifiable result never appears as confirmed compatibility. A clear report does not claim execution or release certification. |
-| UX-05 | Expand What the results mean and a flow's findings. | OK, Needs review, Needs repair, and Could not verify have distinct explanations. Editor and Serving usage remain separate. Missing history stays unknown. |
+| UX-05 | Expand What the results mean and a flow's findings. | Ready, Review required, Needs repair, and Could not verify have distinct explanations. Editor and Serving usage remain separate. Missing history stays unknown. |
 | UX-06 | Search and filter by owner, name, project, label, result, and unknown edit time. | Only matching rows remain. Pagination and selection remain understandable. Selection is limited to 100 flows. |
 | UX-07 | Select flows and preview updates with maintenance off. | Preview changes no flows. Results use flow names and explain ready, manual, missing, and conflict outcomes. Apply remains disabled. |
 | UX-08 | Enable maintenance after taking backups and draining work. Review and confirm ready updates. | Apply becomes available only with database maintenance on, migration pause off, and confirmation checked. Only ready items are submitted. |

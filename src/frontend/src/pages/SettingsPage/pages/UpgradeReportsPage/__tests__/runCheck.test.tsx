@@ -87,7 +87,7 @@ function open() {
 
 let status = 200;
 async function start(version = "1.15.0") {
-  await userEvent.type(screen.getByLabelText("Target release"), version);
+  await userEvent.type(screen.getByLabelText("Target version"), version);
   await userEvent.click(
     screen.getByRole("button", { name: "Check compatibility" }),
   );
@@ -112,23 +112,39 @@ it("starts idle with the check button off until a release is typed", async () =>
   const button = screen.getByRole("button", { name: "Check compatibility" });
   expect(button).toBeDisabled();
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  await userEvent.type(screen.getByLabelText("Target release"), "1.15.0");
+  await userEvent.type(screen.getByLabelText("Target version"), "1.15.0");
   expect(button).toBeEnabled();
 });
 
-it("offers fetched releases as suggestions", async () => {
-  const { container } = render(
-    inRouter(
-      <QueryClientProvider client={new QueryClient()}>
-        <RunCheck onSelectReport={jest.fn()} />
-      </QueryClientProvider>,
-    ).element,
-  );
-  await waitFor(() =>
-    expect(
-      container.querySelector('datalist option[value="1.15.0"]'),
-    ).not.toBeNull(),
-  );
+it("offers fetched releases and the installed one when the field gets focus", async () => {
+  open();
+  const field = screen.getByRole("combobox", { name: "Target version" });
+  expect(field).toHaveAttribute("placeholder", "Select or enter a version");
+  await userEvent.click(field);
+  const list = await screen.findByRole("listbox", { name: "Target version" });
+  const options = within(list).getAllByRole("option");
+  expect(options).toHaveLength(2);
+  expect(options[0]).toHaveAccessibleName("Langflow 1.15.0");
+  expect(options[1]).toHaveAccessibleName(/^Langflow 1\.14\.0/);
+  expect(within(options[1]).getByText("Installed")).toBeVisible();
+  await userEvent.click(options[0]);
+  expect(field).toHaveValue("1.15.0");
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+});
+
+it("chooses a suggested release with the keyboard without submitting", async () => {
+  open();
+  const field = screen.getByRole("combobox", { name: "Target version" });
+  // A typed value makes Enter able to submit, so choosing must stop it.
+  await userEvent.type(field, "1.1");
+  await screen.findByRole("listbox");
+  await userEvent.keyboard("{ArrowUp}{Enter}");
+  expect(field).toHaveValue("1.14.0");
+  expect(fetch).not.toHaveBeenCalled();
+  await userEvent.keyboard("{ArrowDown}");
+  expect(screen.getByRole("listbox")).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
 });
 
 it("still lets the admin type a release when the releases query fails", async () => {
@@ -204,11 +220,11 @@ it("cancel aborts the request and says the check was cancelled", async () => {
   expect(signal.aborted).toBe(true);
   finish();
   expect(await screen.findByRole("status")).toHaveTextContent(
-    "Compatibility check cancelled.",
+    "Compatibility check canceled.",
   );
   expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  await userEvent.type(screen.getByLabelText("Target release"), "1");
+  await userEvent.type(screen.getByLabelText("Target version"), "1");
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Check compatibility" }),
@@ -220,7 +236,7 @@ it.each(["target", "button"])(
   async (from) => {
     const user = userEvent.setup();
     open();
-    await user.type(screen.getByLabelText("Target release"), "1.15.0");
+    await user.type(screen.getByLabelText("Target version"), "1.15.0");
     if (from === "button") await user.tab();
 
     await user.keyboard("{Enter}");
@@ -255,7 +271,7 @@ it("aborts the request when the page is left", async () => {
       </QueryClientProvider>,
     ).element,
   );
-  await userEvent.type(screen.getByLabelText("Target release"), "1.15.0");
+  await userEvent.type(screen.getByLabelText("Target version"), "1.15.0");
   await userEvent.click(
     screen.getByRole("button", { name: "Check compatibility" }),
   );
@@ -283,7 +299,9 @@ it("says the report is ready, what it found and what comes next", async () => {
   });
   const status = screen.getByRole("status");
   expect(status).toHaveTextContent("The report for Langflow 1.15.0 is ready.");
-  expect(status).toHaveTextContent("OK: 1 · Needs review: 1 · Needs repair: 1");
+  expect(status).toHaveTextContent(
+    "Ready: 1 · Review required: 1 · Needs repair: 1",
+  );
   expect(status).toHaveTextContent(
     "upgrade it to Langflow 1.15.0, and update those flows from the same report.",
   );
@@ -347,7 +365,7 @@ it("clears the finished message when the admin types another release", async () 
   emit({ event: "imported", report_id: "r-1" });
   finish();
   await screen.findByRole("button", { name: "View report" });
-  await userEvent.type(screen.getByLabelText("Target release"), "1");
+  await userEvent.type(screen.getByLabelText("Target version"), "1");
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
 });
 
@@ -406,7 +424,7 @@ it.each([
   emit({ event: "error", code, message: "server said" });
   finish();
   await screen.findByRole("alert");
-  expect(screen.getByLabelText("Target release")).toHaveAttribute(
+  expect(screen.getByLabelText("Target version")).toHaveAttribute(
     "aria-invalid",
     invalid,
   );
@@ -463,7 +481,7 @@ it("clears the error when the admin edits the release", async () => {
   emit({ event: "error", code: "timeout" });
   finish();
   await screen.findByRole("alert");
-  await userEvent.type(screen.getByLabelText("Target release"), "1");
+  await userEvent.type(screen.getByLabelText("Target version"), "1");
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 

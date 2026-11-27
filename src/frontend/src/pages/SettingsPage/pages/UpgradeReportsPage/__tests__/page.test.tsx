@@ -165,7 +165,7 @@ it("opens and focuses the completed check after another history entry was select
   const scroll = jest.fn();
   open();
   await userEvent.type(
-    await screen.findByLabelText("Target release"),
+    await screen.findByLabelText("Target version"),
     "1.14.0",
   );
   await userEvent.click(
@@ -359,9 +359,11 @@ it("explains unverifiable provider selection and requires manual review", async 
       "The selected model provider could not be verified. Review this flow manually.",
     ),
   ).toBeVisible();
-  expect(
-    screen.queryByRole("button", { name: /Apply .* reviewed update/ }),
-  ).not.toBeInTheDocument();
+  const apply = screen.getByRole("button", { name: "Apply updates" });
+  expect(apply).toBeDisabled();
+  expect(apply).toHaveAccessibleDescription(
+    "None of the previewed flows can be updated automatically.",
+  );
 });
 
 it("redirects non-admins without reading reports", async () => {
@@ -476,9 +478,13 @@ it("requires preview, maintenance, and explicit confirmation before applying ser
     screen.getByRole("list", { name: "Update results" }),
   ).toHaveTextContent("Customer support");
   expect(apply).toBeDisabled();
-  await userEvent.click(
-    screen.getByRole("checkbox", { name: /I reviewed this 1 update/ }),
+  expect(apply).toHaveAccessibleDescription(
+    "Apply updates only while database maintenance is enabled and the separate instance migration pause is off.",
   );
+  const confirm = screen.getByRole("checkbox", {
+    name: /I reviewed this 1 update/,
+  });
+  await userEvent.click(confirm);
   expect(apply).toBeDisabled();
   act(() =>
     client.setQueryData(migrationKeys.pause, {
@@ -487,6 +493,13 @@ it("requires preview, maintenance, and explicit confirmation before applying ser
       running_jobs: 0,
     }),
   );
+  await userEvent.click(confirm);
+  expect(apply).toBeDisabled();
+  expect(apply).toHaveAccessibleDescription(
+    "Confirm that you reviewed the updates and have a current backup.",
+  );
+  await userEvent.click(confirm);
+  expect(apply).toBeEnabled();
   await userEvent.click(apply);
   await waitFor(() =>
     expect(api.post).toHaveBeenCalledWith(
@@ -988,9 +1001,11 @@ it("clears reviewed updates when the selected flows change", async () => {
   );
   await screen.findByRole("button", { name: "Apply 1 reviewed update" });
   await userEvent.click(checkbox);
-  expect(
-    screen.queryByRole("button", { name: "Apply 1 reviewed update" }),
-  ).not.toBeInTheDocument();
+  const apply = screen.getByRole("button", { name: "Apply updates" });
+  expect(apply).toBeDisabled();
+  expect(apply).toHaveAccessibleDescription(
+    "Select flows and preview them first.",
+  );
 });
 
 it("has no axe violations in populated and selected preview states", async () => {
@@ -1028,9 +1043,14 @@ it("ignores a preview that finishes after selection changes", async () => {
     finish({ data: preview });
     await pending;
   });
-  expect(
-    screen.queryByRole("button", { name: "Apply 1 reviewed update" }),
-  ).not.toBeInTheDocument();
+  const apply = screen.getByRole("button", { name: "Apply updates" });
+  expect(apply).toBeDisabled();
+  // The reason returns once the late preview settles.
+  await waitFor(() =>
+    expect(apply).toHaveAccessibleDescription(
+      "Select flows and preview them first.",
+    ),
+  );
 });
 
 it("explains an unsupported imported format", async () => {
@@ -1292,7 +1312,7 @@ it("shows each flow as a table row with its compatibility", async () => {
     .find((article) =>
       within(article).queryByRole("heading", { name: "Customer support" }),
     ) as HTMLElement;
-  expect(within(row).getByText("Needs review")).toBeVisible();
+  expect(within(row).getByText("Review required")).toBeVisible();
   expect(
     within(row).getByRole("checkbox", {
       name: "Select Customer support for preview",
@@ -1424,4 +1444,13 @@ it("shows maintenance as on when external sign-in is paused for it", async () =>
   expect(
     section.queryByRole("button", { name: "Retry status check" }),
   ).not.toBeInTheDocument();
+});
+
+it("shows Apply before a preview, with the reason it is unavailable", async () => {
+  open();
+  const apply = await screen.findByRole("button", { name: "Apply updates" });
+  expect(apply).toBeDisabled();
+  expect(apply).toHaveAccessibleDescription(
+    "Select flows and preview them first.",
+  );
 });
