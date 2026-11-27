@@ -11,14 +11,17 @@ from __future__ import annotations
 import asyncio
 import json
 from typing import TYPE_CHECKING
+from uuid import uuid4
 
 import pytest
 from fastapi import BackgroundTasks
 from langflow.api.build import generate_flow_events
+from langflow.services.deps import get_settings_service
 from lfx.events.event_manager import create_default_event_manager
 from lfx.graph.checkpoint.store import InMemoryCheckpointStore
 from lfx.schema.schema import InputValueRequest
 
+from tests.unit.api.v2._scripted_agent import ScriptedAgent
 from tests.unit.build_utils import create_flow
 
 if TYPE_CHECKING:
@@ -135,3 +138,51 @@ async def test_build_path_cancel_decision_propagates_cancelled_error(
     events = _drain_events(queue)
     error_events = [e for e in events if e.get("event") == "error"]
     assert not error_events
+
+
+async def test_build_path_pauses_when_the_last_vertex_asks_for_a_decision(
+    client, logged_in_headers, active_user, monkeypatch
+):
+    # The Agent's model and tool are scripted in its own code, which makes it a custom component.
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "allow_custom_components", True)
+    monkeypatch.setattr(settings, "custom_component_admin_only", False)
+    response = await client.get("api/v1/all", headers=logged_in_headers)
+    chat_input = next(category["ChatInput"] for category in response.json().values() if "ChatInput" in category)
+    agent = ScriptedAgent(_id="Agent", tool_policy="ask").to_frontend_node()["data"]["node"]
+    source = {"dataType": "ChatInput", "id": "In", "name": "message", "output_types": ["Message"]}
+    target = {"fieldName": "input_value", "id": "Agent", "inputTypes": ["Message"], "type": "str"}
+    # Chat Input -> the Agent, which is the last vertex: no later vertex build checks for its pause.
+    flow = {
+        "name": f"last-layer-{uuid4()}",
+        "data": {
+            "nodes": [
+                {"id": node_id, "type": "genericNode", "position": {"x": 0, "y": 0}, "data": data}
+                for node_id, data in (
+                    ("In", {"id": "In", "type": "ChatInput", "node": chat_input}),
+                    ("Agent", {"id": "Agent", "type": "ScriptedAgent", "node": agent}),
+                )
+            ],
+            "edges": [
+                {
+                    "id": "In-Agent",
+                    "source": "In",
+                    "target": "Agent",
+                    "data": {"sourceHandle": source, "targetHandle": target},
+                }
+            ],
+        },
+    }
+    flow_id = await create_flow(client, json.dumps(flow), logged_in_headers)
+    store = InMemoryCheckpointStore()
+
+    async def probe(_job_id: str) -> str:
+        return "run"
+
+    _wrap_graph_config(monkeypatch, store=store, probe=probe)
+    queue, error = await _drive_build(flow_id, active_user)
+
+    assert error is None, f"pause must be caught at the build seam, got {error!r}"
+    pauses = [e["data"] for e in _drain_events(queue) if e.get("event") == "human_input_required"]
+    assert [pause["kind"] for pause in pauses] == ["tool_approval"]
+    assert [cp.job_id for cp in store._checkpoints.values()] == ["job-1"]

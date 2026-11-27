@@ -31,6 +31,7 @@ async def test_generate_flow_events_sets_source_flow_provenance_for_public_graph
     graph.sort_vertices.return_value = []
     graph.set_run_id.side_effect = lambda value: setattr(graph, "run_id", value)
     graph.end_all_traces = AsyncMock()
+    graph.check_and_handle_pause = AsyncMock()
 
     chat_service = MagicMock()
     chat_service.set_cache = AsyncMock()

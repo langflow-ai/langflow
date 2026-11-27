@@ -87,6 +87,28 @@ async def test_driver_injects_the_chosen_decision_downstream() -> None:
     assert extract_text_from_result(results) == "reject"
 
 
+async def test_a_pause_requested_in_the_last_layer_pauses() -> None:
+    store = InMemoryCheckpointStore()
+    chat_input = ChatInput(_id="chat_input", input_value="hello")
+    chat_input.set(should_store_message=False)
+    pauser = StaticPauser(_id="pauser")
+    pauser.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, pauser)
+    graph.set_run_id("job-1")
+    seen: list[dict] = []
+
+    def provider(request: dict) -> dict:
+        seen.append(request)
+        return {"action_id": "approve", "values": {}}
+
+    results = await run_graph_with_human_input(graph, decision_provider=provider, store=store)
+
+    # No layer follows the pauser, so the run must suspend at the end instead of finishing undecided.
+    assert [request["request_id"] for request in seen] == ["pauser:job-1"]
+    (pauser_result,) = [r for r in results if r.vertex.id == "pauser"]
+    assert pauser_result.vertex.built_object["out"].text == "approve"
+
+
 async def test_driver_runs_a_non_pausing_graph_straight_through() -> None:
     store = InMemoryCheckpointStore()
     chat_input = ChatInput(_id="chat_input", input_value="hello")

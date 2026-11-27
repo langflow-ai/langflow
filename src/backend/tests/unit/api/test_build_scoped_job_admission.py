@@ -363,6 +363,7 @@ async def test_legacy_tracking_failure_is_fatal_for_database_keys(active_user, m
     graph.sort_vertices.return_value = []
     graph.set_run_id.side_effect = lambda value: setattr(graph, "run_id", value)
     graph.end_all_traces = AsyncMock()
+    graph.check_and_handle_pause = AsyncMock()
     monkeypatch.setattr(build, "build_graph_from_db", AsyncMock(return_value=graph))
     monkeypatch.setattr(build, "get_chat_service", lambda: SimpleNamespace(set_cache=AsyncMock()))
     monkeypatch.setattr(build, "get_telemetry_service", MagicMock())
