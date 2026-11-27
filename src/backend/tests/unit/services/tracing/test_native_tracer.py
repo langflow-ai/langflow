@@ -932,3 +932,69 @@ class TestFlushParentChildOrder:
         span_objects = [obj for obj in merged_objects if isinstance(obj, SpanTable)]
         assert len(span_objects) == 1
         assert span_objects[0].parent_span_id is None
+
+
+# ---------------------------------------------------------------------------
+# Repeated builds of one vertex (#16633)
+# ---------------------------------------------------------------------------
+
+
+class TestRepeatedComponentBuilds:
+    def test_repeated_builds_get_distinct_span_ids(self):
+        tracer = _make_tracer()
+        for build in range(3):
+            tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {"build": build})
+            tracer.end_trace("comp-1", "Comp", {"out": build})
+
+        ids = [span["id"] for span in tracer.completed_spans]
+        assert ids == ["comp-1", "comp-1#2", "comp-1#3"]
+
+    def test_repeated_builds_resolve_to_distinct_uuids(self):
+        tracer = _make_tracer()
+        for build in range(2):
+            tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {"build": build})
+            tracer.end_trace("comp-1", "Comp", {"out": build})
+
+        resolved = resolve_span_uuids(tracer.completed_spans, tracer.trace_id)
+        span_uuids = [span_uuid for _, span_uuid, _ in resolved]
+        assert len(set(span_uuids)) == 2
+
+    def test_langchain_children_follow_their_own_build(self):
+        tracer = _make_tracer()
+        parents = []
+        for build in range(2):
+            tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {"build": build})
+            callback = tracer.get_langchain_callback()
+            assert callback is not None
+            parents.append(callback.parent_span_id)
+            tracer.end_trace("comp-1", "Comp", {"out": build})
+
+        assert parents[0] is not None
+        assert parents[1] is not None
+        assert parents[0] != parents[1]
+
+    @pytest.mark.asyncio
+    async def test_flush_writes_one_row_per_build(self):
+        tracer = _make_tracer(flow_id=str(uuid4()))
+        for build in range(2):
+            tracer.add_trace("comp-1", "Comp (comp-1)", "chain", {"build": build})
+            tracer.end_trace("comp-1", "Comp", {"out": build})
+
+        merged_objects = []
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=False)
+
+        async def capture_merge(obj):
+            merged_objects.append(obj)
+
+        mock_session.merge = capture_merge
+
+        with patch("lfx.services.deps.session_scope", return_value=mock_session):
+            await tracer._flush_to_database()
+
+        from langflow.services.database.models.traces.model import SpanTable
+
+        span_objects = [obj for obj in merged_objects if isinstance(obj, SpanTable)]
+        assert len(span_objects) == 2
+        assert len({span.id for span in span_objects}) == 2
