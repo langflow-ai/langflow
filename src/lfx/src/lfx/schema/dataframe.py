@@ -231,14 +231,17 @@ class Table(pandas_DataFrame):
         return Table(docs)
 
     def __eq__(self, other):
-        """Override equality to handle comparison with empty Tables and non-Table objects."""
-        if self.empty:
-            return False
-        if isinstance(other, list) and not other:  # Empty list case
-            return False
-        if not isinstance(other, Table | pd.DataFrame):  # Non-Table case
-            return False
-        return super().__eq__(other)
+        """Compare two frames for equality, returning a boolean instead of an element-wise frame.
+
+        ``Table`` defines ``__bool__`` as "has rows", so returning the inherited element-wise
+        comparison made ``a == b`` always truthy: the mask has exactly as many rows as ``self``.
+        Two tables with different values therefore reported themselves as equal. ``DataFrame.equals``
+        compares values and labels and gives a real answer; both empty tables are also equal now.
+        """
+        if isinstance(other, Table | pd.DataFrame):
+            return bool(self.equals(other))
+        # Non-Table operands (including an empty list) are never equal to a table.
+        return False
 
     def to_data(self) -> Data:
         """Convert this Table to a Data object.

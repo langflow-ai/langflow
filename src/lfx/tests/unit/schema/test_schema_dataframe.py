@@ -91,3 +91,28 @@ class TestDataFrameSchema:
         assert list(ordered.columns) == ["TEXT", metadata_column, "category", "session_id", "_trace"]
         assert ordered.iloc[0].tolist() == ["hello", "value", "news", "s1", "t1"]
         assert list(data_frame.columns) == original_columns
+
+
+class TestTableEquality:
+    """Equality must answer a yes/no question instead of returning an element-wise mask."""
+
+    def test_tables_with_different_values_are_not_equal(self):
+        left = DataFrame({"name": ["John"]})
+        right = DataFrame({"name": ["Jane"]})
+
+        assert (left == right) is False
+
+    def test_tables_with_same_values_are_equal(self):
+        left = DataFrame({"name": ["John"]})
+        right = DataFrame({"name": ["John"]})
+
+        assert (left == right) is True
+
+    def test_empty_tables_are_equal(self):
+        assert (DataFrame() == DataFrame()) is True
+
+    def test_non_table_operand_is_not_equal(self):
+        data_frame = DataFrame({"name": ["John"]})
+
+        assert (data_frame == []) is False
+        assert (data_frame == 1) is False
