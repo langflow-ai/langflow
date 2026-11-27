@@ -29,9 +29,13 @@ class MaintenanceStatus(BaseModel):
 
 
 async def maintenance_enabled(session: AsyncSession) -> bool:
-    """Read from the database on each admission so another pod's change is visible."""
+    """Read from the database on each admission so another pod's change is visible.
+
+    Stays on plain ``execute`` so a caller holding a dedicated engine — which yields a
+    plain SQLAlchemy session, not the SQLModel subclass — can ask the same question.
+    """
     statement = select(MaintenanceState.enabled).where(MaintenanceState.id == MAINTENANCE_ID)
-    enabled = (await session.exec(statement)).first()
+    enabled = (await session.execute(statement)).scalars().first()
     return enabled is True
 
 
