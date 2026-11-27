@@ -1,0 +1,2711 @@
+{
+  "id": "ce2f936b-ebc8-4d59-84ba-6b09a0e383cf",
+  "data": {
+    "nodes": [
+      {
+        "id": "Prompt-8AeKA",
+        "type": "genericNode",
+        "position": {
+          "x": 1451.8900283640107,
+          "y": -420.7221111049778
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.base.prompts.api_utils import process_prompt_template\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import DefaultPromptField\nfrom langflow.io import MessageTextInput, Output, PromptInput\nfrom langflow.schema.message import Message\nfrom langflow.template.utils import update_template_values\n\n\nclass PromptComponent(Component):\n    display_name: str = \"Prompt\"\n    description: str = \"Create a prompt template with dynamic variables.\"\n    icon = \"prompts\"\n    trace_type = \"prompt\"\n    name = \"Prompt\"\n\n    inputs = [\n        PromptInput(name=\"template\", display_name=\"Template\"),\n        MessageTextInput(\n            name=\"tool_placeholder\",\n            display_name=\"Tool Placeholder\",\n            tool_mode=True,\n            advanced=True,\n            info=\"A placeholder input for tool mode.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Prompt Message\", name=\"prompt\", method=\"build_prompt\"),\n    ]\n\n    async def build_prompt(self) -> Message:\n        prompt = Message.from_template(**self._attributes)\n        self.status = prompt.text\n        return prompt\n\n    def _update_template(self, frontend_node: dict):\n        prompt_template = frontend_node[\"template\"][\"template\"][\"value\"]\n        custom_fields = frontend_node[\"custom_fields\"]\n        frontend_node_template = frontend_node[\"template\"]\n        _ = process_prompt_template(\n            template=prompt_template,\n            name=\"template\",\n            custom_fields=custom_fields,\n            frontend_node_template=frontend_node_template,\n        )\n        return frontend_node\n\n    async def update_frontend_node(self, new_frontend_node: dict, current_frontend_node: dict):\n        \"\"\"This function is called after the code validation is done.\"\"\"\n        frontend_node = await super().update_frontend_node(new_frontend_node, current_frontend_node)\n        template = frontend_node[\"template\"][\"template\"][\"value\"]\n        # Kept it duplicated for backwards compatibility\n        _ = process_prompt_template(\n            template=template,\n            name=\"template\",\n            custom_fields=frontend_node[\"custom_fields\"],\n            frontend_node_template=frontend_node[\"template\"],\n        )\n        # Now that template is updated, we need to grab any values that were set in the current_frontend_node\n        # and update the frontend_node with those values\n        update_template_values(new_template=frontend_node, previous_template=current_frontend_node[\"template\"])\n        return frontend_node\n\n    def _get_fallback_input(self, **kwargs):\n        return DefaultPromptField(**kwargs)\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "template": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "template",
+                "value": "Respond clearly, concisely, and with sufficient detail, explaining the fundamental concepts involved. \nInclude relevant examples when necessary. \nUse a formal tone and ensure the response is both accessible and comprehensive.",
+                "display_name": "Template",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "prompt",
+                "_input_type": "PromptInput"
+              },
+              "tool_placeholder": {
+                "tool_mode": true,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "tool_placeholder",
+                "value": "",
+                "display_name": "Tool Placeholder",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "A placeholder input for tool mode.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              }
+            },
+            "description": "Create a prompt template with dynamic variables.",
+            "icon": "prompts",
+            "is_input": null,
+            "is_output": null,
+            "is_composition": null,
+            "base_classes": [
+              "Message"
+            ],
+            "name": "",
+            "display_name": "Prompt",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {
+              "template": []
+            },
+            "output_types": [],
+            "full_path": null,
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "prompt",
+                "hidden": null,
+                "display_name": "Prompt Message",
+                "method": "build_prompt",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": null,
+                "allows_loop": false,
+                "tool_mode": true
+              }
+            ],
+            "field_order": [
+              "template",
+              "tool_placeholder"
+            ],
+            "beta": false,
+            "legacy": false,
+            "error": null,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "Prompt",
+          "id": "Prompt-8AeKA"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 255
+        },
+        "dragging": false
+      },
+      {
+        "id": "LangWatchEvaluator-muSx8",
+        "type": "genericNode",
+        "position": {
+          "x": 2459.4899640661697,
+          "y": -230.6145127109508
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "load_from_db": false,
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "api_key",
+                "value": "",
+                "display_name": "API Key",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "Enter your LangWatch API key.",
+                "title_case": false,
+                "password": true,
+                "type": "str",
+                "_input_type": "SecretStrInput"
+              },
+              "code": {
+                "type": "code",
+                "required": false,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "import json\nimport logging\nimport os\nfrom typing import Any\n\nimport httpx\n\nfrom langflow.custom import Component\nfrom langflow.inputs.inputs import MultilineInput\nfrom langflow.io import (\n    BoolInput,\n    DropdownInput,\n    FloatInput,\n    IntInput,\n    MessageTextInput,\n    NestedDictInput,\n    Output,\n    SecretStrInput,\n)\nfrom langflow.schema import Data\nfrom langflow.schema.dotdict import dotdict\n\nlogging.basicConfig(level=logging.INFO)\nlogger = logging.getLogger(__name__)\n\n\nclass LangWatchComponent(Component):\n    display_name: str = \"LangWatch Evaluator\"\n    description: str = \"Evaluates various aspects of language models using LangWatch's evaluation endpoints.\"\n    documentation: str = \"https://docs.langwatch.ai/langevals/documentation/introduction\"\n    icon: str = \"Langwatch\"\n    name: str = \"LangWatchEvaluator\"\n\n    inputs = [\n        DropdownInput(\n            name=\"evaluator_name\",\n            display_name=\"Evaluator Name\",\n            options=[],\n            required=True,\n            info=\"Select an evaluator.\",\n            refresh_button=True,\n            real_time_refresh=True,\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"API Key\",\n            required=True,\n            info=\"Enter your LangWatch API key.\",\n        ),\n        MessageTextInput(\n            name=\"input\",\n            display_name=\"Input\",\n            required=False,\n            info=\"The input text for evaluation.\",\n        ),\n        MessageTextInput(\n            name=\"output\",\n            display_name=\"Output\",\n            required=False,\n            info=\"The output text for evaluation.\",\n        ),\n        MessageTextInput(\n            name=\"expected_output\",\n            display_name=\"Expected Output\",\n            required=False,\n            info=\"The expected output for evaluation.\",\n        ),\n        MessageTextInput(\n            name=\"contexts\",\n            display_name=\"Contexts\",\n            required=False,\n            info=\"The contexts for evaluation (comma-separated).\",\n        ),\n        IntInput(\n            name=\"timeout\",\n            display_name=\"Timeout\",\n            info=\"The maximum time (in seconds) allowed for the server to respond before timing out.\",\n            value=30,\n            advanced=True,\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"evaluation_result\", display_name=\"Evaluation Result\", method=\"evaluate\"),\n    ]\n\n    def __init__(self, **data):\n        super().__init__(**data)\n        self.evaluators = self.get_evaluators()\n        self.dynamic_inputs = {}\n        self._code = data.get(\"_code\", \"\")\n        self.current_evaluator = None\n        if self.evaluators:\n            self.current_evaluator = next(iter(self.evaluators))\n\n    def get_evaluators(self) -> dict[str, Any]:\n        url = f\"{os.getenv('LANGWATCH_ENDPOINT', 'https://app.langwatch.ai')}/api/evaluations/list\"\n        try:\n            response = httpx.get(url, timeout=10)\n            response.raise_for_status()\n            data = response.json()\n            return data.get(\"evaluators\", {})\n        except httpx.RequestError as e:\n            self.status = f\"Error fetching evaluators: {e}\"\n            return {}\n\n    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:\n        try:\n            logger.info(\"Updating build config. Field name: %s, Field value: %s\", field_name, field_value)\n\n            if field_name is None or field_name == \"evaluator_name\":\n                self.evaluators = self.get_evaluators()\n                build_config[\"evaluator_name\"][\"options\"] = list(self.evaluators.keys())\n\n                # Set a default evaluator if none is selected\n                if not self.current_evaluator and self.evaluators:\n                    self.current_evaluator = next(iter(self.evaluators))\n                    build_config[\"evaluator_name\"][\"value\"] = self.current_evaluator\n\n                # Define default keys that should always be present\n                default_keys = [\"code\", \"_type\", \"evaluator_name\", \"api_key\", \"input\", \"output\", \"timeout\"]\n\n                if field_value and field_value in self.evaluators and self.current_evaluator != field_value:\n                    self.current_evaluator = field_value\n                    evaluator = self.evaluators[field_value]\n\n                    # Clear previous dynamic inputs\n                    keys_to_remove = [key for key in build_config if key not in default_keys]\n                    for key in keys_to_remove:\n                        del build_config[key]\n\n                    # Clear component's dynamic attributes\n                    for attr in list(self.__dict__.keys()):\n                        if attr not in default_keys and attr not in {\n                            \"evaluators\",\n                            \"dynamic_inputs\",\n                            \"_code\",\n                            \"current_evaluator\",\n                        }:\n                            delattr(self, attr)\n\n                    # Add new dynamic inputs\n                    self.dynamic_inputs = self.get_dynamic_inputs(evaluator)\n                    for name, input_config in self.dynamic_inputs.items():\n                        build_config[name] = input_config.to_dict()\n\n                    # Update required fields\n                    required_fields = {\"api_key\", \"evaluator_name\"}.union(evaluator.get(\"requiredFields\", []))\n                    for key in build_config:\n                        if isinstance(build_config[key], dict):\n                            build_config[key][\"required\"] = key in required_fields\n\n                # Validate presence of default keys\n                missing_keys = [key for key in default_keys if key not in build_config]\n                if missing_keys:\n                    logger.warning(\"Missing required keys in build_config: %s\", missing_keys)\n                    # Add missing keys with default values\n                    for key in missing_keys:\n                        build_config[key] = {\"value\": None, \"type\": \"str\"}\n\n            # Ensure the current_evaluator is always set in the build_config\n            build_config[\"evaluator_name\"][\"value\"] = self.current_evaluator\n\n            logger.info(\"Current evaluator set to: %s\", self.current_evaluator)\n            return build_config\n\n        except (KeyError, AttributeError, ValueError) as e:\n            self.status = f\"Error updating component: {e!s}\"\n            return build_config\n        else:\n            return build_config\n\n    def get_dynamic_inputs(self, evaluator: dict[str, Any]):\n        try:\n            dynamic_inputs = {}\n\n            input_fields = [\n                field\n                for field in evaluator.get(\"requiredFields\", []) + evaluator.get(\"optionalFields\", [])\n                if field not in {\"input\", \"output\"}\n            ]\n\n            for field in input_fields:\n                input_params = {\n                    \"name\": field,\n                    \"display_name\": field.replace(\"_\", \" \").title(),\n                    \"required\": field in evaluator.get(\"requiredFields\", []),\n                }\n                if field == \"contexts\":\n                    dynamic_inputs[field] = MultilineInput(**input_params, multiline=True)\n                else:\n                    dynamic_inputs[field] = MessageTextInput(**input_params)\n\n            settings = evaluator.get(\"settings\", {})\n            for setting_name, setting_config in settings.items():\n                schema = evaluator.get(\"settings_json_schema\", {}).get(\"properties\", {}).get(setting_name, {})\n\n                input_params = {\n                    \"name\": setting_name,\n                    \"display_name\": setting_name.replace(\"_\", \" \").title(),\n                    \"info\": setting_config.get(\"description\", \"\"),\n                    \"required\": False,\n                }\n\n                if schema.get(\"type\") == \"object\":\n                    input_type = NestedDictInput\n                    input_params[\"value\"] = schema.get(\"default\", setting_config.get(\"default\", {}))\n                elif schema.get(\"type\") == \"boolean\":\n                    input_type = BoolInput\n                    input_params[\"value\"] = schema.get(\"default\", setting_config.get(\"default\", False))\n                elif schema.get(\"type\") == \"number\":\n                    is_float = isinstance(schema.get(\"default\", setting_config.get(\"default\")), float)\n                    input_type = FloatInput if is_float else IntInput\n                    input_params[\"value\"] = schema.get(\"default\", setting_config.get(\"default\", 0))\n                elif \"enum\" in schema:\n                    input_type = DropdownInput\n                    input_params[\"options\"] = schema[\"enum\"]\n                    input_params[\"value\"] = schema.get(\"default\", setting_config.get(\"default\"))\n                else:\n                    input_type = MessageTextInput\n                    default_value = schema.get(\"default\", setting_config.get(\"default\"))\n                    input_params[\"value\"] = str(default_value) if default_value is not None else \"\"\n\n                dynamic_inputs[setting_name] = input_type(**input_params)\n\n        except (KeyError, AttributeError, ValueError, TypeError) as e:\n            self.status = f\"Error creating dynamic inputs: {e!s}\"\n            return {}\n        return dynamic_inputs\n\n    async def evaluate(self) -> Data:\n        if not self.api_key:\n            return Data(data={\"error\": \"API key is required\"})\n\n        # Prioritize evaluator_name if it exists\n        evaluator_name = getattr(self, \"evaluator_name\", None) or self.current_evaluator\n\n        if not evaluator_name:\n            if self.evaluators:\n                evaluator_name = next(iter(self.evaluators))\n                logger.info(\"No evaluator was selected. Using default: %s\", evaluator_name)\n            else:\n                return Data(\n                    data={\"error\": \"No evaluator selected and no evaluators available. Please choose an evaluator.\"}\n                )\n\n        try:\n            evaluator = self.evaluators.get(evaluator_name)\n            if not evaluator:\n                return Data(data={\"error\": f\"Selected evaluator '{evaluator_name}' not found.\"})\n\n            logger.info(\"Evaluating with evaluator: %s\", evaluator_name)\n\n            endpoint = f\"/api/evaluations/{evaluator_name}/evaluate\"\n            url = f\"{os.getenv('LANGWATCH_ENDPOINT', 'https://app.langwatch.ai')}{endpoint}\"\n\n            headers = {\"Content-Type\": \"application/json\", \"X-Auth-Token\": self.api_key}\n\n            payload = {\n                \"data\": {\n                    \"input\": self.input,\n                    \"output\": self.output,\n                    \"expected_output\": self.expected_output,\n                    \"contexts\": self.contexts.split(\",\") if self.contexts else [],\n                },\n                \"settings\": {},\n            }\n\n            if (\n                self._tracing_service\n                and self._tracing_service._tracers\n                and \"langwatch\" in self._tracing_service._tracers\n            ):\n                payload[\"trace_id\"] = str(self._tracing_service._tracers[\"langwatch\"].trace_id)  # type: ignore[assignment]\n\n            for setting_name in self.dynamic_inputs:\n                payload[\"settings\"][setting_name] = getattr(self, setting_name, None)\n\n            async with httpx.AsyncClient(timeout=self.timeout) as client:\n                response = await client.post(url, json=payload, headers=headers)\n\n            response.raise_for_status()\n            result = response.json()\n\n            formatted_result = json.dumps(result, indent=2)\n            self.status = f\"Evaluation completed successfully. Result:\\n{formatted_result}\"\n            return Data(data=result)\n\n        except (httpx.RequestError, KeyError, AttributeError, ValueError) as e:\n            error_message = f\"Evaluation error: {e!s}\"\n            self.status = error_message\n            return Data(data={\"error\": error_message})\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "evaluator_name": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "options": [
+                  "langevals/basic",
+                  "langevals/competitor_blocklist",
+                  "langevals/competitor_llm",
+                  "langevals/competitor_llm_function_call",
+                  "langevals/llm_answer_match",
+                  "langevals/llm_boolean",
+                  "langevals/llm_category",
+                  "langevals/llm_score",
+                  "langevals/off_topic",
+                  "langevals/product_sentiment_polarity",
+                  "langevals/query_resolution",
+                  "langevals/similarity",
+                  "langevals/valid_format",
+                  "lingua/language_detection",
+                  "legacy/ragas_answer_correctness",
+                  "legacy/ragas_answer_relevancy",
+                  "legacy/ragas_context_precision",
+                  "legacy/ragas_context_recall",
+                  "legacy/ragas_context_relevancy",
+                  "legacy/ragas_context_utilization",
+                  "legacy/ragas_faithfulness",
+                  "huggingface/llama_guard",
+                  "openai/moderation",
+                  "azure/content_safety",
+                  "azure/jailbreak",
+                  "azure/prompt_injection",
+                  "presidio/pii_detection",
+                  "ragas/bleu_score",
+                  "ragas/context_f1",
+                  "ragas/context_precision",
+                  "ragas/context_recall",
+                  "ragas/factual_correctness",
+                  "ragas/faithfulness",
+                  "ragas/response_context_precision",
+                  "ragas/response_context_recall",
+                  "ragas/response_relevancy",
+                  "ragas/rouge_score",
+                  "ragas/rubrics_based_scoring",
+                  "ragas/sql_query_equivalence",
+                  "ragas/summarization_score"
+                ],
+                "options_metadata": [],
+                "combobox": false,
+                "dialog_inputs": {},
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "evaluator_name",
+                "value": "langevals/llm_answer_match",
+                "display_name": "Evaluator Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Select an evaluator.",
+                "real_time_refresh": true,
+                "refresh_button": true,
+                "title_case": false,
+                "type": "str",
+                "_input_type": "DropdownInput"
+              },
+              "input": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "input",
+                "value": "",
+                "display_name": "Input",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The input text for evaluation.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "output": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "output",
+                "value": "",
+                "display_name": "Output",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The output text for evaluation.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "timeout": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "timeout",
+                "value": 30,
+                "display_name": "Timeout",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The maximum time (in seconds) allowed for the server to respond before timing out.",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              },
+              "expected_output": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "expected_output",
+                "value": "",
+                "display_name": "Expected Output",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "model": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "model",
+                "value": "openai/gpt-4o-mini",
+                "display_name": "Model",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The model to use for evaluation",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "max_tokens": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "max_tokens",
+                "value": 8192,
+                "display_name": "Max Tokens",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Max tokens allowed for evaluation",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              }
+            },
+            "description": "Evaluates various aspects of language models using LangWatch's evaluation endpoints.",
+            "icon": "Langwatch",
+            "base_classes": [
+              "Data"
+            ],
+            "display_name": "LangWatch Evaluator",
+            "documentation": "https://docs.langwatch.ai/langevals/documentation/introduction",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "evaluation_result",
+                "hidden": null,
+                "display_name": "Evaluation Result",
+                "method": "evaluate",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": null,
+                "allows_loop": false,
+                "tool_mode": true
+              }
+            ],
+            "field_order": [
+              "evaluator_name",
+              "api_key",
+              "input",
+              "output",
+              "expected_output",
+              "contexts",
+              "timeout"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "langwatch",
+            "key": "LangWatchEvaluator",
+            "score": 0.000007568328950209746,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "LangWatchEvaluator",
+          "id": "LangWatchEvaluator-muSx8"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 577
+        },
+        "dragging": false
+      },
+      {
+        "id": "OpenAIModel-ENX3f",
+        "type": "genericNode",
+        "position": {
+          "x": 1890.6629940269722,
+          "y": -254.31085183642148
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "load_from_db": true,
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "api_key",
+                "value": "",
+                "display_name": "OpenAI API Key",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "title_case": false,
+                "password": true,
+                "type": "str",
+                "_input_type": "SecretStrInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "input_value": {
+                "trace_as_input": true,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "input_value",
+                "value": "",
+                "display_name": "Input",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageInput"
+              },
+              "json_mode": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "json_mode",
+                "value": false,
+                "display_name": "JSON Mode",
+                "advanced": true,
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "title_case": false,
+                "type": "bool",
+                "_input_type": "BoolInput"
+              },
+              "max_tokens": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "range_spec": {
+                  "step_type": "float",
+                  "min": 0,
+                  "max": 128000,
+                  "step": 0.1
+                },
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "max_tokens",
+                "value": "",
+                "display_name": "Max Tokens",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              },
+              "model_kwargs": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "model_kwargs",
+                "value": {},
+                "display_name": "Model Kwargs",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "title_case": false,
+                "type": "dict",
+                "_input_type": "DictInput"
+              },
+              "model_name": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-3.5-turbo-0125"
+                ],
+                "options_metadata": [],
+                "combobox": false,
+                "dialog_inputs": {},
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "model_name",
+                "value": "gpt-4o-mini",
+                "display_name": "Model Name",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "DropdownInput"
+              },
+              "openai_api_base": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "openai_api_base",
+                "value": "",
+                "display_name": "OpenAI API Base",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "seed": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "seed",
+                "value": 1,
+                "display_name": "Seed",
+                "advanced": true,
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "title_case": false,
+                "type": "int",
+                "_input_type": "IntInput"
+              },
+              "stream": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "stream",
+                "value": false,
+                "display_name": "Stream",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "title_case": false,
+                "type": "bool",
+                "_input_type": "BoolInput"
+              },
+              "system_message": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "system_message",
+                "value": "",
+                "display_name": "System Message",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MultilineInput"
+              },
+              "temperature": {
+                "tool_mode": false,
+                "min_label": "",
+                "max_label": "",
+                "min_label_icon": "",
+                "max_label_icon": "",
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "range_spec": {
+                  "step_type": "float",
+                  "min": 0,
+                  "max": 2,
+                  "step": 0.01
+                },
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "temperature",
+                "value": 0.1,
+                "display_name": "Temperature",
+                "advanced": false,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "slider",
+                "_input_type": "SliderInput"
+              }
+            },
+            "description": "Generates text using OpenAI LLMs.",
+            "icon": "OpenAI",
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "display_name": "OpenAI",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "text_output",
+                "display_name": "Message",
+                "method": "text_response",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": [],
+                "allows_loop": false,
+                "tool_mode": true
+              },
+              {
+                "types": [
+                  "LanguageModel"
+                ],
+                "selected": "LanguageModel",
+                "name": "model_output",
+                "display_name": "Language Model",
+                "method": "build_model",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "required_inputs": [
+                  "api_key"
+                ],
+                "allows_loop": false,
+                "tool_mode": true,
+                "hidden": true
+              }
+            ],
+            "field_order": [
+              "input_value",
+              "system_message",
+              "stream",
+              "max_tokens",
+              "model_kwargs",
+              "json_mode",
+              "model_name",
+              "openai_api_base",
+              "api_key",
+              "temperature",
+              "seed"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "models",
+            "key": "OpenAIModel",
+            "score": 0.001,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "OpenAIModel",
+          "id": "OpenAIModel-ENX3f"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 605
+        },
+        "dragging": false
+      },
+      {
+        "id": "ParseData-JKA35",
+        "type": "genericNode",
+        "position": {
+          "x": 783.7846441784438,
+          "y": 573.741301458699
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "data": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": true,
+                "list_add_label": "Add More",
+                "trace_as_input": true,
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "data",
+                "value": "",
+                "display_name": "Data",
+                "advanced": false,
+                "input_types": [
+                  "Data"
+                ],
+                "dynamic": false,
+                "info": "The data to convert to text.",
+                "title_case": false,
+                "type": "other",
+                "_input_type": "DataInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\", is_list=True, required=True),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "sep": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "sep",
+                "value": "\n",
+                "display_name": "Separator",
+                "advanced": true,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "template": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "template",
+                "value": "{data}",
+                "display_name": "Template",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MultilineInput"
+              }
+            },
+            "description": "Convert Data objects into Messages using any {field_name} from input data.",
+            "icon": "message-square",
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
+            "display_name": "Data to Message",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "text",
+                "display_name": "Message",
+                "method": "parse_data",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true
+              },
+              {
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "data_list",
+                "display_name": "Data List",
+                "method": "parse_data_as_list",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true,
+                "hidden": true
+              }
+            ],
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "processing",
+            "key": "ParseData",
+            "score": 0.01857804455091699,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "ParseData",
+          "id": "ParseData-JKA35"
+        },
+        "selected": true,
+        "measured": {
+          "width": 320,
+          "height": 293
+        },
+        "dragging": false
+      },
+      {
+        "id": "ChatOutput-6zcaD",
+        "type": "genericNode",
+        "position": {
+          "x": 1634.3222243329005,
+          "y": 568.9351935467222
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "background_color": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "background_color",
+                "value": "",
+                "display_name": "Background Color",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The background color of the icon.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "chat_icon": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "chat_icon",
+                "value": "",
+                "display_name": "Icon",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The icon of the message.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.base.io.chat import ChatComponent\nfrom langflow.inputs import BoolInput\nfrom langflow.io import DropdownInput, MessageInput, MessageTextInput, Output\nfrom langflow.schema.message import Message\nfrom langflow.schema.properties import Source\nfrom langflow.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_AI,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatOutput(ChatComponent):\n    display_name = \"Chat Output\"\n    description = \"Display a chat message in the Playground.\"\n    icon = \"MessagesSquare\"\n    name = \"ChatOutput\"\n    minimized = True\n\n    inputs = [\n        MessageInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Message to be passed as output.\",\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_AI,\n            advanced=True,\n            info=\"Type of sender.\",\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_AI,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"data_template\",\n            display_name=\"Data Template\",\n            value=\"{text}\",\n            advanced=True,\n            info=\"Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.\",\n        ),\n        MessageTextInput(\n            name=\"background_color\",\n            display_name=\"Background Color\",\n            info=\"The background color of the icon.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"chat_icon\",\n            display_name=\"Icon\",\n            info=\"The icon of the message.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"text_color\",\n            display_name=\"Text Color\",\n            info=\"The text color of the name\",\n            advanced=True,\n        ),\n    ]\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"message\",\n            method=\"message_response\",\n        ),\n    ]\n\n    def _build_source(self, id_: str | None, display_name: str | None, source: str | None) -> Source:\n        source_dict = {}\n        if id_:\n            source_dict[\"id\"] = id_\n        if display_name:\n            source_dict[\"display_name\"] = display_name\n        if source:\n            source_dict[\"source\"] = source\n        return Source(**source_dict)\n\n    async def message_response(self) -> Message:\n        source, icon, display_name, source_id = self.get_properties_from_source_component()\n        background_color = self.background_color\n        text_color = self.text_color\n        if self.chat_icon:\n            icon = self.chat_icon\n        message = self.input_value if isinstance(self.input_value, Message) else Message(text=self.input_value)\n        message.sender = self.sender\n        message.sender_name = self.sender_name\n        message.session_id = self.session_id\n        message.flow_id = self.graph.flow_id if hasattr(self, \"graph\") else None\n        message.properties.source = self._build_source(source_id, display_name, source)\n        message.properties.icon = icon\n        message.properties.background_color = background_color\n        message.properties.text_color = text_color\n        if self.session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true, 
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "data_template": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "data_template",
+                "value": "{text}",
+                "display_name": "Data Template",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "Template to convert Data to Text. If left empty, it will be dynamically set to the Data's text key.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "input_value": {
+                "trace_as_input": true,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "input_value",
+                "value": "",
+                "display_name": "Text",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "Message to be passed as output.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageInput"
+              },
+              "sender": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "options_metadata": [],
+                "combobox": false,
+                "dialog_inputs": {},
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "sender",
+                "value": "Machine",
+                "display_name": "Sender Type",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Type of sender.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "DropdownInput"
+              },
+              "sender_name": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "sender_name",
+                "value": "AI",
+                "display_name": "Sender Name",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "session_id": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "session_id",
+                "value": "",
+                "display_name": "Session ID",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "should_store_message": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "should_store_message",
+                "value": true,
+                "display_name": "Store Messages",
+                "advanced": true,
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "title_case": false,
+                "type": "bool",
+                "_input_type": "BoolInput"
+              },
+              "text_color": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "text_color",
+                "value": "",
+                "display_name": "Text Color",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The text color of the name",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              }
+            },
+            "description": "Display a chat message in the Playground.",
+            "icon": "MessagesSquare",
+            "base_classes": [
+              "Message"
+            ],
+            "display_name": "Chat Output",
+            "documentation": "",
+            "minimized": true,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "message",
+                "display_name": "Message",
+                "method": "message_response",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true
+              }
+            ],
+            "field_order": [
+              "input_value",
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "data_template",
+              "background_color",
+              "chat_icon",
+              "text_color"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "outputs",
+            "key": "ChatOutput",
+            "score": 0.003169567463043492,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "ChatOutput",
+          "id": "ChatOutput-6zcaD"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 229
+        },
+        "dragging": false
+      },
+      {
+        "id": "CSVtoData-4EHBu",
+        "type": "genericNode",
+        "position": {
+          "x": -408.93192013956605,
+          "y": -233.02846837665402
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "csv_file": {
+                "trace_as_metadata": true,
+                "file_path": "ce2f936b-ebc8-4d59-84ba-6b09a0e383cf/2025-02-21_16-42-42_complex_questions_answers.csv",
+                "fileTypes": [
+                  "csv"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "csv_file",
+                "value": "",
+                "display_name": "CSV File",
+                "advanced": false,
+                "dynamic": false,
+                "info": "Upload a CSV file to convert to a list of Data objects",
+                "title_case": false,
+                "type": "file",
+                "_input_type": "FileInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "import csv\nimport io\nfrom pathlib import Path\n\nfrom langflow.custom import Component\nfrom langflow.io import FileInput, MessageTextInput, MultilineInput, Output\nfrom langflow.schema import Data\n\n\nclass CSVToDataComponent(Component):\n    display_name = \"Load CSV\"\n    description = \"Load a CSV file, CSV from a file path, or a valid CSV string and convert it to a list of Data\"\n    icon = \"file-spreadsheet\"\n    name = \"CSVtoData\"\n    legacy = True\n\n    inputs = [\n        FileInput(\n            name=\"csv_file\",\n            display_name=\"CSV File\",\n            file_types=[\"csv\"],\n            info=\"Upload a CSV file to convert to a list of Data objects\",\n        ),\n        MessageTextInput(\n            name=\"csv_path\",\n            display_name=\"CSV File Path\",\n            info=\"Provide the path to the CSV file as pure text\",\n        ),\n        MultilineInput(\n            name=\"csv_string\",\n            display_name=\"CSV String\",\n            info=\"Paste a CSV string directly to convert to a list of Data objects\",\n        ),\n        MessageTextInput(\n            name=\"text_key\",\n            display_name=\"Text Key\",\n            info=\"The key to use for the text column. Defaults to 'text'.\",\n            value=\"text\",\n        ),\n    ]\n\n    outputs = [\n        Output(name=\"data_list\", display_name=\"Data List\", method=\"load_csv_to_data\"),\n    ]\n\n    def load_csv_to_data(self) -> list[Data]:\n        if sum(bool(field) for field in [self.csv_file, self.csv_path, self.csv_string]) != 1:\n            msg = \"Please provide exactly one of: CSV file, file path, or CSV string.\"\n            raise ValueError(msg)\n\n        csv_data = None\n        try:\n            if self.csv_file:\n                resolved_path = self.resolve_path(self.csv_file)\n                file_path = Path(resolved_path)\n                if file_path.suffix.lower() != \".csv\":\n                    self.status = \"The provided file must be a CSV file.\"\n                else:\n                    with file_path.open(newline=\"\", encoding=\"utf-8\") as csvfile:\n                        csv_data = csvfile.read()\n\n            elif self.csv_path:\n                file_path = Path(self.csv_path)\n                if file_path.suffix.lower() != \".csv\":\n                    self.status = \"The provided file must be a CSV file.\"\n                else:\n                    with file_path.open(newline=\"\", encoding=\"utf-8\") as csvfile:\n                        csv_data = csvfile.read()\n\n            else:\n                csv_data = self.csv_string\n\n            if csv_data:\n                csv_reader = csv.DictReader(io.StringIO(csv_data))\n                result = [Data(data=row, text_key=self.text_key) for row in csv_reader]\n\n                if not result:\n                    self.status = \"The CSV data is empty.\"\n                    return []\n\n                self.status = result\n                return result\n\n        except csv.Error as e:\n            error_message = f\"CSV parsing error: {e}\"\n            self.status = error_message\n            raise ValueError(error_message) from e\n\n        except Exception as e:\n            error_message = f\"An error occurred: {e}\"\n            self.status = error_message\n            raise ValueError(error_message) from e\n\n        # An error occurred\n        raise ValueError(self.status)\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "csv_path": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "csv_path",
+                "value": "",
+                "display_name": "CSV File Path",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "Provide the path to the CSV file as pure text",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              },
+              "csv_string": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "csv_string",
+                "value": "",
+                "display_name": "CSV String",
+                "advanced": true,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "Paste a CSV string directly to convert to a list of Data objects",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MultilineInput"
+              },
+              "text_key": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "text_key",
+                "value": "text",
+                "display_name": "Text Key",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The key to use for the text column. Defaults to 'text'.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MessageTextInput"
+              }
+            },
+            "description": "Load a CSV file, CSV from a file path, or a valid CSV string and convert it to a list of Data",
+            "icon": "file-spreadsheet",
+            "base_classes": [
+              "Data"
+            ],
+            "display_name": "Load CSV",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "data_list",
+                "display_name": "Data List",
+                "method": "load_csv_to_data",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true
+              }
+            ],
+            "field_order": [
+              "csv_file",
+              "csv_path",
+              "csv_string",
+              "text_key"
+            ],
+            "beta": false,
+            "legacy": true,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "data",
+            "key": "CSVtoData",
+            "score": 0.005167182297513491,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "CSVtoData",
+          "id": "CSVtoData-4EHBu"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 329
+        },
+        "dragging": false
+      },
+      {
+        "id": "ParseData-XAZOC",
+        "type": "genericNode",
+        "position": {
+          "x": 670.5863718259023,
+          "y": -392.4289962612597
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "data": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": true,
+                "list_add_label": "Add More",
+                "trace_as_input": true,
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "data",
+                "value": "",
+                "display_name": "Data",
+                "advanced": false,
+                "input_types": [
+                  "Data"
+                ],
+                "dynamic": false,
+                "info": "The data to convert to text.",
+                "title_case": false,
+                "type": "other",
+                "_input_type": "DataInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\", is_list=True, required=True),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "sep": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "sep",
+                "value": "\n",
+                "display_name": "Separator",
+                "advanced": true,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "template": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "template",
+                "value": "{Question}",
+                "display_name": "Template",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MultilineInput"
+              }
+            },
+            "description": "Convert Data objects into Messages using any {field_name} from input data.",
+            "icon": "message-square",
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
+            "display_name": "Data to Message",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "text",
+                "display_name": "Message",
+                "method": "parse_data",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true
+              },
+              {
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "data_list",
+                "display_name": "Data List",
+                "method": "parse_data_as_list",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true,
+                "hidden": true
+              }
+            ],
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "processing",
+            "key": "ParseData",
+            "score": 0.01857804455091699,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "ParseData",
+          "id": "ParseData-XAZOC"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 293
+        },
+        "dragging": false
+      },
+      {
+        "id": "ParseData-QiNhY",
+        "type": "genericNode",
+        "position": {
+          "x": 672.4629339070802,
+          "y": -19.479078240613006
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "data": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": true,
+                "list_add_label": "Add More",
+                "trace_as_input": true,
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "data",
+                "value": "",
+                "display_name": "Data",
+                "advanced": false,
+                "input_types": [
+                  "Data"
+                ],
+                "dynamic": false,
+                "info": "The data to convert to text.",
+                "title_case": false,
+                "type": "other",
+                "_input_type": "DataInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.custom import Component\nfrom langflow.helpers.data import data_to_text, data_to_text_list\nfrom langflow.io import DataInput, MultilineInput, Output, StrInput\nfrom langflow.schema import Data\nfrom langflow.schema.message import Message\n\n\nclass ParseDataComponent(Component):\n    display_name = \"Data to Message\"\n    description = \"Convert Data objects into Messages using any {field_name} from input data.\"\n    icon = \"message-square\"\n    name = \"ParseData\"\n\n    inputs = [\n        DataInput(name=\"data\", display_name=\"Data\", info=\"The data to convert to text.\", is_list=True, required=True),\n        MultilineInput(\n            name=\"template\",\n            display_name=\"Template\",\n            info=\"The template to use for formatting the data. \"\n            \"It can contain the keys {text}, {data} or any other key in the Data.\",\n            value=\"{text}\",\n            required=True,\n        ),\n        StrInput(name=\"sep\", display_name=\"Separator\", advanced=True, value=\"\\n\"),\n    ]\n\n    outputs = [\n        Output(\n            display_name=\"Message\",\n            name=\"text\",\n            info=\"Data as a single Message, with each input Data separated by Separator\",\n            method=\"parse_data\",\n        ),\n        Output(\n            display_name=\"Data List\",\n            name=\"data_list\",\n            info=\"Data as a list of new Data, each having `text` formatted by Template\",\n            method=\"parse_data_as_list\",\n        ),\n    ]\n\n    def _clean_args(self) -> tuple[list[Data], str, str]:\n        data = self.data if isinstance(self.data, list) else [self.data]\n        template = self.template\n        sep = self.sep\n        return data, template, sep\n\n    def parse_data(self) -> Message:\n        data, template, sep = self._clean_args()\n        result_string = data_to_text(template, data, sep)\n        self.status = result_string\n        return Message(text=result_string)\n\n    def parse_data_as_list(self) -> list[Data]:\n        data, template, _ = self._clean_args()\n        text_list, data_list = data_to_text_list(template, data)\n        for item, text in zip(data_list, text_list, strict=True):\n            item.set_text(text)\n        self.status = data_list\n        return data_list\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              },
+              "sep": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "sep",
+                "value": "\n",
+                "display_name": "Separator",
+                "advanced": true,
+                "dynamic": false,
+                "info": "",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "StrInput"
+              },
+              "template": {
+                "tool_mode": false,
+                "trace_as_input": true,
+                "multiline": true,
+                "trace_as_metadata": true,
+                "load_from_db": false,
+                "list": false,
+                "list_add_label": "Add More",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "name": "template",
+                "value": "{Answer}",
+                "display_name": "Template",
+                "advanced": false,
+                "input_types": [
+                  "Message"
+                ],
+                "dynamic": false,
+                "info": "The template to use for formatting the data. It can contain the keys {text}, {data} or any other key in the Data.",
+                "title_case": false,
+                "type": "str",
+                "_input_type": "MultilineInput"
+              }
+            },
+            "description": "Convert Data objects into Messages using any {field_name} from input data.",
+            "icon": "message-square",
+            "base_classes": [
+              "Data",
+              "Message"
+            ],
+            "display_name": "Data to Message",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Message"
+                ],
+                "selected": "Message",
+                "name": "text",
+                "display_name": "Message",
+                "method": "parse_data",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true
+              },
+              {
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "data_list",
+                "display_name": "Data List",
+                "method": "parse_data_as_list",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true,
+                "hidden": true
+              }
+            ],
+            "field_order": [
+              "data",
+              "template",
+              "sep"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "processing",
+            "key": "ParseData",
+            "score": 0.01857804455091699,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "ParseData",
+          "id": "ParseData-QiNhY"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 293
+        },
+        "dragging": false
+      },
+      {
+        "id": "LoopComponent-ncT3W",
+        "type": "genericNode",
+        "position": {
+          "x": 86.27790783404072,
+          "y": -118.60089762342523
+        },
+        "data": {
+          "node": {
+            "template": {
+              "_type": "Component",
+              "data": {
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "list": false,
+                "list_add_label": "Add More",
+                "trace_as_input": true,
+                "required": false,
+                "placeholder": "",
+                "show": true,
+                "name": "data",
+                "value": "",
+                "display_name": "Data",
+                "advanced": false,
+                "input_types": [
+                  "Data"
+                ],
+                "dynamic": false,
+                "info": "The initial list of Data objects to iterate over.",
+                "title_case": false,
+                "type": "other",
+                "_input_type": "DataInput"
+              },
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "list": false,
+                "show": true,
+                "multiline": true,
+                "value": "from langflow.custom import Component\nfrom langflow.io import DataInput, Output\nfrom langflow.schema import Data\n\n\nclass LoopComponent(Component):\n    display_name = \"Loop\"\n    description = (\n        \"Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.\"\n    )\n    icon = \"infinity\"\n\n    inputs = [\n        DataInput(\n            name=\"data\",\n            display_name=\"Data\",\n            info=\"The initial list of Data objects to iterate over.\",\n        ),\n    ]\n\n    outputs = [\n        Output(display_name=\"Item\", name=\"item\", method=\"item_output\", allows_loop=True),\n        Output(display_name=\"Done\", name=\"done\", method=\"done_output\"),\n    ]\n\n    def initialize_data(self) -> None:\n        \"\"\"Initialize the data list, context index, and aggregated list.\"\"\"\n        if self.ctx.get(f\"{self._id}_initialized\", False):\n            return\n\n        # Ensure data is a list of Data objects\n        data_list = self._validate_data(self.data)\n\n        # Store the initial data and context variables\n        self.update_ctx(\n            {\n                f\"{self._id}_data\": data_list,\n                f\"{self._id}_index\": 0,\n                f\"{self._id}_aggregated\": [],\n                f\"{self._id}_initialized\": True,\n            }\n        )\n\n    def _validate_data(self, data):\n        \"\"\"Validate and return a list of Data objects.\"\"\"\n        if isinstance(data, Data):\n            return [data]\n        if isinstance(data, list) and all(isinstance(item, Data) for item in data):\n            return data\n        msg = \"The 'data' input must be a list of Data objects or a single Data object.\"\n        raise TypeError(msg)\n\n    def evaluate_stop_loop(self) -> bool:\n        \"\"\"Evaluate whether to stop item or done output.\"\"\"\n        current_index = self.ctx.get(f\"{self._id}_index\", 0)\n        data_length = len(self.ctx.get(f\"{self._id}_data\", []))\n        return current_index > data_length\n\n    def item_output(self) -> Data:\n        \"\"\"Output the next item in the list or stop if done.\"\"\"\n        self.initialize_data()\n        current_item = Data(text=\"\")\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            return Data(text=\"\")\n\n        # Get data list and current index\n        data_list, current_index = self.loop_variables()\n        if current_index < len(data_list):\n            # Output current item and increment index\n            try:\n                current_item = data_list[current_index]\n            except IndexError:\n                current_item = Data(text=\"\")\n        self.aggregated_output()\n        self.update_ctx({f\"{self._id}_index\": current_index + 1})\n        return current_item\n\n    def done_output(self) -> Data:\n        \"\"\"Trigger the done output when iteration is complete.\"\"\"\n        self.initialize_data()\n\n        if self.evaluate_stop_loop():\n            self.stop(\"item\")\n            self.start(\"done\")\n\n            return self.ctx.get(f\"{self._id}_aggregated\", [])\n        self.stop(\"done\")\n        return Data(text=\"\")\n\n    def loop_variables(self):\n        \"\"\"Retrieve loop variables from context.\"\"\"\n        return (\n            self.ctx.get(f\"{self._id}_data\", []),\n            self.ctx.get(f\"{self._id}_index\", 0),\n        )\n\n    def aggregated_output(self) -> Data:\n        \"\"\"Return the aggregated list once all items are processed.\"\"\"\n        self.initialize_data()\n\n        # Get data list and aggregated list\n        data_list = self.ctx.get(f\"{self._id}_data\", [])\n        aggregated = self.ctx.get(f\"{self._id}_aggregated\", [])\n\n        # Check if loop input is provided and append to aggregated list\n        if self.item is not None and not isinstance(self.item, str) and len(aggregated) <= len(data_list):\n            aggregated.append(self.item)\n            self.update_ctx({f\"{self._id}_aggregated\": aggregated})\n        return aggregated\n",
+                "fileTypes": [],
+                "file_path": "",
+                "password": false,
+                "name": "code",
+                "advanced": true,
+                "dynamic": true,
+                "info": "",
+                "load_from_db": false,
+                "title_case": false
+              }
+            },
+            "description": "Iterates over a list of Data objects, outputting one item at a time and aggregating results from loop inputs.",
+            "icon": "infinity",
+            "base_classes": [
+              "Data"
+            ],
+            "display_name": "Loop",
+            "documentation": "",
+            "minimized": false,
+            "custom_fields": {},
+            "output_types": [],
+            "pinned": false,
+            "conditional_paths": [],
+            "frozen": false,
+            "outputs": [
+              {
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "item",
+                "display_name": "Item",
+                "method": "item_output",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": true,
+                "tool_mode": true
+              },
+              {
+                "types": [
+                  "Data"
+                ],
+                "selected": "Data",
+                "name": "done",
+                "display_name": "Done",
+                "method": "done_output",
+                "value": "__UNDEFINED__",
+                "cache": true,
+                "allows_loop": false,
+                "tool_mode": true
+              }
+            ],
+            "field_order": [
+              "data"
+            ],
+            "beta": false,
+            "legacy": false,
+            "edited": false,
+            "metadata": {},
+            "tool_mode": false,
+            "category": "logic",
+            "key": "LoopComponent",
+            "score": 0.001,
+            "lf_version": "1.1.4.post1"
+          },
+          "showNode": true,
+          "type": "LoopComponent",
+          "id": "LoopComponent-ncT3W"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 279
+        },
+        "dragging": false
+      },
+      {
+        "id": "note-DaOl4",
+        "type": "noteNode",
+        "position": {
+          "x": 1888.7094222999644,
+          "y": -599.7763550511083
+        },
+        "data": {
+          "id": "note-DaOl4",
+          "node": {
+            "description": "## Get Your OpenAI API Key\n\n**Steps**:\n\n1. **Visit** [OpenAI's API Key Page](https://platform.openai.com/api-keys).\n\n2. **Log In/Sign Up**:\n   - Log in or create a new OpenAI account.\n\n3. **Generate API Key**:\n   - Click \"Create New Secret Key\" to obtain your key.\n\n4. **Store Your Key Securely**:\n   - Note it down as it will only display once.\n\n5. **Enter API Key**:\n   - Input your key in the OpenAI API Key field within the component setup.\n\nKeep your key safe and manage it responsibly!",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "rose"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "measured": {
+          "width": 325,
+          "height": 325
+        },
+        "dragging": false
+      },
+      {
+        "id": "note-YqnHy",
+        "type": "noteNode",
+        "position": {
+          "x": -420.2280673394715,
+          "y": -318.21915835177515
+        },
+        "data": {
+          "id": "note-YqnHy",
+          "node": {
+            "description": "### 💡 Upload yout CSV here👇\n\n**Question and Answer Columns Are Required**\n\n\n\n\n\n\n\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "measured": {
+          "width": 324,
+          "height": 324
+        },
+        "dragging": false
+      },
+      {
+        "id": "note-1UchT",
+        "type": "noteNode",
+        "position": {
+          "x": 2455.6659060984357,
+          "y": -590.1696649182951
+        },
+        "data": {
+          "id": "note-1UchT",
+          "node": {
+            "description": "## Getting Your LangWatch API Key\n\n\n\n### Steps to Get Your API Key\n\n1. **Access LangWatch:**\n   - Visit the official website: [LangWatch](https://langwatch.ai/)\n\n2. **Get Started:**\n   - Begin by accessing the app: [LangWatch App](https://app.langwatch.ai/)\n\n3. **Go to Settings:**\n   - Navigate to your settings here: [Settings](https://app.langwatch.ai/settings)\n\n4. **API Setup:**\n   - Head over to the setup page: [Setup](https://app.langwatch.ai/lfmain-8j9G-v/setup)\n   - Follow the instructions on the page to obtain your API key.\n\n## Notes\n\n- Ensure that you store your API key securely.\n- If you encounter any issues, please refer to the official documentation or contact LangWatch support.\n\n## Additional Resources\n\n- [LangWatch - Homepage](https://langwatch.ai/)\n- [LangWatch - App](https://app.langwatch.ai/)\n- [LangWatch - Settings](https://app.langwatch.ai/settings)\n- [LangWatch - Setup](https://app.langwatch.ai/lfmain-8j9G-v/setup)\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "neutral"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "measured": {
+          "width": 325,
+          "height": 325
+        },
+        "dragging": false
+      },
+      {
+        "id": "note-fCGFz",
+        "type": "noteNode",
+        "position": {
+          "x": 1439.8289747067097,
+          "y": -501.49234606437716
+        },
+        "data": {
+          "id": "note-fCGFz",
+          "node": {
+            "description": "### 💡 Enter Your Prompt for Production Evaluation 👇",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "measured": {
+          "width": 324,
+          "height": 324
+        },
+        "dragging": false
+      },
+      {
+        "id": "note-tG8An",
+        "type": "noteNode",
+        "position": {
+          "x": -819.9610781736436,
+          "y": -535.2325802490486
+        },
+        "data": {
+          "node": {
+            "description": "# 📖 README  \n\nEvaluates the effectiveness of prompts by measuring LLM answer accuracy and relevance. Designed to help users refine prompts for production, ensuring high-quality and consistent outputs.  \n\n## 🚀 How to Use  \n\n1. **Load your CSV** using the **Load CSV** component.  \n2. **Set Up Data to Message:**  \n   - Ensure both **Data to Message** components match your CSV template.  \n   - Use `{Question}` and `{Answer}` as placeholders.  \n3. **Add Credentials:**  \n   - Enter your **LangWatch** and **OpenAI API** keys.  \n4. **Test Your Prompt for Production:**  \n   - Insert your prompt and run the flow.  \n\n## 🔄 Next Steps  \n\nRefine and optimize your prompt based on evaluation results.  \n\nFor more, visit the [Langflow Docs](https://docs.langflow.org/starter-projects-basic-prompting).  \n",
+            "display_name": "",
+            "documentation": "",
+            "template": {}
+          },
+          "type": "note",
+          "id": "note-tG8An"
+        },
+        "measured": {
+          "width": 325,
+          "height": 325
+        },
+        "selected": false,
+        "dragging": false
+      },
+      {
+        "id": "OpenAIModel-Mcp52",
+        "type": "genericNode",
+        "position": {
+          "x": 1183.6966886521,
+          "y": 573.6490621400046
+        },
+        "data": {
+          "id": "OpenAIModel-Mcp52",
+          "node": {
+            "base_classes": [
+              "LanguageModel",
+              "Message"
+            ],
+            "beta": false,
+            "category": "models",
+            "conditional_paths": [],
+            "custom_fields": {},
+            "description": "Generates text using OpenAI LLMs.",
+            "display_name": "OpenAI",
+            "documentation": "",
+            "edited": false,
+            "field_order": [
+              "input_value",
+              "system_message",
+              "stream",
+              "max_tokens",
+              "model_kwargs",
+              "json_mode",
+              "model_name",
+              "openai_api_base",
+              "api_key",
+              "temperature",
+              "seed"
+            ],
+            "frozen": false,
+            "icon": "OpenAI",
+            "key": "OpenAIModel",
+            "legacy": false,
+            "metadata": {},
+            "minimized": false,
+            "output_types": [],
+            "outputs": [
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Message",
+                "method": "text_response",
+                "name": "text_output",
+                "required_inputs": [],
+                "selected": "Message",
+                "tool_mode": true,
+                "types": [
+                  "Message"
+                ],
+                "value": "__UNDEFINED__"
+              },
+              {
+                "allows_loop": false,
+                "cache": true,
+                "display_name": "Language Model",
+                "method": "build_model",
+                "name": "model_output",
+                "required_inputs": [
+                  "api_key"
+                ],
+                "selected": "LanguageModel",
+                "tool_mode": true,
+                "types": [
+                  "LanguageModel"
+                ],
+                "value": "__UNDEFINED__",
+                "hidden": true
+              }
+            ],
+            "pinned": false,
+            "score": 0.14285714285714285,
+            "template": {
+              "_type": "Component",
+              "api_key": {
+                "_input_type": "SecretStrInput",
+                "advanced": false,
+                "display_name": "OpenAI API Key",
+                "dynamic": false,
+                "info": "The OpenAI API Key to use for the OpenAI model.",
+                "input_types": [
+                  "Message"
+                ],
+                "load_from_db": true,
+                "name": "api_key",
+                "password": true,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "str",
+                "value": ""
+              },
+              "code": {
+                "advanced": true,
+                "dynamic": true,
+                "fileTypes": [],
+                "file_path": "",
+                "info": "",
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "code",
+                "password": false,
+                "placeholder": "",
+                "required": true,
+                "show": true,
+                "title_case": false,
+                "type": "code",
+                "value": "from langchain_openai import ChatOpenAI\nfrom pydantic.v1 import SecretStr\n\nfrom langflow.base.models.model import LCModelComponent\nfrom langflow.base.models.openai_constants import OPENAI_MODEL_NAMES\nfrom langflow.field_typing import LanguageModel\nfrom langflow.field_typing.range_spec import RangeSpec\nfrom langflow.inputs import BoolInput, DictInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput\n\n\nclass OpenAIModelComponent(LCModelComponent):\n    display_name = \"OpenAI\"\n    description = \"Generates text using OpenAI LLMs.\"\n    icon = \"OpenAI\"\n    name = \"OpenAIModel\"\n\n    inputs = [\n        *LCModelComponent._base_inputs,\n        IntInput(\n            name=\"max_tokens\",\n            display_name=\"Max Tokens\",\n            advanced=True,\n            info=\"The maximum number of tokens to generate. Set to 0 for unlimited tokens.\",\n            range_spec=RangeSpec(min=0, max=128000),\n        ),\n        DictInput(\n            name=\"model_kwargs\",\n            display_name=\"Model Kwargs\",\n            advanced=True,\n            info=\"Additional keyword arguments to pass to the model.\",\n        ),\n        BoolInput(\n            name=\"json_mode\",\n            display_name=\"JSON Mode\",\n            advanced=True,\n            info=\"If True, it will output JSON regardless of passing a schema.\",\n        ),\n        DropdownInput(\n            name=\"model_name\",\n            display_name=\"Model Name\",\n            advanced=False,\n            options=OPENAI_MODEL_NAMES,\n            value=OPENAI_MODEL_NAMES[0],\n        ),\n        StrInput(\n            name=\"openai_api_base\",\n            display_name=\"OpenAI API Base\",\n            advanced=True,\n            info=\"The base URL of the OpenAI API. \"\n            \"Defaults to https://api.openai.com/v1. \"\n            \"You can change this to use other APIs like JinaChat, LocalAI and Prem.\",\n        ),\n        SecretStrInput(\n            name=\"api_key\",\n            display_name=\"OpenAI API Key\",\n            info=\"The OpenAI API Key to use for the OpenAI model.\",\n            advanced=False,\n            value=\"OPENAI_API_KEY\",\n            required=True,\n        ),\n        SliderInput(\n            name=\"temperature\", display_name=\"Temperature\", value=0.1, range_spec=RangeSpec(min=0, max=2, step=0.01)\n        ),\n        IntInput(\n            name=\"seed\",\n            display_name=\"Seed\",\n            info=\"The seed controls the reproducibility of the job.\",\n            advanced=True,\n            value=1,\n        ),\n    ]\n\n    def build_model(self) -> LanguageModel:  # type: ignore[type-var]\n        openai_api_key = self.api_key\n        temperature = self.temperature\n        model_name: str = self.model_name\n        max_tokens = self.max_tokens\n        model_kwargs = self.model_kwargs or {}\n        openai_api_base = self.openai_api_base or \"https://api.openai.com/v1\"\n        json_mode = self.json_mode\n        seed = self.seed\n\n        api_key = SecretStr(openai_api_key).get_secret_value() if openai_api_key else None\n        output = ChatOpenAI(\n            max_tokens=max_tokens or None,\n            model_kwargs=model_kwargs,\n            model=model_name,\n            base_url=openai_api_base,\n            api_key=api_key,\n            temperature=temperature if temperature is not None else 0.1,\n            seed=seed,\n        )\n        if json_mode:\n            output = output.bind(response_format={\"type\": \"json_object\"})\n\n        return output\n\n    def _get_exception_message(self, e: Exception):\n        \"\"\"Get a message from an OpenAI exception.\n\n        Args:\n            e (Exception): The exception to get the message from.\n\n        Returns:\n            str: The message from the exception.\n        \"\"\"\n        try:\n            from openai import BadRequestError\n        except ImportError:\n            return None\n        if isinstance(e, BadRequestError):\n            message = e.body.get(\"message\")\n            if message:\n                return message\n        return None\n"
+              },
+              "input_value": {
+                "_input_type": "MessageInput",
+                "advanced": false,
+                "display_name": "Input",
+                "dynamic": false,
+                "info": "",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "input_value",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "json_mode": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "JSON Mode",
+                "dynamic": false,
+                "info": "If True, it will output JSON regardless of passing a schema.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "json_mode",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "max_tokens": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Max Tokens",
+                "dynamic": false,
+                "info": "The maximum number of tokens to generate. Set to 0 for unlimited tokens.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "max_tokens",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 128000,
+                  "min": 0,
+                  "step": 0.1,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": ""
+              },
+              "model_kwargs": {
+                "_input_type": "DictInput",
+                "advanced": true,
+                "display_name": "Model Kwargs",
+                "dynamic": false,
+                "info": "Additional keyword arguments to pass to the model.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "model_kwargs",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "type": "dict",
+                "value": {}
+              },
+              "model_name": {
+                "_input_type": "DropdownInput",
+                "advanced": false,
+                "combobox": false,
+                "dialog_inputs": {},
+                "display_name": "Model Name",
+                "dynamic": false,
+                "info": "",
+                "name": "model_name",
+                "options": [
+                  "gpt-4o-mini",
+                  "gpt-4o",
+                  "gpt-4-turbo",
+                  "gpt-4-turbo-preview",
+                  "gpt-4",
+                  "gpt-3.5-turbo",
+                  "gpt-3.5-turbo-0125"
+                ],
+                "options_metadata": [],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "gpt-4o-mini"
+              },
+              "openai_api_base": {
+                "_input_type": "StrInput",
+                "advanced": true,
+                "display_name": "OpenAI API Base",
+                "dynamic": false,
+                "info": "The base URL of the OpenAI API. Defaults to https://api.openai.com/v1. You can change this to use other APIs like JinaChat, LocalAI and Prem.",
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "name": "openai_api_base",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "seed": {
+                "_input_type": "IntInput",
+                "advanced": true,
+                "display_name": "Seed",
+                "dynamic": false,
+                "info": "The seed controls the reproducibility of the job.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "seed",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "int",
+                "value": 1
+              },
+              "stream": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Stream",
+                "dynamic": false,
+                "info": "Stream the response from the model. Streaming works only in Chat.",
+                "list": false,
+                "list_add_label": "Add More",
+                "name": "stream",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_metadata": true,
+                "type": "bool",
+                "value": false
+              },
+              "system_message": {
+                "_input_type": "MultilineInput",
+                "advanced": false,
+                "display_name": "System Message",
+                "dynamic": false,
+                "info": "System message to pass to the model.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "list_add_label": "Add More",
+                "load_from_db": false,
+                "multiline": true,
+                "name": "system_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "tool_mode": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "Generate a concise markdown report summarizing the evaluation results. \nInclude the status, pass/fail result, and details about why the evaluation failed or passed. \nExclude any null or irrelevant data. \nFormat the report clearly with headings and bullet points.\n"
+              },
+              "temperature": {
+                "_input_type": "SliderInput",
+                "advanced": true,
+                "display_name": "Temperature",
+                "dynamic": false,
+                "info": "",
+                "max_label": "",
+                "max_label_icon": "",
+                "min_label": "",
+                "min_label_icon": "",
+                "name": "temperature",
+                "placeholder": "",
+                "range_spec": {
+                  "max": 2,
+                  "min": 0,
+                  "step": 0.01,
+                  "step_type": "float"
+                },
+                "required": false,
+                "show": true,
+                "slider_buttons": false,
+                "slider_buttons_options": [],
+                "slider_input": false,
+                "title_case": false,
+                "tool_mode": false,
+                "type": "slider",
+                "value": 0.1
+              }
+            },
+            "tool_mode": false
+          },
+          "showNode": true,
+          "type": "OpenAIModel"
+        },
+        "selected": false,
+        "measured": {
+          "width": 320,
+          "height": 475
+        },
+        "dragging": false
+      },
+      {
+        "id": "note-SDqMN",
+        "type": "noteNode",
+        "position": {
+          "x": 1163.9197506276128,
+          "y": 452.7196269170917
+        },
+        "data": {
+          "id": "note-SDqMN",
+          "node": {
+            "description": "### Report\n\n📊 Report Section (Optional) – Format LangWatch evaluation results into a clear and concise report for better visualization.\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n",
+            "display_name": "",
+            "documentation": "",
+            "template": {
+              "backgroundColor": "transparent"
+            }
+          },
+          "type": "note"
+        },
+        "selected": false,
+        "measured": {
+          "width": 324,
+          "height": 324
+        },
+        "dragging": false
+      }
+    ],
+    "edges": [
+      {
+        "source": "Prompt-8AeKA",
+        "sourceHandle": "{œdataTypeœ:œPromptœ,œidœ:œPrompt-8AeKAœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-ENX3f",
+        "targetHandle": "{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-ENX3fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "system_message",
+            "id": "OpenAIModel-ENX3f",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "Prompt",
+            "id": "Prompt-8AeKA",
+            "name": "prompt",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__Prompt-8AeKA{œdataTypeœ:œPromptœ,œidœ:œPrompt-8AeKAœ,œnameœ:œpromptœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ENX3f{œfieldNameœ:œsystem_messageœ,œidœ:œOpenAIModel-ENX3fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "animated": false,
+        "className": "",
+        "selected": false
+      },
+      {
+        "source": "OpenAIModel-ENX3f",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ENX3fœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LangWatchEvaluator-muSx8",
+        "targetHandle": "{œfieldNameœ:œoutputœ,œidœ:œLangWatchEvaluator-muSx8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "output",
+            "id": "LangWatchEvaluator-muSx8",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-ENX3f",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__OpenAIModel-ENX3f{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-ENX3fœ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-LangWatchEvaluator-muSx8{œfieldNameœ:œoutputœ,œidœ:œLangWatchEvaluator-muSx8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "animated": false,
+        "className": "",
+        "selected": false
+      },
+      {
+        "source": "ParseData-XAZOC",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-XAZOCœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-ENX3f",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ENX3fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-ENX3f",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-XAZOC",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__ParseData-XAZOC{œdataTypeœ:œParseDataœ,œidœ:œParseData-XAZOCœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-ENX3f{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-ENX3fœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "animated": false,
+        "className": ""
+      },
+      {
+        "source": "ParseData-QiNhY",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-QiNhYœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LangWatchEvaluator-muSx8",
+        "targetHandle": "{œfieldNameœ:œexpected_outputœ,œidœ:œLangWatchEvaluator-muSx8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "expected_output",
+            "id": "LangWatchEvaluator-muSx8",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-QiNhY",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__ParseData-QiNhY{œdataTypeœ:œParseDataœ,œidœ:œParseData-QiNhYœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-LangWatchEvaluator-muSx8{œfieldNameœ:œexpected_outputœ,œidœ:œLangWatchEvaluator-muSx8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "selected": false,
+        "animated": false,
+        "className": ""
+      },
+      {
+        "source": "CSVtoData-4EHBu",
+        "sourceHandle": "{œdataTypeœ:œCSVtoDataœ,œidœ:œCSVtoData-4EHBuœ,œnameœ:œdata_listœ,œoutput_typesœ:[œDataœ]}",
+        "target": "LoopComponent-ncT3W",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œLoopComponent-ncT3Wœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "LoopComponent-ncT3W",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          },
+          "sourceHandle": {
+            "dataType": "CSVtoData",
+            "id": "CSVtoData-4EHBu",
+            "name": "data_list",
+            "output_types": [
+              "Data"
+            ]
+          }
+        },
+        "id": "xy-edge__CSVtoData-4EHBu{œdataTypeœ:œCSVtoDataœ,œidœ:œCSVtoData-4EHBuœ,œnameœ:œdata_listœ,œoutput_typesœ:[œDataœ]}-LoopComponent-ncT3W{œfieldNameœ:œdataœ,œidœ:œLoopComponent-ncT3Wœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "selected": false,
+        "animated": false,
+        "className": ""
+      },
+      {
+        "source": "LoopComponent-ncT3W",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-ncT3Wœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParseData-XAZOC",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-XAZOCœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-XAZOC",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          },
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-ncT3W",
+            "name": "item",
+            "output_types": [
+              "Data"
+            ]
+          }
+        },
+        "id": "xy-edge__LoopComponent-ncT3W{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-ncT3Wœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-XAZOC{œfieldNameœ:œdataœ,œidœ:œParseData-XAZOCœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "animated": false,
+        "className": "",
+        "selected": false
+      },
+      {
+        "source": "LoopComponent-ncT3W",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-ncT3Wœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParseData-QiNhY",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-QiNhYœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-QiNhY",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          },
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-ncT3W",
+            "name": "item",
+            "output_types": [
+              "Data"
+            ]
+          }
+        },
+        "id": "xy-edge__LoopComponent-ncT3W{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-ncT3Wœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}-ParseData-QiNhY{œfieldNameœ:œdataœ,œidœ:œParseData-QiNhYœ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "animated": false,
+        "className": "",
+        "selected": false
+      },
+      {
+        "source": "LangWatchEvaluator-muSx8",
+        "sourceHandle": "{œdataTypeœ:œLangWatchEvaluatorœ,œidœ:œLangWatchEvaluator-muSx8œ,œnameœ:œevaluation_resultœ,œoutput_typesœ:[œDataœ]}",
+        "target": "LoopComponent-ncT3W",
+        "targetHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-ncT3Wœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "data": {
+          "targetHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-ncT3W",
+            "name": "item",
+            "output_types": [
+              "Data"
+            ]
+          },
+          "sourceHandle": {
+            "dataType": "LangWatchEvaluator",
+            "id": "LangWatchEvaluator-muSx8",
+            "name": "evaluation_result",
+            "output_types": [
+              "Data"
+            ]
+          }
+        },
+        "id": "xy-edge__LangWatchEvaluator-muSx8{œdataTypeœ:œLangWatchEvaluatorœ,œidœ:œLangWatchEvaluator-muSx8œ,œnameœ:œevaluation_resultœ,œoutput_typesœ:[œDataœ]}-LoopComponent-ncT3W{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-ncT3Wœ,œnameœ:œitemœ,œoutput_typesœ:[œDataœ]}",
+        "animated": false,
+        "className": "",
+        "selected": false
+      },
+      {
+        "source": "LoopComponent-ncT3W",
+        "sourceHandle": "{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-ncT3Wœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}",
+        "target": "ParseData-JKA35",
+        "targetHandle": "{œfieldNameœ:œdataœ,œidœ:œParseData-JKA35œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "data",
+            "id": "ParseData-JKA35",
+            "inputTypes": [
+              "Data"
+            ],
+            "type": "other"
+          },
+          "sourceHandle": {
+            "dataType": "LoopComponent",
+            "id": "LoopComponent-ncT3W",
+            "name": "done",
+            "output_types": [
+              "Data"
+            ]
+          }
+        },
+        "id": "xy-edge__LoopComponent-ncT3W{œdataTypeœ:œLoopComponentœ,œidœ:œLoopComponent-ncT3Wœ,œnameœ:œdoneœ,œoutput_typesœ:[œDataœ]}-ParseData-JKA35{œfieldNameœ:œdataœ,œidœ:œParseData-JKA35œ,œinputTypesœ:[œDataœ],œtypeœ:œotherœ}",
+        "animated": false,
+        "className": "",
+        "selected": false
+      },
+      {
+        "source": "ParseData-XAZOC",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-XAZOCœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "LangWatchEvaluator-muSx8",
+        "targetHandle": "{œfieldNameœ:œinputœ,œidœ:œLangWatchEvaluator-muSx8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input",
+            "id": "LangWatchEvaluator-muSx8",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-XAZOC",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__ParseData-XAZOC{œdataTypeœ:œParseDataœ,œidœ:œParseData-XAZOCœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-LangWatchEvaluator-muSx8{œfieldNameœ:œinputœ,œidœ:œLangWatchEvaluator-muSx8œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "animated": false,
+        "className": "",
+        "selected": false
+      },
+      {
+        "source": "ParseData-JKA35",
+        "sourceHandle": "{œdataTypeœ:œParseDataœ,œidœ:œParseData-JKA35œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "OpenAIModel-Mcp52",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Mcp52œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "OpenAIModel-Mcp52",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "ParseData",
+            "id": "ParseData-JKA35",
+            "name": "text",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__ParseData-JKA35{œdataTypeœ:œParseDataœ,œidœ:œParseData-JKA35œ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-OpenAIModel-Mcp52{œfieldNameœ:œinput_valueœ,œidœ:œOpenAIModel-Mcp52œ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "animated": false,
+        "className": ""
+      },
+      {
+        "source": "OpenAIModel-Mcp52",
+        "sourceHandle": "{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Mcp52œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}",
+        "target": "ChatOutput-6zcaD",
+        "targetHandle": "{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6zcaDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "data": {
+          "targetHandle": {
+            "fieldName": "input_value",
+            "id": "ChatOutput-6zcaD",
+            "inputTypes": [
+              "Message"
+            ],
+            "type": "str"
+          },
+          "sourceHandle": {
+            "dataType": "OpenAIModel",
+            "id": "OpenAIModel-Mcp52",
+            "name": "text_output",
+            "output_types": [
+              "Message"
+            ]
+          }
+        },
+        "id": "xy-edge__OpenAIModel-Mcp52{œdataTypeœ:œOpenAIModelœ,œidœ:œOpenAIModel-Mcp52œ,œnameœ:œtext_outputœ,œoutput_typesœ:[œMessageœ]}-ChatOutput-6zcaD{œfieldNameœ:œinput_valueœ,œidœ:œChatOutput-6zcaDœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "animated": false,
+        "className": ""
+      }
+    ],
+    "viewport": {
+      "x": 320.17109142749626,
+      "y": 331.70607574834855,
+      "zoom": 0.4755756201529374
+    }
+  },
+  "description": "Evaluates the effectiveness of prompts by measuring LLM answer accuracy and relevance. Designed to help users refine prompts for production, ensuring high-quality and consistent outputs.",
+  "name": "LLM Prompt Performance Eval",
+  "last_tested_version": "1.1.4.post1",
+  "endpoint_name": null,
+  "is_component": false,
+  "tags": ["chatbots"]
+}
