@@ -187,11 +187,34 @@ jobs:
             exit 1
           fi
 
-          echo "Pushing main tag $RELEASE_TAG"
-          if ! git push origin $RELEASE_TAG; then
-            echo "Tag push failed. Check if the tag already exists. Exiting the workflow."
-            exit 1
-          fi
+          push_output=$(mktemp)
+          trap 'rm -f "$push_output"' EXIT
+          workflow_timeout="Unable to determine if workflow can be created or updated due to timeout"
+          max_attempts=4
+          backoff_seconds=10
+
+          for ((attempt = 1; attempt <= max_attempts; attempt++)); do
+            echo "Pushing main tag $RELEASE_TAG (attempt $attempt/$max_attempts)"
+            if git push origin "refs/tags/$RELEASE_TAG" >"$push_output" 2>&1; then
+              cat "$push_output"
+              break
+            else
+              push_status=$?
+            fi
+
+            cat "$push_output" >&2
+            if ! grep -Fq "$workflow_timeout" "$push_output"; then
+              exit "$push_status"
+            fi
+            if ((attempt == max_attempts)); then
+              echo "GitHub's workflow permission check still timed out after $max_attempts attempts." >&2
+              exit "$push_status"
+            fi
+
+            echo "GitHub timed out checking workflow permissions. Retrying in ${backoff_seconds}s."
+            sleep "$backoff_seconds"
+            backoff_seconds=$((backoff_seconds * 2))
+          done
           # TODO: notify on failure
 
       - name: Checkout main nightly tag

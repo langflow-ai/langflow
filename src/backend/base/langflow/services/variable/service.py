@@ -160,9 +160,11 @@ class DatabaseVariableService(VariableService, Service):
             var_to_provider = {}
             provider_variables = {}
             metadata = get_model_provider_metadata()
-            # Serialize imports for the same user across PostgreSQL workers so
-            # concurrent startup/login imports cannot create duplicate rows.
-            principal = await session.get(User, UUID(str(user_id)), with_for_update=True)
+            # FOR NO KEY UPDATE serializes same-user imports and account
+            # writes, while allowing the foreign-key lock of a concurrent
+            # login's refresh-session insert. FOR UPDATE can deadlock with
+            # that insert and the login's subsequent last-login update.
+            principal = await session.get(User, UUID(str(user_id)), with_for_update={"key_share": True})
             for provider, meta in metadata.items():
                 for var in meta.get("variables", []):
                     var_key = var.get("variable_key")

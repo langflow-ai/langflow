@@ -4140,5 +4140,7 @@
   "settings.upgrade.check.error.subprocess_unavailable": "Este servidor no puede iniciar la comprobación desde esta página. Ejecuta langflow upgrade-check en una terminal e importa el informe.",
   "settings.upgrade.check.error.connection_lost": "La conexión se cerró antes de que terminara la comprobación. Ejecútala de nuevo.",
   "settings.upgrade.check.error.refused": "El servidor no inició la comprobación. Inténtalo más tarde.",
-  "playground.sharedRunFailedHint": "Este playground compartido no puede usar las credenciales ni las bases de conocimiento del propietario del flujo. Si el flujo las necesita, consulta a su propietario."
+  "playground.sharedRunFailedHint": "Este playground compartido no puede usar las credenciales ni las bases de conocimiento del propietario del flujo. Si el flujo las necesita, consulta a su propietario.",
+  "updateComponent.customizedUpdateDesc": "Al actualizar un componente personalizado, su código guardado se sustituye por la versión del catálogo de componentes.",
+  "settings.upgrade.duplicateImport": "Importación duplicada"
 }

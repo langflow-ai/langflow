@@ -329,6 +329,27 @@ describe("runFlowAGUI end-to-end", () => {
     }
   });
 
+  it("shows the maintenance refusal without the HTTP or JSON wrapper", async () => {
+    const detail = "This instance is in maintenance mode.";
+    const fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({
+      ok: false,
+      status: 503,
+      headers: new Headers({ "content-type": "application/json" }),
+      text: async () => JSON.stringify({ detail }),
+    } as Response);
+
+    try {
+      await runFlowAGUI({ flowId: "flow-1", message: "hello" });
+      expect(useFlowStore.getState().buildInfo).toEqual({
+        error: [detail],
+        success: false,
+      });
+      expect(useAlertStore.getState().errorData.list).toEqual([detail]);
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("marks still-running nodes as ERROR when a run-level RUN_ERROR arrives", async () => {
     const events = [
       {

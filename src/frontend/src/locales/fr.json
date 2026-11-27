@@ -4140,5 +4140,7 @@
   "settings.upgrade.check.error.subprocess_unavailable": "Ce serveur ne peut pas lancer la vérification depuis cette page. Exécutez langflow upgrade-check dans un terminal et importez le rapport.",
   "settings.upgrade.check.error.connection_lost": "La connexion s’est fermée avant la fin de la vérification. Relancez-la.",
   "settings.upgrade.check.error.refused": "Le serveur n’a pas démarré la vérification. Réessayez plus tard.",
-  "playground.sharedRunFailedHint": "Ce playground partagé ne peut pas utiliser les identifiants ni les bases de connaissances du propriétaire du flow. Si le flow en a besoin, contactez son propriétaire."
+  "playground.sharedRunFailedHint": "Ce playground partagé ne peut pas utiliser les identifiants ni les bases de connaissances du propriétaire du flow. Si le flow en a besoin, contactez son propriétaire.",
+  "updateComponent.customizedUpdateDesc": "La mise à jour d’un composant personnalisé remplace son code enregistré par la version du catalogue de composants.",
+  "settings.upgrade.duplicateImport": "Importation en double"
 }

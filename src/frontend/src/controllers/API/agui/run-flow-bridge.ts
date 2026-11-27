@@ -60,6 +60,21 @@ function showWorkflowWarning(message: string): void {
   });
 }
 
+function workflowRequestError(message: string): string {
+  // HttpAgent wraps failed response text in an HTTP error. FastAPI uses a
+  // plain detail string for maintenance refusals.
+  const prefix = "HTTP 503: ";
+  if (message.startsWith(prefix)) {
+    try {
+      const { detail } = JSON.parse(message.slice(prefix.length));
+      if (typeof detail === "string" && detail) return detail;
+    } catch {
+      // A proxy may return a non-JSON response.
+    }
+  }
+  return message;
+}
+
 interface JsonPatchOp {
   op: string;
   path: string;
@@ -536,10 +551,11 @@ export async function runFlowAGUI(opts: RunFlowOptions): Promise<void> {
       },
       error: (err: Error) => {
         markRunningAsError = true;
-        flowStore.setBuildInfo({ error: [err.message], success: false });
+        const message = workflowRequestError(err.message);
+        flowStore.setBuildInfo({ error: [message], success: false });
         setErrorData({
           title: i18n.t("humanInput.runFailed"),
-          list: [err.message],
+          list: [message],
         });
         subscription.unsubscribe();
         finish();

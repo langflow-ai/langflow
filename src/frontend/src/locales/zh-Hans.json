@@ -4139,5 +4139,7 @@
   "settings.upgrade.check.error.subprocess_unavailable": "此服务器无法从本页面启动检查。请在终端中运行 langflow upgrade-check 并导入报告。",
   "settings.upgrade.check.error.connection_lost": "检查结束前连接已关闭。请重新运行。",
   "settings.upgrade.check.error.refused": "服务器没有启动检查。请稍后重试。",
-  "playground.sharedRunFailedHint": "此共享 Playground 无法使用流程所有者的凭据或知识库。如果流程需要它们，请联系其所有者。"
+  "playground.sharedRunFailedHint": "此共享 Playground 无法使用流程所有者的凭据或知识库。如果流程需要它们，请联系其所有者。",
+  "updateComponent.customizedUpdateDesc": "更新自定义组件时，其已保存的代码将替换为组件目录中的版本。",
+  "settings.upgrade.duplicateImport": "重复导入"
 }
