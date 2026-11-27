@@ -47,7 +47,9 @@ function DataOutputComponent({
       key={"dataOutputComponent"}
       overlayNoRowsTemplate="No data available"
       paginationInfo={
-        rows.length > maxItemsLength ? rows[maxItemsLength] : undefined
+        rows.length > maxItemsLength
+          ? `${rows.length - maxItemsLength} more items hidden`
+          : undefined
       }
       suppressRowClickSelection={true}
       pagination={pagination}
