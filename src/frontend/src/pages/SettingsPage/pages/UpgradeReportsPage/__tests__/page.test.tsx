@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import { migrationKeys } from "@/controllers/API/queries/migration";
 import * as checkApi from "@/controllers/API/queries/upgrade-reports/use-upgrade-check";
@@ -13,7 +13,10 @@ import FlowList from "../FlowList";
 import { reportReason } from "../format";
 import { history, preview, report } from "./fixture";
 
-function open(admin: boolean | null = true) {
+function open(
+  admin: boolean | null = true,
+  entry = "/settings/upgrade-reports",
+) {
   useAuthStore.setState({
     userData: admin === null ? null : ({ is_superuser: admin } as Users),
   });
@@ -25,26 +28,31 @@ function open(admin: boolean | null = true) {
   });
   const view = render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={["/settings/upgrade-reports"]}>
-        <Routes>
-          <Route
-            path="/settings/upgrade-reports"
-            element={
-              <main>
-                <h1>Settings</h1>
-                <UpgradeReportsPage />
-              </main>
-            }
-          />
-          <Route path="/" element={<p>Home</p>} />
-        </Routes>
-      </MemoryRouter>
+      <RouterProvider
+        router={createMemoryRouter(
+          [
+            {
+              path: "/settings/upgrade-reports",
+              element: (
+                <main>
+                  <h1>Settings</h1>
+                  <UpgradeReportsPage />
+                </main>
+              ),
+            },
+            { path: "/", element: <p>Home</p> },
+          ],
+          { initialEntries: [entry] },
+        )}
+      />
     </QueryClientProvider>,
   );
   return { ...view, client };
 }
 
 beforeEach(() => {
+  Element.prototype.scrollIntoView ??= jest.fn();
+  jest.spyOn(Element.prototype, "scrollIntoView").mockImplementation(() => {});
   jest.spyOn(api, "get").mockImplementation(async (url) => ({
     data: url.endsWith("/maintenance/status")
       ? { maintenance: false, migration: false, running_jobs: 0 }
@@ -157,10 +165,12 @@ it("opens and focuses the completed check after another history entry was select
   const scroll = jest.fn();
   open();
   await userEvent.type(
-    await screen.findByLabelText("Target release"),
+    await screen.findByLabelText("Target version"),
     "1.14.0",
   );
-  await userEvent.click(screen.getByRole("button", { name: "Check upgrade" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  );
   const view = await screen.findByRole("button", { name: "View report" });
   const historySelect = await screen.findByLabelText("Choose a report");
   await userEvent.selectOptions(historySelect, other.id);
@@ -317,7 +327,7 @@ it("waits for the signed-in profile before deciding admin access", async () => {
     useAuthStore.setState({ userData: { is_superuser: true } as Users });
   });
   expect(
-    await screen.findByRole("heading", { name: "Upgrade reports" }),
+    await screen.findByRole("heading", { name: "Upgrade compatibility" }),
   ).toBeVisible();
   expect(screen.queryByText("Home")).not.toBeInTheDocument();
 });
@@ -349,9 +359,11 @@ it("explains unverifiable provider selection and requires manual review", async 
       "The selected model provider could not be verified. Review this flow manually.",
     ),
   ).toBeVisible();
-  expect(
-    screen.queryByRole("button", { name: /Apply .* reviewed update/ }),
-  ).not.toBeInTheDocument();
+  const apply = screen.getByRole("button", { name: "Apply updates" });
+  expect(apply).toBeDisabled();
+  expect(apply).toHaveAccessibleDescription(
+    "None of the previewed flows can be updated automatically.",
+  );
 });
 
 it("redirects non-admins without reading reports", async () => {
@@ -363,10 +375,9 @@ it("redirects non-admins without reading reports", async () => {
 it("explains the first action and keeps incomplete checks distinct from success", async () => {
   open();
   await screen.findByRole("heading", { name: "Assessment incomplete" });
-  await userEvent.click(screen.getByText("Start an upgrade review"));
-  expect(
-    screen.getByText(/Pick a target release under "Check an upgrade"/),
-  ).toBeVisible();
+  await userEvent.click(screen.getByText("About compatibility checks"));
+  expect(screen.getByText(/the index set in UV_INDEX_URL/)).toBeVisible();
+  expect(screen.getByText(/not the image you will deploy/)).toBeVisible();
   expect(
     await screen.findByRole("heading", { name: "Assessment incomplete" }),
   ).toBeVisible();
@@ -467,9 +478,13 @@ it("requires preview, maintenance, and explicit confirmation before applying ser
     screen.getByRole("list", { name: "Update results" }),
   ).toHaveTextContent("Customer support");
   expect(apply).toBeDisabled();
-  await userEvent.click(
-    screen.getByRole("checkbox", { name: /I reviewed this 1 update/ }),
+  expect(apply).toHaveAccessibleDescription(
+    "Apply updates only while database maintenance is enabled and the separate instance migration pause is off.",
   );
+  const confirm = screen.getByRole("checkbox", {
+    name: /I reviewed this 1 update/,
+  });
+  await userEvent.click(confirm);
   expect(apply).toBeDisabled();
   act(() =>
     client.setQueryData(migrationKeys.pause, {
@@ -478,6 +493,13 @@ it("requires preview, maintenance, and explicit confirmation before applying ser
       running_jobs: 0,
     }),
   );
+  await userEvent.click(confirm);
+  expect(apply).toBeDisabled();
+  expect(apply).toHaveAccessibleDescription(
+    "Confirm that you reviewed the updates and have a current backup.",
+  );
+  await userEvent.click(confirm);
+  expect(apply).toBeEnabled();
   await userEvent.click(apply);
   await waitFor(() =>
     expect(api.post).toHaveBeenCalledWith(
@@ -502,6 +524,10 @@ it("requires preview, maintenance, and explicit confirmation before applying ser
   ).toBeVisible();
   expect(
     screen.getByText(/Update request complete. Review each result/),
+  ).toBeVisible();
+  expect(screen.getByText("Updated: 1 · Not updated: 0")).toBeVisible();
+  expect(
+    screen.getByText(/Maintenance stays on after the update/),
   ).toBeVisible();
 });
 
@@ -563,8 +589,11 @@ it.each([undefined, null, -1, Number.NaN, "0"])(
 
     expect(apply).toBeDisabled();
     expect(
-      await screen.findByText(/Maintenance status could not be verified/),
+      await screen.findByText(
+        /Maintenance status could not be verified. Updates are disabled./,
+      ),
     ).toBeVisible();
+    expect(screen.getAllByRole("alert")).toHaveLength(1);
   },
 );
 
@@ -645,10 +674,35 @@ it.each([
   },
 );
 
+const maintenanceSection = () =>
+  within(screen.getByRole("region", { name: "Database maintenance" }));
+
+it("lets an admin manage maintenance before any report exists", async () => {
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : { items: [], total: 0 },
+  }));
+  open();
+  expect(
+    await screen.findByRole("button", { name: "Enable maintenance" }),
+  ).toBeEnabled();
+  const section = maintenanceSection();
+  expect(section.getByText("Maintenance off")).toBeVisible();
+  expect(
+    section.getByText(/Changes and flow runs are not restricted/),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("heading", { name: "Customer support" }),
+  ).not.toBeInTheDocument();
+});
+
 it("explains maintenance against the live database and links its instructions", async () => {
   open();
   await screen.findByRole("heading", { name: "Customer support" });
-  await userEvent.click(screen.getByText("How to enable maintenance"));
+  await userEvent.click(
+    screen.getByText("Manage maintenance from the terminal"),
+  );
 
   expect(screen.getByText(/this installation’s live database/)).toBeVisible();
   expect(screen.getByText(/langflow maintenance on --reason/)).toBeVisible();
@@ -682,10 +736,13 @@ it("changes maintenance only after confirmation and refreshes the shared status"
   });
   open();
   const start = await screen.findByRole("button", {
-    name: "Turn maintenance on",
+    name: "Enable maintenance",
   });
   await userEvent.click(start);
   let dialog = screen.getByRole("dialog");
+  expect(
+    within(dialog).getByText("Enable database maintenance?"),
+  ).toBeVisible();
   await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
   expect(post).not.toHaveBeenCalled();
   await userEvent.click(start);
@@ -695,32 +752,50 @@ it("changes maintenance only after confirmation and refreshes the shared status"
     "Repair review",
   );
   await userEvent.click(
-    within(dialog).getByRole("button", { name: "Turn maintenance on" }),
+    within(dialog).getByRole("button", { name: "Enable maintenance" }),
   );
   expect(post).toHaveBeenCalledWith(expect.stringMatching(/maintenance\/on$/), {
     reason: "Repair review",
   });
-  expect(await screen.findByText("Repair review")).toBeVisible();
+  const section = maintenanceSection();
+  expect(await section.findByText("Repair review")).toBeVisible();
+  expect(section.getByText("Maintenance on")).toBeVisible();
+  expect(section.getByText("Maintenance requirements met")).toBeVisible();
   await userEvent.click(
-    await screen.findByRole("button", { name: "Turn maintenance off" }),
+    await screen.findByRole("button", { name: "Disable maintenance" }),
   );
   await userEvent.click(
     within(screen.getByRole("dialog")).getByRole("button", {
-      name: "Turn maintenance off",
+      name: "Disable maintenance",
     }),
   );
-  expect(await screen.findByText("Maintenance is off.")).toBeVisible();
+  expect(await section.findByText("Maintenance off")).toBeVisible();
+});
+
+it("shows running jobs in the maintenance section", async () => {
+  const { client } = open();
+  await screen.findByRole("button", { name: "Enable maintenance" });
+  act(() =>
+    client.setQueryData(migrationKeys.pause, {
+      maintenance: true,
+      migration: false,
+      running_jobs: 3,
+    }),
+  );
+  const section = maintenanceSection();
+  expect(await section.findByText("Jobs are still running")).toBeVisible();
+  expect(section.getByText("3")).toBeVisible();
 });
 
 it.each([false, true])(
   "blocks maintenance changes during a migration pause (maintenance %s)",
   async (maintenance) => {
     const { client } = open();
-    await screen.findByRole("button", { name: "Turn maintenance on" });
+    await screen.findByRole("button", { name: "Enable maintenance" });
     const status = { maintenance, migration: false, running_jobs: 0 };
     act(() => client.setQueryData(migrationKeys.pause, status));
     const toggle = await screen.findByRole("button", {
-      name: maintenance ? "Turn maintenance off" : "Turn maintenance on",
+      name: maintenance ? "Disable maintenance" : "Enable maintenance",
     });
     await userEvent.click(toggle);
     expect(screen.getByRole("dialog")).toBeVisible();
@@ -731,27 +806,132 @@ it.each([false, true])(
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
     );
     expect(toggle).toBeDisabled();
-    expect(screen.getByText(/before changing maintenance mode/)).toBeVisible();
+    expect(
+      screen.getByRole("heading", { name: "Database maintenance" }),
+    ).toHaveFocus();
+    expect(
+      maintenanceSection().getByText(/before changing maintenance mode/),
+    ).toBeVisible();
     expect(api.post).not.toHaveBeenCalled();
   },
 );
 
-it("shows a failed maintenance change and leaves the admin able to retry", async () => {
-  jest.spyOn(api, "post").mockRejectedValue(new Error("offline"));
+it("shows a failed maintenance change on the page and lets the admin retry", async () => {
+  const post = jest.spyOn(api, "post").mockRejectedValue(new Error("offline"));
   open();
   await userEvent.click(
-    await screen.findByRole("button", { name: "Turn maintenance on" }),
+    await screen.findByRole("button", { name: "Enable maintenance" }),
   );
-  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.type(
+    within(screen.getByRole("dialog")).getByLabelText("Reason (optional)"),
+    "Repair review",
+  );
   await userEvent.click(
-    dialog.getByRole("button", { name: "Turn maintenance on" }),
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Enable maintenance",
+    }),
   );
-  expect(await dialog.findByRole("alert")).toHaveTextContent(
-    "Could not change maintenance mode",
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  const section = maintenanceSection();
+  expect(section.getByRole("alert")).toHaveTextContent(
+    "Could not enable database maintenance",
+  );
+  expect(section.getByText(/still off/)).toBeVisible();
+  const retry = section.getByRole("button", {
+    name: "Retry enabling maintenance",
+  });
+  expect(retry).toHaveFocus();
+  await userEvent.click(retry);
+  const dialog = within(screen.getByRole("dialog"));
+  expect(dialog.getByLabelText("Reason (optional)")).toHaveValue(
+    "Repair review",
+  );
+  await userEvent.click(
+    dialog.getByRole("button", { name: "Enable maintenance" }),
+  );
+  expect(post).toHaveBeenCalledTimes(2);
+});
+
+it("drops a failed change once the server reports the requested status", async () => {
+  jest.spyOn(api, "post").mockRejectedValue(new Error("timeout"));
+  const { client } = open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Enable maintenance" }),
+  );
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Enable maintenance",
+    }),
   );
   expect(
-    dialog.getByRole("button", { name: "Turn maintenance on" }),
+    await maintenanceSection().findByText(
+      "Could not enable database maintenance",
+    ),
+  ).toBeVisible();
+  act(() =>
+    client.setQueryData(migrationKeys.pause, {
+      maintenance: true,
+      migration: false,
+      running_jobs: 0,
+    }),
+  );
+  await waitFor(() =>
+    expect(
+      maintenanceSection().queryByText("Could not enable database maintenance"),
+    ).not.toBeInTheDocument(),
+  );
+  expect(
+    screen.getByRole("button", { name: "Disable maintenance" }),
   ).toBeEnabled();
+});
+
+it("lets the admin retry an unverified maintenance status", async () => {
+  let reachable = false;
+  jest.spyOn(api, "get").mockImplementation(async (url) => {
+    if (url.endsWith("/maintenance/status")) {
+      if (!reachable) throw new Error("offline");
+      return {
+        data: { maintenance: false, migration: false, running_jobs: 0 },
+      };
+    }
+    return { data: { items: [], total: 0 } };
+  });
+  open();
+  const section = maintenanceSection();
+  const retry = await section.findByRole("button", {
+    name: "Retry status check",
+  });
+  expect(section.getByText("Status unknown")).toBeVisible();
+  expect(
+    screen.queryByRole("button", { name: "Enable maintenance" }),
+  ).not.toBeInTheDocument();
+  reachable = true;
+  await userEvent.click(retry);
+  expect(
+    await screen.findByRole("button", { name: "Enable maintenance" }),
+  ).toBeEnabled();
+});
+
+it("opens on the maintenance section when the link asks for it", async () => {
+  const scroll = jest.mocked(Element.prototype.scrollIntoView);
+  open(true, "/settings/upgrade-reports#upgrade-maintenance");
+  const heading = await screen.findByRole("heading", {
+    name: "Database maintenance",
+  });
+  expect(heading).toHaveFocus();
+  expect(scroll).toHaveBeenCalled();
+});
+
+it("links the update section back to maintenance", async () => {
+  open();
+  await screen.findByRole("heading", { name: "Customer support" });
+  const heading = screen.getByRole("heading", { name: "Database maintenance" });
+  await userEvent.click(
+    screen.getByRole("button", { name: "Manage maintenance" }),
+  );
+  expect(heading).toHaveFocus();
 });
 
 it.each([
@@ -821,9 +1001,11 @@ it("clears reviewed updates when the selected flows change", async () => {
   );
   await screen.findByRole("button", { name: "Apply 1 reviewed update" });
   await userEvent.click(checkbox);
-  expect(
-    screen.queryByRole("button", { name: "Apply 1 reviewed update" }),
-  ).not.toBeInTheDocument();
+  const apply = screen.getByRole("button", { name: "Apply updates" });
+  expect(apply).toBeDisabled();
+  expect(apply).toHaveAccessibleDescription(
+    "Select flows and preview them first.",
+  );
 });
 
 it("has no axe violations in populated and selected preview states", async () => {
@@ -861,9 +1043,14 @@ it("ignores a preview that finishes after selection changes", async () => {
     finish({ data: preview });
     await pending;
   });
-  expect(
-    screen.queryByRole("button", { name: "Apply 1 reviewed update" }),
-  ).not.toBeInTheDocument();
+  const apply = screen.getByRole("button", { name: "Apply updates" });
+  expect(apply).toBeDisabled();
+  // The reason returns once the late preview settles.
+  await waitFor(() =>
+    expect(apply).toHaveAccessibleDescription(
+      "Select flows and preview them first.",
+    ),
+  );
 });
 
 it("explains an unsupported imported format", async () => {
@@ -881,8 +1068,12 @@ it("explains an unsupported imported format", async () => {
   Object.defineProperty(file, "text", {
     value: async () => '{"format_version":2}',
   });
-  await userEvent.upload(screen.getByLabelText("Checker report file"), file);
-  await userEvent.click(screen.getByRole("button", { name: "Import report" }));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Import report" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.upload(dialog.getByLabelText("Checker report file"), file);
+  await userEvent.click(dialog.getByRole("button", { name: "Import report" }));
   expect(
     await screen.findByText(
       /This report format is not supported by this server/,
@@ -987,4 +1178,279 @@ it("names only the database in the summary and keeps its full location in the id
   expect(location).not.toBeVisible();
   await userEvent.click(screen.getByText("Source and target identity"));
   expect(location).toBeVisible();
+});
+
+it("imports a report from the dialog and opens it", async () => {
+  const imported = { ...report, id: "imported-report" };
+  let items = [report];
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : url.endsWith(imported.id)
+          ? imported
+          : url.endsWith(report.id)
+            ? report
+            : { ...history, items, total: items.length },
+  }));
+  const post = jest.spyOn(api, "post").mockImplementation(async () => {
+    items = [imported, report];
+    return { data: imported };
+  });
+  open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Import report" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  const submit = dialog.getByRole("button", { name: "Import report" });
+  expect(submit).toBeDisabled();
+  await userEvent.click(dialog.getByText("How to generate a report"));
+  expect(
+    dialog.getByText(/langflow upgrade-check --database-url/),
+  ).toBeVisible();
+  await userEvent.upload(
+    dialog.getByLabelText("Checker report file"),
+    new File(["{}"], "report.json", { type: "application/json" }),
+  );
+  expect(dialog.getByText("report.json")).toBeVisible();
+  await userEvent.click(submit);
+  expect(post).toHaveBeenCalledTimes(1);
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  await waitFor(() =>
+    expect(
+      screen.getByRole("heading", { name: "Report details" }),
+    ).toHaveFocus(),
+  );
+  expect(screen.getByText("1 of 2")).toBeVisible();
+});
+
+it("refuses a report file over 20 MiB before uploading it", async () => {
+  const post = jest.spyOn(api, "post");
+  open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Import report" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  const big = new File(["{}"], "big.json", { type: "application/json" });
+  Object.defineProperty(big, "size", { value: 21 * 1024 * 1024 });
+  await userEvent.upload(dialog.getByLabelText("Checker report file"), big);
+  expect(dialog.getByRole("alert")).toBeVisible();
+  expect(dialog.getByRole("button", { name: "Import report" })).toBeDisabled();
+  expect(post).not.toHaveBeenCalled();
+});
+
+it("offers an import from the empty history", async () => {
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : { items: [], total: 0 },
+  }));
+  open();
+  expect(await screen.findByText("No compatibility reports yet")).toBeVisible();
+  await userEvent.click(
+    screen.getByRole("button", { name: "Import an existing report" }),
+  );
+  expect(
+    screen.getByRole("dialog", { name: "Import compatibility report" }),
+  ).toBeVisible();
+});
+
+it("steps through report history with Previous and Next", async () => {
+  const second = { ...report, id: "second-report" };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : url.endsWith(second.id)
+          ? second
+          : url.endsWith(report.id)
+            ? report
+            : { ...history, items: [report, second], total: 2 },
+  }));
+  open();
+  expect(await screen.findByText("1 of 2")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Previous report" }),
+  ).toBeDisabled();
+  await userEvent.click(screen.getByRole("button", { name: "Next report" }));
+  expect(await screen.findByText("2 of 2")).toBeVisible();
+  expect(screen.getByLabelText("Choose a report")).toHaveValue(second.id);
+  expect(screen.getByRole("button", { name: "Next report" })).toBeDisabled();
+});
+
+it("warns before turning maintenance off with reviewed updates not applied", async () => {
+  const { client } = open();
+  await reviewUpdate();
+  act(() =>
+    client.setQueryData(migrationKeys.pause, {
+      maintenance: true,
+      migration: false,
+      running_jobs: 0,
+    }),
+  );
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Disable maintenance" }),
+  );
+  expect(
+    within(screen.getByRole("dialog")).getByText(
+      /Previewed flow updates have not been applied/,
+    ),
+  ).toBeVisible();
+});
+
+it("shows each flow as a table row with its compatibility", async () => {
+  open();
+  const findings = await screen.findByRole("region", {
+    name: "Flow compatibility findings",
+  });
+  const row = within(findings)
+    .getAllByRole("article")
+    .find((article) =>
+      within(article).queryByRole("heading", { name: "Customer support" }),
+    ) as HTMLElement;
+  expect(within(row).getByText("Review required")).toBeVisible();
+  expect(
+    within(row).getByRole("checkbox", {
+      name: "Select Customer support for preview",
+    }),
+  ).toBeEnabled();
+});
+
+it("keeps history paging when the selected report is on another page", async () => {
+  const all = Array.from({ length: 25 }, (_, i) => ({
+    ...report,
+    id: `r${i}`,
+  }));
+  jest.spyOn(api, "get").mockImplementation(async (url, config) => {
+    if (url.endsWith("/maintenance/status"))
+      return {
+        data: { maintenance: false, migration: false, running_jobs: 0 },
+      };
+    if (url.endsWith("/repairs")) return { data: { items: [], total: 0 } };
+    const id = /\/(r\d+)$/.exec(url)?.[1];
+    if (id) return { data: { ...report, id } };
+    const offset =
+      (config as { params?: { offset?: number } })?.params?.offset ?? 0;
+    return {
+      data: { ...history, items: all.slice(offset, offset + 20), total: 25 },
+    };
+  });
+  open(true, "/settings/upgrade-reports?report=r22");
+  const next = await screen.findByRole("button", { name: "Next report" });
+  expect(next).toBeEnabled();
+  await userEvent.click(next);
+  expect(await screen.findByText("1 of 25")).toBeVisible();
+  for (let step = 1; step < 20; step++)
+    await userEvent.click(screen.getByRole("button", { name: "Next report" }));
+  expect(await screen.findByText("20 of 25")).toBeVisible();
+  const boundary = screen.getByRole("button", { name: "Next report" });
+  boundary.focus();
+  await userEvent.keyboard("{Enter}");
+  expect(await screen.findByText("21 of 25")).toBeVisible();
+  expect(screen.getByRole("button", { name: "Next report" })).toBe(boundary);
+  expect(boundary).toHaveFocus();
+});
+
+it("holds the chosen file while an import is in flight", async () => {
+  let finish: (value: unknown) => void = () => {};
+  jest.spyOn(api, "post").mockImplementation(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  );
+  open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Import report" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  const input = dialog.getByLabelText(
+    "Checker report file",
+  ) as HTMLInputElement;
+  await userEvent.upload(
+    input,
+    new File(["{}"], "report.json", { type: "application/json" }),
+  );
+  expect(input.value).toBe("");
+  await userEvent.click(dialog.getByRole("button", { name: "Import report" }));
+  expect(input).toBeDisabled();
+  await act(async () => finish({ data: report }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+});
+
+it("keeps a report the admin picks while the next history page loads", async () => {
+  const all = Array.from({ length: 25 }, (_, i) => ({
+    ...report,
+    id: `r${i}`,
+  }));
+  let releaseSecondPage: () => void = () => {};
+  jest.spyOn(api, "get").mockImplementation(async (url, config) => {
+    if (url.endsWith("/maintenance/status"))
+      return {
+        data: { maintenance: false, migration: false, running_jobs: 0 },
+      };
+    if (url.endsWith("/repairs")) return { data: { items: [], total: 0 } };
+    const id = /\/(r\d+)$/.exec(url)?.[1];
+    if (id) return { data: { ...report, id } };
+    const offset =
+      (config as { params?: { offset?: number } })?.params?.offset ?? 0;
+    if (offset)
+      await new Promise<void>((resolve) => {
+        releaseSecondPage = resolve;
+      });
+    return {
+      data: { ...history, items: all.slice(offset, offset + 20), total: 25 },
+    };
+  });
+  open(true, "/settings/upgrade-reports?report=r19");
+  await screen.findByText("20 of 25");
+  await userEvent.click(screen.getByRole("button", { name: "Next report" }));
+  await userEvent.selectOptions(screen.getByLabelText("Choose a report"), "r3");
+  await act(async () => releaseSecondPage());
+  await screen.findByRole("option", { name: /r20$/ });
+  await act(async () => {});
+  expect(screen.getByLabelText("Choose a report")).not.toHaveValue("r20");
+  expect(screen.queryByText("21 of 25")).not.toBeInTheDocument();
+});
+
+it("shows maintenance as on when external sign-in is paused for it", async () => {
+  jest.spyOn(api, "get").mockImplementation(async (url) => {
+    if (url.endsWith("/maintenance/status"))
+      throw {
+        isAxiosError: true,
+        response: {
+          status: 503,
+          data: {
+            detail: {
+              code: "external_auth_maintenance",
+              message: "External authentication paused",
+            },
+          },
+        },
+      };
+    return { data: { items: [], total: 0 } };
+  });
+  open();
+  const section = maintenanceSection();
+  expect(await section.findByText("Maintenance on")).toBeVisible();
+  expect(section.getByText(/External SSO sign-in is paused/)).toBeVisible();
+  expect(section.queryByText("Status unknown")).not.toBeInTheDocument();
+  expect(
+    section.queryByRole("button", { name: "Retry status check" }),
+  ).not.toBeInTheDocument();
+});
+
+it("shows Apply before a preview, with the reason it is unavailable", async () => {
+  open();
+  const apply = await screen.findByRole("button", { name: "Apply updates" });
+  expect(apply).toBeDisabled();
+  expect(apply).toHaveAccessibleDescription(
+    "Select flows and preview them first.",
+  );
 });

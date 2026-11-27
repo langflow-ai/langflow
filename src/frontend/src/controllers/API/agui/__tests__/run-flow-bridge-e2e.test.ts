@@ -280,6 +280,55 @@ describe("runFlowAGUI end-to-end", () => {
     },
   );
 
+  it("adds the shared-playground hint only for a run on the public endpoint", async () => {
+    const events = [
+      { type: "RUN_STARTED", threadId: "thread-1", runId: "run-1" },
+      { type: "RUN_ERROR", message: "boom" },
+    ];
+    useFlowStore.setState({ playgroundPage: true });
+    const fetchSpy = jest
+      .spyOn(global as { fetch: typeof fetch }, "fetch")
+      .mockImplementation((async () =>
+        sseResponse(events)) as unknown as typeof fetch);
+
+    try {
+      await runFlowAGUI({
+        flowId: "flow-1",
+        message: "hello",
+        usePublicEndpoint: false,
+      });
+
+      expect(useAlertStore.getState().errorData.list).toEqual(["boom"]);
+    } finally {
+      fetchSpy.mockRestore();
+      useFlowStore.setState({ playgroundPage: false });
+    }
+  });
+
+  it("tells a shared-playground visitor why a run can fail there", async () => {
+    const events = [
+      { type: "RUN_STARTED", threadId: "thread-1", runId: "run-1" },
+      { type: "RUN_ERROR", message: "Workflow execution failed." },
+    ];
+    useFlowStore.setState({ playgroundPage: true });
+    const fetchSpy = jest
+      .spyOn(global as { fetch: typeof fetch }, "fetch")
+      .mockImplementation((async () =>
+        sseResponse(events)) as unknown as typeof fetch);
+
+    try {
+      await runFlowAGUI({ flowId: "flow-1", message: "hello" });
+
+      expect(useAlertStore.getState().errorData.list).toEqual([
+        "Workflow execution failed.",
+        "This shared playground can't use the flow owner's credentials or knowledge bases. If the flow needs them, ask its owner.",
+      ]);
+    } finally {
+      fetchSpy.mockRestore();
+      useFlowStore.setState({ playgroundPage: false });
+    }
+  });
+
   it("shows the maintenance refusal without the HTTP or JSON wrapper", async () => {
     const detail = "This instance is in maintenance mode.";
     const fetchSpy = jest.spyOn(global, "fetch").mockResolvedValue({
