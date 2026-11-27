@@ -137,7 +137,7 @@ The enforcement request shape is `(subject, domain, object, action)`:
 
 ## Component Development
 
-Components live in `src/backend/base/langflow/components/`. To add a new component:
+Components live in `src/lfx/src/lfx/components/`. To add a new component:
 
 1. Create component class inheriting from `Component`
 2. Define `display_name`, `description`, `icon`, `inputs`, `outputs`
