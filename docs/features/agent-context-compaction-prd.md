@@ -238,7 +238,11 @@ budget stay internal. This answers question 3 of the issue.
 **Should**
 
 10. The playground message shows that a fold or compaction happened.
-    **Not met.** Not built.
+    **Met.** The events live in `properties.context_events`, next to `usage`. The playground shows a fold
+    as "Summarizing N older messages…" while the answer streams, then "Summarized N older messages"
+    with its duration. Checked live in the Docker stack with Playwright, also after a reload. The
+    compaction line is covered by tests only. A content block was tried first and dropped: the v1
+    projection of `content_blocks` removes flat leaves of a run without tool calls.
 11. Tool approval (human in the loop) still pauses and resumes after a compaction.
     **Met.** Unit test with `HumanInTheLoopMiddleware`, a checkpointer and a compaction before the
     interrupt.

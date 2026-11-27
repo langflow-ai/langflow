@@ -226,6 +226,7 @@ export const useChatHistory = (visibleSession: string | null) => {
             positive_feedback: message.properties.positive_feedback,
             build_duration: message.properties.build_duration,
             usage: message.properties.usage,
+            context_events: message.properties.context_events,
           };
         }
 
