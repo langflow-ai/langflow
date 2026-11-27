@@ -4,6 +4,7 @@ import { cn } from "@/utils/utils";
 
 export default function NodeUpdateComponent({
   hasBreakingChange,
+  customized = false,
   blocked = false,
   blockedByCatalogPolicy = false,
   showNode,
@@ -15,6 +16,7 @@ export default function NodeUpdateComponent({
   disabled = false,
 }: {
   hasBreakingChange: boolean;
+  customized?: boolean;
   blocked?: boolean;
   blockedByCatalogPolicy?: boolean;
   showNode: boolean;
@@ -27,6 +29,10 @@ export default function NodeUpdateComponent({
 }) {
   const { t } = useTranslation();
   const showUpdateAction = !blocked;
+  const requiresReview = hasBreakingChange || customized;
+  const reviewLabel = customized
+    ? t("settings.upgrade.nodeStatus.customized")
+    : t("updateComponent.breaking");
   // `blocked` only reaches here when a catalog policy applies or custom
   // components are off, so those are the only two causes the copy can name.
   const blockedMessage = blockedByCatalogPolicy
@@ -69,7 +75,11 @@ export default function NodeUpdateComponent({
         <div className={cn("h-2.5 w-2.5 rounded-full", "bg-accent-amber")} />
         <div className="mb-px flex-1 truncate text-mmd font-medium">
           {showNode &&
-            (blocked ? blockedMessage : t("node.upgradeRequiredMessage"))}
+            (blocked
+              ? blockedMessage
+              : requiresReview
+                ? reviewLabel
+                : t("node.upgradeRequiredMessage"))}
         </div>
         {showUpdateAction && (
           <Button
@@ -81,11 +91,9 @@ export default function NodeUpdateComponent({
             }}
             loading={loadingUpdate}
             disabled={disabled}
-            data-testid={hasBreakingChange ? "review-button" : "update-button"}
+            data-testid={requiresReview ? "review-button" : "update-button"}
           >
-            {hasBreakingChange
-              ? t("deployments.review")
-              : t("nodeToolbar.update")}
+            {requiresReview ? t("deployments.review") : t("nodeToolbar.update")}
           </Button>
         )}
       </div>
@@ -95,16 +103,16 @@ export default function NodeUpdateComponent({
   const dotColor =
     blocked || isRequired
       ? "bg-accent-amber"
-      : hasBreakingChange
+      : requiresReview
         ? "bg-warning"
         : "bg-status-green";
 
   const label = blocked
     ? blockedLabel
-    : isRequired
-      ? t("node.updateRequiredLabel")
-      : hasBreakingChange
-        ? t("node.updateAvailableLabel")
+    : requiresReview
+      ? reviewLabel
+      : isRequired
+        ? t("node.updateRequiredLabel")
         : t("node.updateReadyLabel");
 
   return (
@@ -121,7 +129,7 @@ export default function NodeUpdateComponent({
         className="mb-px flex-1 truncate text-mmd font-medium"
         title={blocked ? blockedMessage : undefined}
       >
-        {showNode || blocked ? label : null}
+        {showNode || blocked || requiresReview ? label : null}
       </div>
 
       <Button
@@ -148,11 +156,9 @@ export default function NodeUpdateComponent({
           }}
           loading={loadingUpdate}
           disabled={disabled}
-          data-testid={hasBreakingChange ? "review-button" : "update-button"}
+          data-testid={requiresReview ? "review-button" : "update-button"}
         >
-          {hasBreakingChange
-            ? t("deployments.review")
-            : t("nodeToolbar.update")}
+          {requiresReview ? t("deployments.review") : t("nodeToolbar.update")}
         </Button>
       )}
     </div>

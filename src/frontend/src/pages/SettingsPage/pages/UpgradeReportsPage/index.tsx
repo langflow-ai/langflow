@@ -195,6 +195,8 @@ function UpgradeReports() {
                   </option>
                   {history.data.items.map((item) => (
                     <option key={item.id} value={item.id}>
+                      {item.duplicate &&
+                        `${t("settings.upgrade.duplicateImport")} · `}
                       {t("settings.upgrade.historyEntry", {
                         source:
                           item.source_database?.split(/[\\/]/).pop() ||

@@ -108,7 +108,8 @@ async def _plan_selected(
         result.reason_codes = plan.reason_codes
         result.reason_detail = plan.reason_detail
         if plan.data is not None:
-            await validate_owner_policy(flow, owner, plan.data, all_types)
+            if plan.updated_nodes:
+                await validate_owner_policy(flow, owner, plan.data, all_types)
             result.updated_nodes = plan.updated_nodes
             result.status = "ready" if plan.updated_nodes else "unchanged"
             return flow, plan, result

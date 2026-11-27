@@ -661,6 +661,26 @@ def _delegated_repair_fixture(kind, *, override=None, selection=None):
     return saved, {"models": {kind: entry}}
 
 
+async def test_empty_model_on_unchanged_flow_is_not_a_repair_blocker(client, active_user, repair_admin, monkeypatch):
+    _actor, headers = repair_admin
+    kind = "LanguageModelComponent"
+    data, target = _delegated_repair_fixture(kind)
+    template = data["nodes"][0]["data"]["node"]["template"]
+    template["code"]["value"] = target["models"][kind]["template"]["code"]["value"]
+    template["model"].update(value=[], required=True)
+    flow_id = await _flow(active_user.id, data=data)
+
+    async def load():
+        return target
+
+    monkeypatch.setattr(service, "target_registry", load)
+    response = await client.post(PREVIEW, json={"flow_ids": [str(flow_id)]}, headers=headers)
+    assert response.status_code == 200, response.text
+    [result] = response.json()["results"]
+    assert result["status"] == "unchanged"
+    assert result["reason_codes"] == []
+
+
 @pytest.mark.parametrize("kind", ["LanguageModelComponent", "EmbeddingModelComponent"])
 @pytest.mark.parametrize("override", [None, "Anthropic"])
 @pytest.mark.parametrize("allowed", [True, False])
