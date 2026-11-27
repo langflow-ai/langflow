@@ -86,7 +86,7 @@ def test_budget_follows_the_window_with_an_absolute_cap():
 async def test_history_under_the_high_mark_sends_every_message_and_folds_nothing():
     store = Store()
     current = _session(store, turns=3, size=100)
-    loaded = await _load(store, current, sm.Budget(high=1_000, low=500))
+    loaded = await _load(store, current, sm.Budget(high=1_000, low=500, message_cap=200))
     assert [m.id for m in loaded.history] == [m.id for m in store.messages[:-1]]
     assert loaded.fold_batch == []
 
@@ -94,10 +94,10 @@ async def test_history_under_the_high_mark_sends_every_message_and_folds_nothing
 async def test_history_above_the_high_mark_keeps_the_newest_and_folds_the_oldest_to_the_low_mark():
     store = Store()
     current = _session(store, turns=6, size=100)  # 1,200 tokens unfolded
-    budget = sm.Budget(high=1_000, low=500)
+    budget = sm.Budget(high=1_000, low=500, message_cap=200)
     loaded = await _load(store, current, budget)
 
-    assert loaded.history_tokens <= budget.high
+    assert loaded.history_tokens <= budget.high + budget.message_cap
     assert sum(sm.message_tokens(m, budget) for m in loaded.fold_batch) <= budget.high
     assert loaded.history[-1].id == store.messages[-2].id  # the newest stored message
     assert loaded.fold_batch[0].id == store.messages[0].id  # the oldest one
@@ -122,7 +122,7 @@ async def test_a_large_message_is_cut_in_the_model_input_and_unchanged_in_the_st
 async def test_fold_saves_the_summary_and_the_next_turn_reads_only_after_the_cursor():
     store = Store()
     current = _session(store, turns=6, size=100)
-    budget = sm.Budget(high=1_000, low=500)
+    budget = sm.Budget(high=1_000, low=500, message_cap=200)
     loaded = await _load(store, current, budget)
 
     async def summarize(_state, batch):
@@ -138,35 +138,46 @@ async def test_fold_saves_the_summary_and_the_next_turn_reads_only_after_the_cur
     assert "folded" in again.history[0].text
     assert again.history[1].id == store.messages[len(loaded.fold_batch)].id
     assert again.fold_batch == []
-    assert again.history_tokens <= budget.high
+    assert again.history_tokens <= budget.high + budget.message_cap
 
 
-async def test_failed_fold_keeps_the_state_and_pauses_folding_for_the_session():
+async def test_failed_fold_keeps_the_state_and_pauses_folding_after_two_failures_in_a_row():
     store = Store()
-    current = _session(store, turns=10, size=100)
-    budget = sm.Budget(high=1_000, low=500)
-    loaded = await _load(store, current, budget)
+    current = _session(store, turns=6, size=100)
+    budget = sm.Budget(high=1_000, low=500, message_cap=200)
 
     async def broken(_state, _batch):
         msg = "provider down"
         raise RuntimeError(msg)
 
-    assert (
-        await sm.fold(
+    for attempt in range(2):
+        loaded = await _load(store, current, budget)
+        assert loaded.fold_batch, f"attempt {attempt}: one failure only retries on the next turn"
+        saved = await sm.fold(
             scope=SCOPE, state=loaded.state, batch=loaded.fold_batch, summarize=broken, summary_model="m", store=store
         )
-        is None
-    )
+        assert saved is None
     assert store.state == SessionMemoryState()
     again = await _load(store, current, budget)
     assert again.fold_batch == []  # paused
-    assert again.history_tokens <= budget.high  # still bounded while folding is paused
+    assert again.history_tokens <= budget.high + budget.message_cap  # bounded while folding is paused
+
+
+async def test_history_keeps_the_messages_of_a_fold_that_runs_beside_this_turn():
+    store = Store()
+    first = store.add("project is PRJ-123")
+    store.add("noted", MESSAGE_SENDER_AI)
+    current = _session(store, turns=5, size=100)  # 1,000 tokens, plus the first two: just above the high mark
+    budget = sm.Budget(high=1_000, low=500, message_cap=200)
+    loaded = await _load(store, current, budget)
+    assert loaded.fold_batch[0].id == first.id
+    assert loaded.history[0].id == first.id  # not yet in the notes, so it must still be in the history
 
 
 async def test_lost_race_keeps_the_state_of_the_other_writer():
     store = Store()
     current = _session(store, turns=10, size=100)
-    loaded = await _load(store, current, sm.Budget(high=1_000, low=500))
+    loaded = await _load(store, current, sm.Budget(high=1_000, low=500, message_cap=200))
     store.state = replace(store.state, id=uuid.uuid4(), version=1, summary="other run")
 
     async def summarize(_state, _batch):
@@ -201,7 +212,7 @@ async def test_store_without_session_memory_returns_none():
         return None
 
     store.aget_session_memory_state = unsupported
-    assert await _load(store, store.add("hi"), sm.Budget(high=1_000, low=500)) is None
+    assert await _load(store, store.add("hi"), sm.Budget(high=1_000, low=500, message_cap=200)) is None
 
 
 def test_notes_render_facts_and_summary_as_background_notes():
@@ -258,7 +269,7 @@ def test_merge_cuts_long_keys_and_values():
 
 async def test_fold_merges_facts_from_each_fold_and_keeps_the_early_ones():
     store = Store()
-    budget = sm.Budget(high=1_000, low=500)
+    budget = sm.Budget(high=1_000, low=500, message_cap=200)
     replies = iter(
         [
             sm.FoldResult(summary="first", set={"project": "PRJ-123"}),

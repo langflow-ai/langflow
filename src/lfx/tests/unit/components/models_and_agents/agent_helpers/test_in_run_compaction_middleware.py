@@ -80,6 +80,8 @@ async def test_should_compact_a_long_run_and_keep_the_summary_out_of_the_chat_st
     assert _compacted(messages)
     assert len([m for m in messages if isinstance(m, ToolMessage)]) < 4  # older tool results were replaced
     assert messages[-1].content == "done"
+    assert messages[0].content == "read the pages"  # the request stays word for word
+    assert messages[1].additional_kwargs.get("lc_source") == "summarization"
     # The raw stream has the summary call; the stream the Agent turns into the chat message does not.
     assert any(SUMMARY in str(e["data"].get("output", "")) for e in raw_events if e["event"] == "on_chat_model_end")
     assert not any(SUMMARY in str(e["data"].get("output", "")) for e in adapted if e["event"] == "on_chat_model_end")

@@ -1,7 +1,7 @@
 """Compact the messages of one agent run before they pass the model context window.
 
 A run with many tool calls grows inside one turn, where the session fold cannot help. This is
-LangChain's `SummarizationMiddleware` with four changes:
+LangChain's `SummarizationMiddleware` with five changes:
 
 - The thresholds come from the model window: compact at 80%, keep the newest 25%, and send at most
   60% to the summary call.
@@ -9,6 +9,8 @@ LangChain's `SummarizationMiddleware` with four changes:
   text, which loses the run's context.
 - The summary input keeps the first message (the user request) and the newest messages that fit. The
   parent trims to start on a human message, and a tool loop has only one, so its trim can come back empty.
+- The first user message stays word for word after the summary, so the run keeps the exact request,
+  such as the reply format.
 - Each compaction writes one log event with tokens before and after and the duration.
 
 The summary call is tagged `lc_source=summarization`. The Agent drops events with that tag from the
@@ -21,7 +23,7 @@ from time import perf_counter
 from typing import TYPE_CHECKING, Any
 
 from langchain.agents.middleware import SummarizationMiddleware
-from langchain_core.messages import RemoveMessage, get_buffer_string
+from langchain_core.messages import HumanMessage, RemoveMessage, get_buffer_string
 
 from lfx.log.logger import logger
 
@@ -78,6 +80,7 @@ class InRunCompactionMiddleware(SummarizationMiddleware):
             return None
         if update is None:
             return None
+        update = {**update, "messages": _keep_first_request(state["messages"], update["messages"])}
         after = self.token_counter([m for m in update["messages"] if not isinstance(m, RemoveMessage)])
         await logger.ainfo(
             f"in_run_compaction tokens_before={before} tokens_after={after} "
@@ -114,3 +117,13 @@ class InRunCompactionMiddleware(SummarizationMiddleware):
             msg = "empty summary"
             raise ValueError(msg)
         return text
+
+
+def _keep_first_request(old: list[Any], new: list[Any]) -> list[Any]:
+    """Put the first user message of the run back after the summary, unless the kept messages hold it."""
+    first = next((m for m in old if isinstance(m, HumanMessage)), None)
+    if first is None or any(m is first or (m.id and m.id == first.id) for m in new):
+        return new
+    remove = [m for m in new if isinstance(m, RemoveMessage)]
+    rest = [m for m in new if not isinstance(m, RemoveMessage)]
+    return [*remove, first, *rest]

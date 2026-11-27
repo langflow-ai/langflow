@@ -15,7 +15,8 @@ from lfx.components.models_and_agents.agent_helpers.in_run_compaction_middleware
 from lfx.components.models_and_agents.agent_helpers.tool_result_cap_middleware import ToolResultCapMiddleware
 from run_eval import MODEL, FoldRun, Policy, Prepared
 
-STRESS = sm.Budget(high=2_000, low=1_000)
+# The message cap keeps the production ratio (4,000 of 12,000), so the send bound stays tight.
+STRESS = sm.Budget(high=2_000, low=1_000, message_cap=700)
 
 
 class Auto(Policy):
@@ -26,7 +27,7 @@ class Auto(Policy):
         self.name = name
         self.budget = budget or sm.budget_for_window(sm.model_window(llm))
         self.free_text = free_text
-        self.invalid_replies = 0
+        self.invalid_replies: list[str] = []
 
     async def prepare(self, store, user_message) -> Prepared:
         scope = {"flow_id": "f", "user_id": "u", "session_id": store.session_id, "context_id": ""}
@@ -49,7 +50,7 @@ class Auto(Policy):
                     return sm.FoldResult(summary=text) if text else None
                 result = sm.parse_fold_reply(text)
                 if result is None:
-                    self.invalid_replies += 1
+                    self.invalid_replies.append(text[:2_000])
                 return result
 
             fold.coro = sm.fold(

@@ -49,13 +49,15 @@ MAX_FACT_VALUE_CHARS = 200
 SUMMARY_MAX_CHARS = 3_000
 FOLD_TIMEOUT_SECONDS = 60
 FOLD_FAILURE_COOLDOWN_SECONDS = 600
+# Folding pauses after this many failures in a row. One bad reply only retries on the next turn.
+FOLD_FAILURES_BEFORE_PAUSE = 2
 _MAX_COOLDOWN_KEYS = 1024
 
 # Start of the notes message. `messages_input_builder` uses it to merge the notes into the next user message.
 NOTES_PREFIX = "Background notes from earlier in this conversation"
 
-# scope key -> monotonic time of the last failed fold (in-process, best effort)
-_fold_failures: dict[tuple[str, ...], float] = {}
+# scope key -> (failures in a row, monotonic time of the last one). In-process, best effort.
+_fold_failures: dict[tuple[str, ...], tuple[int, float]] = {}
 
 _PROMPT_TAGS = re.compile(r"</?\s*(known_facts|previous_summary|messages)\b[^>]*>", re.IGNORECASE)
 
@@ -167,9 +169,11 @@ async def load_auto_history(
     `scope` holds flow_id, user_id, session_id and context_id. Returns None when the store has no session
     memory (standalone lfx, Evals isolation) or a read fails, so the caller uses the Last N mode.
 
-    The history is the notes plus the newest unfolded messages that fit the high mark, notes included,
-    and at least one message. Each message is cut to the message cap. A fold is due when the unfolded
-    messages pass the high mark, or when there are more than `MAX_UNFOLDED_ROWS` of them.
+    The history is the notes plus the newest unfolded messages that fit the high mark plus the message cap,
+    notes included, and at least one message. Each message is cut to the message cap. A fold is due when
+    the unfolded messages pass the high mark, or when there are more than `MAX_UNFOLDED_ROWS` of them.
+    The fold runs beside the answer, so its result reaches the next turn. The extra message cap keeps the
+    messages it folds in this turn's history, so no message is lost between the read and the fold.
     """
     try:
         state = await store.aget_session_memory_state(**scope)
@@ -191,7 +195,7 @@ async def load_auto_history(
         used = estimate_tokens(notes.text) if notes else 0
         kept: list[Message] = []
         for message, size in zip(reversed(rows), reversed(sizes), strict=True):
-            if kept and used + size > budget.high:
+            if kept and used + size > budget.high + budget.message_cap:
                 break
             kept.append(_capped(message, budget))
             used += size
@@ -293,6 +297,7 @@ async def fold(
         _record_fold_failure(key)
         await logger.awarning(f"session_memory_fold_failed: {type(exc).__name__}")
         return None
+    _fold_failures.pop(key, None)
     await logger.ainfo(
         f"session_memory_fold tokens_before={tokens_before} tokens_after={estimate_tokens(render_notes(new_state))} "
         f"duration_ms={round((perf_counter() - start) * 1000)} folded={len(batch)} saved={saved is not None}"
@@ -434,17 +439,17 @@ def clip_words(text: str, budget: int = SUMMARY_WORD_BUDGET) -> str:
 
 
 def _is_cooling_down(key: tuple[str, ...]) -> bool:
-    failed_at = _fold_failures.get(key)
-    return failed_at is not None and monotonic() - failed_at < FOLD_FAILURE_COOLDOWN_SECONDS
+    count, failed_at = _fold_failures.get(key, (0, 0.0))
+    return count >= FOLD_FAILURES_BEFORE_PAUSE and monotonic() - failed_at < FOLD_FAILURE_COOLDOWN_SECONDS
 
 
 def _record_fold_failure(key: tuple[str, ...]) -> None:
-    """Remember a failed fold for `key`. Prunes expired entries and bounds the dict size."""
+    """Count a failed fold for `key`. Prunes expired entries and bounds the dict size."""
     now = monotonic()
-    for stale in [k for k, t in _fold_failures.items() if now - t >= FOLD_FAILURE_COOLDOWN_SECONDS]:
+    for stale in [k for k, (_, t) in _fold_failures.items() if now - t >= FOLD_FAILURE_COOLDOWN_SECONDS]:
         del _fold_failures[stale]
-    _fold_failures.pop(key, None)
-    _fold_failures[key] = now
+    count, _ = _fold_failures.pop(key, (0, now))
+    _fold_failures[key] = (count + 1, now)
     while len(_fold_failures) > _MAX_COOLDOWN_KEYS:
         del _fold_failures[next(iter(_fold_failures))]
 
