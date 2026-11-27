@@ -268,3 +268,27 @@ The first Ollama runs used Ollama in Docker on macOS, which has no GPU there. Ea
 the native Ollama of the host, each turn took 0.5 to 10 seconds and every fold was saved. The same
 runs found that Ollama cuts every prompt to `num_ctx` tokens, 4,096 by default. Commit `5163a50119`
 makes Auto use that limit as the model window.
+
+## Several workers and context ids in one session
+
+The backend ran with 4 uvicorn workers on Postgres 16, with one `LANGFLOW_SECRET_KEY` for all of them.
+One session held three contexts: `A`, `B` and none (an empty `context_id`). Each got its own fact in
+turn 1. Then 5 rounds ran 6 turns at the same time, 2 for each context. After round 3 the probe deleted
+the oldest folded message of `A` through `DELETE /api/v1/monitor/messages`.
+
+- All 36 turns returned 200, with no error or deadlock in the backend log.
+- Each context always had at most one state row. Versions only went up, and every cursor pointed to a
+  message that exists.
+- The summaries of `A` and `B` never held the fact of another context.
+- The delete reset all three rows of the session. This is the planned over-reset: a reset matches on
+  the session, not on the context. The next rounds folded each context again from the start, each
+  with its own fact.
+- At the end, `B` and the empty context returned their facts. `A` returned `srv-alpha-111` for
+  `svc-alpha-111`: its summary held the right value, and the model copied it with one wrong letter.
+
+The empty context reads the messages of every context in the session, so its summary held the facts
+of `A` and `B` too. That matches how the Last N mode reads history with an empty `context_id`.
+
+Before the shared secret key was set, 3 of 6 turns failed with HTTP 500. Each worker made its own
+key and could not decrypt the credential that another worker had stored. This is a deployment rule for
+any Langflow with more than one worker, not a problem of this feature.
