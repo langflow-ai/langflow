@@ -665,7 +665,6 @@ def _to_session_memory_state(row: SessionMemoryStateTable) -> SessionMemoryState
     return SessionMemoryState(
         id=row.id,
         summary=row.summary,
-        facts=tuple((str(key), str(value)) for key, value in row.facts or ()),
         cursor_message_id=row.cursor_message_id,
         cursor_timestamp=row.cursor_timestamp,
         folded_count=row.folded_count,
@@ -744,9 +743,8 @@ async def asave_session_memory_state(
     expected_version: int,
     batch_snapshot: dict[UUID | str, dict],
     expected_state_id: UUID | None = None,
-    facts: Sequence[tuple[str, str]] = (),
 ) -> SessionMemoryState | None:
-    """Compare-and-swap save of the facts and summary; returns None when the save lost a race or the batch changed.
+    """Compare-and-swap save of the summary state; returns None when the save lost a race or the batch changed.
 
     ``batch_snapshot`` maps each folded message id to its `SUMMARY_FIELDS` as they were summarized. The rows
     are read with ``FOR UPDATE`` first (message locks before the state write, like edits and deletes), and
@@ -780,7 +778,6 @@ async def asave_session_memory_state(
                 session_id=session_id,
                 context_id=context_id or "",
                 summary=summary,
-                facts=[list(pair) for pair in facts],
                 cursor_message_id=cursor_id,
                 cursor_timestamp=cursor_timestamp,
                 folded_count=folded_delta,
@@ -807,7 +804,6 @@ async def asave_session_memory_state(
                 .values(
                     version=expected_version + 1,
                     summary=summary,
-                    facts=[list(pair) for pair in facts],
                     cursor_message_id=cursor_id,
                     cursor_timestamp=cursor_timestamp,
                     folded_count=SessionMemoryStateTable.folded_count + folded_delta,

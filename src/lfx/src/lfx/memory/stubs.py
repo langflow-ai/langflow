@@ -374,7 +374,6 @@ async def asave_session_memory_state(
     summary_model: str | None,  # noqa: ARG001
     expected_version: int,  # noqa: ARG001
     expected_state_id: UUID | None = None,  # noqa: ARG001
-    facts: tuple = (),  # noqa: ARG001
 ) -> SessionMemoryState | None:
     """No-op: nothing is persisted without a database."""
     return None

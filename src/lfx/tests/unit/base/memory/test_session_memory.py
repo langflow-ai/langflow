@@ -42,7 +42,7 @@ class Store:
         return rows[-limit:] if newest_first else rows[:limit]
 
     async def asave_session_memory_state(
-        self, *, summary, facts, cursor_message_id, folded_delta, expected_version, expected_state_id, **_kwargs
+        self, *, summary, cursor_message_id, folded_delta, expected_version, expected_state_id, **_kwargs
     ):
         if self.state.version != expected_version or self.state.id != expected_state_id:
             return None
@@ -50,7 +50,6 @@ class Store:
         self.state = SessionMemoryState(
             id=self.state.id or uuid.uuid4(),
             summary=summary,
-            facts=tuple(facts),
             cursor_message_id=cursor_message_id,
             folded_count=self.state.folded_count + folded_delta,
             version=expected_version + 1,
@@ -126,7 +125,7 @@ async def test_fold_saves_the_summary_and_the_next_turn_reads_only_after_the_cur
     loaded = await _load(store, current, budget)
 
     async def summarize(_state, batch):
-        return sm.FoldResult(summary=f"folded {len(batch)} messages")
+        return f"folded {len(batch)} messages"
 
     saved = await sm.fold(
         scope=SCOPE, state=loaded.state, batch=loaded.fold_batch, summarize=summarize, summary_model="m", store=store
@@ -181,7 +180,7 @@ async def test_lost_race_keeps_the_state_of_the_other_writer():
     store.state = replace(store.state, id=uuid.uuid4(), version=1, summary="other run")
 
     async def summarize(_state, _batch):
-        return sm.FoldResult(summary="mine")
+        return "mine"
 
     assert (
         await sm.fold(
@@ -215,94 +214,13 @@ async def test_store_without_session_memory_returns_none():
     assert await _load(store, store.add("hi"), sm.Budget(high=1_000, low=500, message_cap=200)) is None
 
 
-def test_notes_render_facts_and_summary_as_background_notes():
-    text = sm.render_notes(SessionMemoryState(facts=(("project", "PRJ-123"),), summary="We debugged pods."))
+def test_notes_render_the_summary_as_background_notes():
+    text = sm.render_notes(SessionMemoryState(summary="Key facts:\n- project: PRJ-123"))
     assert sm.is_notes_text(text)
     assert "- project: PRJ-123" in text
-    assert "We debugged pods." in text
     assert sm.render_notes(SessionMemoryState()) == ""
 
 
-@pytest.mark.parametrize(
-    "reply",
-    [
-        '{"set": {"project": "PRJ-123"}, "remove": [], "summary": "s"}',
-        '```json\n{"set": {"project": "PRJ-123"}, "summary": "s"}\n```',
-        'Here is the update:\n{"set": {"project": "PRJ-123"}, "remove": [], "summary": "s"}\nDone.',
-    ],
-)
-def test_parse_fold_reply_reads_json_with_fences_or_text_around_it(reply):
-    result = sm.parse_fold_reply(reply)
-    assert result == sm.FoldResult(summary="s", set={"project": "PRJ-123"}, remove=[])
-
-
-@pytest.mark.parametrize(
-    "reply",
-    ["Key facts: project PRJ-123", '{"set": {"a": "b"}}', '{"set": ["a"], "summary": "s"}', '{"summary": "s"'],
-)
-def test_parse_fold_reply_rejects_a_reply_that_is_not_valid(reply):
-    assert sm.parse_fold_reply(reply) is None
-
-
-def test_merge_applies_set_and_remove_and_moves_a_changed_fact_to_the_end():
-    facts = (("cluster", "EU-West"), ("customer", "Initech"), ("ticket", "INC-1"))
-    result = sm.FoldResult(summary="", set={"Cluster": "US-East", "customer": "Initech"}, remove=["ticket"])
-    assert sm.merge_facts(facts, result) == (("customer", "Initech"), ("cluster", "US-East"))
-
-
-def test_merge_evicts_the_oldest_update_above_the_limit_but_never_a_pinned_key():
-    facts = tuple((f"k{i}", "v") for i in range(sm.MAX_FACTS))
-    result = sm.FoldResult(summary="", set={"new": "v"}, remove=["k0"])
-    merged = dict(sm.merge_facts(facts, result, pinned_keys=["k0"]))
-    assert len(merged) == sm.MAX_FACTS
-    assert "k0" in merged  # pinned: not removed and not evicted
-    assert "k1" not in merged  # the oldest one that is not pinned
-    assert "new" in merged
-
-
-def test_merge_cuts_long_keys_and_values():
-    result = sm.FoldResult(summary="", set={"k" * 100: "v" * 500})
-    ((key, value),) = sm.merge_facts((), result)
-    assert len(key) == sm.MAX_FACT_KEY_CHARS
-    assert len(value) == sm.MAX_FACT_VALUE_CHARS
-
-
-async def test_fold_merges_facts_from_each_fold_and_keeps_the_early_ones():
-    store = Store()
-    budget = sm.Budget(high=1_000, low=500, message_cap=200)
-    replies = iter(
-        [
-            sm.FoldResult(summary="first", set={"project": "PRJ-123"}),
-            sm.FoldResult(summary="second", set={"cluster": "US-East"}),
-        ]
-    )
-
-    async def summarize(_state, _batch):
-        return next(replies)
-
-    for _ in range(2):
-        current = _session(store, turns=6, size=100)
-        loaded = await _load(store, current, budget)
-        await sm.fold(
-            scope=SCOPE,
-            state=loaded.state,
-            batch=loaded.fold_batch,
-            summarize=summarize,
-            summary_model="m",
-            store=store,
-        )
-
-    assert store.state.facts == (("project", "PRJ-123"), ("cluster", "US-East"))
-    assert store.state.summary == "second"
-    notes = (await _load(store, store.add("q"), budget)).history[0].text
-    assert "- project: PRJ-123" in notes
-
-
-async def test_fold_prompt_carries_known_facts_and_pinned_keys():
-    prompt = sm.format_fold_prompt(
-        SessionMemoryState(facts=(("project", "PRJ-123"),)),
-        [Message(text="hi", sender=MESSAGE_SENDER_USER)],
-        ["Customer ID"],
-    )
-    assert "customer_id" in prompt[0].content
-    assert "- project: PRJ-123" in prompt[1].content
+@pytest.mark.parametrize(("reply", "expected"), [("  Key facts:\n- a  ", "Key facts:\n- a"), ("   ", None)])
+def test_parse_fold_reply_keeps_text_and_rejects_an_empty_reply(reply, expected):
+    assert sm.parse_fold_reply(reply) == expected

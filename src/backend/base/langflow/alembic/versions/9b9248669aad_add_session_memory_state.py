@@ -3,7 +3,7 @@
 Revision ID: 9b9248669aad
 Revises: a09a699afb52
 Phase: EXPAND
-Safe to rollback: YES (facts and summary are derived from the messages)
+Safe to rollback: YES (the summary is derived from the messages)
 Services compatible: Older versions ignore this additional table.
 """
 
@@ -27,7 +27,6 @@ def upgrade() -> None:
         sa.Column("session_id", sa.String(), nullable=False),
         sa.Column("context_id", sa.String(), nullable=False, server_default=""),
         sa.Column("summary", sa.Text(), nullable=False, server_default=""),
-        sa.Column("facts", sa.JSON(), nullable=True),
         sa.Column("cursor_message_id", sa.Uuid(), nullable=True),
         sa.Column("cursor_timestamp", sa.DateTime(timezone=True), nullable=True),
         sa.Column("folded_count", sa.Integer(), nullable=False, server_default="0"),

@@ -487,7 +487,7 @@ async def test_should_include_null_category_and_skip_error_messages_between(clie
 
 @pytest.mark.parametrize("change", ["delete", "edit", "none"])
 async def test_should_save_nothing_when_a_batch_message_changes_during_the_summary_call(client, change):  # noqa: ARG001
-    from lfx.base.memory.session_memory import FoldResult, fold
+    from lfx.base.memory.session_memory import fold
 
     flow_id, user_id = uuid4(), uuid4()
     scope = _scope(flow_id, user_id)
@@ -501,7 +501,7 @@ async def test_should_save_nothing_when_a_batch_message_changes_during_the_summa
             await delete_message(ids[1])
         elif change == "edit":
             await aupdate_messages(Message(id=ids[1], text="edited"))
-        return FoldResult(summary="SUMMARY", set={"k": "v"})
+        return "SUMMARY"
 
     await fold(
         scope=scope,
@@ -713,28 +713,3 @@ async def test_should_not_delete_state_of_a_virtual_flow_owned_by_a_legacy_row(c
         await _delete_session_summaries(session, active_user.id, ["s"])
 
     assert await _state_session_ids(virtual_flow_id) == {"s"}
-
-
-async def test_should_store_facts_in_order_and_drop_them_when_a_folded_message_is_deleted(client):  # noqa: ARG001
-    flow_id, user_id = uuid4(), uuid4()
-    scope = _scope(flow_id, user_id)
-    first = await _add_message(flow_id, user_id, "s1", ts=T0, text="project is PRJ-123")
-    async with session_scope() as session:
-        row = (await session.exec(select(MessageTable).where(MessageTable.id == first))).one()
-        snapshot = {first: summary_snapshot(row)}
-    facts = (("project", "PRJ-123"), ("cluster", "EU-West"))
-    saved = await asave_session_memory_state(
-        **scope,
-        summary="sum",
-        facts=facts,
-        cursor_message_id=first,
-        folded_delta=1,
-        summary_model="m",
-        expected_version=0,
-        batch_snapshot=snapshot,
-    )
-    assert saved.facts == facts
-    assert (await aget_session_memory_state(**scope)).facts == facts
-
-    await delete_message(first)
-    assert (await aget_session_memory_state(**scope)).facts == ()

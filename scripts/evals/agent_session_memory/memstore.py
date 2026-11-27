@@ -24,7 +24,7 @@ def summary_snapshot(message: Any) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class SessionMemoryState:
-    """Same shape as the PR #16515 state, plus `facts` for the Auto variants."""
+    """Same shape as the PR #16515 state."""
 
     id: UUID | None = None
     summary: str = ""
@@ -32,7 +32,6 @@ class SessionMemoryState:
     cursor_timestamp: datetime | None = None
     folded_count: int = 0
     version: int = 0
-    facts: tuple[tuple[str, str], ...] = ()
 
 
 class MemStore:
@@ -107,14 +106,12 @@ async def asave_session_memory_state(
     expected_version,
     batch_snapshot,  # noqa: ARG001
     expected_state_id=None,
-    facts=(),
 ) -> SessionMemoryState | None:
     store = STORES[session_id]
     return store.save(
         expected_version=expected_version,
         expected_state_id=expected_state_id,
         summary=summary,
-        facts=tuple(tuple(pair) for pair in facts),
         cursor_message_id=cursor_message_id,
         folded_count=store.state.folded_count + folded_delta,
     )

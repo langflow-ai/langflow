@@ -1,15 +1,15 @@
 from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, Index, Text, UniqueConstraint
+from sqlalchemy import Column, Index, Text, UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
 class SessionMemoryStateTable(SQLModel, table=True):  # type: ignore[call-arg]
-    """Facts and summary of the folded messages of one chat session (Agent "Auto" chat history mode).
+    """Summary of the folded messages of one chat session (Agent "Auto" chat history mode).
 
-    One row per (flow, message owner, session, context). ``facts`` is a list of ``[key, value]`` pairs,
-    oldest update first. ``cursor_*`` marks the last message that facts and summary cover.
+    One row per (flow, message owner, session, context). ``cursor_*`` marks the last message that the
+    summary covers.
     ``flow_id`` and ``user_id`` carry no FK: they mirror the message scoping, and rows are removed
     explicitly with the session or flow.
     ``version`` is the compare-and-swap token for concurrent runs.
@@ -27,7 +27,6 @@ class SessionMemoryStateTable(SQLModel, table=True):  # type: ignore[call-arg]
     session_id: str
     context_id: str = Field(default="")
     summary: str = Field(default="", sa_column=Column(Text, nullable=False, server_default=""))
-    facts: list | None = Field(default=None, sa_column=Column(JSON, nullable=True))
     cursor_message_id: UUID | None = Field(default=None)
     cursor_timestamp: datetime | None = Field(default=None)
     folded_count: int = Field(default=0)

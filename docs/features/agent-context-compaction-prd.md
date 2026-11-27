@@ -1,8 +1,9 @@
 # PRD: session memory and context budget for the Agent component
 
 Status: implemented on branch `feat/agent-session-memory-context-budget` (local commits) and measured.
-The eval results are in [agent-session-memory-eval.md](agent-session-memory-eval.md). The eval shows that
-facts apart from the summary do not beat a free-text summary under the same token policy. See
+The eval results are in [agent-session-memory-eval.md](agent-session-memory-eval.md). The eval showed
+that facts apart from the summary do not beat a free-text summary under the same token policy, so
+section 4 (facts) and Pinned Keys were replaced by the free-text summary of PR #16515. See
 "Result of the eval" at the end.
 Issue: [#15799](https://github.com/langflow-ai/langflow/issues/15799).
 Related: [PR #16515](https://github.com/langflow-ai/langflow/pull/16515),
@@ -104,7 +105,11 @@ must not carry 200,000 tokens of history on each call.
 - **Model:** the Agent's model, with streaming off. This answers question 2.
 - **Failure:** the turn keeps the previous state, and folding pauses for that session.
 
-### 4. Facts apart from the summary
+### 4. Facts apart from the summary (replaced after the eval)
+
+> The eval did not support this section. The fold now writes the free-text summary of PR #16515,
+> which keeps a "Key facts" block in plain text. There is no fact list, merge or Pinned Keys input.
+> The text below is kept as the original plan.
 
 A summary that the model rewrites on every fold can lose early facts after many folds.
 The design keeps facts out of that rewrite.
@@ -310,9 +315,10 @@ Measured on `gpt-4o-mini`, one run for each case. Details in
 
 ### Goals
 
-1. **Recall of early facts: partly met.** Auto recalls 9/11 early facts across three sessions, against
-   0/11 for Last N at 10, 6/11 for Last N at 100 and 5/11 for PR #16515. It missed one fact in
-   `long_60` (the fold never extracted it) and the log error line, which no variant returned.
+1. **Recall of early facts: met, with one miss.** Auto with the free-text summary (run 3) recalls 10/11
+   early facts across three sessions, against 0/11 for Last N at 10, 6/11 for Last N at 100 and 5/11
+   for PR #16515. The miss is the log error line, which Last N at 100 also did not return. With the
+   JSON facts (run 2) Auto recalled 9/11.
 2. **Bounded history cost: met.** Largest history 15,125 tokens for any session length, against
    51,434 for Last N at 100.
 3. **No run fails on the model window: met.** `tool_heavy` passes with one compaction (2/2). Every
@@ -344,6 +350,6 @@ Facts apart from the summary do not beat a free-text summary under the same toke
 in run 2, and 11/11 for the summary against 9/11 for facts in run 1. Facts add invalid JSON replies,
 noise and a missed fact. The gain over PR #16515 comes from the token policy.
 
-Recommendation: keep phases 2, 3 and 5 (tool result cap, token budget and fold, in-run compaction).
-Replace the JSON facts of phase 4 with the free-text summary of PR #16515, which keeps a "Key facts"
-block in plain text. Pinned keys can then become one line in the fold prompt, or wait for a user need.
+Done: phases 2, 3 and 5 stay. The JSON facts of phase 4 are replaced by the free-text summary of
+PR #16515, and Pinned Keys is removed until a user needs it. Eval run 3 measures that design:
+10/11 at the normal budget (facts: 9/11), 11/11 at the stress budget, and `tool_heavy` 2/2.

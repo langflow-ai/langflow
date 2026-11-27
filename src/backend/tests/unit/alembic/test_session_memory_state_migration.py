@@ -19,7 +19,7 @@ def test_session_memory_state_upgrade_downgrade_upgrade(db_url):  # noqa: F811
             inspector = inspect(connection)
             assert "session_memory_state" in inspector.get_table_names()
             columns = {c["name"] for c in inspector.get_columns("session_memory_state")}
-            assert {"facts", "summary", "cursor_message_id", "cursor_timestamp", "version"} <= columns
+            assert {"summary", "cursor_message_id", "cursor_timestamp", "version"} <= columns
             uniques = {u["name"]: u["column_names"] for u in inspector.get_unique_constraints("session_memory_state")}
             assert uniques["uq_session_memory_state_scope"] == ["flow_id", "user_id", "session_id", "context_id"]
             indexes = {i["name"]: i["column_names"] for i in inspector.get_indexes("session_memory_state")}

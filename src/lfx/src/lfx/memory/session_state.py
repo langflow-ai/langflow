@@ -19,16 +19,15 @@ def summary_snapshot(message: Any) -> dict[str, Any]:
 
 @dataclass(frozen=True)
 class SessionMemoryState:
-    """Facts and summary of the folded messages of one session, and the cursor of the last folded message.
+    """Summary of the folded messages of one session, and the cursor of the last folded message.
 
-    `facts` holds `(key, value)` pairs, oldest update first. `version == 0` means no row exists yet.
+    `version == 0` means no row exists yet.
     Saves use `id` and `version` together as the compare-and-swap token: a row that was reset and
     re-created has a new `id`, so an older fold cannot overwrite it.
     """
 
     id: UUID | None = None
     summary: str = ""
-    facts: tuple[tuple[str, str], ...] = ()
     cursor_message_id: UUID | None = None
     cursor_timestamp: datetime | None = None
     folded_count: int = 0

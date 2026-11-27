@@ -221,3 +221,31 @@ In the eval, `gpt-4o-mini` returned 2 invalid replies of 44, both with Python `T
   limit, but a bad summary does not stay in a list that code keeps across folds.
 - In the second fold, `gpt-4o-mini` put `cluster` in both `set` and `remove`. The merge applies
   `remove` first, so the new value stays.
+
+## Run 3: the free-text summary design
+
+After run 2, phase 4 was replaced: the fold writes the free-text summary of PR #16515, and the JSON
+facts, the merge and Pinned Keys are gone. Run 3 measures that design once, with the same eval. The
+raw data is in the evidence store under `eval/auto_run3/`.
+
+| Session | Auto run 2 (facts) | Auto run 3 (summary) | Stress run 3 (summary) |
+|---|---|---|---|
+| `long_60` | 3/4 | 4/4 | 4/4 |
+| `pasted_log` | 3/4 | 3/4 | 4/4 |
+| `fact_change` | 3/3 | 3/3 | 3/3 |
+| Total | 9/11 | 10/11 | 11/11 |
+| `tool_heavy` | 2/2 | 2/2 | - |
+
+| Measure (run 3, Auto) | `long_60` | `pasted_log` | `fact_change` |
+|---|---|---|---|
+| Mean input tokens for each turn | 6,888 | 11,235 | 4,880 |
+| Cached share of input | 90% | 59% | 91% |
+| Largest history sent (bound 16,000) | 12,970 | 12,383 | 12,163 |
+| Folds (fold input tokens) | 4 (22,415) | 1 (8,265) | 1 (5,277) |
+| Added latency | 0 s | 0 s | 0 s |
+
+No invalid fold reply is possible now: any reply that is not empty is a summary.
+
+The stress `pasted_log` run sent 2,716 history tokens against a bound of 2,700. The cap marker in the
+middle of a cut message adds about 15 tokens, and the budget counted only the cap. The next commit
+counts the marker too. This also explains the 1 or 2 tokens above the bound in run 2.
