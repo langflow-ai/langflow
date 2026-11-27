@@ -1,0 +1,80 @@
+---
+title: You.com
+slug: /bundles-youdotcom
+description: You.com bundle components for web search, content extraction, and research.
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import { GraduatedBundleInstall } from '@site/docs/_partial-bundle-graduated-install.mdx';
+
+<GraduatedBundleInstall packageName="youdotcom" />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **You.com** bundle.
+
+For more information, see the [You.com API documentation](https://you.com/docs).
+
+## You.com Search
+
+This component calls the You.com Web Search API to perform web searches optimized for LLMs and RAG pipelines.
+
+It returns search results as a [`Table`](/data-types#table) with titles, URLs, descriptions, snippets, and extracted content.
+
+### You.com Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your You.com API key. |
+| query | String | Input parameter. The search query to execute. Supports operators like `site:`, `filetype:`, `AND`, `OR`, `NOT`. |
+| max_results | Integer | Input parameter. Maximum number of results to return (1-100, or 1-50 with highlights). Default: `10`. |
+| country | String | Input parameter. Country code to filter results by country. |
+| safesearch | String | Input parameter. Content moderation filter: `off`, `moderate`, or `strict`. Default: `moderate`. |
+| freshness | String | Input parameter. Filter results by recency: `day`, `week`, `month`, `year`, or a date range. |
+| extraction_mode | String | Input parameter. Attach `highlights` or `full_page` content to each result. Leave unset for snippets only. |
+| extraction_formats | String | Input parameter. Full-page format: `markdown` or `html`. Only valid when `extraction_mode` is `full_page`. |
+| language | String | Input parameter. BCP 47 language code to filter results by language. |
+
+## You.com Extract
+
+This component calls the You.com Extract API to extract clean content from webpages and PDFs.
+
+It returns extracted content as a [`Table`](/data-types#table) with URLs, titles, content, and optional metadata. Multiple URLs are processed as separate API requests.
+
+### You.com Extract parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your You.com API key. |
+| urls | String | Input parameter. Newline-separated URLs or a JSON array of URLs. |
+| formats | String | Input parameter. Output format: `markdown` or `html`. Default: `markdown`. |
+| timeout | Integer | Input parameter. End-to-end timeout in seconds (2-100). Default: `30`. |
+
+## You.com Research
+
+This component calls the You.com Research API to perform multi-step research. It takes a complex question and returns a detailed Markdown answer with inline citations and sources.
+
+It has three outputs:
+
+* **Combined**: The research answer with sources appended as a [`Message`](/data-types#message), suitable for piping into chat outputs or other LLMs.
+* **Answer**: The research answer only as a [`Message`](/data-types#message).
+* **Sources**: The cited sources as a [`Table`](/data-types#table) with URLs, titles, and snippets.
+
+### You.com Research parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your You.com API key. |
+| query | String | Input parameter. The research question to investigate (max 40,000 characters). |
+| research_effort | String | Input parameter. Controls depth and time spent researching: `lite`, `standard`, `deep`, or `exhaustive`. Default: `standard`. |
+
+:::note
+This component sends synchronous research requests. The `frontier` effort level requires background execution and is not available here.
+:::
