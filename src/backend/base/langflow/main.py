@@ -70,6 +70,7 @@ from langflow.services.deps import (
 )
 from langflow.services.schema import ServiceType
 from langflow.services.telemetry.opentelemetry import instrument_db_pool
+from langflow.services.upgrade_reports.workspace import sweep_run_folders_periodically
 from langflow.services.utils import initialize_services, initialize_settings_service, teardown_services
 from langflow.utils.frontend import render_frontend_index
 from langflow.utils.mcp_cleanup import cleanup_mcp_sessions
@@ -244,6 +245,7 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        upgrade_check_sweep_task = None
         # Same reason as ``temp_dirs`` below: the shutdown path stops this, so it must exist
         # even when startup fails before it is created.
         lag_monitor = None
@@ -302,6 +304,7 @@ def get_lifespan(*, fix_migration=False, version=None):
             # so each worker rebuilds its own connection pool (idempotent otherwise).
             await initialize_services(fix_migration=fix_migration)
             await initialize_environment_variables()
+            upgrade_check_sweep_task = asyncio.create_task(sweep_run_folders_periodically())
             from langflow.services.knowledge_base_storage.coordinator import fence_legacy_records, schedule_upgrade
 
             await fence_legacy_records()
@@ -921,6 +924,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
+                    if upgrade_check_sweep_task and not upgrade_check_sweep_task.done():
+                        upgrade_check_sweep_task.cancel()
+                        tasks_to_cancel.append(upgrade_check_sweep_task)
                     if models_dev_refresh_task and not models_dev_refresh_task.done():
                         models_dev_refresh_task.cancel()
                         tasks_to_cancel.append(models_dev_refresh_task)

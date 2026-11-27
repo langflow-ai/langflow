@@ -39,6 +39,7 @@ from langflow.services.upgrade_reports.history import (
     UnsupportedReportFormatError,
     import_report_content,
 )
+from langflow.services.upgrade_reports.workspace import RUN_FOLDER_PREFIX, hold_run_folder
 from langflow.utils.version import VERSION_INFO
 
 if TYPE_CHECKING:
@@ -97,7 +98,7 @@ def parse_target_version(raw: str, *, current: Version) -> Version:
         raise InvalidTargetVersionError from None
     if not _is_final_release(version) or version < MIN_TARGET or version < current:
         raise InvalidTargetVersionError
-    return version
+    return current if version == current else version
 
 
 def parse_releases(pypi: Mapping[str, Any], *, current: Version, limit: int = MAX_RELEASES) -> list[str]:
@@ -183,7 +184,8 @@ def check_environment(inherited: Mapping[str, str], *, database_url: str, cache_
     env = {
         name: value
         for name, value in inherited.items()
-        if name.upper() in _ENVIRONMENT or name.upper().startswith(_ENVIRONMENT_PREFIXES)
+        if (name.upper() in _ENVIRONMENT or name.upper().startswith(_ENVIRONMENT_PREFIXES))
+        and not name.upper().startswith("UV_PUBLISH_")
     }
     env["UV_CACHE_DIR"] = str(cache_dir)
     env[DATABASE_URL_VARIABLE] = database_url
@@ -311,6 +313,8 @@ async def _child_events(
     argv: list[str],
     env: Mapping[str, str],
     *,
+    output: Path,
+    folder_lock: int | None = None,
     timeout: float,  # noqa: ASYNC109
     heartbeat: float,
     redact: Callable[[str], str],
@@ -328,6 +332,7 @@ async def _child_events(
             stderr=asyncio.subprocess.PIPE,
             env=env,
             start_new_session=os.name == "posix",
+            pass_fds=() if folder_lock is None else (folder_lock,),
         )
     except NotImplementedError:
         # Windows with a selector event loop, which Langflow uses with PostgreSQL.
@@ -381,7 +386,7 @@ async def _child_events(
         yield _error("timeout", f"The check did not finish within {round(timeout / 60)} minutes.")
     elif child_error is not None:
         yield child_error
-    elif process.returncode not in {0, 1}:
+    elif process.returncode not in {0, 1} or not output.is_file():
         tail = bytes(stderr).decode(errors="replace").strip()
         yield _error("install_failed", redact(tail)[-MAX_STDERR_CHARS:] or "The check ended without a report.")
 
@@ -395,8 +400,10 @@ async def run_check(
         return
     await check_lock.acquire()
     folder = None
+    lock = contextlib.ExitStack()
     try:
-        folder = Path(tempfile.mkdtemp(prefix="langflow-upgrade-check-run-"))
+        folder = Path(tempfile.mkdtemp(prefix=RUN_FOLDER_PREFIX))
+        folder_lock = lock.enter_context(hold_run_folder(folder))
         download = target != current
         async with session_scope() as session:
             total = await count_checked_flows(session)
@@ -420,6 +427,8 @@ async def run_check(
             _child_events(
                 command,
                 env,
+                output=output,
+                folder_lock=folder_lock,
                 timeout=TIMEOUT_SECONDS,
                 heartbeat=HEARTBEAT_SECONDS,
                 redact=lambda text: _redact(text, database_url),
@@ -429,9 +438,6 @@ async def run_check(
                 yield event
                 if event["event"] == "error":
                     return
-        if not output.is_file():
-            yield _error("install_failed", "The check ended without a report.")
-            return
         async with await anyio.open_file(output, "rb") as report:
             content = await report.read(MAX_REPORT_BYTES + 1)
         async with write_admission("request", method="POST", path=CHECKS_PATH, caller_id=admin_id) as refusal:
@@ -467,6 +473,7 @@ async def run_check(
                 with anyio.CancelScope(shield=True):
                     await anyio.to_thread.run_sync(partial(shutil.rmtree, folder, ignore_errors=True))
         finally:
+            lock.close()
             check_lock.release()
 
 

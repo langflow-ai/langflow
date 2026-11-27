@@ -101,7 +101,7 @@ constraints = [
     { name = "langgraph-sdk", specifier = ">=0.4.6" },
     { name = "libcst", marker = "python_full_version >= '3.15'", specifier = ">=1.9.0" },
     { name = "line-profiler", marker = "python_full_version >= '3.15'", specifier = ">=5.1.0" },
-    { name = "litellm", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", specifier = "!=1.104.0rc1,!=1.107.0,>=1.109.1,<1.110.0" },
     { name = "lxml", marker = "python_full_version >= '3.15'", specifier = ">=6.1.2" },
     { name = "markupsafe", marker = "python_full_version >= '3.15'", specifier = ">=3.0.4" },
     { name = "mmh3", marker = "python_full_version >= '3.15'", specifier = ">=5.3.1" },
@@ -9265,10 +9265,10 @@ requires-dist = [
     { name = "lfx", extras = ["sandbox"], marker = "extra == 'sandbox'", editable = "src/lfx" },
     { name = "lfx", extras = ["sqlite"], editable = "src/lfx" },
     { name = "lfx", extras = ["toolguard"], marker = "extra == 'toolguard'", editable = "src/lfx" },
-    { name = "litellm", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
-    { name = "litellm", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
-    { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
-    { name = "litellm", marker = "extra == 'litellm'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", specifier = "!=1.104.0rc1,!=1.107.0,>=1.109.1,<1.110.0" },
+    { name = "litellm", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = "!=1.104.0rc1,!=1.107.0,>=1.109.1,<1.110.0" },
+    { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = "!=1.104.0rc1,!=1.107.0,>=1.109.1,<1.110.0" },
+    { name = "litellm", marker = "extra == 'litellm'", specifier = "!=1.104.0rc1,!=1.107.0,>=1.109.1,<1.110.0" },
     { name = "loguru", marker = "python_full_version < '3.14'", specifier = ">=0.7.1,<1.0.0" },
     { name = "loguru", marker = "python_full_version >= '3.14'", specifier = ">=0.8.0,<1.0.0" },
     { name = "mako", specifier = ">=1.4.2,<2.0.0" },
@@ -9999,7 +9999,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-bundles"
-version = "1.3.10"
+version = "1.3.11"
 source = { editable = "src/bundles/lfx-bundles" }
 dependencies = [
     { name = "lfx" },
@@ -10600,8 +10600,8 @@ requires-dist = [
     { name = "lfx-bundles", extras = ["zep"], marker = "extra == 'all-no-torch'", editable = "src/bundles/lfx-bundles" },
     { name = "lfx-google", marker = "extra == 'google'", editable = "src/bundles/google" },
     { name = "lfx-ollama", marker = "extra == 'ollama'", editable = "src/bundles/ollama" },
-    { name = "litellm", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
-    { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", marker = "python_full_version < '3.14' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'cuga'", specifier = "!=1.104.0rc1,!=1.107.0,>=1.109.1,<1.110.0" },
+    { name = "litellm", marker = "python_full_version < '3.14' and sys_platform != 'darwin' and extra == 'cuga'", specifier = "!=1.104.0rc1,!=1.107.0,>=1.109.1,<1.110.0" },
     { name = "markdown", marker = "extra == 'notion'", specifier = ">=3.8.0" },
     { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.18,<3.0.0" },
     { name = "mrscraper-sdk", marker = "extra == 'mrscraper'", specifier = ">=0.6.0,<0.7.0" },
@@ -10697,7 +10697,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-datastax"
-version = "0.3.1"
+version = "0.3.2"
 source = { editable = "src/bundles/datastax" }
 dependencies = [
     { name = "astrapy" },
@@ -11199,7 +11199,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-toolguard"
-version = "0.3.3"
+version = "0.3.4"
 source = { editable = "src/bundles/toolguard" }
 dependencies = [
     { name = "fastmcp" },
@@ -11212,7 +11212,7 @@ dependencies = [
 requires-dist = [
     { name = "fastmcp", specifier = ">=3.4.10,<4.0.0" },
     { name = "lfx", editable = "src/lfx" },
-    { name = "litellm", specifier = ">=1.103.10,!=1.104.0rc1,<1.104.0,!=1.107.0" },
+    { name = "litellm", specifier = "!=1.104.0rc1,!=1.107.0,>=1.109.1,<1.110.0" },
     { name = "toolguard", specifier = ">=0.2.20,<1.0.0" },
 ]
 
@@ -11617,35 +11617,41 @@ wheels = [
 
 [[package]]
 name = "litellm"
-version = "1.103.10"
+version = "1.109.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiohttp" },
+    { name = "anyio" },
     { name = "boto3" },
     { name = "certifi" },
     { name = "click" },
-    { name = "fastuuid" },
+    { name = "fastuuid", marker = "python_full_version < '3.15'" },
+    { name = "filelock" },
     { name = "httpx", extra = ["http2"] },
+    { name = "huggingface-hub" },
     { name = "importlib-metadata" },
     { name = "jinja2" },
     { name = "jsonschema" },
     { name = "openai" },
+    { name = "packaging" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "python-dotenv" },
+    { name = "pyyaml" },
     { name = "tiktoken", version = "0.13.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.15'" },
     { name = "tiktoken", version = "0.14.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.15'" },
     { name = "tokenizers" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/fc/0d/4d210a75f88820903421d36d8160ed07e844e53941730433c294145d5b98/litellm-1.103.10.tar.gz", hash = "sha256:b1bf12810b6565156c6b23bda2ccaf115c6edafbbf92e98220ecbc73f89d6972", size = 18763166, upload-time = "2026-10-27T19:41:29.156Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/11/5f/b13d8b4eae980e95f3a6cd8f54bea2a1de6291eec8de3a48c948b6fdf5fa/litellm-1.109.5.tar.gz", hash = "sha256:c3b067f25ddf78262beb5a69d7e71cd45ade72fccf4fc205265f484fda61ca0b", size = 25597220, upload-time = "2026-11-25T00:58:55.2Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/c3/6ba11f169a9acc9a9f1079b4ae998339a16c42d8806a23613be8cd4ed87c/litellm-1.103.10-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:0085bb61fdb321ce17014eac697d8d7513f36e6681d490af845e8d8b9af8e613", size = 27617034, upload-time = "2026-10-27T19:41:09.209Z" },
-    { url = "https://files.pythonhosted.org/packages/65/f2/dde77f2f18303bf9aa869a9c4b24e2d58d50977a1a4bd97e22734f9929fb/litellm-1.103.10-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:7451792391b9e268e812b17a4a5cc0d34dba9bac8d51615798ebcc58f10e1b09", size = 27075436, upload-time = "2026-10-27T19:41:12.677Z" },
-    { url = "https://files.pythonhosted.org/packages/34/6f/54181ae5987dec3442d902e3199498f855e14644092d44dc2b7704e6a2d9/litellm-1.103.10-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:ca4cbf0492f65c383de264da0ff98f48d4eb56e4edf4a55713d2562a554b986f", size = 27388878, upload-time = "2026-10-27T19:41:15.568Z" },
-    { url = "https://files.pythonhosted.org/packages/e9/a1/6b49bbaa6bd180f981e51f03d56f86c3e3f47dc41d7994b54b0a893f57f6/litellm-1.103.10-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:f639bd02ac34869080b7792732336345bc066ffb04be301093090425f6caa2bc", size = 27934228, upload-time = "2026-10-27T19:41:18.366Z" },
-    { url = "https://files.pythonhosted.org/packages/b3/4c/7eedabeabf932658f31db95179607e31842e7e04e30be615d2233aa883df/litellm-1.103.10-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:5774a19560e93b1da1838b160d0ac4fec5238c11bde2cd2411422a06fb4f5e7f", size = 27463638, upload-time = "2026-10-27T19:41:21.225Z" },
-    { url = "https://files.pythonhosted.org/packages/d0/5e/d044b5092079b76b509e29faf0bd2f7a66f4d0ecdd1ffe53d0a8dc9e694e/litellm-1.103.10-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:a7d2b6a0de7c0abfc97fe89184cb2b719a5f76170a4cac9ffd4d14e85fbb3b73", size = 28047479, upload-time = "2026-10-27T19:41:23.808Z" },
-    { url = "https://files.pythonhosted.org/packages/0a/5b/8e011f2fed0a445b71b24a79cc426e30433e7435b684167c1953202a3a8a/litellm-1.103.10-cp310-abi3-win_amd64.whl", hash = "sha256:adbcbb663a9cc96331de0f6ddd60e81d883288b901b7a4f6fbbfeb66edb669cd", size = 27992824, upload-time = "2026-10-27T19:41:26.523Z" },
+    { url = "https://files.pythonhosted.org/packages/d5/c1/6e34bd57ac30ebc5738571b0d6278a19983c54a12fdab323b611d39a0ac6/litellm-1.109.5-cp310-abi3-macosx_10_12_x86_64.whl", hash = "sha256:260aed85856288093f626984143dc4d69da577c8de3e3c8bb91b36ea3b99ac2d", size = 40585431, upload-time = "2026-11-25T00:58:31.126Z" },
+    { url = "https://files.pythonhosted.org/packages/82/04/45eb0bdd6963345d07d5c7aa618fe5bf2ade342cd045d5156d58e6eeb0da/litellm-1.109.5-cp310-abi3-macosx_11_0_arm64.whl", hash = "sha256:2334ce8ec7aaa2bea0d7a30b4bebc94ed0c0dbf03ae8950107bd6c0e7fd2b7e6", size = 39917882, upload-time = "2026-11-25T00:58:34.53Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/ad/5f5733e6820f6a1960c20ab05eb4050a690f4e87b1cb2ca2f75669810001/litellm-1.109.5-cp310-abi3-manylinux_2_28_aarch64.whl", hash = "sha256:ed57ff4648c45970e0c80573f9177064bad09fa0f11d296a06d10f97fccb4a80", size = 40481529, upload-time = "2026-11-25T00:58:38.225Z" },
+    { url = "https://files.pythonhosted.org/packages/eb/30/02eb1d35d328c1018f3cea7317e9ad730e514d81c16f1aaab4a316d0c3a8/litellm-1.109.5-cp310-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:45de355b982abf32910c2311729aaa9b1fece73be81488ee9319a1bcdf6b41ce", size = 41109070, upload-time = "2026-11-25T00:58:41.252Z" },
+    { url = "https://files.pythonhosted.org/packages/22/42/152601bdee8f4039ea3f7a3f4048fe18ce8e2ba62aaf873bfdc044acca91/litellm-1.109.5-cp310-abi3-musllinux_1_2_aarch64.whl", hash = "sha256:2c2b8dab09a20c24908df95a937ffd271fbd41c20b143068c07681e97cf194b6", size = 40579374, upload-time = "2026-11-25T00:58:44.61Z" },
+    { url = "https://files.pythonhosted.org/packages/65/db/f72967cb22ed0e1141a1d92247f801ce2d179db28719ffee8dd71020ce01/litellm-1.109.5-cp310-abi3-musllinux_1_2_x86_64.whl", hash = "sha256:6f062404b4555331392ee9737dff316324e9d26df9992bfb6cb83bd99bd60917", size = 41265536, upload-time = "2026-11-25T00:58:48.168Z" },
+    { url = "https://files.pythonhosted.org/packages/65/51/0723e8286c4fc90317b735c0bdaffaeb82c988ee5fb48247b75e57a6d8e0/litellm-1.109.5-cp310-abi3-win_amd64.whl", hash = "sha256:a6e3177c9939651ec8694c3b81800b7cedef59145ecb0a8c9500be2cb216f698", size = 41982879, upload-time = "2026-11-25T00:58:52.039Z" },
 ]
 
 [[package]]

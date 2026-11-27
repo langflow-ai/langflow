@@ -188,6 +188,34 @@ it("cancel aborts the request and returns to idle", async () => {
   expect(screen.getByRole("button", { name: "Check upgrade" })).toBeEnabled();
 });
 
+it.each(["target", "button"])(
+  "moves keyboard focus through the check started from the %s",
+  async (from) => {
+    const user = userEvent.setup();
+    open();
+    await user.type(screen.getByLabelText("Target release"), "1.15.0");
+    if (from === "button") await user.tab();
+
+    await user.keyboard("{Enter}");
+    const cancel = await screen.findByRole("button", { name: "Cancel" });
+    expect(cancel).toHaveFocus();
+
+    await user.keyboard("{Enter}");
+    expect(screen.getByRole("button", { name: "Check upgrade" })).toHaveFocus();
+    expect(signal.aborted).toBe(true);
+  },
+);
+
+it("returns focus after a failed check when Cancel had focus", async () => {
+  open();
+  await start();
+  expect(screen.getByRole("button", { name: "Cancel" })).toHaveFocus();
+  emit({ event: "error", code: "check_running" });
+  finish();
+  await screen.findByRole("alert");
+  expect(screen.getByRole("button", { name: "Check upgrade" })).toHaveFocus();
+});
+
 it("aborts the request when the page is left", async () => {
   const view = render(
     <QueryClientProvider client={new QueryClient()}>
@@ -327,6 +355,36 @@ it.each([
   await start();
   refuse(body);
   expect(await screen.findByRole("alert")).toHaveTextContent(text);
+});
+
+it.each([
+  ["invalid_target_version", "true"],
+  ["import_refused", "false"],
+  ["install_failed", "false"],
+])("sets aria-invalid appropriately for %s", async (code, invalid) => {
+  open();
+  await start();
+  emit({ event: "error", code, message: "server said" });
+  finish();
+  await screen.findByRole("alert");
+  expect(screen.getByLabelText("Target release")).toHaveAttribute(
+    "aria-invalid",
+    invalid,
+  );
+});
+
+it("shows the install failure detail without assuming a PyPI connection problem", async () => {
+  open();
+  await start();
+  emit({
+    event: "error",
+    code: "install_failed",
+    message: "No version of langflow matches the requested release",
+  });
+  finish();
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("No version of langflow matches");
+  expect(alert).not.toHaveTextContent("PyPI");
 });
 
 it("shows the server text of a refusal that has no code", async () => {

@@ -91,7 +91,7 @@ def test_target_version_rejects_old_pre_release_and_older_than_running(raw):
 
 def test_target_version_is_rebuilt_from_the_parsed_version():
     assert str(parse_target_version(" 1.16.1 ", current=RUNNING)) == "1.16.1"
-    assert parse_target_version("1.15.0", current=RUNNING) == RUNNING
+    assert str(parse_target_version("1.15", current=RUNNING)) == "1.15.0"
 
 
 def test_releases_keep_final_installable_newer_versions_newest_first():
@@ -233,6 +233,8 @@ def test_environment_keeps_what_uv_and_the_check_need_and_drops_secrets(tmp_path
         "HOME": "/home/langflow",
         "https_proxy": "http://proxy:3128",
         "UV_INDEX_URL": "https://mirror.example/simple",
+        "UV_PUBLISH_TOKEN": "publish-only",  # pragma: allowlist secret
+        "uv_publish_password": "publish-password",  # pragma: allowlist secret
         "LC_ALL": "C.UTF-8",
         "PGSSLROOTCERT": "/certs/root.pem",
         "LANGFLOW_SECRET_KEY": "server-secret",  # pragma: allowlist secret
@@ -257,13 +259,13 @@ def python_child(source):
     return [sys.executable, "-c", source]
 
 
-async def run_child(source, *, timeout=30, heartbeat=10, env=None):
+async def run_child(source, output, *, timeout=30, heartbeat=10, env=None):
     redact = lambda text: _redact(text, DATABASE_URL)  # noqa: E731
     child_env = os.environ if env is None else env
     return [
         event
         async for event in _child_events(
-            python_child(source), child_env, timeout=timeout, heartbeat=heartbeat, redact=redact
+            python_child(source), child_env, output=output, timeout=timeout, heartbeat=heartbeat, redact=redact
         )
     ]
 
@@ -272,41 +274,55 @@ def printed(*events):
     return "".join(f"print({json.dumps(json.dumps(event))}, flush=True);" for event in events)
 
 
-async def test_child_flow_events_pass_through_and_other_lines_are_dropped():
+async def test_child_flow_events_pass_through_and_other_lines_are_dropped(tmp_path):
+    output = tmp_path / "report.json"
+    output.touch()
     flow = {"event": "flow", "flow": {"status": "warn", "name": "private name"}}
     source = (
         printed(flow, {"event": "flow", "flow": {"status": "unknown"}}, ["not", "an", "event"])
         + "print('not json', flush=True)"
     )
-    assert await run_child(source) == [{"event": "flow", "status": "warn"}]
+    assert await run_child(source, output) == [{"event": "flow", "status": "warn"}]
 
 
-async def test_child_error_event_passes_through_with_the_database_url_and_password_redacted():
+async def test_child_error_event_passes_through_with_the_database_url_and_password_redacted(tmp_path):
     error = {"event": "error", "code": "check_failed", "message": f"cannot read {DATABASE_URL}, password secret"}
-    events = await run_child(printed(error) + "raise SystemExit(2)")
+    events = await run_child(printed(error) + "raise SystemExit(2)", tmp_path / "report.json")
     assert events == [{"event": "error", "code": "check_failed", "message": "cannot read <database url>, password ***"}]
 
 
-async def test_a_child_that_dies_without_an_error_event_reports_its_redacted_stderr_tail():
-    source = f"import sys; print('boom {DATABASE_URL} secret', file=sys.stderr); sys.exit(3)"
-    events = await run_child(source)
+@pytest.mark.parametrize("exit_code", [1, 3])
+async def test_a_child_without_a_report_explains_why_it_failed(tmp_path, exit_code):
+    source = f"import sys; print('boom {DATABASE_URL} secret', file=sys.stderr); sys.exit({exit_code})"
+    events = await run_child(source, tmp_path / "report.json")
     assert events == [{"event": "error", "code": "install_failed", "message": "boom <database url> ***"}]
 
 
-async def test_a_child_that_exits_with_a_verdict_code_ends_cleanly():
-    assert await run_child("import sys; sys.exit(1)") == []
+@pytest.mark.parametrize("exit_code", [0, 1])
+async def test_a_child_that_writes_a_report_and_exits_with_a_verdict_code_ends_cleanly(tmp_path, exit_code):
+    output = tmp_path / "report.json"
+    source = f"from pathlib import Path; Path({str(output)!r}).write_text('{{}}'); raise SystemExit({exit_code})"
+    assert await run_child(source, output) == []
 
 
-async def test_a_child_that_does_not_finish_is_stopped_after_heartbeats_and_ends_with_a_timeout():
-    events = await run_child("import time; time.sleep(60)", timeout=0.5, heartbeat=0.1)
+async def test_a_child_without_a_report_or_stderr_reports_missing_output(tmp_path):
+    assert await run_child("raise SystemExit(1)", tmp_path / "report.json") == [
+        {"event": "error", "code": "install_failed", "message": "The check ended without a report."}
+    ]
+
+
+async def test_a_child_that_does_not_finish_is_stopped_after_heartbeats_and_ends_with_a_timeout(tmp_path):
+    events = await run_child("import time; time.sleep(60)", tmp_path / "report.json", timeout=0.5, heartbeat=0.1)
     assert {"event": "heartbeat"} in events
     assert [event["code"] for event in events if event["event"] == "error"] == ["timeout"]
     assert events[-1]["event"] == "error"
 
 
-async def test_an_over_long_stdout_line_is_skipped_and_the_run_finishes():
+async def test_an_over_long_stdout_line_is_skipped_and_the_run_finishes(tmp_path):
+    output = tmp_path / "report.json"
+    output.touch()
     source = "print('x' * 300_000, flush=True);" + printed({"event": "flow", "flow": {"status": "ok"}})
-    assert await run_child(source) == [{"event": "flow", "status": "ok"}]
+    assert await run_child(source, output) == [{"event": "flow", "status": "ok"}]
 
 
 async def test_stopping_the_checker_also_closes_its_workers_output_pipe():
@@ -336,11 +352,16 @@ async def test_a_full_temp_directory_releases_the_check_lock(monkeypatch):
     assert not check_lock.locked()
 
 
-async def test_a_child_that_cannot_be_started_ends_with_one_error():
+async def test_a_child_that_cannot_be_started_ends_with_one_error(tmp_path):
     events = [
         event
         async for event in _child_events(
-            ["/nonexistent/program"], os.environ, timeout=5, heartbeat=1, redact=lambda text: text
+            ["/nonexistent/program"],
+            os.environ,
+            output=tmp_path / "report.json",
+            timeout=5,
+            heartbeat=1,
+            redact=lambda text: text,
         )
     ]
     assert events == [{"event": "error", "code": "install_failed", "message": "The check could not be started."}]

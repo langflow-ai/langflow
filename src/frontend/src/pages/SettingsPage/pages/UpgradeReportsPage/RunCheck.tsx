@@ -1,5 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import {
+  type FormEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
@@ -154,6 +160,16 @@ export default function RunCheck({
   const [target, setTarget] = useState("");
   const [run, setRun] = useState<Run>({ kind: "idle" });
   const controller = useRef<AbortController | null>(null);
+  const startButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
+  const nextFocus = useRef<"start" | "cancel" | null>(null);
+  const running = run.kind === "running";
+
+  useLayoutEffect(() => {
+    if (nextFocus.current === "cancel") cancelButton.current?.focus();
+    if (nextFocus.current === "start") startButton.current?.focus();
+    nextFocus.current = null;
+  }, [running]);
   // Leaving the page cancels the check on the server.
   // A refusal also ends in an abort, so only dropping the ref marks a run as cancelled.
   const stop = () => {
@@ -163,8 +179,12 @@ export default function RunCheck({
   };
   useEffect(() => stop, []);
 
-  const start = async () => {
+  const start = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     const version = target.trim();
+    if (!version || controller.current) return;
+
+    nextFocus.current = "cancel";
     const abort = new AbortController();
     controller.current = abort;
     setRun({
@@ -178,6 +198,7 @@ export default function RunCheck({
       targetVersion: version,
       controller: abort,
       onEvent: (event: UpgradeCheckProgress) => {
+        if (controller.current !== abort) return;
         if (event.event === "started") {
           setRun({
             kind: "running",
@@ -196,6 +217,9 @@ export default function RunCheck({
     // A cancel or leaving the page replaced the ref, and the run no longer owns the page.
     if (controller.current !== abort) return;
     controller.current = null;
+    if (document.activeElement === cancelButton.current) {
+      nextFocus.current = "start";
+    }
     switch (outcome.kind) {
       case "imported":
         client.invalidateQueries({ queryKey: ["useGetUpgradeReports"] });
@@ -222,7 +246,6 @@ export default function RunCheck({
     }
   };
 
-  const running = run.kind === "running";
   return (
     <section
       aria-labelledby="upgrade-check-title"
@@ -234,50 +257,57 @@ export default function RunCheck({
       <p className="text-sm text-muted-foreground">
         {t("settings.upgrade.check.help")}
       </p>
-      <label className="flex flex-col gap-2">
-        {t("settings.upgrade.check.target")}
-        <input
-          list="upgrade-check-releases"
-          value={target}
-          disabled={running}
-          aria-invalid={run.kind === "failed"}
-          aria-describedby="upgrade-check-feedback"
-          autoComplete="off"
-          spellCheck={false}
-          className="w-full min-w-0 max-w-full rounded-md border border-input bg-background p-2 text-sm"
-          onChange={(event) => {
-            setTarget(event.target.value);
-            if (run.kind === "failed" || run.kind === "done")
-              setRun({ kind: "idle" });
-          }}
-        />
-        <datalist id="upgrade-check-releases">
-          {(releases.data?.releases ?? []).map((version) => (
-            <option key={version} value={version} />
-          ))}
-        </datalist>
-      </label>
-      <div className="flex gap-2">
-        <Button
-          disabled={running || !target.trim()}
-          onClick={start}
-          ignoreTitleCase
-        >
-          {t("settings.upgrade.check.run")}
-        </Button>
-        {running && (
-          <Button
-            variant="outline"
-            onClick={() => {
-              stop();
-              setRun({ kind: "idle" });
+      <form className="space-y-3" onSubmit={start}>
+        <label className="flex flex-col gap-2">
+          {t("settings.upgrade.check.target")}
+          <input
+            list="upgrade-check-releases"
+            value={target}
+            disabled={running}
+            aria-invalid={
+              run.kind === "failed" && run.code === "invalid_target_version"
+            }
+            aria-describedby="upgrade-check-feedback"
+            autoComplete="off"
+            spellCheck={false}
+            className="w-full min-w-0 max-w-full rounded-md border border-input bg-background p-2 text-sm"
+            onChange={(event) => {
+              setTarget(event.target.value);
+              if (run.kind === "failed" || run.kind === "done")
+                setRun({ kind: "idle" });
             }}
+          />
+          <datalist id="upgrade-check-releases">
+            {(releases.data?.releases ?? []).map((version) => (
+              <option key={version} value={version} />
+            ))}
+          </datalist>
+        </label>
+        <div className="flex gap-2">
+          <Button
+            ref={startButton}
+            type="submit"
+            disabled={running || !target.trim()}
             ignoreTitleCase
           >
-            {t("settings.upgrade.check.cancel")}
+            {t("settings.upgrade.check.run")}
           </Button>
-        )}
-      </div>
+          {running && (
+            <Button
+              ref={cancelButton}
+              variant="outline"
+              onClick={() => {
+                nextFocus.current = "start";
+                stop();
+                setRun({ kind: "idle" });
+              }}
+              ignoreTitleCase
+            >
+              {t("settings.upgrade.check.cancel")}
+            </Button>
+          )}
+        </div>
+      </form>
       <div id="upgrade-check-feedback">
         {run.kind === "running" && <Progress run={run} />}
         {run.kind === "done" && (
