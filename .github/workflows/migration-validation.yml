@@ -93,7 +93,7 @@ jobs:
         env:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
         run: |
-          uv run pytest -c pyproject.toml src/backend/tests/unit/services/jobs/test_jobs_dedupe_concurrency.py -x -v
+          uv run pytest -c pyproject.toml src/backend/tests/unit/services/jobs/test_jobs_dedupe_concurrency.py src/backend/tests/unit/services/database/test_independent_update.py -x -v
 
       - name: Check API key usage counter concurrency
         env:

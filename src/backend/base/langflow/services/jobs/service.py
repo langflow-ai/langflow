@@ -566,13 +566,17 @@ class JobService(Service):
         *,
         owner: str | None,
     ) -> bool:
+        """Persist one payload only while the job's live status and lease match."""
         owner_expr = col(Job.job_metadata)["owner"].as_string()
         conditions = [Job.job_id == job_id, col(Job.status).in_((JobStatus.QUEUED, JobStatus.IN_PROGRESS))]
         if owner is not None:
             conditions.append(or_(owner_expr.is_(None), owner_expr == owner))
         async with session_scope() as session:
+            if session.get_bind().dialect.name == "postgresql":
+                # This fresh scope owns exactly one atomic, guarded write. Keep
+                # session_scope's database binding and pooled connection cleanup.
+                await session.connection(execution_options={"isolation_level": "AUTOCOMMIT"})
             result = await session.exec(update(Job).where(*conditions).values(**{field: value}))
-            await session.flush()
             return result.rowcount == 1
 
     async def save_checkpoint(self, job_id: UUID, kind: str, blob: str) -> None:
