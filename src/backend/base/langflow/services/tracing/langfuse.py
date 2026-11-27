@@ -658,8 +658,8 @@ class LangFuseTracer(BaseTracer):
         self._root_span.update(
             input={"input": trace_input},
             output={"output": trace_output},
-            metadata=metadata_ser,
         )
+        self._update_trace_metadata(metadata_ser)
         self._root_span.set_trace_io(input={"input": trace_input}, output={"output": trace_output})
 
         # End the root span
@@ -672,6 +672,32 @@ class LangFuseTracer(BaseTracer):
             self._client.flush()
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error flushing Langfuse client: {e}")
+
+    def _update_trace_metadata(self, metadata: dict[str, Any] | None) -> None:
+        """Apply final metadata to the existing root trace through the SDK API.
+
+        ``LangfuseSpan.update(metadata=...)`` writes observation metadata. The
+        v4 SDK's public ``propagate_attributes`` API writes trace metadata, but
+        only on its current OTel span. Temporarily making the existing root
+        current preserves the trace-level contract without changing the caller's
+        context or the root's boundary input/output attributes.
+        """
+        if not metadata:
+            return
+
+        from langfuse import propagate_attributes
+        from opentelemetry import context, trace
+
+        root_otel_span = getattr(self._root_span, "_otel_span", None)
+        if root_otel_span is None or not root_otel_span.is_recording():
+            return
+
+        token = context.attach(trace.set_span_in_context(root_otel_span))
+        try:
+            with propagate_attributes(metadata=metadata):
+                pass
+        finally:
+            context.detach(token)
 
     def _attributes(self) -> dict[str, Any]:
         return {
