@@ -13,6 +13,7 @@ from langflow.api.v1 import mcp_utils
 from langflow.api.v1.mcp_utils import ensure_project_reachable, project_flow_owner
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
+from langflow.services.database.models.user.model import User
 from lfx.services.deps import session_scope
 
 
@@ -110,3 +111,98 @@ async def test_streamable_endpoint_keeps_404_for_another_users_key(client, deplo
     )
     assert response.status_code == 404
     assert response.json()["detail"] == "Project not found"
+
+
+@pytest.fixture
+def as_caller(active_user, monkeypatch):
+    """Run list and call as active_user, with the flow's graph and the run stubbed out."""
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    monkeypatch.setattr(mcp_utils, "json_schema_from_flow", lambda _flow: {"type": "object"})
+    run = AsyncMock(return_value=SimpleNamespace(outputs=[]))
+    monkeypatch.setattr(mcp_utils, "simple_run_flow", run)
+    monkeypatch.setattr(mcp_utils.get_mcp_config(), "enable_progress_notifications", False)
+    user_token = mcp_utils.current_user_ctx.set(active_user)
+    caller_token = mcp_utils.authenticated_caller_ctx.set(active_user.id)
+    yield run
+    mcp_utils.authenticated_caller_ctx.reset(caller_token)
+    mcp_utils.current_user_ctx.reset(user_token)
+
+
+def _execute_only(monkeypatch, executable: set):
+    """The plugin's per-flow check on the call path: execute is allowed on `executable` only."""
+
+    async def ensure(_user, _act, *, flow_id, **_):
+        if flow_id not in executable:
+            raise HTTPException(status_code=403, detail="Forbidden")
+
+    monkeypatch.setattr(mcp_utils, "ensure_flow_permission", ensure)
+
+
+async def _second_exposed_flow(project_id, owner_id):
+    flow_id = uuid4()
+    async with session_scope() as session:
+        session.add(
+            Flow(
+                id=flow_id,
+                name=f"other-{flow_id.hex[:6]}",
+                data={"nodes": [], "edges": []},
+                user_id=owner_id,
+                folder_id=project_id,
+                mcp_enabled=True,
+            )
+        )
+    return flow_id
+
+
+@pytest.mark.usefixtures("as_caller")
+async def test_a_non_owner_lists_only_the_owners_flows_it_may_run(user_two, deployer_project, monkeypatch):
+    project_id, exposed_id, _ = deployer_project
+    other_id = await _second_exposed_flow(project_id, user_two.id)
+    try:
+        _plugin(monkeypatch, cross_user=True, executable={exposed_id})
+        tools, _ = await mcp_utils._collect_tools(project_id, mcp_enabled_only=True)
+        assert [tool.name for tool in tools] == [f"flow_{exposed_id.hex[:6]}"]
+    finally:
+        async with session_scope() as session:
+            await session.delete(await session.get(Flow, other_id))
+
+
+async def test_a_non_owner_runs_its_flow_and_is_refused_the_others(user_two, deployer_project, monkeypatch, as_caller):
+    project_id, exposed_id, _ = deployer_project
+    other_id = await _second_exposed_flow(project_id, user_two.id)
+    try:
+        _plugin(monkeypatch, cross_user=True, executable={exposed_id})
+        _execute_only(monkeypatch, {exposed_id})
+
+        assert await mcp_utils.handle_call_tool(f"flow_{exposed_id.hex[:6]}", {}, None, project_id=project_id) == []
+        as_caller.assert_awaited_once()
+
+        with pytest.raises(HTTPException) as refused:
+            await mcp_utils.handle_call_tool(f"other_{other_id.hex[:6]}", {}, None, project_id=project_id)
+        assert refused.value.status_code == 403
+        as_caller.assert_awaited_once()
+    finally:
+        async with session_scope() as session:
+            await session.delete(await session.get(Flow, other_id))
+
+
+async def test_a_deactivated_owner_closes_its_project_to_shared_callers(
+    active_user, user_two, deployer_project, monkeypatch, as_caller
+):
+    project_id, exposed_id, _ = deployer_project
+    _plugin(monkeypatch, cross_user=True, executable={exposed_id})
+    _execute_only(monkeypatch, {exposed_id})
+    async with session_scope() as session:
+        (await session.get(User, user_two.id)).is_active = False
+    try:
+        with pytest.raises(HTTPException) as refused:
+            await ensure_project_reachable(active_user, project_id, user_two.id)
+        assert refused.value.status_code == 404
+        with pytest.raises(ValueError, match="Project owner not found"):
+            await mcp_utils.handle_call_tool(f"flow_{exposed_id.hex[:6]}", {}, None, project_id=project_id)
+        as_caller.assert_not_awaited()
+    finally:
+        async with session_scope() as session:
+            (await session.get(User, user_two.id)).is_active = True

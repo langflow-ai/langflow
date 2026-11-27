@@ -266,20 +266,21 @@ async def ensure_project_reachable(user: User | UserRead, project_id: UUID, proj
     if project_user_id is None or not await cross_user_fetch_enabled():
         raise not_found
     async with session_scope() as session:
-        flows = [
-            snapshot_mcp_metadata(flow)
-            for flow in (
-                await session.exec(
-                    select(Flow).where(
-                        Flow.folder_id == project_id,
-                        Flow.user_id == project_user_id,
-                        Flow.mcp_enabled == True,  # noqa: E712
-                        Flow.is_component == False,  # noqa: E712
-                    )
+        # A deactivated owner still closes its projects, as it did when only the owner got in.
+        if await get_active_project_owner(session, project_user_id) is None:
+            raise not_found
+        # Only what the permission filter reads: this runs on every message, and a graph can be large.
+        flows = (
+            await session.exec(
+                select(Flow.id, Flow.user_id, Flow.workspace_id, Flow.folder_id).where(
+                    Flow.folder_id == project_id,
+                    Flow.user_id == project_user_id,
+                    Flow.mcp_enabled == True,  # noqa: E712
+                    Flow.is_component == False,  # noqa: E712
                 )
-            ).all()
-        ]
-    if not await filter_mcp_flows(user, flows, act=FlowAction.EXECUTE):
+            )
+        ).all()
+    if not await filter_mcp_flows(user, list(flows), act=FlowAction.EXECUTE):
         raise not_found
 
 
@@ -600,17 +601,20 @@ async def handle_call_tool(
 
     async def execute_tool(session):
         # The transport's user can outlive the account state read during admission.
-        if project_id is not None and await get_active_project_owner(session, current_user.id) is None:
-            msg = "Project owner not found"
-            raise ValueError(msg)
-
-        # Scoping in the query, not after it: post-filtering let an unexposed flow run by
-        # name and let one project win a name shared with another, silencing the second.
         flow_owner_id = (
             await project_flow_owner(session, project_id, current_user.id)
             if project_id is not None
             else current_user.id
         )
+        # Both the caller and, when a share admitted someone else, the project's owner.
+        if project_id is not None and None in [
+            await get_active_project_owner(session, account_id) for account_id in {current_user.id, flow_owner_id}
+        ]:
+            msg = "Project owner not found"
+            raise ValueError(msg)
+
+        # Scoping in the query, not after it: post-filtering let an unexposed flow run by
+        # name and let one project win a name shared with another, silencing the second.
         flow = await get_flow_snake_case(
             name,
             flow_owner_id,
