@@ -108,6 +108,66 @@ class TestLangfuseV4Api:
 
 
 class TestLangfuseTracerV4:
+    def test_shared_client_is_reused_for_multiple_flow_runs(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        tracers = [
+            LangFuseTracer(
+                trace_name="test-flow - flow-123",
+                trace_type="chain",
+                project_name="test-project",
+                trace_id=uuid.uuid4(),
+            )
+            for _ in range(2)
+        ]
+
+        assert mock_langfuse["langfuse_class"].call_count == 1
+        assert tracers[0]._client is tracers[1]._client
+
+    def test_credential_rotation_creates_a_new_shared_client(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+
+        with patch.dict(
+            os.environ,
+            {
+                "LANGFUSE_SECRET_KEY": "sk-lf-rotated",  # pragma: allowlist secret
+                "LANGFUSE_PUBLIC_KEY": "pk-lf-rotated",
+            },
+        ):
+            LangFuseTracer(
+                trace_name="test-flow - flow-456",
+                trace_type="chain",
+                project_name="test-project",
+                trace_id=uuid.uuid4(),
+            )
+
+        assert mock_langfuse["langfuse_class"].call_count == 2
+        first_config = mock_langfuse["langfuse_class"].call_args_list[0].kwargs
+        second_config = mock_langfuse["langfuse_class"].call_args_list[1].kwargs
+        assert first_config["secret_key"] != second_config["secret_key"]
+        assert first_config["public_key"] != second_config["public_key"]
+
+    def test_shared_client_uses_an_isolated_tracer_provider(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import LangFuseTracer
+        from opentelemetry.sdk.trace import TracerProvider
+
+        LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+
+        provider = mock_langfuse["langfuse_class"].call_args.kwargs["tracer_provider"]
+        assert isinstance(provider, TracerProvider)
+
     def test_initializes_root_observation_with_propagated_attributes(self, mock_langfuse):
         from langflow.services.tracing.langfuse import LangFuseTracer
 
@@ -211,6 +271,85 @@ class TestLangfuseTracerV4:
             input={"input": "request"}, output={"output": "response"}
         )
 
+    def test_end_falls_back_to_unmarked_graph_aggregates(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+        inputs = {"Source (source-id)": {"payload": {"order_id": 42}}}
+        outputs = {"Sink (sink-id)": {"record": {"order_id": 42, "status": "ready"}}}
+
+        tracer.end(inputs=inputs, outputs=outputs)
+
+        mock_langfuse["root"].set_trace_io.assert_called_once_with(input={"input": inputs}, output={"output": outputs})
+
+    def test_end_orders_multiple_boundaries_deterministically(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import LangFuseTracer
+        from lfx.schema.message import Message
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+        tracer.add_trace(
+            trace_id="z-output-id",
+            trace_name="Data Output (z-output-id)",
+            trace_type="chain",
+            inputs={},
+            vertex=types.SimpleNamespace(is_input=False, is_output=True),
+        )
+        tracer.add_trace(
+            trace_id="a-output-id",
+            trace_name="Text Output (a-output-id)",
+            trace_type="chain",
+            inputs={},
+            vertex=types.SimpleNamespace(is_input=False, is_output=True),
+        )
+
+        tracer.end(
+            inputs={},
+            outputs={
+                "Data Output (z-output-id)": {"data": {"order_id": 42}},
+                "Text Output (a-output-id)": {"text": Message(text="ready")},
+            },
+        )
+
+        mock_langfuse["root"].set_trace_io.assert_called_once_with(
+            input={"input": {}}, output={"output": ["ready", {"order_id": 42}]}
+        )
+
+    def test_end_uses_original_input_for_dual_role_boundary(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import LangFuseTracer
+        from lfx.schema.message import Message
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+        trace_name = "Bidirectional (component-id)"
+        tracer.add_trace(
+            trace_id="component-id",
+            trace_name=trace_name,
+            trace_type="chain",
+            inputs={"request": "ping"},
+            vertex=types.SimpleNamespace(is_input=True, is_output=True),
+        )
+
+        tracer.end(
+            inputs={trace_name: {"request": "ping"}},
+            outputs={trace_name: {"response": Message(text="pong")}},
+        )
+
+        mock_langfuse["root"].set_trace_io.assert_called_once_with(input={"input": "ping"}, output={"output": "pong"})
+
     def test_setup_errors_are_visible(self):
         from langflow.services.tracing.langfuse import LangFuseTracer
 
@@ -234,6 +373,38 @@ class TestLangfuseTracerV4:
         assert tracer.ready is False
         logger.exception.assert_called_once()
 
+    def test_auth_check_false_logs_a_warning(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        mock_langfuse["client"].auth_check.return_value = False
+        with patch("langflow.services.tracing.langfuse.logger") as logger:
+            tracer = LangFuseTracer(
+                trace_name="test-flow - flow-123",
+                trace_type="chain",
+                project_name="test-project",
+                trace_id=uuid.uuid4(),
+            )
+
+        assert tracer.ready is False
+        logger.warning.assert_called_once()
+        assert "authentication failed" in logger.warning.call_args.args[0].lower()
+
+    def test_auth_check_exception_logs_a_warning(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        mock_langfuse["client"].auth_check.side_effect = ConnectionError("upstream unavailable")
+        with patch("langflow.services.tracing.langfuse.logger") as logger:
+            tracer = LangFuseTracer(
+                trace_name="test-flow - flow-123",
+                trace_type="chain",
+                project_name="test-project",
+                trace_id=uuid.uuid4(),
+            )
+
+        assert tracer.ready is False
+        logger.warning.assert_called_once()
+        assert "cannot connect to langfuse" in logger.warning.call_args.args[0].lower()
+
     def test_feedback_deletion_uses_v4_legacy_score_endpoint(self, mock_langfuse):
         from langflow.services.tracing.langfuse import delete_feedback_score
 
@@ -241,3 +412,28 @@ class TestLangfuseTracerV4:
         delete_feedback_score(message_id=message_id)
 
         mock_langfuse["client"].api.legacy.score_v1.delete.assert_called_once_with(score_id=message_id.hex)
+
+    def test_feedback_deletion_falls_back_to_score_endpoint(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import delete_feedback_score
+
+        delete = MagicMock()
+        mock_langfuse["client"].api.legacy = None
+        mock_langfuse["client"].api.score = types.SimpleNamespace(delete=delete)
+        message_id = uuid.uuid4()
+
+        delete_feedback_score(message_id=message_id)
+
+        delete.assert_called_once_with(score_id=message_id.hex)
+
+    def test_feedback_deletion_warns_when_sdk_has_no_delete_endpoint(self, mock_langfuse):
+        from langflow.services.tracing.langfuse import delete_feedback_score
+
+        mock_langfuse["client"].api.legacy = None
+        mock_langfuse["client"].api.score = types.SimpleNamespace()
+        message_id = uuid.uuid4()
+
+        with patch("langflow.services.tracing.langfuse.logger") as logger:
+            delete_feedback_score(message_id=message_id)
+
+        logger.warning.assert_called_once()
+        assert message_id.hex in logger.warning.call_args.args[1:]
