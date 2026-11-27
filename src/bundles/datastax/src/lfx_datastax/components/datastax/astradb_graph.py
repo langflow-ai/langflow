@@ -13,7 +13,16 @@ from lfx.inputs.inputs import (
     IntInput,
     StrInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.data import Data
+
+SEARCH_TYPES = {
+    "Similarity": "similarity",
+    "Similarity with score threshold": "similarity_score_threshold",
+    "MMR (Max Marginal Relevance)": "mmr",
+    "Graph Traversal": "traversal",
+    "MMR (Max Marginal Relevance) Graph Traversal": "mmr_traversal",
+}
 
 
 class AstraDBGraphVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
@@ -45,13 +54,7 @@ class AstraDBGraphVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreCompon
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=[
-                "Similarity",
-                "Similarity with score threshold",
-                "MMR (Max Marginal Relevance)",
-                "Graph Traversal",
-                "MMR (Max Marginal Relevance) Graph Traversal",
-            ],
+            options=list(SEARCH_TYPES),
             value="MMR (Max Marginal Relevance) Graph Traversal",
             advanced=True,
         ),
@@ -148,19 +151,11 @@ class AstraDBGraphVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreCompon
             self.log("No documents to add to the Vector Store.")
 
     def _map_search_type(self) -> str:
-        match self.search_type:
-            case "Similarity":
-                return "similarity"
-            case "Similarity with score threshold":
-                return "similarity_score_threshold"
-            case "MMR (Max Marginal Relevance)":
-                return "mmr"
-            case "Graph Traversal":
-                return "traversal"
-            case "MMR (Max Marginal Relevance) Graph Traversal":
-                return "mmr_traversal"
-            case _:
-                return "similarity"
+        search_type = SEARCH_TYPES.get(self.search_type)
+        if search_type is None:
+            logger.warning("Unknown search type %r; falling back to 'similarity'", self.search_type)
+            return "similarity"
+        return search_type
 
     def _build_search_args(self):
         args = {

@@ -119,6 +119,51 @@ def test_split_credentialized_dsn_allows_at_sign_in_password() -> None:
     assert dsn == "host/service"
 
 
+# Typed out, not imported from the component: saved flows store these labels.
+EXPECTED_SEARCH_TYPES = {
+    "Similarity": "similarity",
+    "MMR (Max Marginal Relevance)": "mmr",
+}
+
+
+def _search_type_dropdown():
+    return next(field for field in OracleVectorStoreComponent.inputs if field.name == "search_type")
+
+
+def _map_search_type(label: str) -> tuple[str, list[str]]:
+    """Return the mapped search type and the warnings the component logged on the way."""
+    component = OracleVectorStoreComponent()
+    component.search_type = label
+    with patch("lfx_oracle.components.oracle.oraclevs.logger", create=True) as logger:
+        search_type = component._map_search_type()
+    return search_type, [call.args[0] % call.args[1:] for call in logger.warning.call_args_list]
+
+
+@pytest.mark.parametrize("label", _search_type_dropdown().options)
+def test_should_map_every_dropdown_option_to_its_own_search_type(label: str) -> None:
+    search_type, warnings = _map_search_type(label)
+
+    assert search_type == EXPECTED_SEARCH_TYPES[label]
+    assert warnings == [], "a label the dropdown offers must not be treated as unknown"
+
+
+def test_should_offer_exactly_the_saved_labels_in_order_with_the_same_default() -> None:
+    dropdown = _search_type_dropdown()
+
+    assert dropdown.options == list(EXPECTED_SEARCH_TYPES)
+    assert dropdown.value == "Similarity"
+
+
+@pytest.mark.parametrize("label", ["Similarity with score threshold", "Unknown mode", "", "similarity"])
+def test_should_fall_back_to_similarity_and_warn_when_the_label_is_unknown(label: str) -> None:
+    """Score threshold was dropped from this dropdown; flows that saved it keep running as similarity."""
+    search_type, warnings = _map_search_type(label)
+
+    assert search_type == "similarity"
+    assert len(warnings) == 1
+    assert repr(label) in warnings[0]
+
+
 class TestOracleVectorStoreComponent:
     @pytest.fixture
     def component_class(self) -> type[Any]:

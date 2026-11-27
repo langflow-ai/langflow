@@ -12,10 +12,17 @@ from lfx.io import (
     MessageTextInput,
     SecretStrInput,
 )
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx_datastax.components.cassandra._ssrf import validate_cassandra_connection
 
 DEFAULT_BATCH_SIZE = 16
+
+SEARCH_TYPES = {
+    "Similarity": "similarity",
+    "Similarity with score threshold": "similarity_score_threshold",
+    "MMR (Max Marginal Relevance)": "mmr",
+}
 
 
 class CassandraVectorStoreComponent(LCVectorStoreComponent):
@@ -94,7 +101,7 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=["Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)"],
+            options=list(SEARCH_TYPES),
             value="Similarity",
             advanced=True,
         ),
@@ -213,11 +220,11 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
         return table
 
     def _map_search_type(self) -> str:
-        if self.search_type == "Similarity with score threshold":
-            return "similarity_score_threshold"
-        if self.search_type == "MMR (Max Marginal Relevance)":
-            return "mmr"
-        return "similarity"
+        search_type = SEARCH_TYPES.get(self.search_type)
+        if search_type is None:
+            logger.warning("Unknown search type %r; falling back to 'similarity'", self.search_type)
+            return "similarity"
+        return search_type
 
     def search_documents(self) -> list[Data]:
         vector_store = self.build_vector_store()
