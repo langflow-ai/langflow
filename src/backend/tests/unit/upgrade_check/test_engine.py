@@ -211,13 +211,15 @@ def test_retired_components_without_their_optional_bundle(key, bundle):
     assert (node.status, node.bundle) == ("retired", bundle)
     replacement = "models_and_agents.Agent" if bundle == "altk" else "files_and_knowledge.Knowledge"
     assert node.replacement == [replacement]
-    assert node.reasons[0] == {
-        "code": "retired",
-        "field": None,
-        "message": "retired in 1.13.0. Replace with Agent"
-        if bundle == "altk"
-        else "retired in 1.13.0. Replace with Knowledge",
-    }
+    assert node.reasons == [
+        {
+            "code": "retired",
+            "field": None,
+            "message": "retired in 1.13.0. Replace with Agent"
+            if bundle == "altk"
+            else "retired in 1.13.0. Replace with Knowledge",
+        }
+    ]
     assert node.runs == "refused"
     assert target.components.all_types_dict == {}
 

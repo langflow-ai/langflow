@@ -1,3 +1,4 @@
+import { isEqual } from "lodash";
 import {
   componentsToIgnoreUpdate,
   TYPE_MIGRATIONS,
@@ -398,5 +399,25 @@ const templateKeysCompatible = (
   }
   return true;
 };
+
+// Compare the returned template too: component rebuilds can drop a value even
+// when the saved and catalog declarations have the same shape.
+export const updateDropsSavedFields = (
+  saved: APIClassType,
+  rebuilt: APIClassType,
+): boolean =>
+  Object.entries(saved.template).some(([name, before]) => {
+    if (name === "code" || !isStructuralTemplateKey(name) || !before) {
+      return false;
+    }
+    const after = rebuilt.template[name];
+    if (!after) return true;
+    return (
+      (Boolean(before.file_path) &&
+        !isEqual(before.file_path, after.file_path)) ||
+      Boolean(before.load_from_db) !== Boolean(after.load_from_db) ||
+      (holdsValue(before.value) && !isEqual(before.value, after.value))
+    );
+  });
 
 export default checkCodeValidity;

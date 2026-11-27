@@ -1,9 +1,14 @@
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { useMigrationPauseQuery } from "@/controllers/API/queries/migration";
+import { cn } from "@/utils/utils";
 
 /** Tells every signed-in user, on every page, that this instance refuses changes while it moves to a new one. */
-export function ChangesPausedNotice() {
+export function ChangesPausedNotice({
+  aboveComposer = false,
+}: {
+  aboveComposer?: boolean;
+} = {}) {
   const { t } = useTranslation();
   const { pathname } = useLocation();
   const { data } = useMigrationPauseQuery();
@@ -21,7 +26,12 @@ export function ChangesPausedNotice() {
   return (
     <section
       aria-label={t("settings.maintenance.statusLabel")}
-      className="pointer-events-none fixed bottom-[calc(theme(spacing.4)+env(safe-area-inset-bottom))] left-1/2 z-50 w-max max-w-[min(36rem,calc(100%-2rem))] -translate-x-1/2"
+      className={cn(
+        "pointer-events-none fixed left-1/2 z-50 w-max max-w-[min(36rem,calc(100%-2rem))] -translate-x-1/2",
+        aboveComposer
+          ? "top-[calc(theme(spacing.16)+env(safe-area-inset-top))]"
+          : "bottom-[calc(theme(spacing.4)+env(safe-area-inset-bottom))]",
+      )}
     >
       {/* Keep the empty status mounted so screen readers announce later changes. */}
       <div role="status" data-testid="changes-paused-notice">

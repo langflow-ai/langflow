@@ -229,7 +229,7 @@ For more information, see [Deploy Langflow on Docker](/deployment-docker).
 ### Manage the Langflow OSS version
 
 :::warning Upgrading from Langflow 1.11.x
-Use the [1.11.x upgrade procedure](#upgrade-from-langflow-111) when moving an older full installation to 1.13.
+Use the [1.11.x upgrade procedure](#upgrade-from-langflow-111) when moving an older full installation to 1.14.
 An in-place upgrade can leave incompatible provider packages installed.
 Neither `--upgrade` nor `--force-reinstall` removes packages that are no longer dependencies.
 :::
@@ -265,6 +265,16 @@ Startup leaves that database unchanged and links to this procedure.
 Stop every Editor and Serving process, including workers and scheduled jobs, before restoring.
 Keep the current database, storage, and configuration backups separately.
 Restore the database backup taken with the release you will run.
+For PostgreSQL, use a new, empty database owned by the application role, with any required extensions and grants.
+For a custom-format backup, connect as that role and run:
+
+```shell
+pg_restore --single-transaction --no-owner --dbname=langflow_restored langflow-before-upgrade.dump
+```
+
+Keep the migrated database intact.
+An in-place restore with `--clean` can leave newer tables in place. Their foreign keys can prevent the backup from restoring.
+After a successful restore, point the earlier release's `LANGFLOW_DATABASE_URL` at the restored database.
 Restore its matching secret key, file storage, and knowledge-base storage.
 Install the matching packages or images and restore their configuration and provider dependencies.
 If the restored release provides `langflow check-integrity`, run it with that release.
@@ -307,22 +317,28 @@ version-aligned with `langflow`. Requirements such as
 ### Upgrade from Langflow 1.11.x {#upgrade-from-langflow-111}
 
 1. While the old version is still running, [prepare the existing account for password sign-in](/api-keys-and-authentication#upgrade-from-auto-login).
-   Then stop all Langflow workers and back up the database, configuration, uploaded files, and knowledge storage.
-   Keep the original Python environment and these backups until you have checked the new version.
+   Langflow 1.14 recognizes the database revision shipped in 1.11.6.
+   Keep the existing installation running until the stable 1.14.0 package is available and installs successfully.
 
-2. From your existing working directory, create a new environment in an unused directory and install the replacement version.
+2. From your existing working directory, create a new environment in an unused directory.
 
    ```bash
-   uv venv --python 3.12 .venv-langflow-1.13
-   uv pip install --python .venv-langflow-1.13 'langflow[bundles]==1.13.2'
-   uv pip check --python .venv-langflow-1.13
+   uv venv --python 3.12 .venv-langflow-1.14
+   uv pip install --python .venv-langflow-1.14 'langflow[bundles]==1.14.0'
    ```
 
    The `bundles` extra includes the optional provider packages omitted from the default installation.
-   To test a release candidate, use its full version instead, such as `1.13.2rc1`.
-   Resolve any dependency conflicts before starting Langflow.
+   For PostgreSQL, use this install command to include the binary driver:
 
-3. Put your original instance settings in an environment file for the new process.
+   ```bash
+   uv pip install --python .venv-langflow-1.14 'langflow[bundles,postgresql]==1.14.0'
+   ```
+
+   Check the new environment with `uv pip check --python .venv-langflow-1.14` before continuing.
+
+3. Stop all Langflow processes and back up the database, configuration, uploaded files, and knowledge storage.
+   Keep the original Python environment and the backups until you have checked the new version.
+   Put your original instance settings in an environment file for the new process.
    If you already use a `.env` file, copy it and preserve its existing values.
    Keep the original `LANGFLOW_CONFIG_DIR`, `LANGFLOW_KNOWLEDGE_BASES_DIR`, and file-storage settings.
    Set `LANGFLOW_DATABASE_URL` explicitly to your existing external database URL or an absolute URL for your SQLite file.
@@ -335,7 +351,7 @@ version-aligned with `langflow`. Requirements such as
 4. Start the replacement environment using that file.
 
    ```bash
-   uv run --no-project --python .venv-langflow-1.13 python -m langflow run --env-file /absolute/path/to/langflow-upgrade.env
+   uv run --no-project --python .venv-langflow-1.14 python -m langflow run --env-file /absolute/path/to/langflow-upgrade.env
    ```
 
    Replace the environment file path with your actual path.

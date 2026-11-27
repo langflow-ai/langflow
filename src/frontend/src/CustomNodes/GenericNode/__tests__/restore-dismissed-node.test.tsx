@@ -222,7 +222,12 @@ jest.mock("@/customization/components/custom-NodeStatus", () => ({
 
 jest.mock("@/modals/updateComponentModal", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ open, onUpdateNode }) =>
+    open ? (
+      <button type="button" onClick={() => void onUpdateNode()}>
+        Confirm restore
+      </button>
+    ) : null,
 }));
 
 jest.mock("@/utils/reactflowUtils", () => ({
@@ -328,6 +333,8 @@ describe("GenericNode dismissed update recovery", () => {
     expect(screen.getByText("Restore")).toBeInTheDocument();
 
     await user.click(screen.getByTestId("restore-node-button"));
+    expect(mockValidateComponentCode).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Confirm restore" }));
 
     await waitFor(() => {
       expect(mockTakeSnapshot).toHaveBeenCalled();
