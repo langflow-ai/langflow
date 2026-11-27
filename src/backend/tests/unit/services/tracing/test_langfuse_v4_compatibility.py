@@ -328,7 +328,7 @@ class TestLangfuseTracerV4:
         update_kwargs = mock_langfuse["root"].update.call_args.kwargs
         assert update_kwargs["input"] == {"input": {"input": "hello"}}
         assert update_kwargs["output"] == {"output": {"output": "world"}}
-        assert "metadata" not in update_kwargs
+        assert update_kwargs["metadata"] == {"final": True}
         mock_langfuse["root"].set_trace_io.assert_called_once_with(
             input={"input": {"input": "hello"}},
             output={"output": {"output": "world"}},
@@ -368,7 +368,7 @@ class TestLangfuseTracerV4:
         update_kwargs = mock_langfuse["root"].update.call_args.kwargs
         assert update_kwargs["input"] == {"input": "request"}
         assert update_kwargs["output"] == {"output": "response"}
-        assert "metadata" not in update_kwargs
+        assert update_kwargs["metadata"] is None
         mock_langfuse["root"].set_trace_io.assert_called_once_with(
             input={"input": "request"}, output={"output": "response"}
         )
