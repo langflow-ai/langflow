@@ -4,7 +4,7 @@ import json
 import subprocess
 import sys
 from copy import deepcopy
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -182,11 +182,36 @@ async def test_duplicate_imports_are_visible_across_history_pages(client, admin_
         response = await client.post(URL, content=content, headers=admin_headers)
         assert response.status_code == 201, response.text
 
-    for offset, duplicate in enumerate((False, True, True)):
+    # Newest first: the changed file is unique, the repeat is a duplicate, and the first import is not.
+    for offset, duplicate in enumerate((False, True, False)):
         response = await client.get(URL, params={"offset": offset, "limit": 1}, headers=admin_headers)
         assert response.status_code == 200, response.text
         [report] = response.json()["items"]
         assert report["duplicate"] is duplicate
+
+
+async def test_imports_at_the_same_instant_flag_only_the_later_one(client, admin_headers):
+    document = FIXTURE.read_text()
+    instant = datetime(2026, 11, 27, 12, tzinfo=timezone.utc)
+    async with session_scope() as session:
+        for _ in range(2):
+            session.add(
+                UpgradeReport(
+                    created_at=instant,
+                    generated_at=instant,
+                    target_version="1.14.0",
+                    flow_count=1,
+                    warning_count=0,
+                    failing_count=0,
+                    content_sha256="a" * 64,
+                    document_json=document,
+                )
+            )
+
+    response = await client.get(URL, headers=admin_headers)
+    assert response.status_code == 200, response.text
+    # The id breaks the tie in list order, so only the row listed first is the repeat.
+    assert [report["duplicate"] for report in response.json()["items"]] == [True, False]
 
 
 async def test_admin_reports_work_during_database_maintenance(client, logged_in_headers, admin_headers):

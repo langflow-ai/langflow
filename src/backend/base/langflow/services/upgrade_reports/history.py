@@ -110,9 +110,10 @@ async def list_reports(
     )
     locator = document["source"]["identity"]["locator"]
     other = UpgradeReport.__table__.alias()
+    # Flag repeats only: an earlier import with the same bytes, ordered by the list's (created_at, id) key.
     duplicate = sa.exists().where(
         other.c.content_sha256 == UpgradeReport.content_sha256,
-        other.c.id != UpgradeReport.id,
+        sa.tuple_(other.c.created_at, other.c.id) < sa.tuple_(UpgradeReport.created_at, UpgradeReport.id),
     )
     rows = await session.execute(
         sa.select(
