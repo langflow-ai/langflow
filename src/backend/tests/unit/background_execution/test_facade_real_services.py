@@ -143,6 +143,23 @@ async def test_sweep_orphans_fails_in_progress(real_services_job_service):
     assert job.error.get("type") == "worker_lost"
 
 
+async def test_sweep_orphans_spares_a_job_this_process_keeps_alive(real_services_job_service):
+    """A stale heartbeat from a stalled event loop does not make this process's own run an orphan."""
+    job_service = real_services_job_service
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    await job_service.start_keep_alive(job_id, interval_s=3600, beat_now=False)
+    try:
+        failed = await job_service.sweep_orphans()
+    finally:
+        await job_service.stop_keep_alive(job_id)
+
+    assert job_id not in failed
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.IN_PROGRESS
+
+
 async def test_scaled_watchdog_reconciles_orphans_without_restart(real_services_job_service):
     """A steady scaled worker fleet must reap a dead owner's stale job.
 

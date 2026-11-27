@@ -1675,8 +1675,8 @@ class JobService(Service):
             now = datetime.now(timezone.utc)
             hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
             for job in in_progress:
-                if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
-                    # Live owner still heartbeating — leave the run alone.
+                if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s) or self.is_kept_alive_here(job.job_id):
+                    # Live owner still heartbeating (or this very process, its beat late from a stalled loop).
                     continue
                 prior_heartbeat = (job.job_metadata or {}).get("heartbeat_at")
                 if require_heartbeat and prior_heartbeat is None:

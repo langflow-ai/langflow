@@ -165,8 +165,12 @@ async def _store_result(run_id: UUID, result: EvaluationResult) -> bool:
         session.add(result)
         try:
             await session.flush()
-        except IntegrityError:
+        except IntegrityError as exc:
+            # Usually a timeout racing the save for the same position; anything else should stay visible.
             await session.rollback()
+            await logger.awarning(
+                f"evals_row_not_stored run_id={run_id} position={result.position} error={type(exc.orig).__name__}"
+            )
             return False
     return True
 

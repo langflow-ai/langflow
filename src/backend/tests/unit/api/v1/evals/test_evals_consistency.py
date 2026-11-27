@@ -236,6 +236,7 @@ class TestActiveRuns:
         self, client, logged_in_headers, monkeypatch
     ):
         from langflow.services.database.models.jobs.model import Job
+        from langflow.services.deps import get_job_service
 
         monkeypatch.setattr(runner, "execute_row", _slow_rows(0.3))
         monkeypatch.setattr(get_settings_service().settings, "evals_row_concurrency", 1)
@@ -243,9 +244,14 @@ class TestActiveRuns:
         dataset = await create_dataset(client, logged_in_headers, "late-beat", [(f"q{i}", f"q{i}") for i in range(4)])
         evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
         started = await start_run(client, logged_in_headers, evaluation["id"])
-        # A loop stall longer than the lease leaves the heartbeat this old although the worker is alive.
         async with session_scope() as session:
             run = (await session.exec(select(EvaluationRun).where(EvaluationRun.id == UUID(started["id"])))).one()
+        for _ in range(100):
+            if get_job_service().is_kept_alive_here(run.job_id):
+                break
+            await asyncio.sleep(0.05)
+        # A loop stall longer than the lease leaves the heartbeat this old although the worker is alive.
+        async with session_scope() as session:
             job = (await session.exec(select(Job).where(Job.job_id == run.job_id))).one()
             job.job_metadata = {**(job.job_metadata or {}), "heartbeat_at": "2020-01-01T00:00:00+00:00"}
             session.add(job)
