@@ -15,7 +15,9 @@ def set_advanced_true(component_input):
 
 
 MODEL_PROVIDERS_LIST = ["Anthropic", "OpenAI"]
-INPUT_NAMES_TO_BE_OVERRIDDEN = ["agent_llm"]
+# Parent inputs to drop. "agent_llm" has its own dropdown here. The chat history mode is newer than the
+# retirement, so leaving it out keeps the retired contract unchanged.
+INPUT_NAMES_TO_BE_OVERRIDDEN = ["agent_llm", "chat_history_mode"]
 VERBOSE_INPUT_INFO = (
     "Legacy toggle. The '> Entering new ... chain' / '> Finished chain.' "
     "markers it used to print to stdout are now gated on the "
