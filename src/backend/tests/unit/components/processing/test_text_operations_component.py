@@ -444,6 +444,36 @@ class TestTextOperationsClean:
 
 
 class TestTextOperationsToDataFrame:
+    @pytest.mark.parametrize(
+        ("table", "separator", "expected"),
+        [
+            (
+                "| first | middle | last |\n|---|---|---|\n||Alice||\n|x|Bob|z|",
+                "|",
+                [["", "Alice", ""], ["x", "Bob", "z"]],
+            ),
+            (
+                "| first | middle | last |\n|---|---|---|\n||||\n|x|Bob|z|",
+                "|",
+                [["", "", ""], ["x", "Bob", "z"]],
+            ),
+            (
+                "name::note\n:Alice::suffix:\nBob::prefix",
+                "::",
+                [[":Alice", "suffix:"], ["Bob", "prefix"]],
+            ),
+        ],
+    )
+    def test_dataframe_preserves_cell_boundaries(self, table, separator, expected):
+        component = TextOperations()
+        component.table_separator = separator
+        component.has_header = True
+        component.log = lambda _: None
+
+        result = component._text_to_dataframe(table)
+
+        assert result.to_numpy().tolist() == expected
+
     def test_dataframe_basic(self):
         """Test basic table to DataFrame conversion."""
         component = TextOperations()
