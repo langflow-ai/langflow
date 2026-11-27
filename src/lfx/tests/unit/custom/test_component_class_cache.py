@@ -37,24 +37,6 @@ class {name}(Component):
     )
 
 
-@pytest.fixture(autouse=True)
-def _clean_cache():
-    class_cache.clear_component_class_cache()
-    class_cache.reset_component_class_cache_stats()
-    yield
-    class_cache.clear_component_class_cache()
-    class_cache.reset_component_class_cache_stats()
-
-
-@pytest.fixture
-def cache_on(monkeypatch):
-    """Enable the cache with a clean slate."""
-    monkeypatch.setattr(class_cache, "_cache_enabled", lambda: True)
-    # Treat every source as reviewed and trusted so these tests exercise the cache; both gates have own tests.
-    monkeypatch.setattr(class_cache, "_is_reviewed", lambda _digest, _name: True)
-    monkeypatch.setattr(class_cache, "_is_trusted_source", lambda _code: True)
-
-
 def build(source: str, name: str | None = None):
     return eval_custom_component_code(source, class_name=name, reuse_class=True)
 
@@ -387,17 +369,6 @@ def _shipped_source(path: str) -> str:
     return (Path(lfx.__file__).parent / "components" / path).read_text(encoding="utf-8")
 
 
-def _class_state(component_class: type) -> dict[str, dict[str, tuple[int, str]]]:
-    """Identity and repr of every class attribute and module-level value: catches rebinding and in-place changes."""
-    namespace = next((f.__globals__ for f in vars(component_class).values() if inspect.isfunction(f)), None)
-    assert namespace is not None, f"{component_class.__name__} defines no methods"
-
-    def snapshot(values: dict) -> dict[str, tuple[int, str]]:
-        return {k: (id(v), repr(v)) for k, v in values.items() if not k.startswith("__")}
-
-    return {"class": snapshot(vars(component_class)), "module": snapshot(namespace)}
-
-
 @pytest.mark.parametrize(("path", "class_name", "digest"), class_cache.REVIEWED_COMPONENTS)
 def test_reviewed_pin_matches_shipped_file(path, class_name, digest):
     source = _shipped_source(path)
@@ -423,7 +394,7 @@ def test_every_reviewed_component_is_in_the_shipped_component_index():
 
 
 @pytest.mark.parametrize(("path", "class_name", "digest"), class_cache.REVIEWED_COMPONENTS)
-def test_reviewed_component_reuse_behaves_like_fresh_builds(monkeypatch, path, class_name, digest):
+def test_reviewed_component_reuse_behaves_like_fresh_builds(monkeypatch, class_state, path, class_name, digest):
     source = _shipped_source(path)
     monkeypatch.setattr(class_cache, "_cache_enabled", lambda: True)
     monkeypatch.setattr(class_cache, "_is_trusted_source", lambda code: code == source)
@@ -433,7 +404,7 @@ def test_reviewed_component_reuse_behaves_like_fresh_builds(monkeypatch, path, c
     first = build(source, class_name)
     assert build(source, class_name) is first
     assert class_cache.component_class_cache_stats()["hits"] == 1
-    before = _class_state(first)
+    before = class_state(first)
 
     used = first()
     used.to_frontend_node()
@@ -443,7 +414,7 @@ def test_reviewed_component_reuse_behaves_like_fresh_builds(monkeypatch, path, c
     assert fresh.inputs is not used.inputs
     uncached = eval_custom_component_code(source, class_name=class_name)()
     assert fresh.to_frontend_node()["data"]["node"] == uncached.to_frontend_node()["data"]["node"]
-    assert _class_state(first) == before
+    assert class_state(first) == before
 
 
 def test_reviewed_digests_are_unique():
@@ -494,7 +465,7 @@ def _run_parser(component_class, rows, pattern):
     ],
 )
 def test_reviewed_component_outputs_match_uncached_across_runs(
-    monkeypatch, path, class_name, run, first_args, second_args
+    monkeypatch, class_state, path, class_name, run, first_args, second_args
 ):
     """A run on the cached class leaves nothing behind: the next run matches a freshly built class."""
     source = _shipped_source(path)
@@ -502,10 +473,10 @@ def test_reviewed_component_outputs_match_uncached_across_runs(
     monkeypatch.setattr(class_cache, "_is_trusted_source", lambda code: code == source)
 
     cached = build(source, class_name)
-    before = _class_state(cached)
+    before = class_state(cached)
     run(cached, *first_args)
     assert build(source, class_name) is cached
     second = run(cached, *second_args)
 
     assert second == run(eval_custom_component_code(source, class_name=class_name), *second_args)
-    assert _class_state(cached) == before
+    assert class_state(cached) == before
