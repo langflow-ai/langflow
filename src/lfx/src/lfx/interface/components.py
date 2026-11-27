@@ -13,9 +13,8 @@ from concurrent.futures import Future
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional
 
-from typing_extensions import Self
-
 import orjson
+from typing_extensions import Self
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.class_cache import clear_component_class_cache
