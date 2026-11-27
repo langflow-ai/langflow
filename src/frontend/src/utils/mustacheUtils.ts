@@ -71,7 +71,7 @@ export function validateMustacheTemplate(
   }
 
   // Find all {{ }} patterns and validate them
-  const allMustachePatterns = template.match(/\{\{[^}]*\}\}/g) || [];
+  const allMustachePatterns = template.match(/\{\{[\s\S]*?\}\}/g) || [];
   const simpleVarPattern = /^\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}$/;
 
   for (const pattern of allMustachePatterns) {
