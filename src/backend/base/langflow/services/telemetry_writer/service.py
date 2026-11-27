@@ -42,7 +42,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import col
 
-from langflow.api.utils.migration_pause import async_writing, writes_paused
+from langflow.api.utils.migration_pause import async_writing, is_paused, maintenance_pauses_writes
 from langflow.services.base import Service
 from langflow.services.database.models.transactions.model import TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildTable
@@ -65,6 +65,28 @@ _UUID_TAG = "__lftw_uuid__"
 # After this many consecutive batch failures, escalate from per-batch logging
 # to a loud error so operators see sustained data-loss risk.
 _FAILURE_ESCALATION_THRESHOLD = 6
+
+# The retention gate lives at module level so one name carries the whole pause
+# decision and callers (including tests) can substitute it in a single place.
+# The maintenance flag is read through the writer's own engine, which the service
+# publishes right before it sweeps.
+_retention_session_maker: async_sessionmaker | None = None
+
+
+async def writes_paused() -> bool:
+    """Whether either pause source refuses new telemetry work.
+
+    Two independent sources: the file record a migration writes, and the
+    maintenance flag in the database this writer prunes. The flag is read through
+    this writer's own engine — the service manager points elsewhere — and an
+    unreadable one is not a pause.
+    """
+    if is_paused():
+        return True
+    session_maker = _retention_session_maker
+    if session_maker is None:
+        return False
+    return await maintenance_pauses_writes(session_maker)
 
 
 def _host_boot_identity() -> tuple[str, str]:
@@ -732,7 +754,9 @@ class TelemetryWriterService(Service):
             # A paused instance flushes nothing. The rows wait in memory, and teardown spills them to disk.
             # A flush holds a place from here until it is over, so a pause waits for one that is under way.
             place = AsyncExitStack()
-            paused = not await place.enter_async_context(async_writing(name="telemetry_flush"))
+            paused = not await place.enter_async_context(
+                async_writing(name="telemetry_flush", session_maker=self._session_maker)
+            )
             tx_batch = [] if paused else self._drain_batch("transactions", batch_size, batch_size_bytes)
             vb_batch = [] if paused else self._drain_batch("vertex_builds", batch_size, batch_size_bytes)
 
@@ -805,7 +829,7 @@ class TelemetryWriterService(Service):
                 return
             self._heartbeat_owner_file()
             try:
-                async with async_writing(name="telemetry_retention") as let_in:
+                async with async_writing(name="telemetry_retention", session_maker=self._session_maker) as let_in:
                     if let_in:
                         await self._run_retention_pass()
             except Exception:  # noqa: BLE001
@@ -816,7 +840,13 @@ class TelemetryWriterService(Service):
                 logger.exception("telemetry_writer: cross-host orphan prune failed")
 
     async def _run_retention_pass(self) -> None:
-        if self._session_maker is None or await writes_paused():
+        if self._session_maker is None:
+            return
+        # Publish the engine the module-level gate reads the maintenance flag through.
+        # The gate is one name, so substituting it replaces the whole decision.
+        global _retention_session_maker  # noqa: PLW0603
+        _retention_session_maker = self._session_maker
+        if await writes_paused():
             return
         settings = self.settings_service.settings
         max_transactions = int(getattr(settings, "max_transactions_to_keep", 3000))
