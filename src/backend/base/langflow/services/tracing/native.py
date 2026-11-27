@@ -99,6 +99,10 @@ class NativeTracer(BaseTracer):
         # Needed so get_langchain_callback() can set the correct parent span ID.
         self._current_component_id: str | None = None
 
+        # One vertex can be built several times in a run; each build needs its own
+        # span ID or the DB merge collapses them into a single row (#16633).
+        self._span_occurrences: dict[str, int] = {}
+
         # Rolled up into the component span's attributes so the UI can show per-component token counts.
         self._component_tokens: dict[str, dict[str, int]] = {}
 
@@ -146,8 +150,14 @@ class NativeTracer(BaseTracer):
 
         # Strip the component ID suffix so the UI shows a clean display name.
         name = trace_name.removesuffix(f" ({trace_id})")
+        # Each build of the same vertex gets its own span ID (the first build keeps
+        # the plain vertex ID); the flush would otherwise merge repeated builds into
+        # one row because the UUID is derived from the span ID (#16633).
+        occurrence = self._span_occurrences.get(trace_id, 0) + 1
+        self._span_occurrences[trace_id] = occurrence
+        span_id = trace_id if occurrence == 1 else f"{trace_id}#{occurrence}"
         self.spans[trace_id] = {
-            "id": trace_id,
+            "id": span_id,
             "name": name,
             "trace_type": trace_type,
             "inputs": serialize(inputs),
@@ -156,7 +166,7 @@ class NativeTracer(BaseTracer):
         }
 
         # Stored so get_langchain_callback() can attach LangChain child spans to this component.
-        self._current_component_id = trace_id
+        self._current_component_id = span_id
 
     @override
     def end_trace(
@@ -198,7 +208,7 @@ class NativeTracer(BaseTracer):
             output_data["logs"] = [log if isinstance(log, dict) else log.model_dump() for log in logs]
 
         # Pop so tokens aren't double-counted if end_trace is called more than once for the same component.
-        tokens = self._component_tokens.pop(trace_id, {})
+        tokens = self._component_tokens.pop(span_info["id"], {})
 
         # Use OTel GenAI conventions so observability tools can parse token usage uniformly across providers
         attributes: dict[str, Any] = {}
@@ -209,7 +219,7 @@ class NativeTracer(BaseTracer):
 
         self.completed_spans.append(
             self._build_completed_span(
-                span_id=trace_id,
+                span_id=span_info["id"],
                 name=span_info["name"],
                 span_type=self._map_trace_type(span_info["trace_type"]),
                 inputs=span_info["inputs"],
@@ -392,16 +402,17 @@ class NativeTracer(BaseTracer):
         from langflow.services.tracing.native_callback import NativeCallbackHandler
         from langflow.services.tracing.service import component_context_var
 
-        # Component context is set before add_trace(), so it's available when components call
-        # get_langchain_callbacks() — checked here in case _current_component_id was None at creation.
+        # Prefer the tracer's active span ID so repeated builds of one vertex attach
+        # LangChain children to the right build; fall back to the component context
+        # for edge cases where add_trace() has not run yet.
         parent_span_id = None
-        component_context = component_context_var.get(None)
-        if component_context:
-            component_id = component_context.trace_id
+        component_id = self._current_component_id
+        if component_id is None:
+            component_context = component_context_var.get(None)
+            if component_context:
+                component_id = component_context.trace_id
+        if component_id:
             parent_span_id = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{component_id}")
-        elif self._current_component_id:
-            # Fallback for edge cases where component context might not be set
-            parent_span_id = uuid5(LANGFLOW_SPAN_NAMESPACE, f"{self.trace_id}-{self._current_component_id}")
 
         return NativeCallbackHandler(self, parent_span_id=parent_span_id)
 
