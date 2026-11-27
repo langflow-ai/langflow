@@ -253,6 +253,8 @@ class Graph:
         self.pause_requested = False
         self.pause_info: dict[str, Any] | None = None
         self.checkpoint_store: CheckpointStore | None = None
+        # Paused nested runs by request prefix; see graph/checkpoint/nested.py.
+        self.child_checkpoints: dict[str, GraphCheckpoint] = {}
         self.job_id: str | None = None
         self.resumed_from_checkpoint = False
         # Server-established reviewed references survive approval resumes. Executable
@@ -1957,6 +1959,7 @@ class Graph:
         state.setdefault("source_flow_id", None)
         state.setdefault("runs_stored_flow", True)
         state.setdefault("runtime_candidate", None)
+        state.setdefault("child_checkpoints", {})
         state.setdefault("authorized_legacy_flow_ids", frozenset())
         state.setdefault("authorized_extra_file_scopes", frozenset())
         state.setdefault("execution_principal", ExecutionPrincipal.unknown())

@@ -11,6 +11,7 @@ from lfx.base.tools.served_flows import served_flow
 from lfx.custom import Component
 from lfx.custom.custom_component.component import get_component_toolkit
 from lfx.field_typing import Tool
+from lfx.graph.checkpoint.nested import NestedFlowChangedError, NestedRunPaused, run_nested
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 
@@ -700,33 +701,43 @@ class RunFlowBaseComponent(Component):
                 # The protected-field floor still applies.
                 graph = process_tweaks_on_graph(graph, tweaks, caller_supplied=False)
 
-            result = await run_flow(
-                inputs=self._build_inputs(tweaks),
-                flow_id=self.flow_id_selected,
-                flow_name=self.flow_name_selected,
-                user_id=user_id,
-                session_id=self.session_id,
-                output_type=output_type,
-                graph=graph,
-                # The target is a sub-flow of THIS execution, so it resolves
-                # connections under the calling graph's principal. A freshly
-                # loaded child graph carries the fail-closed ``unknown()``, which
-                # would deny every connection inside a Run Flow node.
-                execution_principal=getattr(self.graph, "execution_principal", None),
+            result = await run_nested(
+                self,
+                graph,
+                lambda: run_flow(
+                    inputs=self._build_inputs(tweaks),
+                    flow_id=self.flow_id_selected,
+                    flow_name=self.flow_name_selected,
+                    user_id=user_id,
+                    session_id=self.session_id,
+                    output_type=output_type,
+                    graph=graph,
+                    # The target is a sub-flow of THIS execution, so it resolves
+                    # connections under the calling graph's principal. A freshly
+                    # loaded child graph carries the fail-closed ``unknown()``, which
+                    # would deny every connection inside a Run Flow node.
+                    execution_principal=getattr(self.graph, "execution_principal", None),
+                ),
             )
             self._declared_outputs = reviewed_flows.declared_outputs(self, graph)
 
+        except NestedRunPaused:
+            # The parent pauses at its next boundary and re-runs this node on resume.
+            return []
         except Exception as exc:
             from lfx.exceptions.tweaks import TweakRefusedError
+            from lfx.graph.exceptions import PauseConflictError
             from lfx.run.hitl import NestedHITLUnsupportedError
             from lfx.utils.flow_validation import CustomComponentValidationError
 
-            if isinstance(exc, NestedHITLUnsupportedError):
+            guidance = NestedHITLUnsupportedError | PauseConflictError | NestedFlowChangedError
+            if isinstance(exc, guidance):
                 raise
-            # A refusal raised deeper in the child (a Loop body) arrives wrapped. Its words are for the user.
+            # Guidance raised deeper in the child (a Loop body, a nested Run Flow) arrives wrapped. Its words
+            # are for the user.
             cause = exc.__cause__
             while cause is not None:
-                if isinstance(cause, NestedHITLUnsupportedError):
+                if isinstance(cause, guidance):
                     raise type(cause)(*cause.args) from None
                 cause = cause.__cause__
             # A refused tweak is a caller error, not a flow failure. Collapsing it

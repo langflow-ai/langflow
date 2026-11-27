@@ -509,7 +509,8 @@ class TestRunFlowComponentUpdateBuildConfig:
                         }
                     }
                 }
-            }
+            },
+            graph=None,
         )
 
         component._pre_run_setup()

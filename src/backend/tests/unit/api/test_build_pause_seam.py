@@ -30,7 +30,7 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.usefixtures("client")
 
 
-def _wrap_graph_config(monkeypatch, *, store, probe):
+def _wrap_graph_config(monkeypatch, *, store, probe, job_id="job-1"):
     import langflow.api.build as build_module
 
     real_build_graph_from_db = build_module.build_graph_from_db
@@ -39,7 +39,7 @@ def _wrap_graph_config(monkeypatch, *, store, probe):
         graph = await real_build_graph_from_db(**kwargs)
         graph.checkpointing_enabled = True
         graph.checkpoint_store = store
-        graph.job_id = "job-1"
+        graph.job_id = job_id
         graph.pause_probe = probe
         return graph
 
@@ -176,13 +176,12 @@ async def test_build_path_pauses_when_the_last_vertex_asks_for_a_decision(
     flow_id = await create_flow(client, json.dumps(flow), logged_in_headers)
     store = InMemoryCheckpointStore()
 
-    async def probe(_job_id: str) -> str:
-        return "run"
-
-    _wrap_graph_config(monkeypatch, store=store, probe=probe)
+    # The Agent keeps its approval state under the graph's job, so the graph carries the run's own job,
+    # not a stand-in id the job table does not hold.
+    _wrap_graph_config(monkeypatch, store=store, probe=None, job_id=None)
     queue, error = await _drive_build(flow_id, active_user)
 
     assert error is None, f"pause must be caught at the build seam, got {error!r}"
     pauses = [e["data"] for e in _drain_events(queue) if e.get("event") == "human_input_required"]
     assert [pause["kind"] for pause in pauses] == ["tool_approval"]
-    assert [cp.job_id for cp in store._checkpoints.values()] == ["job-1"]
+    assert len(store._checkpoints) == 1

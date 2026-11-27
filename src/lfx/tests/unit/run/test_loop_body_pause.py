@@ -69,6 +69,8 @@ async def test_a_decision_in_a_loop_body_of_a_nested_flow_refuses(step, tmp_path
 
     error, requests = await _refusal(graph_from(wrapper_payload("child", tmp_path)), store)
 
+    # The child runs with checkpointing on, so the refusal comes from the Loop body and must reach the parent.
     assert isinstance(error.__cause__, NestedHITLUnsupportedError)
+    assert LOOP_BODY_HITL_UNSUPPORTED in str(error)
     assert requests == []
     assert marker.read_text() == ""

@@ -1077,6 +1077,7 @@ class TestRunFlowToolInvocation:
             data={"node": {"template": {"flow_name_selected": {"selected_metadata": {"id": flow_id}}}}},
             outgoing_edges=[],
             edges_source_names={"component_as_tool"},
+            graph=None,
         )
 
     @staticmethod

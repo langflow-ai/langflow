@@ -50,8 +50,11 @@ class ToolApprovalMixin:
                 return await store.load_blob(job_id, kind) or await store.load_blob(thread_id, "agent")
 
         # One blob per Agent: the saver keeps only the latest checkpoint, so a shared blob would hand
-        # the next Agent the previous one's finished run.
-        return JobCheckpointSaver(thread_id, store.save_blob, load_blob, kind=f"agent:{thread_id}:{self._id}")
+        # the next Agent the previous one's finished run. A nested run's job is its parent's, so job
+        # retention and erasure delete the state with that job.
+        # A component built outside a run has a placeholder graph, which has no job.
+        job_id = getattr(self.graph, "job_id", None) or thread_id
+        return JobCheckpointSaver(job_id, store.save_blob, load_blob, kind=f"agent:{thread_id}:{self._id}")
 
     def _gated_interrupt_on(self) -> dict[str, dict[str, Any]]:
         """Combine the harness policy with each tool's selected approval decisions.
@@ -149,13 +152,23 @@ class ToolApprovalMixin:
 
         return _get
 
-    def _has_candidate_decision(self, thread_id: str) -> bool:
-        """Whether any injected decision targets this agent's thread (any pause nonce)."""
+    def _own_decision_keys(self, thread_id: str) -> list[str]:
+        """Injected decision keys for this agent's own pauses, without those of a flow it runs nested."""
+        from lfx.run.hitl import nested_request_prefix, request_id_targets_vertex
+
         decisions = getattr(self.graph, "human_input_decisions", None)
         if not isinstance(decisions, dict):
-            return False
-        prefix = f"{self._id}:{thread_id}"
-        return any(key == prefix or str(key).startswith(prefix + ":") for key in decisions)
+            return []
+        nested = nested_request_prefix(self._id, thread_id)
+        return [
+            key
+            for key in decisions
+            if request_id_targets_vertex(key, self._id, thread_id) and not key.startswith(nested)
+        ]
+
+    def _has_candidate_decision(self, thread_id: str) -> bool:
+        """Whether any injected decision targets this agent's thread (any pause nonce)."""
+        return bool(self._own_decision_keys(thread_id))
 
     def _injected_agent_decision(self, thread_id: str, interrupt_id: str | None = None) -> dict[str, Any] | None:
         """Human decision for this agent's pending approval, injected on resume.
@@ -176,9 +189,8 @@ class ToolApprovalMixin:
         bare_match = decisions.get(f"{self._id}:{thread_id}")
         if bare_match is not None:
             return bare_match
-        prefix = f"{self._id}:{thread_id}:"
-        nonced = [value for key, value in decisions.items() if str(key).startswith(prefix)]
-        return nonced[0] if len(nonced) == 1 else None
+        nonced = self._own_decision_keys(thread_id)
+        return decisions[nonced[0]] if len(nonced) == 1 else None
 
     @staticmethod
     def _to_langgraph_decision(decision: dict[str, Any], action_request: dict[str, Any]) -> dict[str, Any]:

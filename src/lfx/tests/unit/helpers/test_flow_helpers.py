@@ -202,6 +202,7 @@ class TestRunFlow:
         session_id = "test_session"
 
         mock_graph = MagicMock(spec=Graph)
+        mock_graph.checkpointing_enabled = False
         mock_graph.vertices = []
         mock_graph.arun = AsyncMock(return_value=[])
 
@@ -225,6 +226,7 @@ class TestRunFlow:
         mock_output_vertex.is_output = True
 
         mock_graph = MagicMock(spec=Graph)
+        mock_graph.checkpointing_enabled = False
         mock_graph.vertices = [mock_output_vertex]
         mock_graph.arun = AsyncMock(return_value=[])
 
@@ -251,6 +253,7 @@ class TestRunFlow:
         inputs = {"components": ["comp1"], "input_value": "test"}
 
         mock_graph = MagicMock(spec=Graph)
+        mock_graph.checkpointing_enabled = False
         mock_graph.vertices = []
         mock_graph.arun = AsyncMock(return_value=[])
 
