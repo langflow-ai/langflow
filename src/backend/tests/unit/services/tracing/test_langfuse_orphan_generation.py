@@ -72,6 +72,37 @@ def _build_real_langfuse_client_or_skip(tracer_provider):
     return client
 
 
+def test_end_writes_final_metadata_to_trace_and_preserves_boundary_io():
+    """Langfuse v4 final metadata must remain trace-level, not observation-level."""
+    from langflow.services.tracing.langfuse import LangFuseTracer
+    from opentelemetry.sdk.trace import TracerProvider
+    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
+    exporter = InMemorySpanExporter()
+    provider = TracerProvider()
+    provider.add_span_processor(SimpleSpanProcessor(exporter))
+    client = _build_real_langfuse_client_or_skip(provider)
+    try:
+        with patch("langflow.services.tracing.langfuse._get_or_create_shared_client", return_value=client):
+            tracer = LangFuseTracer("flow - id", "chain", "project", uuid.uuid4())
+
+        tracer.end(
+            inputs={"input": "hello"},
+            outputs={"output": "world"},
+            metadata={"final": True},
+        )
+
+        root = next(span for span in exporter.get_finished_spans() if span.name == "flow")
+        assert root.attributes["langfuse.trace.metadata.final"] == "True"
+        assert "langfuse.observation.metadata.final" not in root.attributes
+        assert root.attributes["langfuse.trace.input"] == '{"input": {"input": "hello"}}'
+        assert root.attributes["langfuse.trace.output"] == '{"output": {"output": "world"}}'
+    finally:
+        client.shutdown()
+        provider.shutdown()
+
+
 def test_reset_joins_real_client_background_threads():
     from langflow.services.tracing.langfuse import _reset_shared_client_for_tests
     from opentelemetry.sdk.trace import TracerProvider
