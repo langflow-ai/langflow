@@ -12,6 +12,7 @@ plugin would have allowed it. These tests pin the new behavior:
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from copy import deepcopy
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock
@@ -145,8 +146,53 @@ async def test_public_fallback_drops_graph_override_without_active_plugin(
     )
 
     assert result == {"job_id": "fake-job-id"}
-    assert patch_build_flow["start_kwargs"]["data"] is None
+    assert patch_build_flow["start_kwargs"]["data"] == FlowDataRequest(nodes=[], edges=[])
     write_check.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("is_owner", "source"),
+    [(False, "stored"), (False, "prepared"), (False, "override"), (True, "override")],
+)
+async def test_public_build_filters_dispatch_data(patch_build_flow, monkeypatch, is_owner, source):
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+    from langflow.services.authorization import flow_data_override
+
+    template = {
+        "credential": {"password": True, "value": "placeholder"},
+        "label": {"value": "stored"},
+    }
+    stored = {"nodes": [{"data": {"node": {"template": template}}}], "edges": []}
+    user = _make_user()
+    flow = _make_flow(owner_id=user.id if is_owner else uuid4(), public=True, data=stored)
+    patch_build_flow["read_flow"] = flow
+    monkeypatch.setattr(flow_data_override, "ensure_flow_permission", AsyncMock())
+
+    override = None
+    if source == "override":
+        override = FlowDataRequest.model_validate(deepcopy(stored))
+        override.nodes[0]["data"]["node"]["template"]["label"]["value"] = "override"
+
+    prepared = None
+    if source == "prepared":
+        prepared = deepcopy(stored)
+        prepared["nodes"][0]["data"]["node"]["template"]["label"]["value"] = "prepared"
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", AsyncMock(return_value=prepared))
+
+    await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=user,
+        queue_service=_make_queue_service(),
+        data=override,
+    )
+
+    dispatched = patch_build_flow["start_kwargs"]["data"]
+    actual = dispatched.nodes[0]["data"]["node"]["template"]
+    assert actual["label"]["value"] == source
+    assert actual["credential"]["value"] == ("placeholder" if is_owner else None)
+    assert template["credential"]["value"] == "placeholder"
 
 
 # --------------------------------------------------------------------- #
@@ -700,15 +746,16 @@ async def test_build_flow_unknown_flow_returns_404(patch_build_flow):
 
 
 @pytest.mark.asyncio
-async def test_build_flow_public_fallback_when_share_aware_misses(patch_build_flow):
+async def test_build_flow_public_fallback_when_share_aware_misses(patch_build_flow, monkeypatch):
     """Plugin can't see the flow (returns None), but PUBLIC fallback finds it."""
     from langflow.api.v1 import chat as chat_module
 
     user = _make_user()
     owner_id = uuid4()
-    public_flow = _make_flow(owner_id=owner_id, public=True)
+    public_flow = _make_flow(owner_id=owner_id, public=True, data={"nodes": [], "edges": []})
     patch_build_flow["read_flow"] = None  # share-aware load misses
     patch_build_flow["session_exec"] = [[public_flow]]  # PUBLIC query hits
+    monkeypatch.setattr(chat_module, "prepare_flow_build_for_user", AsyncMock(return_value=None))
 
     result = await chat_module.build_flow(
         flow_id=public_flow.id,
@@ -717,6 +764,24 @@ async def test_build_flow_public_fallback_when_share_aware_misses(patch_build_fl
         queue_service=_make_queue_service(),
     )
     assert result == {"job_id": "fake-job-id"}
+
+
+async def test_public_build_without_executable_data_does_not_dispatch(patch_build_flow):
+    from langflow.api.v1 import chat as chat_module
+
+    flow = _make_flow(owner_id=uuid4(), public=True)
+    patch_build_flow["read_flow"] = flow
+
+    with pytest.raises(HTTPException) as excinfo:
+        await chat_module.build_flow(
+            flow_id=flow.id,
+            background_tasks=None,
+            current_user=_make_user(),
+            queue_service=_make_queue_service(),
+        )
+
+    assert excinfo.value.status_code == 400
+    assert patch_build_flow["start_kwargs"] is None
 
 
 @pytest.mark.asyncio

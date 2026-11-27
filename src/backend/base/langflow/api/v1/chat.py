@@ -529,6 +529,18 @@ async def _build_flow_impl(
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
 
+    if flow.access_type == AccessTypeEnum.PUBLIC and flow.user_id != current_user.id:
+        # Match anonymous public execution and pass a detached graph so the
+        # worker cannot fall back to the unsanitized database payload.
+        public_data = strip_secret_field_values(data.model_dump() if data is not None else flow.data)
+        if public_data is None:
+            raise HTTPException(status_code=400, detail="Public flow has no executable data")
+        data = FlowDataRequest(
+            nodes=public_data.get("nodes", []),
+            edges=public_data.get("edges", []),
+            viewport=public_data.get("viewport"),
+        )
+
     # v1.build, not "playground": the canvas moved to POST /api/v2/workflows and the frontend
     # has no reference to this route left (15 hits for api/v2/workflows, 0 for api/v1/build).
     # What still arrives here is direct API callers and voice, so labelling it playground would
