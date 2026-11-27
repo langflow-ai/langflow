@@ -85,6 +85,11 @@ No model call happens on this path.
 The eval gives no reason to change the start values. It tested one model, so the values are not
 proven for other window sizes.
 
+After review, two caps scale with a small window. The message cap is at most a third of the high mark,
+and the tool result cap is at most a quarter of the window. With a window of 8,192 tokens, the history
+stays under 2,184 tokens and one tool result under 2,048. From a window of 60,000 tokens up, both caps
+keep the start values above.
+
 Tokens are estimated at 4 characters for each token. Codex and the Langflow token
 callback use the same estimate. No tokenizer dependency is added.
 

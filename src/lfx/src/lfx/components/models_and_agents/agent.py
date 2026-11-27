@@ -53,6 +53,7 @@ from lfx.base.agents.events import (
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
+from lfx.base.memory.context_budget import tool_result_cap
 from lfx.base.memory.session_memory import (
     FOLD_TIMEOUT_SECONDS,
     budget_for_window,
@@ -700,9 +701,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # crashing the flow.
         if self.tools:
             middleware.append(ToolCallIDMiddleware())
+        window = self._model_window(llm) if self._auto_mode() else None
         if self._auto_mode() and self.tools:
             # Auto mode keeps one run under the model window: no tool result enters it above the cap.
-            middleware.append(ToolResultCapMiddleware())
+            middleware.append(ToolResultCapMiddleware(max_tokens=tool_result_cap(window)))
         max_iterations = getattr(self, "max_iterations", None)
         if max_iterations is not None:
             # `max_iterations` is a safety cap, not an "unlimited" toggle. A saved
@@ -731,7 +733,6 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             middleware.append(SingleToolCallMiddleware())
             middleware.append(WatsonXPlaceholderMiddleware())
         # Auto mode compacts a run that reaches 80% of the model window. Off when the window is unknown.
-        window = self._model_window(llm) if self._auto_mode() else None
         if window:
             middleware.append(InRunCompactionMiddleware(self._get_llm(stream=False), window))
         # Human-in-the-loop: attach only when a tool is gated AND interrupts are allowed
@@ -1174,7 +1175,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
     async def _await_fold(self, *, cancel: bool = False) -> Usage | None:
         """Wait for the background fold (or cancel it) and return its token usage.
 
-        Marks the fold event `done` when the fold saved a summary, else `failed`, with its duration.
+        Marks the fold event `done` unless the fold failed (see `fold`), with its duration.
         """
         task = getattr(self, "_fold_task", None)
         if task is None:
@@ -1188,12 +1189,12 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         except asyncio.CancelledError:
             task.cancel()
             raise
-        saved = None if task.cancelled() or task.exception() is not None else task.result()
+        outcome = None if task.cancelled() or task.exception() is not None else task.result()
         event = getattr(self, "_fold_event", None)
         if event is not None:
             self._fold_event = event.model_copy(
                 update={
-                    "state": "done" if saved is not None else "failed",
+                    "state": "done" if outcome is not None else "failed",
                     "duration": round((perf_counter() - self._fold_started) * 1000),
                 }
             )

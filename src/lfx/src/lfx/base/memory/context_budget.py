@@ -8,8 +8,14 @@ from __future__ import annotations
 
 CHARS_PER_TOKEN = 4
 
-# Largest tool result that enters the run state, in tokens.
+# Largest tool result that enters the run state, in tokens. A small model window gets a smaller cap.
 TOOL_RESULT_CAP_TOKENS = 10_000
+TOOL_RESULT_WINDOW_SHARE = 0.25
+
+
+def tool_result_cap(window: int | None) -> int:
+    """The tool result cap for a model window: 10,000 tokens, or a quarter of a smaller window."""
+    return min(TOOL_RESULT_CAP_TOKENS, int(window * TOOL_RESULT_WINDOW_SHARE)) if window else TOOL_RESULT_CAP_TOKENS
 
 
 def estimate_tokens(text: str) -> int:

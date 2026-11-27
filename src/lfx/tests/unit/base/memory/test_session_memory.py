@@ -7,7 +7,7 @@ from dataclasses import replace
 
 import pytest
 from lfx.base.memory import session_memory as sm
-from lfx.base.memory.context_budget import estimate_tokens
+from lfx.base.memory.context_budget import estimate_tokens, tool_result_cap
 from lfx.memory.session_state import SessionMemoryState
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_USER
@@ -77,9 +77,18 @@ async def _load(store: Store, current: Message, budget: sm.Budget) -> sm.AutoHis
 
 
 def test_budget_follows_the_window_with_an_absolute_cap():
-    assert sm.budget_for_window(128_000) == sm.Budget(high=12_000, low=6_000)
-    assert sm.budget_for_window(32_000) == sm.Budget(high=6_400, low=3_200)
-    assert sm.budget_for_window(None) == sm.Budget(high=8_000, low=4_000)
+    assert sm.budget_for_window(128_000) == sm.Budget(high=12_000, low=6_000, message_cap=4_000)
+    assert sm.budget_for_window(32_000) == sm.Budget(high=6_400, low=3_200, message_cap=2_133)
+    assert sm.budget_for_window(None) == sm.Budget(high=8_000, low=4_000, message_cap=2_666)
+
+
+def test_small_window_keeps_the_send_bound_and_the_tool_cap_well_inside_the_window():
+    window = 8_192
+    budget = sm.budget_for_window(window)
+    assert budget.high + budget.message_cap <= window // 3
+    assert tool_result_cap(window) == 2_048
+    assert tool_result_cap(128_000) == 10_000
+    assert tool_result_cap(None) == 10_000
 
 
 async def test_history_under_the_high_mark_sends_every_message_and_folds_nothing():
@@ -173,7 +182,7 @@ async def test_history_keeps_the_messages_of_a_fold_that_runs_beside_this_turn()
     assert loaded.history[0].id == first.id  # not yet in the notes, so it must still be in the history
 
 
-async def test_lost_race_keeps_the_state_of_the_other_writer():
+async def test_lost_race_keeps_the_state_of_the_other_writer_and_is_not_a_failure():
     store = Store()
     current = _session(store, turns=10, size=100)
     loaded = await _load(store, current, sm.Budget(high=1_000, low=500, message_cap=200))
@@ -182,17 +191,10 @@ async def test_lost_race_keeps_the_state_of_the_other_writer():
     async def summarize(_state, _batch):
         return "mine"
 
-    assert (
-        await sm.fold(
-            scope=SCOPE,
-            state=loaded.state,
-            batch=loaded.fold_batch,
-            summarize=summarize,
-            summary_model="m",
-            store=store,
-        )
-        is None
+    outcome = await sm.fold(
+        scope=SCOPE, state=loaded.state, batch=loaded.fold_batch, summarize=summarize, summary_model="m", store=store
     )
+    assert outcome == loaded.state  # not None: the Agent shows the fold as done, not failed
     assert store.state.summary == "other run"
 
 

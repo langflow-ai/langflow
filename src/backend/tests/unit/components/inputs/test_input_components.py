@@ -57,6 +57,7 @@ class TestChatInput(ComponentTestBaseWithClient):
             "targets": [],
             "usage": None,
             "build_duration": None,
+            "context_events": None,
         }
 
     async def test_message_response_ai_sender(self, component_class):

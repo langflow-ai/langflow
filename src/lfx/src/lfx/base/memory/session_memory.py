@@ -67,9 +67,13 @@ class Budget:
 
 
 def budget_for_window(window: int | None) -> Budget:
-    """The budget for a model with a context window of `window` tokens (None when unknown)."""
+    """The budget for a model with a context window of `window` tokens (None when unknown).
+
+    The message cap is at most a third of the high mark, so a small window keeps room for the system
+    prompt, the tools and the input. From a window of 60,000 tokens up it is the full 4,000.
+    """
     high = min(int(window * HIGH_MARK_SHARE), HIGH_MARK_CAP) if window else UNKNOWN_WINDOW_HIGH_MARK
-    return Budget(high=high, low=high // 2)
+    return Budget(high=high, low=high // 2, message_cap=min(MESSAGE_CAP_TOKENS, high // 3))
 
 
 def model_window(llm: Any) -> int | None:
@@ -245,10 +249,12 @@ async def fold(
     summary_model: str | None,
     store: ModuleType | Any = lfx_memory,
 ) -> SessionMemoryState | None:
-    """Fold `batch` into the state with one `summarize` call and save it. Returns the saved state or None.
+    """Fold `batch` into the state with one `summarize` call and save it.
 
-    A lost race or a reset leaves the state of the other writer. A failure keeps the previous state and
-    pauses folding for this session. Writes one log event with tokens before and after and the duration.
+    Returns the saved state. A lost race or a reset keeps the state of the other writer and returns the
+    previous `state`: nothing failed, and the next turn reads the newer row. A failure (no usable reply,
+    a model or storage error) returns None, keeps the previous state and counts toward the pause of
+    folding for this session. Writes one log event with tokens before and after and the duration.
     Never raises (cancellation still propagates).
     """
     key = _scope_key(scope)
@@ -280,7 +286,7 @@ async def fold(
         f"session_memory_fold tokens_before={tokens_before} tokens_after={estimate_tokens(render_notes(new_state))} "
         f"duration_ms={round((perf_counter() - start) * 1000)} folded={len(batch)} saved={saved is not None}"
     )
-    return saved
+    return saved if saved is not None else state
 
 
 FOLD_SYSTEM_PROMPT = """You maintain a running summary of a conversation between a user and an AI assistant.

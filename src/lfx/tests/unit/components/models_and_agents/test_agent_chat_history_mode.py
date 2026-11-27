@@ -68,7 +68,7 @@ async def test_auto_mode_reads_session_memory_with_the_budget_of_the_model_windo
     result, last_n, load = await _history(_component(CHAT_HISTORY_AUTO), loaded=loaded, window=32_000)
     assert result == [notes]
     last_n.assert_not_called()
-    assert load.call_args.kwargs["budget"] == Budget(high=6_400, low=3_200)
+    assert load.call_args.kwargs["budget"] == Budget(high=6_400, low=3_200, message_cap=2_133)
 
 
 async def test_auto_mode_falls_back_to_last_n_without_session_memory():
@@ -197,3 +197,50 @@ async def test_fold_event_shows_while_the_answer_streams_and_ends_done_or_failed
         assert component._fold_event.state == expected
         assert component._fold_event.id == first[0].id
         assert component._fold_event.duration is not None
+
+
+async def test_run_agent_puts_the_finished_fold_and_its_usage_on_the_stored_message():
+    component = _component(CHAT_HISTORY_AUTO)
+    batch = [Message(text="old", sender=MESSAGE_SENDER_USER, id=uuid.uuid4())]
+    component._staged_fold = {"scope": {}, "state": SessionMemoryState(), "batch": batch}
+
+    async def finished_fold(**_kwargs):
+        return SessionMemoryState(version=1)
+
+    with patch.object(agent_module, "fold", new=finished_fold):
+        component._start_fold()
+    component._fold_usage_handler = MagicMock(
+        get_usage=MagicMock(return_value=Usage(input_tokens=3, output_tokens=1, total_tokens=4))
+    )
+    answer = Message(text="bye", sender="Machine", sender_name="AI", id=str(uuid.uuid4()))
+    run_usage = MagicMock(get_usage=MagicMock(return_value=Usage(input_tokens=10, output_tokens=5, total_tokens=15)))
+
+    async def no_events(*_args, **_kwargs):
+        return
+        yield
+
+    graph = MagicMock()
+    graph.astream_events = no_events
+    graph.checkpointer = None
+    stored = AsyncMock(side_effect=lambda message: message)
+    with (
+        patch.object(type(component), "_get_shared_callbacks", return_value=[]),
+        patch.object(type(component), "_update_stored_message", new=stored),
+        patch.object(type(component), "_send_message_event", new=AsyncMock()),
+        patch.object(agent_module, "TokenUsageCallbackHandler", return_value=run_usage),
+        patch.object(agent_module, "process_agent_events", new=AsyncMock(return_value=answer)),
+    ):
+        result = await component.run_agent(graph)
+
+    (event,) = result.properties.context_events
+    assert (event.kind, event.state) == ("fold", "done")
+    assert result.properties.usage == Usage(input_tokens=13, output_tokens=6, total_tokens=19)
+    stored.assert_awaited_once()
+
+
+def test_tool_result_cap_follows_a_small_model_window():
+    component = _component(CHAT_HISTORY_AUTO)
+    component.tools = [MagicMock(name="tool")]
+    component._get_llm = lambda **_kwargs: FakeMessagesListChatModel(responses=[])
+    (cap,) = [m for m in component._build_middleware(_llm(8_192)) if isinstance(m, ToolResultCapMiddleware)]
+    assert cap.max_tokens == 2_048
