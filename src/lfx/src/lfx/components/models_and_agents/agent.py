@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import uuid
 from collections.abc import Mapping
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -38,10 +37,15 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
-from lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.events import (
+    AgentPausedError,
+    ExceptionWithMessageError,
+    initial_agent_message,
+    process_agent_events,
+    retract_partial_message,
+)
 from lfx.base.agents.harness import HarnessRuntimeConfig, harness_runtime_inputs
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
-from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.unified_models import (
     get_language_model_options,
@@ -58,12 +62,10 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
-from lfx.memory import delete_message
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
-from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
 def set_advanced_true(component_input):
@@ -813,7 +815,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         )
         input_dict = {"messages": messages}
 
-        agent_message = self._build_initial_agent_message()
+        agent_message = initial_agent_message(self)
         token_usage_handler = TokenUsageCallbackHandler()
 
         # Stream tokens to the event manager when running inside the Langflow runtime.
@@ -863,19 +865,12 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         except AgentPausedError as e:
             # Why: retract the empty partial bubble (leaks as "[]"); the HITL card supersedes it, resume re-emits it.
             paused_message = e.agent_message or agent_message
-            msg_id = paused_message.get_id()
-            if msg_id:
-                await delete_message(id_=msg_id)
-            await self._send_message_event(paused_message, category="remove_message")
+            await retract_partial_message(self, paused_message)
             return self._suspend_for_tool_approval(e.request, paused_message)
         except ExceptionWithMessageError as e:
             # Drop the half-stored partial message from the DB (only if it was
             # actually persisted) and tell the frontend to remove the stale bubble.
-            if hasattr(e, "agent_message"):
-                msg_id = e.agent_message.get_id()
-                if msg_id:
-                    await delete_message(id_=msg_id)
-                await self._send_message_event(e.agent_message, category="remove_message")
+            await retract_partial_message(self, e.agent_message)
             # exception(), not error(f"...{e}"): this class's str() interpolates the model's
             # partial completion, and passing the exception rather than formatting it is what
             # gives the exported record an error.type to triage on.
@@ -896,29 +891,6 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
 
         self.status = result
         return result
-
-    def _build_initial_agent_message(self) -> Message:
-        """Construct the placeholder agent Message that `process_agent_events` mutates."""
-        if hasattr(self, "graph"):
-            session_id = self.graph.session_id
-        elif hasattr(self, "_session_id"):
-            session_id = self._session_id
-        else:
-            session_id = None
-
-        sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
-        return Message(
-            sender=MESSAGE_SENDER_AI,
-            sender_name=sender_name,
-            properties={"icon": "Bot", "state": "partial"},
-            # `text=""` sentinel so MessageTable's no_content check accepts
-            # an in-flight agent message whose content_blocks haven't been
-            # populated yet. Mirrors ChatInput's convention.
-            text="",
-            # Flat chronological event log; see lfx.base.agents.events.
-            content_blocks=[],
-            session_id=session_id or uuid.uuid4(),
-        )
 
     def _selected_model_remediation_context(self) -> tuple[str | None, str | None, Any | None]:
         """Return provider/name plus a connected model target, when present."""
