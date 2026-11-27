@@ -26,28 +26,28 @@
       "target_version": "1.14.0"
     },
     {
-      "id": "f396bdd2c1f143135185b404a63bcf66d1bf185610e07817f9b3f7b7dbb2f954",
+      "id": "05871a3b74dc60ca1fac27eea6b42339d7e3ebf4f685eb5a2cf461efac7da89f",
       "reason": "Accept the documented ALTK Agent retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-f396bdd2c1f1.md",
+      "release_note": "docs/release_notes/compatibility/lfx-bundles-05871a3b74dc.md",
       "distribution": "lfx-bundles",
       "source_version": "1.3.5",
-      "target_version": "1.3.10"
+      "target_version": "1.3.12"
     },
     {
-      "id": "cc28775e240da5c932b13f818ff70c3035b75ddc7b0e7e665a7de26c17e7cf04",
+      "id": "83f41e2a989506d253e3a5184f8101c7d763db3580adab8d8c51308147c3339c",
       "reason": "Accept the documented Chroma Vector Store retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-cc28775e240d.md",
+      "release_note": "docs/release_notes/compatibility/lfx-bundles-83f41e2a9895.md",
       "distribution": "lfx-bundles",
       "source_version": "1.3.5",
-      "target_version": "1.3.10"
+      "target_version": "1.3.12"
     },
     {
-      "id": "5e87c90f568368d29b21af1174a1529332b9254fc39f2a78f321f6e5da6a531b",
+      "id": "81f768d249232b7a3864535ffc1fb5e3a08f8f7f5f8d89a6f992ad9f5b616a97",
       "reason": "Accept the documented Local DB retirement with manual saved-flow migration guidance.",
-      "release_note": "docs/release_notes/compatibility/lfx-bundles-5e87c90f5683.md",
+      "release_note": "docs/release_notes/compatibility/lfx-bundles-81f768d24923.md",
       "distribution": "lfx-bundles",
       "source_version": "1.3.5",
-      "target_version": "1.3.10"
+      "target_version": "1.3.12"
     },
     {
       "id": "5ad788897846b2782d8a7e01094484a287cb572fdf2c62aef3f2683f25c28d52",
@@ -71,6 +71,30 @@
       "release_note": "docs/release_notes/compatibility/langflow-8d83f423647f.md",
       "distribution": "langflow",
       "source_version": "1.13.3",
+      "target_version": "1.14.0"
+    },
+    {
+      "id": "cebabf34a3f9bae029da544d0071b3833a38122c52cf9bf2f76f69a68c6e8cde",
+      "reason": "Accept the documented ALTK Agent retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-cebabf34a3f9.md",
+      "distribution": "langflow",
+      "source_version": "1.13.4",
+      "target_version": "1.14.0"
+    },
+    {
+      "id": "48b3f4f6ba546594e0efcafe408f35778ae8318b1f2f1c20b5cd5e9efccdb6b9",
+      "reason": "Accept the documented Chroma Vector Store retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-48b3f4f6ba54.md",
+      "distribution": "langflow",
+      "source_version": "1.13.4",
+      "target_version": "1.14.0"
+    },
+    {
+      "id": "145d9cbde53b0524146f385ae6991d1e89295669d9677f30f2da0fd072c6207f",
+      "reason": "Accept the documented Local DB retirement with manual saved-flow migration guidance.",
+      "release_note": "docs/release_notes/compatibility/langflow-145d9cbde53b.md",
+      "distribution": "langflow",
+      "source_version": "1.13.4",
       "target_version": "1.14.0"
     }
   ]

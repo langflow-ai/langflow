@@ -303,12 +303,16 @@ class StreamChunk(BaseModel):
     def text(self) -> str | None:
         """The text content of this chunk, if any.
 
-        Returns ``data["chunk"]`` for ``token`` events and the message text
-        for ``add_message`` events.  ``None`` for all other event types.
+        Returns ``data["chunk"]`` for ``token`` events. For ``add_message`` events,
+        reads ``data["text"]`` and falls back to ``data["message"]["text"]``.
+        Returns ``None`` for other event types.
         """
         if self.event == "token":
             return self.data.get("chunk")
         if self.event == "add_message":
+            text = self.data.get("text")
+            if isinstance(text, str):
+                return text
             msg = self.data.get("message", {})
             if isinstance(msg, dict):
                 return msg.get("text")

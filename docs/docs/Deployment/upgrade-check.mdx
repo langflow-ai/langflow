@@ -112,6 +112,8 @@ uvx --from "langflow==1.14.0" langflow upgrade-check \
 
 Other users of the machine can see the database URL in the process list while the check runs.
 
+To keep the password out of the process list, set the `LANGFLOW_UPGRADE_CHECK_DATABASE_URL` environment variable instead of passing `--database-url`.
+
 </TabItem>
 <TabItem value="docker" label="Docker">
 

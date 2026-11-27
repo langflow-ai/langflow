@@ -2,7 +2,8 @@
 
 from types import SimpleNamespace
 
-from langchain_core.messages import AIMessage
+import pytest
+from langchain_core.messages import AIMessage, AIMessageChunk
 from lfx.schema.properties import Usage
 from lfx.schema.token_usage import (
     _normalize_usage_metadata,
@@ -63,6 +64,33 @@ class TestExtractUsageFromMessage:
         assert result.input_tokens == 200
         assert result.output_tokens == 300
         assert result.total_tokens == 500
+
+    def test_returns_none_when_token_usage_is_none(self):
+        # OpenAI-compatible endpoints that omit `usage` on the wire can surface
+        # as response_metadata["token_usage"] = None (GH-16512); usage info is
+        # simply unavailable, not a crash.
+        message = AIMessage(
+            content="hi",
+            response_metadata={
+                "model_name": "agent/sample",
+                "finish_reason": "stop",
+                "token_usage": None,
+            },
+        )
+
+        result = extract_usage_from_message(message)
+
+        assert result is None
+
+    def test_returns_none_when_anthropic_usage_is_none(self):
+        message = AIMessage(
+            content="hi",
+            response_metadata={"model": "claude", "stop_reason": "stop", "usage": None},
+        )
+
+        result = extract_usage_from_message(message)
+
+        assert result is None
 
     def test_returns_none_for_no_metadata(self):
         message = AIMessage(content="hi")
@@ -325,6 +353,12 @@ class TestExtractUsageFromLlmResult:
 
 class TestExtractUsageFromChunk:
     """Tests for extract_usage_from_chunk()."""
+
+    @pytest.mark.parametrize("key", ["token_usage", "usage"])
+    def test_returns_none_for_null_usage(self, key):
+        chunk = AIMessageChunk(content="hi", response_metadata={key: None})
+
+        assert extract_usage_from_chunk(chunk) is None
 
     def test_extracts_from_usage_metadata_dict(self):
         chunk = SimpleNamespace(

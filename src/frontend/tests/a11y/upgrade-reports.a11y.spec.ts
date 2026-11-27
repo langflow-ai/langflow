@@ -10,6 +10,7 @@ import {
   report,
 } from "../../src/pages/SettingsPage/pages/UpgradeReportsPage/__tests__/fixture";
 import { expect, test } from "../fixtures";
+import { awaitBootstrapTest } from "../utils/await-bootstrap-test";
 import { TIMEOUTS } from "../utils/constants/timeouts";
 
 const routePath = "/settings/upgrade-reports";
@@ -18,6 +19,10 @@ test(
   "imports, reloads, and exports a persisted report",
   { tag: ["@release", "@database"] },
   async ({ page }) => {
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+      seedFlowIfEmpty: false,
+    });
     await page.goto(routePath);
     await expect(
       page.getByRole("heading", { name: "Upgrade reports", exact: true }),
@@ -105,6 +110,10 @@ test(
       ];
       return route.fulfill({ json: { ...preview, results: [updated] } });
     });
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+      seedFlowIfEmpty: false,
+    });
     await page.goto(routePath);
     await expect(
       page.getByRole("heading", { name: "Upgrade reports", exact: true }),
@@ -168,6 +177,10 @@ test(
     await page.route("**/api/v1/upgrade-reports**", (route) =>
       route.fulfill({ json: { items: [], total: 0, offset: 0, limit: 20 } }),
     );
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+      seedFlowIfEmpty: false,
+    });
     await page.goto(routePath);
     await expect(
       page.getByRole("heading", { name: "Upgrade reports", exact: true }),

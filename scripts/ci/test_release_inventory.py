@@ -63,6 +63,15 @@ def test_contract_tracks_every_curated_extension() -> None:
     assert expected == sorted(actual)
 
 
+def test_cassandra_extra_requires_the_same_datastax_bundle_as_langflow() -> None:
+    langflow = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    lfx = tomllib.loads((REPO_ROOT / "src" / "lfx" / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    default_dependencies = map(Requirement, langflow["dependencies"])
+    datastax = next(requirement for requirement in default_dependencies if requirement.name == "lfx-datastax")
+
+    assert datastax in {Requirement(value) for value in lfx["optional-dependencies"]["cassandra"]}
+
+
 def test_bundles_extra_owns_the_opt_in_standalone_extensions() -> None:
     contract = load_contract()
     root_project = tomllib.loads((REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
