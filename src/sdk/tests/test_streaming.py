@@ -208,14 +208,23 @@ def test_sync_stream_skips_blank_lines() -> None:
 
 
 @pytest.mark.unit
-def test_sync_stream_skips_invalid_json() -> None:
-    body = b"not-json\n\n" + json.dumps({"event": "end", "data": {}}).encode() + b"\n\n"
-    client = _sync_client(_MockTransport(content=body))
-    chunks = list(client.stream(_FLOW_ID, input_value="test"))
-    # Bad JSON line is skipped; only the end event comes through
+@pytest.mark.parametrize("async_mode", [False, True])
+@pytest.mark.parametrize(
+    "invalid_line",
+    ["not-json", '{"no_event": "oops"}', "null", "[]", "42", '{"event": 123}', '{"event": "token", "data": []}'],
+)
+async def test_stream_skips_invalid_chunks(invalid_line: str, *, async_mode: bool) -> None:
+    body = invalid_line.encode() + b"\n\n" + _sse_body({"event": "end", "data": {}})
+    if async_mode:
+        async_client = _async_client(_AsyncMockTransport(content=body))
+        chunks = [chunk async for chunk in async_client.stream(_FLOW_ID, input_value="test")]
+        await async_client.aclose()
+    else:
+        client = _sync_client(_MockTransport(content=body))
+        chunks = list(client.stream(_FLOW_ID, input_value="test"))
+        client.close()
     assert len(chunks) == 1
     assert chunks[0].is_end is True
-    client.close()
 
 
 @pytest.mark.unit
