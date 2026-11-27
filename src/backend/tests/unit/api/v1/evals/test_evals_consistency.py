@@ -232,6 +232,31 @@ class TestActiveRuns:
         assert restart.status_code == 202, restart.text
         await wait_for_run(client, logged_in_headers, restart.json()["id"])
 
+    async def test_should_keep_a_run_this_process_is_executing_when_its_heartbeat_is_late(
+        self, client, logged_in_headers, monkeypatch
+    ):
+        from langflow.services.database.models.jobs.model import Job
+
+        monkeypatch.setattr(runner, "execute_row", _slow_rows(0.3))
+        monkeypatch.setattr(get_settings_service().settings, "evals_row_concurrency", 1)
+        flow = await create_flow(client, logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "late-beat", [(f"q{i}", f"q{i}") for i in range(4)])
+        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
+        started = await start_run(client, logged_in_headers, evaluation["id"])
+        # A loop stall longer than the lease leaves the heartbeat this old although the worker is alive.
+        async with session_scope() as session:
+            run = (await session.exec(select(EvaluationRun).where(EvaluationRun.id == UUID(started["id"])))).one()
+            job = (await session.exec(select(Job).where(Job.job_id == run.job_id))).one()
+            job.job_metadata = {**(job.job_metadata or {}), "heartbeat_at": "2020-01-01T00:00:00+00:00"}
+            session.add(job)
+
+        read = (await client.get(f"api/v1/evaluation-runs/{started['id']}", headers=logged_in_headers)).json()
+
+        assert read["status"] in ("queued", "running"), read
+        finished = await wait_for_run(client, logged_in_headers, started["id"])
+        assert finished["status"] == "completed", finished
+        assert finished["completed_items"] == 4
+
     async def test_should_not_fail_a_run_that_is_still_launching(self, client, logged_in_headers):
         flow = await create_flow(client, logged_in_headers)
         dataset = await create_dataset(client, logged_in_headers, "launching", [("a", "a")])
@@ -359,6 +384,36 @@ class TestRunner:
             done_stmt = select(EvaluationRun.completed_items).where(EvaluationRun.id == run_id)
             completed = (await session.exec(done_stmt)).one()
         assert (stored, completed) == (1, 1)
+
+    async def test_should_not_log_an_error_for_a_row_that_is_not_stored(self, client, logged_in_headers, monkeypatch):
+        import lfx.services.deps as lfx_deps
+
+        errors: list[str] = []
+
+        async def record(message, *args, **kwargs):  # noqa: ARG001
+            errors.append(message)
+
+        flow = await create_flow(client, logged_in_headers)
+        dataset = await create_dataset(client, logged_in_headers, "quiet", [("a", "a")])
+        evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
+        async with session_scope() as session:
+            run = EvaluationRun(
+                evaluation_id=UUID(evaluation["id"]),
+                user_id=UUID(flow["user_id"]),
+                flow_name="f",
+                dataset_name="d",
+                dataset_revision=1,
+                status="cancelled",
+            )
+            session.add(run)
+            await session.flush()
+            run_id = run.id
+        monkeypatch.setattr(lfx_deps.logger, "aexception", record)
+
+        stored = await runner._store_result(run_id, EvaluationResult(run_id=run_id, position=0, input={"text": "a"}))
+
+        assert stored is False
+        assert errors == []
 
 
 class TestOwnership:

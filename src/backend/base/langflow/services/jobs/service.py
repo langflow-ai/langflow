@@ -979,6 +979,10 @@ class JobService(Service):
         self._keep_alives[job_id] = (task, stop)
         task.add_done_callback(lambda done: self._forget_keep_alive(job_id, done))
 
+    def is_kept_alive_here(self, job_id: UUID) -> bool:
+        """True while this process heartbeats ``job_id``, so its owner is alive whatever the heartbeat's age."""
+        return job_id in self._keep_alives
+
     async def stop_keep_alive(self, job_id: UUID) -> None:
         """Stop ``job_id``'s heartbeat, returning only once no heartbeat write is in flight."""
         entry = self._keep_alives.pop(job_id, None)

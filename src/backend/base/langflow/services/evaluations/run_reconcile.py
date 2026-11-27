@@ -10,7 +10,7 @@ from sqlmodel import col, select
 
 from langflow.services.database.models.evaluation import EvaluationRun
 from langflow.services.database.models.jobs.model import Job, JobStatus
-from langflow.services.deps import get_settings_service
+from langflow.services.deps import get_job_service, get_settings_service
 from langflow.services.jobs.service import JobService
 
 if TYPE_CHECKING:
@@ -36,6 +36,9 @@ def _is_lost(run: EvaluationRun, jobs: dict[Any, Job], lease_ttl_s: float) -> bo
         return _as_utc(run.created_at) < _now() - LAUNCH_GRACE
     if job.status not in (JobStatus.QUEUED, JobStatus.IN_PROGRESS):
         return True
+    # This process is still running it: a heartbeat delayed by a stalled event loop is not a dead worker.
+    if get_job_service().is_kept_alive_here(job.job_id):
+        return False
     # A pod that died mid-run leaves its job IN_PROGRESS until some process restarts (the default
     # mode has no periodic sweep); a heartbeat older than the lease is the reliable death signal.
     return JobService.is_lease_stale(job, lease_ttl_s=lease_ttl_s)
