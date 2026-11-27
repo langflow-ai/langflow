@@ -325,6 +325,8 @@ async def cleanup_mcp_on_delete(
     project_id: UUID,
     current_user,
     session,
+    *,
+    owns_transaction: bool = True,
 ) -> None:
     """Clean up MCP resources when a project is deleted.
 
@@ -364,6 +366,7 @@ async def cleanup_mcp_on_delete(
                     get_storage_service(),
                     get_settings_service(),
                     delete=True,
+                    owns_transaction=owns_transaction,
                 )
                 await logger.adebug(
                     "Deleted MCP server %s for deleted project %s (%s)",

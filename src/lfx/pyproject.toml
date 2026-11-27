@@ -97,7 +97,7 @@ sandbox = [
 # Relocated out of langflow-base[complete], where they were the de-facto provider
 # for these components after the bundle split.
 cassandra = ["lfx-datastax>=0.2.3,<1.0.0"]  # First 1.13-compatible bundle with Dotenv retired
-toolguard = ["lfx-toolguard>=0.2.2,<1.0.0"]  # Compatibility alias for the Policies extension
+toolguard = ["lfx-toolguard>=0.2.5.dev0,<1.0.0"]  # Compatibility alias for the Policies extension
 # Application observability: OTLP export of traces, metrics and logs for ``lfx serve`` / ``lfx
 # run``. lfx.observability guards every import, so a bare ``pip install lfx`` skips these and
 # the whole path no-ops; installing this extra turns it on. The full ``langflow`` distribution
@@ -120,7 +120,7 @@ otel = [
 #
 # Documented as a headless/serverless deployment footnote, not a
 # getting-started headline.  There is intentionally NO ``lfx[all]``.
-bundles = ["lfx-bundles[all]>=1.1.41,<2.0"]
+bundles = ["lfx-bundles[all]>=1.2.13.dev0,<2.0"]
 
 [project.scripts]
 lfx = "lfx.__main__:main"

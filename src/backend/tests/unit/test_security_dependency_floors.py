@@ -211,14 +211,14 @@ def test_published_extras_enforce_patched_gitpython_floor() -> None:
 def test_workspace_constraints_enforce_patched_pymongo() -> None:
     constraints = _load_pyproject("pyproject.toml")["tool"]["uv"]["constraint-dependencies"]
 
-    for python_version, minimum in (("3.10", "4.18.3"), ("3.11", "4.20.1")):
+    for python_version, minimum in (("3.10", "4.18.3"), ("3.11", "4.20.2")):
         pymongo = _requirement_for_python(constraints, "pymongo", python_version)
         _assert_floor(pymongo, minimum)
         _assert_specifier(pymongo, "<", "5.0.0")
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
-    for python_version, expected in (("3.10", "4.18.3"), ("3.11", "4.20.1")):
+    for python_version, expected in (("3.10", "4.18.3"), ("3.11", "4.20.2")):
         env = {"python_version": python_version, "python_full_version": f"{python_version}.0", "sys_platform": "linux"}
         versions = [
             Version(package["version"])
@@ -265,7 +265,7 @@ def test_published_packages_enforce_patched_pymongo_floor() -> None:
         base_project["optional-dependencies"]["mongodb"],
         bundle_extras["mongodb"],
     ):
-        for python_version, minimum in (("3.10", "4.18.3"), ("3.11", "4.20.1")):
+        for python_version, minimum in (("3.10", "4.18.3"), ("3.11", "4.20.2")):
             pymongo = _requirement_for_python(requirements, "pymongo", python_version)
             _assert_floor(pymongo, minimum)
             _assert_specifier(pymongo, "<", "5.0.0")
@@ -320,10 +320,10 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
         _assert_floor(_requirement(overrides, name), minimum)
 
     litellm = _requirement(constraints, "litellm")
-    _assert_floor(litellm, "1.103.10")
+    _assert_floor(litellm, "1.109.1")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
     _assert_specifier(litellm, "!=", "1.107.0")
-    _assert_specifier(litellm, "<", "1.104.0")
+    _assert_specifier(litellm, "<", "1.110.0")
 
     with (REPO_ROOT / "uv.lock").open("rb") as lock_file:
         packages = tomllib.load(lock_file)["package"]
@@ -331,7 +331,7 @@ def test_workspace_security_overrides_enforce_current_python_floors() -> None:
         ("oauthlib", "4.0.1"),
         ("pyjwt", "2.15.1"),
         ("urllib3", "2.8.0"),
-        ("litellm", "1.103.10"),
+        ("litellm", "1.109.1"),
         ("a2a-sdk", "1.2.1"),
         ("authlib", "1.8.0"),
         ("virtualenv", "21.14.2"),
@@ -372,28 +372,34 @@ def test_published_packages_enforce_current_python_floors() -> None:
     _assert_specifier(urllib3, "<", "3.0.0")
 
     litellm = _requirement(base_project["optional-dependencies"]["litellm"], "litellm")
-    _assert_floor(litellm, "1.103.10")
+    _assert_floor(litellm, "1.109.1")
     _assert_specifier(litellm, "!=", "1.104.0rc1")
     _assert_specifier(litellm, "!=", "1.107.0")
-    _assert_specifier(litellm, "<", "1.104.0")
+    _assert_specifier(litellm, "<", "1.110.0")
 
     bundle_extras = _load_pyproject("src/bundles/lfx-bundles/pyproject.toml")["project"]["optional-dependencies"]
     for cuga_requirements in (base_project["optional-dependencies"]["cuga"], bundle_extras["cuga"]):
         cuga_litellm = [Requirement(spec) for spec in cuga_requirements if Requirement(spec).name.lower() == "litellm"]
         assert len(cuga_litellm) == 2
         for requirement in cuga_litellm:
-            _assert_floor(requirement, "1.103.10")
+            _assert_floor(requirement, "1.109.1")
             _assert_specifier(requirement, "!=", "1.104.0rc1")
             _assert_specifier(requirement, "!=", "1.107.0")
-            _assert_specifier(requirement, "<", "1.104.0")
+            _assert_specifier(requirement, "<", "1.110.0")
 
     generator = runpy.run_path(str(REPO_ROOT / "scripts/migrate/consolidate_bundles.py"))
     assert generator["PROVIDER_DEPS"]["cuga"] == bundle_extras["cuga"]
 
 
 def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None:
-    """Standalone bundle installs must retain the published PyMongo security floor."""
+    """Keep standalone LFX aliases on the release's patched bundle metadata."""
     extras = _load_pyproject("src/lfx/pyproject.toml")["project"]["optional-dependencies"]
     legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
-    assert "1.1.40" not in legacy_bundle.specifier
-    assert "1.1.41" in legacy_bundle.specifier
+    assert "1.2.11" not in legacy_bundle.specifier
+    assert "1.2.13" in legacy_bundle.specifier
+    assert "1.2.13rc1" in legacy_bundle.specifier
+
+    toolguard = _requirement(extras["toolguard"], "lfx-toolguard")
+    assert "0.2.3" not in toolguard.specifier
+    assert "0.2.5" in toolguard.specifier
+    assert "0.2.5rc1" in toolguard.specifier

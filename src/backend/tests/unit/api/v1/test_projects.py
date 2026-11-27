@@ -1647,8 +1647,13 @@ class TestProjectMCPIntegration:
         logged_in_headers,
         basic_case,
         mock_mcp_settings_enabled,  # noqa: ARG002
+        monkeypatch,
     ):
-        """Test project deletion with MCP server cleanup."""
+        """Test project deletion with MCP cleanup after a lock-retry."""
+        import sqlite3
+
+        from langflow.api.v1 import projects as projects_module
+
         # Create project first
         with (
             patch("langflow.api.v1.projects.get_settings_service") as mock_get_settings,
@@ -1694,6 +1699,23 @@ class TestProjectMCPIntegration:
             mock_validation.server_name = "lf-new-project"
             mock_validate.return_value = mock_validation
 
+            original_retry = projects_module.retry_project_operation_on_deployment_guard
+            retry_calls = 0
+            lock_message = "database is locked"
+
+            async def retry_after_transient_lock(**kwargs):
+                nonlocal retry_calls
+                retry_calls += 1
+                if retry_calls == 1:
+                    raise sqlite3.OperationalError(lock_message)
+                return await original_retry(**kwargs)
+
+            monkeypatch.setattr(
+                projects_module,
+                "retry_project_operation_on_deployment_guard",
+                retry_after_transient_lock,
+            )
+
             response = await client.delete(f"api/v1/projects/{project_id}", headers=logged_in_headers)
 
             assert response.status_code == status.HTTP_204_NO_CONTENT
@@ -1704,6 +1726,7 @@ class TestProjectMCPIntegration:
             mock_update_server.assert_called_once()
             _, kwargs = mock_update_server.call_args
             assert kwargs.get("delete") is True
+            assert kwargs.get("owns_transaction") is False
 
     async def test_delete_project_with_mcp_server_cleanup_legacy_sse(
         self,
