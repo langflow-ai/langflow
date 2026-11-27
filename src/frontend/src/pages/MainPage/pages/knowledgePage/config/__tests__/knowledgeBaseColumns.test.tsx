@@ -15,6 +15,25 @@ jest.mock("@/components/common/loadingTextComponent", () => ({
 jest.mock("@/utils/stringManipulation", () => ({
   formatFileSize: (v: number) => `${v} B`,
 }));
+let mockUseLabelSeam = false;
+jest.mock("@/customization/components/custom-resource-access-label", () => ({
+  __esModule: true,
+  default: (props: {
+    resourceType: string;
+    resourceId: string;
+    isOwned: boolean;
+  }) =>
+    mockUseLabelSeam ? (
+      <span
+        data-testid="access-label"
+        data-resource-type={props.resourceType}
+        data-resource-id={props.resourceId}
+        data-owned={String(props.isOwned)}
+      >
+        via Admin Role
+      </span>
+    ) : null,
+}));
 jest.mock("@/utils/styleUtils", () => ({
   FILE_ICONS: {
     pdf: {
@@ -29,7 +48,10 @@ jest.mock("@/utils/styleUtils", () => ({
 }));
 
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
-import { createKnowledgeBaseColumns } from "../knowledgeBaseColumns";
+import {
+  createKnowledgeBaseColumns,
+  isKnowledgeBaseOwned,
+} from "../knowledgeBaseColumns";
 
 const makeKb = (
   overrides: Partial<KnowledgeBaseInfo> = {},
@@ -272,5 +294,89 @@ describe("createKnowledgeBaseColumns", () => {
       render(<CellRenderer data={makeKb({ status: "ingesting" })} />);
       expect(screen.getByTestId("kb-row-update-button")).toBeDisabled();
     });
+  });
+});
+
+describe("knowledge base access label", () => {
+  const renderNameCell = (kb: KnowledgeBaseInfo) => {
+    const nameCol = createKnowledgeBaseColumns().find(
+      (c) => c.field === "name",
+    );
+    const Renderer = nameCol?.cellRenderer as (
+      p: NameCellRendererProps,
+    ) => React.ReactElement;
+    return render(<Renderer data={kb} value={kb.name} />);
+  };
+
+  afterEach(() => {
+    mockUseLabelSeam = false;
+  });
+
+  it.each([
+    [true, true],
+    [false, false],
+    [undefined, true],
+    [null, true],
+  ])("should_treat_is_owner_%p_as_owned_%p", (isOwner, expected) => {
+    expect(isKnowledgeBaseOwned(makeKb({ is_owner: isOwner }))).toBe(expected);
+  });
+
+  it("should_leave_the_name_cell_unchanged_when_the_label_is_the_default", () => {
+    const { container } = renderNameCell(makeKb({ is_owner: false }));
+
+    const cell = container.firstElementChild as HTMLElement;
+    expect(cell.children).toHaveLength(2);
+    const name = cell.lastElementChild as HTMLElement;
+    expect(name).toHaveTextContent("My KB");
+    expect(name.children).toHaveLength(0);
+  });
+
+  it("should_render_the_label_inside_the_name_span_so_it_takes_its_own_line", () => {
+    mockUseLabelSeam = true;
+    const { container } = renderNameCell(
+      makeKb({ id: "kb-42", name: "legal-kb", is_owner: false }),
+    );
+
+    const label = screen.getByTestId("access-label");
+    const name = screen.getByTitle("legal-kb");
+    // The name keeps the row's full width; the label is not a flex sibling.
+    expect(container.firstElementChild?.children).toHaveLength(2);
+    expect(name.lastElementChild).toBe(label);
+    expect(name.firstChild?.textContent).toBe("legal-kb");
+    expect(label).toHaveAttribute("data-resource-type", "knowledge_base");
+    expect(label).toHaveAttribute("data-resource-id", "kb-42");
+    expect(label).toHaveAttribute("data-owned", "false");
+  });
+
+  it("should_mark_an_older_backend_kb_without_is_owner_as_owned", () => {
+    mockUseLabelSeam = true;
+    renderNameCell(makeKb());
+
+    expect(screen.getByTestId("access-label")).toHaveAttribute(
+      "data-owned",
+      "true",
+    );
+  });
+
+  it("should_keep_a_long_unbroken_name_truncated_with_the_full_name_in_title", () => {
+    mockUseLabelSeam = true;
+    const longName = `kb_${"x".repeat(300)}`;
+    renderNameCell(makeKb({ name: longName }));
+
+    const name = screen.getByTitle(longName);
+    expect(name).toHaveClass("truncate");
+    expect(name.parentElement).toHaveClass("min-w-0");
+  });
+});
+
+describe("knowledge base name column sizing", () => {
+  it("should_reserve_room_for_a_one_line_access_label_when_the_grid_is_narrow", () => {
+    const nameCol = createKnowledgeBaseColumns().find(
+      (c) => c.field === "name",
+    );
+
+    // Rows are a fixed 45px, so the label under the name cannot wrap; 280px
+    // fits "Shared by priya (Full access)" beside the checkbox and icon.
+    expect(nameCol).toMatchObject({ flex: 2, minWidth: 280 });
   });
 });

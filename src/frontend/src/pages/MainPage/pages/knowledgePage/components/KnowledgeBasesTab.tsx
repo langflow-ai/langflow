@@ -18,6 +18,7 @@ import {
   useGetKnowledgeBases,
 } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
+import { useCustomResourceListFilter } from "@/customization/hooks/use-custom-resource-list-filter";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -26,7 +27,10 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import { updateIds } from "@/utils/reactflowUtils";
-import { createKnowledgeBaseColumns } from "../config/knowledgeBaseColumns";
+import {
+  createKnowledgeBaseColumns,
+  isKnowledgeBaseOwned,
+} from "../config/knowledgeBaseColumns";
 import { isBusyStatus } from "../config/statusConfig";
 import { useKnowledgeBaseActions } from "../hooks/useKnowledgeBaseActions";
 import { useKnowledgeBasePolling } from "../hooks/useKnowledgeBasePolling";
@@ -330,14 +334,19 @@ const KnowledgeBasesTab = ({
     };
   }, [actions.knowledgeBaseForAddSources]);
 
+  const { items: visibleKnowledgeBases, tools: listTools } =
+    useCustomResourceListFilter(
+      "knowledge_base",
+      knowledgeBases ?? [],
+      isKnowledgeBaseOwned,
+    );
+
   const sortedKnowledgeBases = useMemo(
     () =>
-      knowledgeBases
-        ? [...knowledgeBases].sort((a, b) =>
-            a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
-          )
-        : [],
-    [knowledgeBases],
+      [...visibleKnowledgeBases].sort((a, b) =>
+        a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+      ),
+    [visibleKnowledgeBases],
   );
 
   const columnDefs = createKnowledgeBaseColumns(
@@ -375,9 +384,12 @@ const KnowledgeBasesTab = ({
         </div>
       }
       emptyState={
-        <KnowledgeBaseEmptyState
-          handleCreateKnowledge={handleCreateKnowledge}
-        />
+        <>
+          {listTools}
+          <KnowledgeBaseEmptyState
+            handleCreateKnowledge={handleCreateKnowledge}
+          />
+        </>
       }
       searchPlaceholder={t("knowledge.searchPlaceholder")}
       searchInputTestId="search-kb-input"
@@ -385,24 +397,35 @@ const KnowledgeBasesTab = ({
       quickFilterText={quickFilterText}
       setQuickFilterText={setQuickFilterText}
       toolbarActions={
-        quantitySelected > 0 ? (
-          <Button
-            variant="destructive"
-            className="flex items-center gap-2 font-semibold ml-4"
-            onClick={handleOpenBulkDeleteModal}
-          >
-            <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
-            {t("knowledge.deleteSelected", { count: quantitySelected })}
-          </Button>
-        ) : (
-          <Button
-            className="flex items-center gap-2 font-semibold ml-4"
-            onClick={handleOpenCreateModal}
-          >
-            <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-            {t("knowledge.addKnowledge")}
-          </Button>
-        )
+        <>
+          {/* Same 8px gap from search as the Files toolbar's search margin. */}
+          {listTools ? (
+            <div
+              className="ml-2 flex shrink-0 items-center"
+              data-testid="kb-list-tools"
+            >
+              {listTools}
+            </div>
+          ) : null}
+          {quantitySelected > 0 ? (
+            <Button
+              variant="destructive"
+              className="flex items-center gap-2 font-semibold ml-4"
+              onClick={handleOpenBulkDeleteModal}
+            >
+              <ForwardedIconComponent name="Trash2" className="h-4 w-4" />
+              {t("knowledge.deleteSelected", { count: quantitySelected })}
+            </Button>
+          ) : (
+            <Button
+              className="flex items-center gap-2 font-semibold ml-4"
+              onClick={handleOpenCreateModal}
+            >
+              <ForwardedIconComponent name="Plus" className="h-4 w-4" />
+              {t("knowledge.addKnowledge")}
+            </Button>
+          )}
+        </>
       }
       setSelectedRows={setSelectedFiles}
       setQuantitySelected={setQuantitySelected}

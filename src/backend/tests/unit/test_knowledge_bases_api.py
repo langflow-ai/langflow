@@ -517,6 +517,7 @@ class TestKnowledgeBaseAPI:
         assert data["name"] == "New KB"
         assert data["backend_type"] == "opensearch"
         assert data["backend_config"] == {"url_variable": "OPENSEARCH_URL", "index_name": ""}
+        assert data["is_owner"] is True
         mock_fresh_client.assert_not_called()
         record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
         assert record is not None

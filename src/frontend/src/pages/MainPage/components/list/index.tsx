@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePermissions } from "@/contexts/permissionsContext";
+import CustomResourceAccessLabel from "@/customization/components/custom-resource-access-label";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
@@ -32,11 +33,13 @@ const ListComponent = ({
   selected,
   setSelected,
   shiftPressed,
+  isOwned,
 }: {
   flowData: FlowType;
   selected: boolean;
   setSelected: (selected: boolean) => void;
   shiftPressed: boolean;
+  isOwned: boolean;
 }) => {
   const { t } = useTranslation();
   const navigate = useCustomNavigate();
@@ -204,6 +207,11 @@ const ListComponent = ({
                 </span>
               </div>
             </div>
+            <CustomResourceAccessLabel
+              resourceType="flow"
+              resourceId={flowData.id}
+              isOwned={isOwned}
+            />
           </div>
         </div>
 

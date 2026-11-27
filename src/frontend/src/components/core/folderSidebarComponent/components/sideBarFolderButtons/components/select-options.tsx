@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { usePermissions } from "@/contexts/permissionsContext";
+import { getCustomProjectSidebarProjectTitle } from "@/customization/components/custom-project-sidebar";
 import CustomResourceShareAction from "@/customization/components/custom-resource-share-action";
 import type { FolderType } from "@/pages/MainPage/entities";
 import { getProjectDisplayName } from "@/utils/project-display-name";
@@ -62,7 +63,10 @@ export const SelectOptions = ({
             className="h-6 w-6 min-h-[24px] min-w-[24px]"
             id={`options-trigger-${item.id}`}
             data-testid={`more-options-button_${item.id}`}
-            aria-label={t("folder.optionsFor", { name: displayName })}
+            aria-label={t("folder.optionsFor", {
+              // Same name the row's tooltip uses, so the seam can drop the owner suffix.
+              name: getCustomProjectSidebarProjectTitle(item, displayName),
+            })}
             onClick={(e) => e.stopPropagation()}
           >
             <IconComponent

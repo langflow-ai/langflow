@@ -61,6 +61,7 @@ const renderCard = async ({
       selected={selected}
       setSelected={setSelected}
       shiftPressed={shiftPressed}
+      isOwned
     />,
   );
   await act(async () => {});
