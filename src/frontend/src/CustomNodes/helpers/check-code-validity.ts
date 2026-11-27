@@ -407,11 +407,20 @@ export const updateDropsSavedFields = (
   rebuilt: APIClassType,
 ): boolean =>
   Object.entries(saved.template).some(([name, before]) => {
-    if (name === "code" || !isStructuralTemplateKey(name) || !before) {
+    // Tool metadata does not define the component's shape, but it can hold
+    // saved tool choices and descriptions that the rebuild must preserve.
+    const isToolMetadata = name === "tools_metadata";
+    if (
+      name === "code" ||
+      (!isToolMetadata && !isStructuralTemplateKey(name)) ||
+      !before
+    ) {
       return false;
     }
     const after = rebuilt.template[name];
-    if (!after) return true;
+    if (!after) {
+      return !isToolMetadata || holdsValue(before.value);
+    }
     return (
       (Boolean(before.file_path) &&
         !isEqual(before.file_path, after.file_path)) ||

@@ -1,13 +1,19 @@
+import asyncio
+import os
 import secrets
 from contextlib import asynccontextmanager
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+import sqlalchemy as sa
 from cryptography.fernet import Fernet
+from langflow.services.auth.refresh_tokens import create_refresh_session
 from langflow.services.auth.service import AuthService
 from langflow.services.auth.utils import encrypt_api_key, ensure_fernet_key
+from langflow.services.database.models.auth.refresh_token import RefreshTokenSession
+from langflow.services.database.models.user.crud import update_user_last_login_at
 from langflow.services.database.models.user.model import User
 from langflow.services.database.models.variable.model import Variable, VariableUpdate
 from langflow.services.deps import get_settings_service
@@ -23,7 +29,7 @@ from lfx.services.settings.constants import VARIABLES_TO_GET_FROM_ENVIRONMENT
 from lfx.services.variable import VariableNotFoundError
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import create_async_engine
-from sqlmodel import SQLModel
+from sqlmodel import SQLModel, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -67,6 +73,66 @@ async def test_initialize_user_variables__create_and_update(service, session: As
 
     assert all(i in variables for i in good_vars)
     assert all(i not in variables for i in bad_vars)
+
+
+@pytest.mark.no_blockbuster
+async def test_concurrent_login_environment_imports_with_postgres(service, monkeypatch):
+    raw_url = os.environ.get("LANGFLOW_TEST_POSTGRES_URL") or os.environ.get("LANGFLOW_TEST_DATABASE_URI")
+    if not raw_url:
+        pytest.skip("PostgreSQL test URL is not configured")
+    pytest.importorskip("psycopg")
+    url = sa.make_url(raw_url).set(drivername="postgresql+psycopg")
+    namespace = f"login_env_{uuid4().hex}"
+    monkeypatch.setattr(service.settings_service.settings, "store_environment_variables", True)
+    monkeypatch.setattr(service.settings_service.settings, "variables_to_get_from_environment", [])
+    admin_engine = create_async_engine(url)
+    engine = create_async_engine(url.update_query_dict({"options": f"-csearch_path={namespace}"}))
+    user = User(username="concurrent-login", password=secrets.token_hex(16), is_active=True)
+    user_id, session_version = user.id, user.session_version
+    first_inserted = asyncio.Event()
+    second_inserted = asyncio.Event()
+
+    async def login(session_id, own_insert, other_insert):
+        async with AsyncSession(engine) as db:
+            expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+            assert await create_refresh_session(session_id, str(user_id), expires_at, db, session_version)
+            # Both refresh-session inserts must hold their foreign-key locks
+            # before either login timestamps the user and imports variables.
+            own_insert.set()
+            await other_insert.wait()
+            assert await update_user_last_login_at(user_id, db) is not None
+            await service.initialize_user_variables(user_id, db)
+            await db.commit()
+
+    try:
+        async with admin_engine.begin() as connection:
+            await connection.execute(sa.schema.CreateSchema(namespace))
+        async with engine.begin() as connection:
+            await connection.run_sync(
+                lambda sync: SQLModel.metadata.create_all(sync, tables=[User.__table__, RefreshTokenSession.__table__])
+            )
+        async with AsyncSession(engine) as db:
+            db.add(user)
+            await db.commit()
+
+        outcomes = await asyncio.wait_for(
+            asyncio.gather(
+                login("first-session", first_inserted, second_inserted),
+                login("second-session", second_inserted, first_inserted),
+                return_exceptions=True,
+            ),
+            timeout=15,
+        )
+        assert outcomes == [None, None]
+        async with AsyncSession(engine) as db:
+            assert len((await db.exec(select(RefreshTokenSession))).all()) == 2
+    finally:
+        await engine.dispose()
+        try:
+            async with admin_engine.begin() as connection:
+                await connection.execute(sa.schema.DropSchema(namespace, cascade=True, if_exists=True))
+        finally:
+            await admin_engine.dispose()
 
 
 async def test_environment_sync_repeated_rotation(service, session, monkeypatch):
