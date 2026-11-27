@@ -32,6 +32,32 @@ function formatValue(value: unknown): string {
   return String(value);
 }
 
+function jsonValueForStructuredField(
+  currentValue: unknown,
+  nextValue: unknown,
+): unknown {
+  if (typeof nextValue !== "string") return nextValue;
+  const currentIsList = Array.isArray(currentValue);
+  const currentIsRecord =
+    currentValue !== null && typeof currentValue === "object" && !currentIsList;
+  if (!currentIsList && !currentIsRecord) return nextValue;
+  try {
+    const parsed: unknown = JSON.parse(nextValue);
+    if (currentIsList && Array.isArray(parsed)) return parsed;
+    if (
+      currentIsRecord &&
+      parsed !== null &&
+      typeof parsed === "object" &&
+      !Array.isArray(parsed)
+    ) {
+      return parsed;
+    }
+  } catch {
+    return nextValue;
+  }
+  return nextValue;
+}
+
 function FlowEditCard({
   action,
   onAccept,
@@ -170,6 +196,10 @@ export function FlowEditCarousel({
                 Record<string, unknown>
               >;
               if (!tmpl[field]) return node;
+              const value = jsonValueForStructuredField(
+                tmpl[field].value,
+                op.value,
+              );
               return {
                 ...node,
                 data: {
@@ -178,7 +208,7 @@ export function FlowEditCarousel({
                     ...(node.data as Record<string, unknown>).node,
                     template: {
                       ...tmpl,
-                      [field]: { ...tmpl[field], value: op.value },
+                      [field]: { ...tmpl[field], value },
                     },
                   },
                 },
