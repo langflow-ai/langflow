@@ -988,7 +988,8 @@ class Graph:
     async def initialize_run(self) -> None:
         if not self._run_id:
             self.set_run_id()
-        if self.tracing_service:
+        # A subgraph (a Loop iteration) runs inside its parent's trace, which the parent starts and ends.
+        if self.tracing_service and not self._is_subgraph:
             # Serving-plane telemetry attribution: surface the end user as the SEPARATE tracing label
             # (never the primary trace user_id, which stays the SID). Gated OFF by default: the
             # end-user id is PII and tracing providers are third-party SaaS, so it is forwarded only
