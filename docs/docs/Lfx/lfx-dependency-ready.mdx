@@ -103,17 +103,17 @@ Under this option, `next_vertices_ids` means newly dependency-ready successors. 
 
 ## Cancellation and failures
 
-:::warning Natural drainage can wait indefinitely
+:::warning Cancellation waits for admitted tasks to unwind
 
-Cancellation or a component failure stops new admission. It does **not** cancel already admitted build tasks. The invocation waits for all admitted tasks, including framework-awaited synchronous thread work, to finish naturally before it returns or raises. An uncooperative component can therefore make cancellation wait indefinitely. There is no timeout that abandons its workers.
+Cancellation or a component failure stops new admission and cancels already admitted build tasks. The default path also cancels its children on outer cancellation. On component failure, the default path lets same-layer siblings finish naturally and admits no further layers. The dependency-ready path waits for each admitted task to unwind before it returns or raises. This includes waiting for synchronous output methods already running in framework worker threads to finish. A component that suppresses cancellation or a worker that never finishes can keep the run open indefinitely.
 
 :::
 
-The first observed outer cancellation or selected component failure wins. Failures in the same observed completion group use graph order. If a group contains a failure, successful siblings in that group are drained but their graph-level results are not persisted or emitted. Later cancellation cannot replace an earlier failure, and all admitted outcomes are retrieved. Unadmitted descendants do not run after an aborted invocation.
+The first observed outer cancellation or selected component failure wins. Within an observed completion group, the task sorting first in graph order wins, whether it failed or was cancelled. An outer cancellation observed before a group is harvested wins over completed-but-unharvested failures. If a group contains a failure, already-completed siblings' results are not persisted or emitted. Later cancellation cannot replace an earlier failure, and all admitted outcomes are retrieved. Unadmitted descendants do not run after an aborted invocation.
 
 For an eligible run, direct `process()` owns trace finalization. `arun()` owns it through output collection. The non-subgraph owner attempts and awaits run-level trace finalization once, including the native tracer's flush, while preserving a primary error over cleanup errors. Subgraphs retain parent-owned traces. Requested-but-unsupported graphs keep their existing cleanup behavior.
 
-Self-cancellation and detached component work violate the capability promise. Siblings are still drained and run-level finalization is attempted, but this is not a guarantee that every arbitrary provider resource or component span closes. A remote request already accepted by a service is not remotely cancelled by this option.
+Self-cancellation and detached component work violate the capability promise. Siblings are cancelled and run-level finalization is attempted, but this is not a guarantee that every arbitrary provider resource or component span closes. A remote request already accepted by a service is not remotely cancelled by this option.
 
 ## Measuring usefulness
 

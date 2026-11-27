@@ -17,6 +17,20 @@ from lfx.schema.message import Message
 from sqlmodel import select
 
 
+async def _await_run(task, timeout: float):
+    """Await a run task under a hard bound that cancellation suppression cannot extend.
+
+    asyncio.wait never cancels the task, so the bound holds even if the run's
+    drain keeps suppressing cancellation (the regression class covered here).
+    """
+    done, _pending = await asyncio.wait({task}, timeout=timeout)
+    if not done:
+        task.cancel()
+        await asyncio.wait({task}, timeout=5)
+        pytest.fail(f"graph run did not finish within {timeout}s")
+    return await task
+
+
 class NativeNode(Component):
     supports_dependency_ready_scheduling = True
     inputs = [HandleInput(name="messages", input_types=["Message"], is_list=True)]
@@ -98,6 +112,11 @@ async def test_native_worker_and_database_flush_complete_before_return(async_ses
             await asyncio.sleep(0)
             task.cancel()
             await asyncio.sleep(0)
+            # Cancellation reaches the in-flight build promptly (default-path
+            # parity). The run is still unfinished here: unwinding plus
+            # end_all_traces cannot complete within two loop turns, and the
+            # shared DB-session gate below then holds run-level finalization
+            # until released.
             assert not task.done()
             build_release.set()
         await asyncio.wait_for(entered.wait(), 5)
@@ -113,12 +132,12 @@ async def test_native_worker_and_database_flush_complete_before_return(async_ses
         release.set()
     if phase in {"cancel_flush", "cancel_build", "self_cancel"}:
         with pytest.raises(asyncio.CancelledError):
-            await task
+            await _await_run(task, 10)
     elif phase == "partial_startup":
         with pytest.raises(RuntimeError, match="partial native startup"):
-            await task
+            await _await_run(task, 10)
     else:
-        await task
+        await _await_run(task, 10)
     assert committed == [True]
     assert len(flushed) == 1
     tracer = flushed[0]
@@ -177,7 +196,7 @@ async def test_actual_webhook_manager_payload_and_helper_error_contract(monkeypa
             assert builds == ["source"]
             assert not task.done()
         release.set()
-        await task
+        await _await_run(task, 10)
         assert builds == ["source", "target"]
         emitted = []
         while not queue.empty():

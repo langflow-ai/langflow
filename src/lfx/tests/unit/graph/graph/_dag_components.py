@@ -25,8 +25,8 @@ def connected(node_class=StaticNode):
     return Graph(source, target)
 
 
-def branched():
-    source, slow, fast, child, merge = [StaticNode(_id=key) for key in ("source", "slow", "fast", "child", "merge")]
+def branched(source_id="source"):
+    source, slow, fast, child, merge = [StaticNode(_id=key) for key in (source_id, "slow", "fast", "child", "merge")]
     slow.set(messages=[source.message_response])
     fast.set(messages=[source.message_response])
     child.set(messages=[fast.message_response])
@@ -36,7 +36,7 @@ def branched():
 
 class ThreadNode(Component):
     supports_dependency_ready_scheduling = True
-    inputs = []
+    inputs = [HandleInput(name="messages", input_types=["Message"], is_list=True)]
     outputs = [Output(name="message", method="message_response")]
 
     def message_response(self) -> Message:

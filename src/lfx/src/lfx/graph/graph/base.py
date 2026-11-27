@@ -2709,6 +2709,8 @@ class Graph:
                 return True
 
         selection = select_dag_candidate(self, candidate, first_layer) if not isinstance(candidate, str) else candidate
+        if dag_max_concurrency is not None and isinstance(selection, str):
+            await logger.adebug(f"Dependency-ready scheduling ineligible ({selection}); using the default path.")
         if not isinstance(selection, str):
             context = _dag_context if _dag_context is not None else DagRunContext()
             context.eligible = True
