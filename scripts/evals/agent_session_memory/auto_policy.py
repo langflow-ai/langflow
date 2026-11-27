@@ -25,6 +25,7 @@ class Auto(Policy):
         self.name = name
         self.budget = budget or sm.budget_for_window(sm.model_window(llm))
         self.free_text = free_text
+        self.invalid_replies = 0
 
     async def prepare(self, store, user_message) -> Prepared:
         scope = {"flow_id": "f", "user_id": "u", "session_id": store.session_id, "context_id": ""}
@@ -42,7 +43,13 @@ class Auto(Policy):
                     else sm.format_fold_prompt(state, messages)
                 )
                 response = await self.llm.ainvoke(prompt, config={"callbacks": [fold.usage]})
-                return sm.parse_fold_reply(str(response.content))
+                text = str(response.content).strip()
+                if self.free_text:
+                    return sm.FoldResult(summary=text) if text else None
+                result = sm.parse_fold_reply(text)
+                if result is None:
+                    self.invalid_replies += 1
+                return result
 
             fold.coro = sm.fold(
                 scope=scope,
@@ -59,7 +66,12 @@ class Auto(Policy):
 
     def describe_state(self, store) -> dict:
         state = store.state
-        return {"facts": [list(p) for p in state.facts], "summary": state.summary, "folded_count": state.folded_count}
+        return {
+            "facts": [list(p) for p in state.facts],
+            "summary": state.summary,
+            "folded_count": state.folded_count,
+            "invalid_replies": self.invalid_replies,
+        }
 
 
 def factories(llm) -> dict:

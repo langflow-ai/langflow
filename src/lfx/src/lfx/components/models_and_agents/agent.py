@@ -256,6 +256,17 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             advanced=True,
             real_time_refresh=True,
         ),
+        StrInput(
+            name="pinned_keys",
+            display_name="Pinned Keys",
+            info=(
+                "Auto mode only. Comma-separated fact keys, for example project_id, customer. "
+                "The session memory keeps them when the conversation gives a value, and never drops them."
+            ),
+            value="",
+            advanced=True,
+            show=False,
+        ),
         IntInput(
             name="n_messages",
             display_name="Number of Chat History Messages",
@@ -1130,7 +1141,12 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         self._staged_fold = None
         self._fold_usage_handler = TokenUsageCallbackHandler()
         self._fold_task = asyncio.create_task(
-            fold(**staged, summarize=self._summarize_history, summary_model=self._get_resolved_model_name())
+            fold(
+                **staged,
+                summarize=self._summarize_history,
+                summary_model=self._get_resolved_model_name(),
+                pinned_keys=self._pinned_keys(),
+            )
         )
 
     async def _settle_fold(self, *, cancel: bool = False) -> None:
@@ -1165,6 +1181,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 total_tokens=((own.total_tokens or 0) if own else 0) + (fold_usage.total_tokens or 0),
             )
 
+    def _pinned_keys(self) -> list[str]:
+        raw = getattr(self, "pinned_keys", "") or ""
+        return [key.strip() for key in str(raw).split(",") if key.strip()]
+
     async def _summarize_history(self, state, messages: Sequence[Message]):
         """Fold `messages` into `state` with one model call, streaming off. None on any failure."""
         try:
@@ -1172,7 +1192,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             usage_handler = getattr(self, "_fold_usage_handler", None)
             callbacks = ([usage_handler] if usage_handler else []) + self._get_shared_callbacks()
             response = await asyncio.wait_for(
-                llm.ainvoke(format_fold_prompt(state, messages), config={"callbacks": callbacks}),
+                llm.ainvoke(format_fold_prompt(state, messages, self._pinned_keys()), config={"callbacks": callbacks}),
                 FOLD_TIMEOUT_SECONDS,
             )
             return parse_fold_reply(_content_text(response.content))
@@ -1247,6 +1267,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             auto = field_value == CHAT_HISTORY_AUTO
             if "n_messages" in build_config:
                 build_config["n_messages"]["show"] = not auto
+            if "pinned_keys" in build_config:
+                build_config["pinned_keys"]["show"] = auto
         await self._filter_legacy_provider_options(build_config)
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 
