@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
-from lfx.schema.data import Data
-
 from cleanedweb import CleanedWeb
 from cleanedweb.exceptions import CleanedWebError
+from lfx.schema.data import Data
 
 
 def make_client(api_key: str | None = None) -> CleanedWeb:

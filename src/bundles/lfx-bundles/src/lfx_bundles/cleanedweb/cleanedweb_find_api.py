@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import json
 
+from cleanedweb.exceptions import CleanedWebError
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, IntInput, MessageTextInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.template.field.base import Output
-
-from cleanedweb.exceptions import CleanedWebError
 
 from lfx_bundles.cleanedweb.cleanedweb_common import error_message, error_rows, make_client
 
