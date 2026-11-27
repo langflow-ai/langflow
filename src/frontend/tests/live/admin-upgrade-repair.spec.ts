@@ -291,6 +291,9 @@ test(
         },
       ];
       await page.goto(routePath);
+      await page
+        .getByRole("button", { name: "Import report", exact: true })
+        .click();
       await page.getByLabel("Checker report file").setInputFiles({
         name: "real-repair-report.json",
         mimeType: "application/json",
@@ -302,6 +305,7 @@ test(
           response.request().method() === "POST",
       );
       await page
+        .getByRole("dialog")
         .getByRole("button", { name: "Import report", exact: true })
         .click();
       const importedResponse = await imported;

@@ -11,18 +11,20 @@ import {
   useUpgradeMaintenance,
 } from "@/controllers/API/queries/upgrade-reports";
 import { CustomLink } from "@/customization/components/custom-link";
-import { reportTime } from "./format";
-import { scrollToMaintenance, verifiedStatus } from "./MaintenanceControls";
+import { reportTime, verifiedStatus } from "./format";
+import { scrollToMaintenance } from "./MaintenanceControls";
 import { repairReasonKey, repairRequestErrorKey } from "./reasons";
 
 export default function RepairControls({
   reportId,
   selected,
   flows,
+  onUnappliedUpdatesChange,
 }: {
   reportId: string;
   selected: Set<string>;
   flows: ReportFlow[];
+  onUnappliedUpdatesChange: (unapplied: boolean) => void;
 }) {
   const { t, i18n } = useTranslation();
   const maintenance = useUpgradeMaintenance();
@@ -49,11 +51,34 @@ export default function RepairControls({
       (item): item is RepairResult & { data_sha256: string } =>
         item.status === "ready" && typeof item.data_sha256 === "string",
     ) ?? [];
+  const hasUnappliedUpdates = ready.length > 0;
+  useEffect(() => {
+    onUnappliedUpdatesChange(hasUnappliedUpdates);
+    return () => onUnappliedUpdatesChange(false);
+  }, [hasUnappliedUpdates, onUnappliedUpdatesChange]);
   const status = verifiedStatus(maintenance);
-  const canApply = Boolean(
-    status?.maintenance && !status.migration && status.running_jobs === 0,
-  );
+  const maintenanceReason = !status
+    ? t("settings.upgrade.freezeUnknown")
+    : status.migration
+      ? t("settings.upgrade.migrationPause")
+      : !status.maintenance
+        ? t("settings.upgrade.freezeRequired")
+        : status.running_jobs > 0
+          ? t("settings.upgrade.runningJobs", { count: status.running_jobs })
+          : null;
   const busy = preview.isPending || apply.isPending;
+  // One rule both disables Apply and explains why. The maintenance note above already says that reason.
+  const applyBlocker = !result
+    ? "applyNeedsPreview"
+    : !ready.length
+      ? "applyNothingReady"
+      : maintenanceReason
+        ? "maintenance"
+        : !confirmed
+          ? "applyNeedsConfirmation"
+          : null;
+  // After an apply nothing is ready, and the outcome above says why.
+  const applyReason = busy || applied ? null : applyBlocker;
   const flowName = (flowId: string) =>
     (
       flows.find((flow) => flow.kind === "flow" && flow.id === flowId) ??
@@ -99,13 +124,22 @@ export default function RepairControls({
   return (
     <section
       aria-labelledby="upgrade-repair-title"
-      className="space-y-3 rounded border p-4"
+      className="min-w-0 space-y-3 rounded-lg border p-3 sm:p-5"
     >
       <h3 id="upgrade-repair-title" className="font-medium">
         {t("settings.upgrade.repairTitle")}
       </h3>
       <p>{t("settings.upgrade.repairExplanation")}</p>
-      <p>{t("settings.upgrade.selected", { count: selected.size })}</p>
+      <p>
+        {t("settings.upgrade.selected", { count: selected.size })} ·{" "}
+        {t(
+          preview.isPending
+            ? "settings.upgrade.previewState.running"
+            : result
+              ? "settings.upgrade.previewState.done"
+              : "settings.upgrade.previewState.required",
+        )}
+      </p>
       <Button
         variant="outline"
         disabled={!selected.size || busy}
@@ -128,29 +162,18 @@ export default function RepairControls({
       >
         {t("settings.upgrade.preview")}
       </Button>
-      {status && !status.maintenance && !status.migration && !apply.isError && (
-        <p role="note">{t("settings.upgrade.freezeRequired")}</p>
-      )}
-      {status?.migration && !preview.isError && !apply.isError && (
-        <p role="note">{t("settings.upgrade.migrationPause")}</p>
-      )}
-      {status && status.running_jobs > 0 && (
-        <p role="status">
-          {t("settings.upgrade.runningJobs", { count: status.running_jobs })}
+      {!maintenance.isPending && maintenanceReason && (
+        <p role="note">
+          <span id="upgrade-maintenance-reason">{maintenanceReason}</span>{" "}
+          <Button
+            variant="link"
+            className="h-auto p-0"
+            onClick={scrollToMaintenance}
+            ignoreTitleCase
+          >
+            {t("settings.upgrade.maintenance.manage")}
+          </Button>
         </p>
-      )}
-      {!maintenance.isPending && !status && (
-        <p role="alert">{t("settings.upgrade.freezeUnknown")}</p>
-      )}
-      {!maintenance.isPending && !canApply && (
-        <Button
-          variant="link"
-          className="h-auto p-0"
-          onClick={scrollToMaintenance}
-          ignoreTitleCase
-        >
-          {t("settings.upgrade.maintenance.manage")}
-        </Button>
       )}
       {(preview.isError || apply.isError) && (
         <p role="alert">
@@ -169,6 +192,23 @@ export default function RepairControls({
                 : "settings.upgrade.previewComplete",
             )}
           </p>
+          {applied && (
+            <div className="space-y-1 rounded-md border-l-4 border-primary bg-muted/50 px-4 py-3 text-sm">
+              <p className="font-medium">
+                {t("settings.upgrade.applyOutcome", {
+                  updated: result.results.filter(
+                    (item) => item.status === "updated",
+                  ).length,
+                  other: result.results.filter(
+                    (item) => item.status !== "updated",
+                  ).length,
+                })}
+              </p>
+              <p className="text-muted-foreground">
+                {t("settings.upgrade.maintenanceStaysOn")}
+              </p>
+            </div>
+          )}
           <dl className="text-sm">
             <dt>{t("settings.upgrade.target")}</dt>
             <dd>{result.target_version ?? t("settings.upgrade.unknown")}</dd>
@@ -191,46 +231,63 @@ export default function RepairControls({
             ))}
           </ul>
           {ready.length > 0 && (
-            <>
-              <label className="flex items-start gap-2">
-                <input
-                  type="checkbox"
-                  checked={confirmed}
-                  onChange={(event) => setConfirmed(event.target.checked)}
-                />
-                {t("settings.upgrade.confirmRepair", { count: ready.length })}
-              </label>
-              <Button
-                disabled={!confirmed || !canApply || busy}
-                onClick={() => {
-                  if (!result) return;
-                  apply.mutate(
-                    {
-                      flows: ready.map((item) => ({
-                        flow_id: item.flow_id,
-                        version_token: item.version_token,
-                        data_sha256: item.data_sha256,
-                      })),
-                      target_sha256: result.target_sha256,
-                      report_id: reportId,
-                    },
-                    {
-                      onSuccess: (response) => {
-                        setResult(response);
-                        setConfirmed(false);
-                        setApplied(true);
-                      },
-                    },
-                  );
-                }}
-                ignoreTitleCase
-              >
-                {t("settings.upgrade.apply", { count: ready.length })}
-              </Button>
-            </>
+            <label className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                checked={confirmed}
+                onChange={(event) => setConfirmed(event.target.checked)}
+              />
+              {t("settings.upgrade.confirmRepair", { count: ready.length })}
+            </label>
           )}
         </>
       )}
+      <div className="flex flex-wrap items-center gap-3 border-t pt-3">
+        <Button
+          disabled={busy || applyBlocker !== null}
+          aria-describedby={
+            applyReason === "maintenance"
+              ? "upgrade-maintenance-reason"
+              : applyReason
+                ? "upgrade-apply-reason"
+                : undefined
+          }
+          onClick={() => {
+            if (!result) return;
+            apply.mutate(
+              {
+                flows: ready.map((item) => ({
+                  flow_id: item.flow_id,
+                  version_token: item.version_token,
+                  data_sha256: item.data_sha256,
+                })),
+                target_sha256: result.target_sha256,
+                report_id: reportId,
+              },
+              {
+                onSuccess: (response) => {
+                  setResult(response);
+                  setConfirmed(false);
+                  setApplied(true);
+                },
+              },
+            );
+          }}
+          ignoreTitleCase
+        >
+          {ready.length
+            ? t("settings.upgrade.apply", { count: ready.length })
+            : t("settings.upgrade.applyUpdates")}
+        </Button>
+        {applyReason && applyReason !== "maintenance" && (
+          <p
+            id="upgrade-apply-reason"
+            className="text-sm text-muted-foreground"
+          >
+            {t(`settings.upgrade.${applyReason}`)}
+          </p>
+        )}
+      </div>
       <details aria-label={t("settings.upgrade.repairHistory")}>
         <summary className="cursor-pointer">
           {t("settings.upgrade.repairHistory")}

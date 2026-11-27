@@ -12,40 +12,14 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import type { MaintenancePauseStatus } from "@/controllers/API/queries/migration";
 import {
   useSetUpgradeMaintenance,
   useUpgradeMaintenance,
 } from "@/controllers/API/queries/upgrade-reports";
 import { DOCS_LINK } from "@/customization/config-constants";
-import { reportTime } from "./format";
+import { reportTime, verifiedStatus } from "./format";
 
 export const MAINTENANCE_SECTION_ID = "upgrade-maintenance";
-
-type VerifiedStatus = MaintenancePauseStatus & {
-  maintenance: boolean;
-  migration: boolean;
-  running_jobs: number;
-};
-
-/** The maintenance status, or null when the server answer cannot be trusted. */
-export function verifiedStatus({
-  data,
-  isError,
-}: {
-  data?: MaintenancePauseStatus;
-  isError: boolean;
-}): VerifiedStatus | null {
-  const jobs = data?.running_jobs;
-  return !isError &&
-    typeof data?.maintenance === "boolean" &&
-    typeof data.migration === "boolean" &&
-    typeof jobs === "number" &&
-    Number.isSafeInteger(jobs) &&
-    jobs >= 0
-    ? (data as VerifiedStatus)
-    : null;
-}
 
 export function scrollToMaintenance() {
   const heading = document.getElementById(`${MAINTENANCE_SECTION_ID}-title`);
@@ -85,7 +59,11 @@ function StateRow({
   );
 }
 
-export default function MaintenanceControls() {
+export default function MaintenanceControls({
+  unappliedUpdates,
+}: {
+  unappliedUpdates: boolean;
+}) {
   const { t, i18n } = useTranslation();
   const query = useUpgradeMaintenance();
   const status = verifiedStatus(query);
@@ -95,14 +73,18 @@ export default function MaintenanceControls() {
       useIsMutating({ mutationKey: ["useApplyUpgradeRepair"] }) >
     0;
   const [dialog, setDialog] = useState<"enable" | "disable" | null>(null);
-  const [failed, setFailed] = useState<"enable" | "disable" | null>(null);
   const [reason, setReason] = useState("");
   const toggle = useRef<HTMLButtonElement>(null);
+  const failed = update.isError
+    ? update.variables?.enabled
+      ? "enable"
+      : "disable"
+    : null;
 
   // A failed request that the server applied anyway is no longer a failure.
   useEffect(() => {
     if (failed && status && status.maintenance === (failed === "enable"))
-      setFailed(null);
+      update.reset();
   }, [failed, status?.maintenance]);
 
   const { hash } = useLocation();
@@ -115,25 +97,28 @@ export default function MaintenanceControls() {
     if (!update.isPending) setDialog(null);
   }, [status?.maintenance, status?.migration]);
 
+  const phase = !status
+    ? query.isPending
+      ? "loading"
+      : query.data?.externalAuthenticationPaused
+        ? "external"
+        : "unknown"
+    : !status.maintenance
+      ? "off"
+      : status.running_jobs > 0
+        ? "running"
+        : "ready";
   const next = status?.maintenance ? "disable" : "enable";
   const label = (kind: "enable" | "disable") =>
     kind === "enable"
       ? t("settings.upgrade.maintenance.enable")
       : t("settings.upgrade.maintenance.disable");
   const blocked = !status || status.migration || repairBusy;
-  const openDialog = () => {
-    update.reset();
-    setDialog(next);
-  };
   const submit = (kind: "enable" | "disable") =>
     update.mutate(
       { enabled: kind === "enable", reason: reason.trim() || undefined },
       {
-        onSuccess: () => {
-          setFailed(null);
-          setReason("");
-        },
-        onError: () => setFailed(kind),
+        onSuccess: () => setReason(""),
         onSettled: () => setDialog(null),
       },
     );
@@ -152,22 +137,64 @@ export default function MaintenanceControls() {
       )}
     </Button>
   );
-  const toggleButton = (label: string) => (
+  const toggleButton = (text: string) => (
     <Button
       ref={toggle}
       variant="outline"
       className="shrink-0"
       disabled={blocked}
-      onClick={openDialog}
+      onClick={() => setDialog(next)}
       ignoreTitleCase
     >
-      {label}
+      {text}
     </Button>
   );
-  const showFailure =
-    failed && (!status || status.maintenance === (failed === "disable"));
-
-  const row = showFailure ? (
+  const rows = {
+    loading: <p role="status">{t("common.loading")}</p>,
+    external: (
+      <StateRow
+        tone="warning"
+        detail={t("settings.maintenance.externalAuthNotice")}
+      />
+    ),
+    unknown: (
+      <StateRow
+        tone="error"
+        title={t("settings.upgrade.maintenance.unknownTitle")}
+        detail={t("settings.upgrade.maintenance.unknownDetail")}
+        action={retryStatus}
+      />
+    ),
+    off: (
+      <StateRow
+        tone="neutral"
+        detail={t("settings.upgrade.maintenance.offDetail")}
+      />
+    ),
+    running: (
+      <StateRow
+        tone="warning"
+        title={t("settings.upgrade.maintenance.runningTitle")}
+        detail={t("settings.upgrade.maintenance.runningDetail")}
+      />
+    ),
+    ready: (
+      <StateRow
+        tone="ready"
+        title={t("settings.upgrade.maintenance.readyTitle")}
+        detail={t("settings.upgrade.maintenance.readyDetail")}
+      />
+    ),
+  };
+  const statusText = {
+    loading: "—",
+    external: t("settings.upgrade.maintenance.on"),
+    unknown: t("settings.upgrade.maintenance.unknown"),
+    off: t("settings.upgrade.maintenance.off"),
+    running: t("settings.upgrade.maintenance.on"),
+    ready: t("settings.upgrade.maintenance.on"),
+  };
+  const row = failed ? (
     <StateRow
       tone="error"
       title={
@@ -185,43 +212,15 @@ export default function MaintenanceControls() {
       action={
         status
           ? toggleButton(
-              t(
-                failed === "enable"
-                  ? "settings.upgrade.maintenance.retryEnable"
-                  : "settings.upgrade.maintenance.retryDisable",
-              ),
+              failed === "enable"
+                ? t("settings.upgrade.maintenance.retryEnable")
+                : t("settings.upgrade.maintenance.retryDisable"),
             )
           : retryStatus
       }
     />
-  ) : !status ? (
-    query.isPending ? (
-      <p role="status">{t("common.loading")}</p>
-    ) : (
-      <StateRow
-        tone="error"
-        title={t("settings.upgrade.maintenance.unknownTitle")}
-        detail={t("settings.upgrade.maintenance.unknownDetail")}
-        action={retryStatus}
-      />
-    )
-  ) : !status.maintenance ? (
-    <StateRow
-      tone="neutral"
-      detail={t("settings.upgrade.maintenance.offDetail")}
-    />
-  ) : status.running_jobs > 0 ? (
-    <StateRow
-      tone="warning"
-      title={t("settings.upgrade.maintenance.runningTitle")}
-      detail={t("settings.upgrade.maintenance.runningDetail")}
-    />
   ) : (
-    <StateRow
-      tone="ready"
-      title={t("settings.upgrade.maintenance.readyTitle")}
-      detail={t("settings.upgrade.maintenance.readyDetail")}
-    />
+    rows[phase]
   );
 
   return (
@@ -243,22 +242,14 @@ export default function MaintenanceControls() {
             {t("settings.upgrade.maintenance.description")}
           </p>
         </div>
-        {status && !showFailure && toggleButton(label(next))}
+        {status && !failed && toggleButton(label(next))}
       </div>
       <dl className="grid grid-cols-2 gap-3 text-sm [overflow-wrap:anywhere] lg:grid-cols-4">
         <div>
           <dt className="text-muted-foreground">
             {t("settings.upgrade.maintenance.status")}
           </dt>
-          <dd className="font-medium">
-            {!status
-              ? query.isPending
-                ? "—"
-                : t("settings.upgrade.maintenance.unknown")
-              : status.maintenance
-                ? t("settings.upgrade.maintenance.on")
-                : t("settings.upgrade.maintenance.off")}
-          </dd>
+          <dd className="font-medium">{statusText[phase]}</dd>
         </div>
         <div>
           <dt className="text-muted-foreground">
@@ -357,6 +348,11 @@ export default function MaintenanceControls() {
               )}
             </DialogDescription>
           </DialogHeader>
+          {dialog === "disable" && unappliedUpdates && (
+            <p role="note" className="text-sm">
+              {t("settings.upgrade.maintenance.unappliedUpdates")}
+            </p>
+          )}
           {dialog === "enable" && (
             <label className="grid gap-1">
               {t("settings.upgrade.maintenanceReason")}
