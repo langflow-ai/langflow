@@ -161,3 +161,25 @@ async def test_should_show_the_compaction_in_the_chat_message_while_the_run_stre
     assert event.state == "done"
     assert event.tokens_after < event.tokens_before
     assert SUMMARY not in final.text
+
+
+async def test_should_count_the_compaction_call_in_the_run_token_usage():
+    from lfx.base.agents.token_callback import TokenUsageCallbackHandler
+
+    def with_usage(message: AIMessage, tokens: int) -> AIMessage:
+        message.usage_metadata = {"input_tokens": tokens, "output_tokens": 1, "total_tokens": tokens + 1}
+        return message
+
+    summary = with_usage(AIMessage(content=SUMMARY), 1_000)
+    main = _main_model([AIMessage(content="done")])
+    main.responses = [with_usage(m, 10) for m in main.responses]
+    agent = create_agent(
+        model=main,
+        tools=[read_page],
+        middleware=[InRunCompactionMiddleware(FakeMessagesListChatModel(responses=[summary]), WINDOW)],
+    )
+    usage = TokenUsageCallbackHandler()
+    await agent.ainvoke({"messages": [("user", "read the pages")]}, config={"callbacks": [usage]})
+
+    # Five answer calls of 10 input tokens, plus the 1,000 of the summary call.
+    assert usage.get_usage().input_tokens == 5 * 10 + 1_000

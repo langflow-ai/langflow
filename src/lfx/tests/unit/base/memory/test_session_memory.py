@@ -253,3 +253,31 @@ def test_ollama_window_is_its_context_length_not_unknown():
     assert sm.model_window(ChatOllama(num_ctx=16_384)) == 16_384
     budget = sm.budget_for_window(sm.model_window(ChatOllama()))
     assert budget.high + budget.message_cap < sm.OLLAMA_DEFAULT_NUM_CTX // 2
+
+
+async def test_fold_prompt_gets_messages_cut_to_the_budget_message_cap():
+    store = Store()
+    for _ in range(3):
+        store.add("x" * 8_000)  # 2,000 tokens each
+    current = store.add("q")
+    budget = sm.budget_for_window(sm.OLLAMA_DEFAULT_NUM_CTX)  # message cap of 273 tokens
+    loaded = await _load(store, current, budget)
+    received: list[str] = []
+
+    async def summarize(_state, batch):
+        received.extend(m.text for m in batch)
+        return "summary"
+
+    saved = await sm.fold(
+        scope=SCOPE,
+        state=loaded.state,
+        batch=loaded.fold_batch,
+        summarize=summarize,
+        summary_model="m",
+        budget=budget,
+        store=store,
+    )
+    assert saved is not None
+    assert received
+    assert all(estimate_tokens(text) <= budget.message_cap + 30 for text in received)
+    assert len(store.messages[0].text) == 8_000  # the stored message does not change

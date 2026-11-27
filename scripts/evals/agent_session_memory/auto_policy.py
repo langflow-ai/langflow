@@ -44,6 +44,7 @@ class Auto(Policy):
                 batch=loaded.fold_batch,
                 summarize=summarize,
                 summary_model=MODEL,
+                budget=self.budget,
                 store=memstore,
             )
         return Prepared(loaded.history, fold)

@@ -4,6 +4,7 @@ from langchain.agents import create_agent
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import tool
+from langgraph.types import Command
 from lfx.base.memory.context_budget import cap_text, estimate_tokens
 from lfx.components.models_and_agents.agent_helpers.tool_result_cap_middleware import ToolResultCapMiddleware
 
@@ -75,3 +76,13 @@ def test_should_cap_text_blocks_together_and_keep_other_blocks():
 def test_cap_text_returns_same_object_inside_the_cap():
     text = "short"
     assert cap_text(text, 10) is text
+
+
+def test_should_cap_a_tool_message_inside_a_command():
+    message = ToolMessage(content=BIG, tool_call_id="call_1")
+    command = Command(update={"messages": [message], "other": 1})
+    capped = ToolResultCapMiddleware(max_tokens=1_000)._cap(command)
+    (inner,) = capped.update["messages"]
+    assert estimate_tokens(inner.content) <= 1_030
+    assert capped.update["other"] == 1
+    assert message.content == BIG  # the tool's own result is not changed

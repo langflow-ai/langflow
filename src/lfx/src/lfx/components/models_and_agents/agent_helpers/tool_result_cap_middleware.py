@@ -8,10 +8,12 @@ keep the full result. Only the model input sees the capped text.
 
 from __future__ import annotations
 
+from dataclasses import replace
 from typing import Any
 
 from langchain.agents.middleware import AgentMiddleware
 from langchain_core.messages import ToolMessage
+from langgraph.types import Command
 
 from lfx.base.memory.context_budget import TOOL_RESULT_CAP_TOKENS, cap_text, estimate_tokens
 from lfx.log.logger import logger
@@ -31,8 +33,14 @@ class ToolResultCapMiddleware(AgentMiddleware):
         return self._cap(await handler(request))
 
     def _cap(self, result: Any) -> Any:
+        if isinstance(result, Command) and isinstance(result.update, dict):
+            # A tool can return a Command whose update carries its ToolMessage.
+            messages = result.update.get("messages")
+            if isinstance(messages, list):
+                return replace(result, update={**result.update, "messages": [self._cap(m) for m in messages]})
+            return result
         if not isinstance(result, ToolMessage):
-            return result  # a Command, for example; it carries its own messages
+            return result
         content = result.content
         if isinstance(content, str):
             capped: Any = cap_text(content, self.max_tokens)

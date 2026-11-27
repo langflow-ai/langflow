@@ -1144,14 +1144,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             "session_id": self.graph.session_id,
             "context_id": self.context_id,
         }
-        loaded = await load_auto_history(
-            scope=scope, current_input_id=input_id, budget=budget_for_window(self._model_window(llm))
-        )
+        budget = budget_for_window(self._model_window(llm))
+        loaded = await load_auto_history(scope=scope, current_input_id=input_id, budget=budget)
         if loaded is None:
             return await self.get_memory_data()
         # Staged, not started: `_start_fold` runs it where the Agent really uses the history.
         self._staged_fold = (
-            {"scope": scope, "state": loaded.state, "batch": loaded.fold_batch} if loaded.fold_batch else None
+            {"scope": scope, "state": loaded.state, "batch": loaded.fold_batch, "budget": budget}
+            if loaded.fold_batch
+            else None
         )
         self._auto_history_memo = (input_id, loaded.history)
         return loaded.history

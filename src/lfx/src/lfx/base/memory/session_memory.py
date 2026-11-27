@@ -259,9 +259,13 @@ async def fold(
     batch: list[Message],
     summarize: Summarize,
     summary_model: str | None,
+    budget: Budget | None = None,
     store: ModuleType | Any = lfx_memory,
 ) -> SessionMemoryState | None:
     """Fold `batch` into the state with one `summarize` call and save it.
+
+    With `budget`, `summarize` gets each message cut to its message cap, the same size the batch was
+    measured with. Without it, a small window could get a fold prompt far above its context length.
 
     Returns the saved state. A lost race or a reset keeps the state of the other writer and returns the
     previous `state`: nothing failed, and the next turn reads the newer row. A failure (no usable reply,
@@ -273,7 +277,7 @@ async def fold(
     start = perf_counter()
     tokens_before = estimate_tokens(render_notes(state)) + sum(estimate_tokens(_text(m)) for m in batch)
     try:
-        summary = await summarize(state, batch)
+        summary = await summarize(state, [_capped(m, budget) for m in batch] if budget else batch)
         if not summary or batch[-1].id is None:
             _record_fold_failure(key)
             await logger.awarning("session_memory_fold_failed: no valid reply")
