@@ -10,6 +10,7 @@ from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComp
 from lfx.inputs.inputs import BoolInput, DataInput, DropdownInput, MessageTextInput, MultilineInput
 from lfx.io import HandleInput, IntInput
 from lfx.schema.message import Message
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.template.field.base import RangeSpec
 
 
@@ -461,6 +462,8 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
         last_trajectory_len = 0
         final_answer = ""
         last_event_time = None
+        invocation_scope = callback_invocation_scope(self.get_langchain_callbacks())
+        invocation_scope.__enter__()
 
         try:
             logger.info("Starting direct trajectory streaming")
@@ -776,6 +779,8 @@ class OpenDsStarAgentComponent(ToolCallingAgentComponent):
             agent_message.error = True
             agent_message = await self.send_message(message=agent_message)
             raise
+        finally:
+            invocation_scope.__exit__(None, None, None)
 
         self.status = agent_message
         return agent_message

@@ -6,6 +6,7 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.utils.python_repl_security import (
     ensure_code_execution_enabled,
     import_allowed_module,
@@ -172,5 +173,7 @@ class PythonREPLToolComponent(LCToolComponent):
         """Execute the configured Python code with workflow callbacks and return its output."""
         tool = self.build_tool()
         code_input = "" if self.python_code is None else self.python_code
-        result = tool.run({"code": code_input}, callbacks=self.get_langchain_callbacks())
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            result = tool.run({"code": code_input}, callbacks=callbacks)
         return [Data(data={"result": result})]

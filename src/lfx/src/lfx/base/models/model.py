@@ -17,6 +17,7 @@ from lfx.log.logger import logger
 from lfx.schema.message import Message
 from lfx.schema.properties import Usage
 from lfx.schema.token_usage import extract_usage_from_message
+from lfx.services.tracing.base import ScopedAsyncIterator, callback_invocation_scope
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -301,19 +302,21 @@ class LCModelComponent(Component):
                 if hasattr(self, "output_parser") and self.output_parser is not None:
                     active |= self.output_parser
 
+                callbacks = self.get_langchain_callbacks()
                 active = active.with_config(
                     {
                         "run_name": self.display_name,
                         "project_name": self.get_project_name(),
-                        "callbacks": self.get_langchain_callbacks(),
+                        "callbacks": callbacks,
                     }
                 )
-                if stream:
-                    lf_message, result, message = await self._handle_stream(active, inputs)
-                else:
-                    message = await active.ainvoke(inputs)
-                    result = message.content if hasattr(message, "content") else message
-                    result = _normalize_message_content(result)
+                with callback_invocation_scope(callbacks):
+                    if stream:
+                        lf_message, result, message = await self._handle_stream(active, inputs, callbacks)
+                    else:
+                        message = await active.ainvoke(inputs)
+                        result = message.content if hasattr(message, "content") else message
+                        result = _normalize_message_content(result)
                 if isinstance(message, AIMessage):
                     status_message = self.build_status_message(message)
                     self.status = status_message
@@ -364,12 +367,13 @@ class LCModelComponent(Component):
         )
         return True
 
-    async def _handle_stream(self, runnable, inputs):
+    async def _handle_stream(self, runnable, inputs, callbacks):
         """Handle streaming responses from the language model.
 
         Args:
             runnable: The language model configured for streaming
             inputs: The inputs to send to the model
+            callbacks: Callbacks whose scopes span stream consumption
 
         Returns:
             tuple: (Message object if connected to chat output, model result, AIMessage or None)
@@ -394,7 +398,7 @@ class LCModelComponent(Component):
             event_manager = getattr(self, "_event_manager", None)
             if session_id and event_manager:
                 model_message = Message(
-                    text=runnable.astream(inputs),
+                    text=ScopedAsyncIterator(runnable.astream(inputs), callbacks),
                     sender=MESSAGE_SENDER_AI,
                     sender_name="AI",
                     properties={"icon": self.icon, "state": "partial"},

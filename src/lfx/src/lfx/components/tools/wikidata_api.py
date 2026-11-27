@@ -8,6 +8,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import MultilineInput
 from lfx.schema.data import Data
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class WikidataSearchSchema(BaseModel):
@@ -88,7 +89,9 @@ class WikidataAPIComponent(LCToolComponent):
         """Search Wikidata with workflow callbacks and return labeled records as data."""
         tool = self.build_tool()
 
-        results = tool.run({"query": self.query}, callbacks=self.get_langchain_callbacks())
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            results = tool.run({"query": self.query}, callbacks=callbacks)
 
         # Transform the API response into Data objects
         data = [

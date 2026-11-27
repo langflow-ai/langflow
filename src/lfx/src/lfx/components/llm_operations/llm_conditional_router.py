@@ -32,6 +32,7 @@ from lfx.io import (
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
 from lfx.schema.token_usage import extract_usage_from_message
+from lfx.services.tracing.base import callback_invocation_scope
 
 _MAX_ROUTE_NUMBER = 9999
 # Choice and Language Model mode route through the routes table; Score keeps its own levels, so
@@ -680,7 +681,9 @@ class SmartRouterComponent(Component):
 
         try:
             if hasattr(llm, "invoke"):
-                response = llm.invoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
+                callbacks = self.get_langchain_callbacks()
+                with callback_invocation_scope(callbacks):
+                    response = llm.invoke(prompt, config={"callbacks": callbacks})
                 self._token_usage = extract_usage_from_message(response)
                 if hasattr(response, "content"):
                     categorization = response.content.strip().strip('"')

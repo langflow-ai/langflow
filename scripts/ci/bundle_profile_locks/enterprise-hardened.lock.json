@@ -68,9 +68,9 @@
       "providers": [
         "lfx-datastax"
       ],
-      "requested": ">=0.3.2,<1.0.0",
-      "requirement": "lfx-datastax==0.3.2",
-      "resolved_version": "0.3.2"
+      "requested": ">=0.3.3,<1.0.0",
+      "requirement": "lfx-datastax==0.3.3",
+      "resolved_version": "0.3.3"
     },
     {
       "distribution": "lfx-discord",
@@ -238,9 +238,9 @@
       "providers": [
         "lfx-toolguard"
       ],
-      "requested": ">=0.3.4,<1.0.0",
-      "requirement": "lfx-toolguard==0.3.4",
-      "resolved_version": "0.3.4"
+      "requested": ">=0.3.5,<1.0.0",
+      "requirement": "lfx-toolguard==0.3.5",
+      "resolved_version": "0.3.5"
     },
     {
       "distribution": "lfx-vllm",

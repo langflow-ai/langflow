@@ -6,6 +6,7 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 
 from lfx.field_typing.constants import LanguageModel
 from lfx.schema.message import Message
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 def _as_user_turn(message: BaseMessage) -> BaseMessage:
@@ -66,9 +67,11 @@ def _stream_with_remediation(
         yielded_chunk = False
         try:
             active = _configure_runnable(runnable, config)
-            for chunk in active.stream(inputs):
-                yielded_chunk = True
-                yield chunk
+            callbacks = config.get("get_langchain_callbacks", list)() if config else []
+            with callback_invocation_scope(callbacks):
+                for chunk in active.stream(inputs):
+                    yielded_chunk = True
+                    yield chunk
         except Exception as e:
             if not yielded_chunk and _remediate(e, remediation_target, applied_remediations):
                 continue
@@ -139,7 +142,9 @@ def get_chat_result(
     while True:
         try:
             active = _configure_runnable(runnable, config)
-            message = active.invoke(inputs)
+            callbacks = config.get("get_langchain_callbacks", list)() if config else []
+            with callback_invocation_scope(callbacks):
+                message = active.invoke(inputs)
             if token_usage_callback is not None and hasattr(message, "content"):
                 token_usage_callback(message)
             return message.content if hasattr(message, "content") else message

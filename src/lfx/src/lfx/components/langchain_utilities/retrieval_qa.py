@@ -5,6 +5,7 @@ from langchain_classic.chains import RetrievalQA
 from lfx.base.chains.model import LCChainComponent
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, MultilineInput
 from lfx.schema import Message
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class RetrievalQAComponent(LCChainComponent):
@@ -68,10 +69,12 @@ class RetrievalQAComponent(LCChainComponent):
             return_source_documents=True,
         )
 
-        result = runnable.invoke(
-            {"query": self.input_value},
-            config={"callbacks": self.get_langchain_callbacks()},
-        )
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            result = runnable.invoke(
+                {"query": self.input_value},
+                config={"callbacks": callbacks},
+            )
 
         source_docs = self.to_data(result.get("source_documents", keys=[]))
         result_str = str(result.get("result", ""))

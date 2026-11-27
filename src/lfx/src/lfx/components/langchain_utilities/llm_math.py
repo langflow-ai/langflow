@@ -3,6 +3,7 @@ from langchain_classic.chains import LLMMathChain
 from lfx.base.chains.model import LCChainComponent
 from lfx.inputs.inputs import HandleInput, MultilineInput
 from lfx.schema import Message
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.template.field.base import Output
 
 
@@ -32,10 +33,12 @@ class LLMMathChainComponent(LCChainComponent):
 
     def invoke_chain(self) -> Message:
         chain = LLMMathChain.from_llm(llm=self.llm)
-        response = chain.invoke(
-            {chain.input_key: self.input_value},
-            config={"callbacks": self.get_langchain_callbacks()},
-        )
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            response = chain.invoke(
+                {chain.input_key: self.input_value},
+                config={"callbacks": callbacks},
+            )
         result = response.get(chain.output_key, "")
         result = str(result)
         self.status = result
