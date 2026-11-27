@@ -348,7 +348,7 @@ async def _remote_lock(kb_id: UUID, *, shared=False):
                 pool_size=getattr(get_settings_service().settings, "knowledge_base_storage_pool_size", 20),
                 max_overflow=0,
                 pool_timeout=30,
-                pool_pre_ping=True,  # as the app pool: a database failover or restart ends the pooled connections
+                pool_pre_ping=True,  # always probe: coordination pool ignores app-pool idle pre-ping
                 connect_args=database._get_connect_args(),  # noqa: SLF001 -- preserve configured driver TLS options
             )
             _coordination_engines[engine_key] = engine

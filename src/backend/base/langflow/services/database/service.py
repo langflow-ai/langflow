@@ -280,6 +280,29 @@ def _is_sqlite_memory_database(database_url: str, connect_args: Mapping[str, obj
     return target is not None and target.in_memory
 
 
+def _configure_idle_pre_ping(engine: AsyncEngine, idle_seconds: float) -> None:
+    """Probe pooled connections only after they have been idle for ``idle_seconds``."""
+    sync_engine = engine.sync_engine
+
+    @event.listens_for(sync_engine, "checkin")
+    def _record_checkin(_dbapi_conn, connection_record) -> None:
+        connection_record.info["last_checkin"] = time.monotonic()
+
+    @event.listens_for(sync_engine, "checkout")
+    def _probe_if_idle(dbapi_conn, connection_record, _connection_proxy) -> None:
+        last_checkin = connection_record.info.get("last_checkin")
+        if last_checkin is None or (time.monotonic() - last_checkin) < idle_seconds:
+            return
+        try:
+            ping_ok = sync_engine.dialect.do_ping(dbapi_conn)
+        except Exception as err:
+            if sync_engine.dialect.is_disconnect(err, dbapi_conn, None):
+                raise sa.exc.InvalidatePoolError from err
+            raise
+        if not ping_ok:
+            raise sa.exc.InvalidatePoolError
+
+
 class DatabaseService(Service):
     name = "database_service"
 
@@ -444,11 +467,21 @@ class DatabaseService(Service):
                 logger.error(f"Invalid poolclass '{poolclass_key}' specified. Using default pool class.")
                 kwargs.pop("poolclass", None)
 
-        return create_async_engine(
+        idle_seconds = self.settings_service.settings.pool_pre_ping_idle_seconds
+        use_idle_probe = (
+            bool(kwargs.get("pool_pre_ping")) and idle_seconds > 0 and not self.database_url.startswith("sqlite")
+        )
+        if use_idle_probe:
+            kwargs["pool_pre_ping"] = False
+
+        engine = create_async_engine(
             self.database_url,
             connect_args=self._get_connect_args(),
             **kwargs,
         )
+        if use_idle_probe:
+            _configure_idle_pre_ping(engine, idle_seconds)
+        return engine
 
     @retry(wait=wait_fixed(2), stop=stop_after_attempt(10))
     def _create_engine_with_retry(self) -> AsyncEngine:

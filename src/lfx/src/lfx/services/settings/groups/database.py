@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 from shutil import copy2
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from lfx.log.logger import logger
 from lfx.utils.util_strings import is_valid_database_url, sanitize_database_url
@@ -73,6 +73,10 @@ class DatabaseSettings(BaseModel):
     - pool_recycle: Seconds before connections are recycled (prevents timeouts)
     - echo: Enable SQL query logging (development only)
     """
+
+    pool_pre_ping_idle_seconds: float = Field(default=0.0, ge=0)
+    """Seconds a pooled connection must sit idle before pre-ping probes it on checkout.
+    Set to 0 (the default) to probe on every checkout."""
 
     use_noop_database: bool = False
     """If True, disables all database operations and uses a no-op session.

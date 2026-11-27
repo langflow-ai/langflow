@@ -108,6 +108,7 @@ EXPECTED_FIELDS = {
     "sqlite_pragmas",
     "db_driver_connection_settings",
     "db_connection_settings",
+    "pool_pre_ping_idle_seconds",
     "use_noop_database",
     # CacheSettings
     "cache_type",
@@ -439,6 +440,13 @@ def test_critical_defaults_unchanged():
     assert settings.developer_api_enabled is False
     assert settings.dangerously_allow_multi_worker_without_shared_queue is False
     assert settings.knowledge_base_storage_pool_size == 20
+    assert settings.pool_pre_ping_idle_seconds == 0.0
+
+
+def test_pool_pre_ping_idle_seconds_rejects_negative_values(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("LANGFLOW_POOL_PRE_PING_IDLE_SECONDS", "-1")
+    with pytest.raises(ValidationError, match="greater than or equal to 0"):
+        Settings(_env_file=None)
 
 
 def test_database_tls_files_dir_reads_operator_environment(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
