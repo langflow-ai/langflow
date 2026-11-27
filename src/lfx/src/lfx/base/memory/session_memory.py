@@ -94,8 +94,8 @@ class AutoHistory:
 
 
 def message_tokens(message: Message, budget: Budget) -> int:
-    """Tokens of one message as the model input sends it: capped at the message cap."""
-    return min(estimate_tokens(_text(message)), budget.message_cap)
+    """Tokens of one message as the model input sends it: cut to the message cap, marker included."""
+    return estimate_tokens(cap_text(_text(message), budget.message_cap))
 
 
 def _text(message: Message) -> str:

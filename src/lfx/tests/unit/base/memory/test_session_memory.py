@@ -224,3 +224,14 @@ def test_notes_render_the_summary_as_background_notes():
 @pytest.mark.parametrize(("reply", "expected"), [("  Key facts:\n- a  ", "Key facts:\n- a"), ("   ", None)])
 def test_parse_fold_reply_keeps_text_and_rejects_an_empty_reply(reply, expected):
     assert sm.parse_fold_reply(reply) == expected
+
+
+async def test_history_bound_counts_the_cap_marker_of_cut_messages():
+    store = Store()
+    for _ in range(6):
+        store.add("x" * 10_000)  # each one is cut to the message cap
+    current = store.add("q")
+    budget = sm.Budget(high=1_000, low=500, message_cap=200)
+    loaded = await _load(store, current, budget)
+    sent = sum(estimate_tokens(m.text) for m in loaded.history)
+    assert sent <= budget.high + budget.message_cap
