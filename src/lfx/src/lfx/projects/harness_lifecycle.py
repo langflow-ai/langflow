@@ -9,14 +9,13 @@ from uuid import UUID
 
 from lfx.base.agents.harness import HarnessRuntimeConfig
 from lfx.projects.bindings import compose_instructions, reject_recursive_binding
-from lfx.projects.compaction import compose_compaction
-from lfx.projects.context import compose_context
+from lfx.projects.builtin_slots import HARNESS_BINDING_SLOTS
 from lfx.projects.dependencies import validate_binding_dependencies
 from lfx.projects.flow_slots import BINDING_LABELS, ProjectFlowBindings, validate_project_binding
 from lfx.projects.hooks import compose_hooks
 from lfx.projects.lifecycle import FlowChange, PreparedSave, ProjectConfigError
 from lfx.projects.local_tools import local_tool_bindings, local_tool_definition
-from lfx.projects.permissions import compose_permission
+from lfx.projects.schema import Cardinality
 from lfx.projects.skills import HarnessSkills, compose_skills, skill_pack_references
 from lfx.projects.source_resolution import resolve_skill_pack, resolve_sources, resolve_tool_pack
 from lfx.projects.tool_packs import FlowDependencyVersion, ToolPackToolBinding, tool_pack_references
@@ -364,36 +363,19 @@ def compose_harness(definition, prepared: PreparedSave, ctx: CompositionContext)
         except (ValueError, KeyError, TypeError) as exc:
             msg = f"Could not bind Hooks: {exc}"
             raise ProjectConfigError(msg) from exc
-        try:
-            data = compose_context(
-                data,
-                project_id=str(ctx.project.id),
-                agent_id=agent_node_ids(data)[0],
-                binding=bindings.context_strategy,
-            )
-        except (ValueError, KeyError, TypeError) as exc:
-            msg = f"Could not bind Context: {exc}"
-            raise ProjectConfigError(msg) from exc
-        try:
-            data = compose_compaction(
-                data,
-                project_id=str(ctx.project.id),
-                agent_id=agent_node_ids(data)[0],
-                binding=bindings.compaction,
-            )
-        except (ValueError, KeyError, TypeError) as exc:
-            msg = f"Could not bind Compaction: {exc}"
-            raise ProjectConfigError(msg) from exc
-        try:
-            data = compose_permission(
-                data,
-                project_id=str(ctx.project.id),
-                agent_id=agent_node_ids(data)[0],
-                binding=bindings.tool_policy,
-            )
-        except (ValueError, KeyError, TypeError) as exc:
-            msg = f"Could not bind Permissions: {exc}"
-            raise ProjectConfigError(msg) from exc
+        for field_name, slot in HARNESS_BINDING_SLOTS.items():
+            if slot.cardinality is not Cardinality.SINGLE or not slot.origin_key:
+                continue
+            try:
+                data = slot.compose_binding(
+                    data,
+                    project_id=str(ctx.project.id),
+                    agent_id=agent_node_ids(data)[0],
+                    binding=getattr(bindings, field_name),
+                )
+            except (ValueError, KeyError, TypeError) as exc:
+                msg = f"Could not bind {slot.binding_label}: {exc}"
+                raise ProjectConfigError(msg) from exc
         if state.compose_tools:
             try:
                 data = compose_tools(

@@ -4,7 +4,7 @@ from langchain_core.runnables import RunnableLambda
 from pydantic import Field
 
 from lfx.base.agents.context_messages import messages_from_table, messages_to_table
-from lfx.projects.bindings import FlowBinding, compose_single_binding, contract_outputs, flow_revision
+from lfx.projects.bindings import FlowBinding, contract_outputs, flow_revision
 from lfx.projects.builtin_slots import CONTEXT_MANAGER
 from lfx.projects.invocation import ReviewedFlowRunner
 
@@ -49,18 +49,6 @@ def validate_context_binding(data: dict, binding: FlowBinding) -> None:
 
 def parse_context_binding(value: str) -> ContextBinding | None:
     return ContextBinding.model_validate_json(value) if value.strip() not in {"", "null", "{}"} else None
-
-
-def compose_context(data: dict, *, project_id: str, agent_id: str, binding: ContextBinding | None) -> dict:
-    return compose_single_binding(
-        data,
-        project_id=project_id,
-        agent_id=agent_id,
-        binding=binding,
-        input_name=CONTEXT_MANAGER.agent_input_name,
-        origin_name=CONTEXT_ORIGIN,
-        label="Context",
-    )
 
 
 class ContextFlowRunner:

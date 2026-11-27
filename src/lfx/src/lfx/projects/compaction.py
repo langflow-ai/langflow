@@ -5,7 +5,7 @@ from pydantic import Field
 
 from lfx.base.agents.compaction import COMPACTION_MODEL, CompactionResult
 from lfx.base.agents.context_messages import messages_to_table
-from lfx.projects.bindings import FlowBinding, compose_single_binding, contract_outputs, flow_revision
+from lfx.projects.bindings import FlowBinding, contract_outputs, flow_revision
 from lfx.projects.builtin_slots import COMPACTOR
 from lfx.projects.invocation import ReviewedFlowRunner
 
@@ -51,18 +51,6 @@ def validate_compaction_binding(data: dict, binding: FlowBinding) -> None:
 
 def parse_compaction_binding(value: str) -> CompactionBinding | None:
     return CompactionBinding.model_validate_json(value) if value.strip() not in {"", "null", "{}"} else None
-
-
-def compose_compaction(data: dict, *, project_id: str, agent_id: str, binding: CompactionBinding | None) -> dict:
-    return compose_single_binding(
-        data,
-        project_id=project_id,
-        agent_id=agent_id,
-        binding=binding,
-        input_name=COMPACTOR.agent_input_name,
-        origin_name=COMPACTION_ORIGIN,
-        label="Compaction",
-    )
 
 
 class CompactionFlowRunner:

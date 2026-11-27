@@ -6,8 +6,9 @@ from copy import deepcopy
 import pytest
 from lfx.projects.baselines import permission_baseline
 from lfx.projects.bindings import flow_revision, reject_recursive_binding
+from lfx.projects.builtin_slots import PERMISSION_GATE
 from lfx.projects.flow_slots import ProjectFlowBindings, flow_runtime_bindings, remap_runtime_bindings
-from lfx.projects.permissions import PERMISSION_ORIGIN, PermissionBinding, compose_permission, permission_outputs
+from lfx.projects.permissions import PERMISSION_ORIGIN, PermissionBinding, permission_outputs
 
 from tests.unit.projects.test_compaction_bindings import agent_data as compaction_agent_data
 
@@ -27,7 +28,7 @@ def binding_for():
 
 
 def compose(data, binding):
-    return compose_permission(data, project_id="project", agent_id="agent", binding=binding)
+    return PERMISSION_GATE.compose_binding(data, project_id="project", agent_id="agent", binding=binding)
 
 
 def test_permission_reconciles_and_clears_only_owned_values():

@@ -86,6 +86,20 @@ class SlotDefinition:
     def validation_source(self, source: dict) -> dict:
         return source.get("data", {})
 
+    def compose_binding(self, data: dict, *, project_id: str, agent_id: str, binding: FlowBinding | None) -> dict:
+        """Write a single-flow binding onto the Agent's hidden input while it matches the project's last write."""
+        from lfx.projects.bindings import compose_single_binding
+
+        return compose_single_binding(
+            data,
+            project_id=project_id,
+            agent_id=agent_id,
+            binding=binding,
+            input_name=self.agent_input_name,
+            origin_name=self.origin_key,
+            label=self.binding_label,
+        )
+
     def build_baseline(self, initial_value: str | None = None, *, initial_config: dict | None = None) -> dict:  # noqa: ARG002
         msg = "This contract does not yet provide a working baseline."
         raise ValueError(msg)
