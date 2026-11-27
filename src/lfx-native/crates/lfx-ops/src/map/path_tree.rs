@@ -1,9 +1,15 @@
 //! A tree with siblings
 //! sorted in insertion order.
 //!
-//! Paths are relative to
-//! the starting node.
-//! An empty path refers to that node.
+//! The tree path supplied
+//! in `Node`'s method arguments,
+//! e.g., [`Node::set`]
+//! are relative to
+//! the starting node,
+//! so an empty path refers
+//! to the starting node
+//! that was passed as
+//! an argument.
 
 use std::hash::Hash;
 
@@ -129,6 +135,9 @@ impl<K: Clone + Eq + Hash, D> Node<K, D> {
     /// An ancestor is missing or holds a scalar.
     pub(crate) fn attach(&mut self, path: &[K], subtree: Self) -> Result<(), InvalidPath> {
         let Some((key, parent_path)) = path.split_last() else {
+            // path is empty
+            // so set self to
+            // provided subtree
             *self = subtree;
             return Ok(());
         };

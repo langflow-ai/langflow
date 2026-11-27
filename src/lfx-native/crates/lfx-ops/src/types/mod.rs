@@ -1,4 +1,4 @@
-//! The value types the engine uses to represent flows.
+//! rust types for deserialized flow jsons.
 
 mod flow_obj;
 mod flow_str;
