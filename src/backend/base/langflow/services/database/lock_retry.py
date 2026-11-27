@@ -20,7 +20,7 @@ import sqlite3
 from typing import TYPE_CHECKING, TypeVar
 
 from lfx.log.logger import logger
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import PendingRollbackError, SQLAlchemyError
 
 if TYPE_CHECKING:
     from collections.abc import Awaitable, Callable
@@ -67,6 +67,22 @@ def is_database_lock_error(exc: BaseException | None) -> bool:
     return False
 
 
+def is_retryable_write_error(exc: BaseException | None) -> bool:
+    """Return True when rerunning the write in a fresh transaction can succeed.
+
+    A lock conflict is the usual case, but it is not the only shape the caller
+    sees. Once a statement has failed, SQLAlchemy refuses every later statement
+    on that session until it is rolled back, so a lock that the request hit
+    *before* the write shows up as :class:`PendingRollbackError` instead of the
+    original error. That session is exactly what a fresh transaction fixes, so
+    it belongs in the retry predicate; without it the write would be reported as
+    a caller error and never retried.
+    """
+    if is_database_lock_error(exc):
+        return True
+    return isinstance(exc, PendingRollbackError)
+
+
 def sanitize_database_error(exc: BaseException, fallback: str) -> str:
     """Return a client-safe message for *exc*.
 
@@ -100,7 +116,7 @@ async def run_with_lock_retry(
         try:
             return await operation(attempt)
         except Exception as exc:
-            if attempt == last_attempt or not is_database_lock_error(exc):
+            if attempt == last_attempt or not is_retryable_write_error(exc):
                 raise
             # The snapshot is stale: roll the transaction back so the retry
             # reads current data instead of failing on the same conflict.
