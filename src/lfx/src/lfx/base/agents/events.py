@@ -10,6 +10,7 @@ from lfx.events.event_manager import emit_token
 from lfx.schema.content_types import TextContent, ToolContent
 from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 from lfx.schema.message import Message
+from lfx.schema.properties import ContextEvent
 
 GetPendingInterrupt = Callable[[], Awaitable[dict[str, Any] | None]]
 
@@ -484,6 +485,44 @@ class ChainEventHandler(Protocol):
 EventHandler = ToolEventHandler | ChainEventHandler
 
 # Define separate mappings of event types to their respective handler functions
+# Custom event of the Agent's in-run compaction (see InRunCompactionMiddleware).
+COMPACTION_EVENT = "agent_context_compaction"
+
+
+def upsert_context_event(message: Message, event: ContextEvent) -> None:
+    """Add `event` to the message's `properties.context_events`, or replace the one with the same id.
+
+    Context events live in properties, not in content_blocks: properties survive the storage round trip,
+    and the v1 projection of content_blocks drops leaves that are not tool calls.
+    """
+    properties = message.properties
+    current = properties.get("context_events") if isinstance(properties, dict) else properties.context_events
+    events = [e for e in (current or []) if (e["id"] if isinstance(e, dict) else e.id) != event.id]
+    events.append(event)
+    if isinstance(properties, dict):
+        properties["context_events"] = [e if isinstance(e, dict) else e.model_dump() for e in events]
+    else:
+        properties.context_events = [e if isinstance(e, ContextEvent) else ContextEvent(**e) for e in events]
+
+
+async def handle_on_custom_event(
+    event: dict[str, Any],
+    agent_message: Message,
+    send_message_callback: SendMessageFunctionType,
+    _send_token_callback: OnTokenFunctionType | None,
+    start_time: float,
+    **_kwargs: Any,
+) -> tuple[Message, float]:
+    """Show a compaction of the run's context in the chat message while the run streams."""
+    data = event.get("data")
+    if event.get("name") != COMPACTION_EVENT or not isinstance(data, dict) or not data.get("id"):
+        return agent_message, start_time
+    fields = {k: data[k] for k in ("state", "tokens_before", "tokens_after", "duration") if data.get(k) is not None}
+    upsert_context_event(agent_message, ContextEvent(id=data["id"], kind="compaction", **fields))
+    agent_message = await send_message_callback(message=agent_message, skip_db_update=True)
+    return agent_message, start_time
+
+
 CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     "on_chain_start": handle_on_chain_start,
     "on_chain_end": handle_on_chain_end,
@@ -494,6 +533,7 @@ CHAIN_EVENT_HANDLERS: dict[str, ChainEventHandler] = {
     # interleaved text + tool_use the model emitted and appends them
     # to content_blocks in producer order.
     "on_chat_model_end": handle_on_chat_model_end,
+    "on_custom_event": handle_on_custom_event,
 }
 
 TOOL_EVENT_HANDLERS: dict[str, ToolEventHandler] = {

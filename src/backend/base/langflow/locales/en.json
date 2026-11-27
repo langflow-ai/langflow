@@ -50,6 +50,8 @@
   "components.agent.inputs.api_key.info.e9e392f1": "Overrides global provider settings. Leave blank to use your pre-configured API Key.",
   "components.agent.inputs.base_url_ibm_watsonx.display_name.a882cd1d": "watsonx API Endpoint",
   "components.agent.inputs.base_url_ibm_watsonx.info.be6cb2d3": "The base URL of the API (IBM watsonx.ai only)",
+  "components.agent.inputs.chat_history_mode.display_name.93a2434f": "Chat History Mode",
+  "components.agent.inputs.chat_history_mode.info.cc384d60": "Last N Messages sends the newest stored messages as they are. Auto keeps a summary of older messages, sends recent messages as they are, and keeps the history under a token budget for the model.",
   "components.agent.inputs.context_id.display_name.2051cde7": "Context ID",
   "components.agent.inputs.context_id.info.55bf9c83": "The context ID of the chat. Adds an extra layer to the local memory.",
   "components.agent.inputs.format_instructions.display_name.d647baaf": "Output Format Instructions",

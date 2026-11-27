@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import uuid
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from time import perf_counter
 from typing import TYPE_CHECKING, Any, cast
 
 from langchain.agents import create_agent
@@ -17,6 +19,7 @@ from langgraph.types import Command
 from lfx.components.models_and_agents.agent_helpers.graph_event_adapter import (
     adapt_graph_events_to_executor_shape,
 )
+from lfx.components.models_and_agents.agent_helpers.in_run_compaction_middleware import InRunCompactionMiddleware
 from lfx.components.models_and_agents.agent_helpers.messages_input_builder import (
     build_initial_messages,
 )
@@ -28,6 +31,7 @@ from lfx.components.models_and_agents.agent_helpers.single_tool_call_middleware 
 )
 from lfx.components.models_and_agents.agent_helpers.tool_approval import ToolApprovalMixin
 from lfx.components.models_and_agents.agent_helpers.tool_call_id_middleware import ToolCallIDMiddleware
+from lfx.components.models_and_agents.agent_helpers.tool_result_cap_middleware import ToolResultCapMiddleware
 from lfx.components.models_and_agents.memory import MemoryComponent, _safe_graph_user_id, aget_agent_chat_history
 
 if TYPE_CHECKING:
@@ -40,10 +44,25 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
-from lfx.base.agents.events import AgentPausedError, ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.events import (
+    AgentPausedError,
+    ExceptionWithMessageError,
+    process_agent_events,
+    upsert_context_event,
+)
 from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.base.constants import STREAM_INFO_TEXT
+from lfx.base.memory.context_budget import tool_result_cap
+from lfx.base.memory.session_memory import (
+    FOLD_TIMEOUT_SECONDS,
+    budget_for_window,
+    fold,
+    format_fold_prompt,
+    load_auto_history,
+    model_window,
+    parse_fold_reply,
+)
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
@@ -60,11 +79,16 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, ModelInput, StrInput
 from lfx.io import IntInput, MessageTextInput, MultilineInput, Output, SecretStrInput, TableInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
+from lfx.memory.flow_context import is_evals_memory_isolated, should_persist_messages
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
+from lfx.schema.properties import ContextEvent, Usage
 from lfx.schema.table import EditMode
 from lfx.utils.constants import MESSAGE_SENDER_AI
+
+CHAT_HISTORY_LAST_N = "Last N Messages"
+CHAT_HISTORY_AUTO = "Auto"
 
 
 def set_advanced_true(component_input):
@@ -112,6 +136,32 @@ def _agent_base_inputs():
         ),
     }
     return [overrides.get(inp.name, inp) for inp in LCToolsAgentComponent.get_base_inputs() if inp.name not in drop]
+
+
+def _add_usage(own: Usage | None, other: Usage | None) -> Usage | None:
+    """Plain sum of two usages. `accumulate_usage` takes the max, which would hide the fold call."""
+    if not other:
+        return own
+    if not own:
+        return other
+    return Usage(
+        input_tokens=(own.input_tokens or 0) + (other.input_tokens or 0),
+        output_tokens=(own.output_tokens or 0) + (other.output_tokens or 0),
+        total_tokens=(own.total_tokens or 0) + (other.total_tokens or 0),
+    )
+
+
+def _content_text(content: Any) -> str:
+    """The text of a model reply `content`: a string, or the text parts of a list of blocks."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return "".join(
+            block if isinstance(block, str) else str(block.get("text", ""))
+            for block in content
+            if isinstance(block, str) or (isinstance(block, dict) and block.get("type", "text") == "text")
+        )
+    return ""
 
 
 def _extract_text_content(value) -> str:
@@ -213,6 +263,19 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             info="The context ID of the chat. Adds an extra layer to the local memory.",
             value="",
             advanced=True,
+        ),
+        DropdownInput(
+            name="chat_history_mode",
+            display_name="Chat History Mode",
+            info=(
+                "Last N Messages sends the newest stored messages as they are. "
+                "Auto keeps a summary of older messages, sends recent messages as they are, "
+                "and keeps the history under a token budget for the model."
+            ),
+            options=[CHAT_HISTORY_LAST_N, CHAT_HISTORY_AUTO],
+            value=CHAT_HISTORY_LAST_N,
+            advanced=True,
+            real_time_refresh=True,
         ),
         IntInput(
             name="n_messages",
@@ -409,7 +472,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             return None
         return val
 
-    def _get_llm(self):
+    def _get_llm(self, *, stream: bool = True):
         """Override parent to include max_tokens from the Agent's input field.
 
         Streaming is mandatory for AgentComponent: ``runnable.astream_events(v2)`` only
@@ -420,12 +483,13 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         Without ``stream=True``, the chat model accumulates the whole response and
         only emits ``on_chat_model_end``, silently disabling the Playground's live-
         typing view and breaking the streaming contract on the /events surface.
+        Internal one-shot calls (session memory folds) pass ``stream=False``.
         """
         return get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
-            stream=True,
+            stream=stream,
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
@@ -459,7 +523,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             raise ValueError(msg)
 
         # Get memory data
-        self.chat_history = await self.get_memory_data()
+        self.chat_history = await self._history_for_turn(llm_model)
         await logger.adebug(f"Retrieved {len(self.chat_history)} chat history messages")
         if isinstance(self.chat_history, Message):
             self.chat_history = [self.chat_history]
@@ -637,6 +701,10 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         # crashing the flow.
         if self.tools:
             middleware.append(ToolCallIDMiddleware())
+        window = self._model_window(llm) if self._auto_mode() else None
+        if self._auto_mode() and self.tools:
+            # Auto mode keeps one run under the model window: no tool result enters it above the cap.
+            middleware.append(ToolResultCapMiddleware(max_tokens=tool_result_cap(window)))
         max_iterations = getattr(self, "max_iterations", None)
         if max_iterations is not None:
             # `max_iterations` is a safety cap, not an "unlimited" toggle. A saved
@@ -664,6 +732,9 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         if is_watsonx_model(llm):
             middleware.append(SingleToolCallMiddleware())
             middleware.append(WatsonXPlaceholderMiddleware())
+        # Auto mode compacts a run that reaches 80% of the model window. Off when the window is unknown.
+        if window:
+            middleware.append(InRunCompactionMiddleware(self._get_llm(stream=False), window))
         # Human-in-the-loop: attach only when a tool is gated AND interrupts are allowed
         # (the structured-output path disables them), keeping ungated flows unchanged.
         interrupt_on = self._gated_interrupt_on() if allow_interrupts else {}
@@ -764,10 +835,16 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             logger.exception("Agent run failed after a partial message was emitted")
             raise
 
-        usage_data = token_usage_handler.get_usage()
-        if usage_data:
-            self._token_usage = usage_data
-            result.properties.usage = usage_data
+        # Auto mode: wait for the fold beside the answer, so its usage and its final state reach this message.
+        fold_usage = await self._await_fold()
+        usage_data = _add_usage(token_usage_handler.get_usage(), fold_usage)
+        fold_event = getattr(self, "_fold_event", None)
+        if fold_event is not None:
+            upsert_context_event(result, fold_event)
+        if usage_data or fold_event is not None:
+            if usage_data:
+                self._token_usage = usage_data
+                result.properties.usage = usage_data
             # Only round-trip the DB when the message was stored (Chat Output wired).
             # `_should_skip_message=True` leaves `result.get_id()` empty; persisting
             # then would create a phantom row.
@@ -789,10 +866,16 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             session_id = None
 
         sender_name = get_chat_output_sender_name(self) or self.display_name or "AI"
+        properties: dict[str, Any] = {"icon": "Bot", "state": "partial"}
+        fold_event = getattr(self, "_fold_event", None)
+        if fold_event is not None:
+            # A fold that started for this turn is in the first message, so the chat shows it while the
+            # answer streams.
+            properties["context_events"] = [fold_event.model_dump()]
         return Message(
             sender=MESSAGE_SENDER_AI,
             sender_name=sender_name,
-            properties={"icon": "Bot", "state": "partial"},
+            properties=properties,
             # `text=""` sentinel so MessageTable's no_content check accepts
             # an in-flight agent message whose content_blocks haven't been
             # populated yet. Mirrors ChatInput's convention.
@@ -922,6 +1005,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
     async def message_response(self) -> Message:
         async def _run_once() -> Message:
             llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+            self._start_fold()
             self.set(
                 llm=llm_model,
                 tools=self.tools or [],
@@ -932,11 +1016,26 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             agent = self.create_agent_runnable()
             return await self.run_agent(agent)
 
-        result = await self._run_agent_with_model_remediation(_run_once)
+        try:
+            result = await self._run_agent_with_model_remediation(_run_once)
+        except BaseException:
+            await self._settle_fold(cancel=True)
+            raise
+        await self._settle_fold()
         self._agent_result = result
         return result
 
     async def json_response(self) -> Data:
+        """Structured output; see `_json_response`. Also settles the background session memory fold."""
+        try:
+            result = await self._json_response()
+        except BaseException:
+            await self._settle_fold(cancel=True)
+            raise
+        await self._settle_fold()
+        return result
+
+    async def _json_response(self) -> Data:
         """Produce structured Data via native LLM structured output, with prompt-based fallback.
 
         Native path (no tools, llm has with_structured_output) bypasses the agent loop and
@@ -967,6 +1066,8 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                     first_attempt = False
                 else:
                     llm_model, self.chat_history, self.tools = await self.get_agent_requirements()
+                # The native structured-output path ignores history; only this fallback run uses it.
+                self._start_fold()
                 self.set(
                     llm=llm_model,
                     tools=self.tools or [],
@@ -1018,6 +1119,122 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
         ]
+
+    def _auto_mode(self) -> bool:
+        return getattr(self, "chat_history_mode", CHAT_HISTORY_LAST_N) == CHAT_HISTORY_AUTO
+
+    async def _history_for_turn(self, llm: Any):
+        """Chat history for this turn. Last N mode runs `get_memory_data` and nothing else.
+
+        Auto mode reads the session notes and the unfolded messages under the token budget of `llm`, and
+        stages a fold when one is due. It uses the Last N read when the input is not stored, messages are not
+        persisted, or the store has no session memory (standalone lfx).
+        """
+        input_id = getattr(self.input_value, "id", None)
+        if not (self._auto_mode() and input_id and should_persist_messages() and not is_evals_memory_isolated()):
+            return await self.get_memory_data()
+
+        # get_agent_requirements() runs again on remediation retries and in json_response; load once per turn.
+        cached = getattr(self, "_auto_history_memo", None)
+        if cached is not None and cached[0] == input_id:
+            return cached[1]
+        scope = {
+            "flow_id": getattr(self.graph, "flow_id", None),
+            "user_id": _safe_graph_user_id(self),
+            "session_id": self.graph.session_id,
+            "context_id": self.context_id,
+        }
+        budget = budget_for_window(self._model_window(llm))
+        loaded = await load_auto_history(scope=scope, current_input_id=input_id, budget=budget)
+        if loaded is None:
+            return await self.get_memory_data()
+        # Staged, not started: `_start_fold` runs it where the Agent really uses the history.
+        self._staged_fold = (
+            {"scope": scope, "state": loaded.state, "batch": loaded.fold_batch, "budget": budget}
+            if loaded.fold_batch
+            else None
+        )
+        self._auto_history_memo = (input_id, loaded.history)
+        return loaded.history
+
+    def _start_fold(self) -> None:
+        """Start the staged fold beside the run. No-op if none is staged or one is already pending.
+
+        The run waits for it at the end (see `_settle_fold`), so a turn that folds can finish a little later.
+        """
+        staged = getattr(self, "_staged_fold", None)
+        if staged is None or getattr(self, "_fold_task", None) is not None:
+            return
+        self._staged_fold = None
+        self._fold_usage_handler = TokenUsageCallbackHandler()
+        self._fold_event = ContextEvent(id=f"fold-{uuid.uuid4().hex[:12]}", kind="fold", messages=len(staged["batch"]))
+        self._fold_started = perf_counter()
+        self._fold_task = asyncio.create_task(
+            fold(**staged, summarize=self._summarize_history, summary_model=self._get_resolved_model_name())
+        )
+
+    async def _await_fold(self, *, cancel: bool = False) -> Usage | None:
+        """Wait for the background fold (or cancel it) and return its token usage.
+
+        Marks the fold event `done` unless the fold failed (see `fold`), with its duration.
+        """
+        task = getattr(self, "_fold_task", None)
+        if task is None:
+            return None
+        self._fold_task = None
+        if cancel:
+            task.cancel()
+        try:
+            # `wait` does not raise for the fold's own cancellation, but it does pass ours on (Stop).
+            await asyncio.wait({task})
+        except asyncio.CancelledError:
+            task.cancel()
+            raise
+        outcome = None if task.cancelled() or task.exception() is not None else task.result()
+        event = getattr(self, "_fold_event", None)
+        if event is not None:
+            self._fold_event = event.model_copy(
+                update={
+                    "state": "done" if outcome is not None else "failed",
+                    "duration": round((perf_counter() - self._fold_started) * 1000),
+                }
+            )
+        handler = getattr(self, "_fold_usage_handler", None)
+        return handler.get_usage() if handler else None
+
+    async def _settle_fold(self, *, cancel: bool = False) -> None:
+        """Wait for the background fold (or cancel it) and add its token usage to this run.
+
+        Also ends the run's history memo, which only serves retries inside one run, and drops a staged fold.
+        """
+        self._auto_history_memo = None
+        self._staged_fold = None
+        fold_usage = await self._await_fold(cancel=cancel)
+        if fold_usage:
+            self._token_usage = _add_usage(getattr(self, "_token_usage", None), fold_usage)
+
+    def _model_window(self, llm: Any) -> int | None:
+        """The model input window: the LangChain model profile first, then the catalog metadata of the model."""
+        window = model_window(llm)
+        if window is None and isinstance(self.model, list) and self.model and isinstance(self.model[0], dict):
+            value = (self.model[0].get("metadata") or {}).get("context_window")
+            window = value if isinstance(value, int) and value > 0 else None
+        return window
+
+    async def _summarize_history(self, state, messages: Sequence[Message]):
+        """Fold `messages` into `state` with one model call, streaming off. None on any failure."""
+        try:
+            llm = self._get_llm(stream=False)
+            usage_handler = getattr(self, "_fold_usage_handler", None)
+            callbacks = ([usage_handler] if usage_handler else []) + self._get_shared_callbacks()
+            response = await asyncio.wait_for(
+                llm.ainvoke(format_fold_prompt(state, messages), config={"callbacks": callbacks}),
+                FOLD_TIMEOUT_SECONDS,
+            )
+            return parse_fold_reply(_content_text(response.content))
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"session_memory_fold_failed: {type(exc).__name__}")
+            return None
 
     def update_input_types(self, build_config: dotdict) -> dotdict:
         """Update input types for all fields in build_config."""
@@ -1081,6 +1298,11 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             if missing_keys:
                 msg = f"Missing required keys in build_config: {missing_keys}"
                 raise ValueError(msg)
+        if field_name == "chat_history_mode":
+            # Auto has no message count: it keeps the history under a token budget.
+            auto = field_value == CHAT_HISTORY_AUTO
+            if "n_messages" in build_config:
+                build_config["n_messages"]["show"] = not auto
         await self._filter_legacy_provider_options(build_config)
         return dotdict({k: v.to_dict() if hasattr(v, "to_dict") else v for k, v in build_config.items()})
 

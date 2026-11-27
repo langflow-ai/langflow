@@ -184,3 +184,37 @@ describe("useChatHistory answered HITL cards", () => {
     ).toBe("tibia");
   });
 });
+
+describe("useChatHistory context events", () => {
+  it("keeps the fold and compaction events of a message", async () => {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const event = { id: "fold-1", kind: "fold", state: "done", messages: 4 };
+    queryClient.setQueryData(
+      ["useGetMessagesQuery", { id: "flow-1", session_id: "session-1" }],
+      [
+        {
+          id: "m1",
+          flow_id: "flow-1",
+          session_id: "session-1",
+          sender: "Machine",
+          sender_name: "AI",
+          text: "answer",
+          properties: { state: "complete", context_events: [event] },
+        },
+      ],
+    );
+    mockUseGetMessagesQuery.mockReturnValue({ data: undefined });
+    mockGetMessages.mockResolvedValue({ data: [] });
+
+    const { result } = renderHook(() => useChatHistory("session-1"), {
+      wrapper: createWrapper(queryClient),
+    });
+    await act(async () => {});
+
+    expect(result.current.chatHistory[0]?.properties?.context_events).toEqual([
+      event,
+    ]);
+  });
+});

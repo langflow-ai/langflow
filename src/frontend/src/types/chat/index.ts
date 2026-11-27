@@ -40,6 +40,19 @@ export type UsageType = {
   total_tokens?: number | null;
 };
 
+// A change to the context of an Agent run: a session fold or an in-run
+// compaction. The same event (same id) moves from "running" to "done" or
+// "failed" while the message streams. Duration is in milliseconds.
+export type ContextEvent = {
+  id: string;
+  kind: "fold" | "compaction";
+  state: "running" | "done" | "failed";
+  messages?: number | null;
+  tokens_before?: number | null;
+  tokens_after?: number | null;
+  duration?: number | null;
+};
+
 export type PropertiesType = {
   source?: SourceType;
   icon?: string;
@@ -52,6 +65,7 @@ export type PropertiesType = {
   positive_feedback?: boolean | null;
   build_duration?: number | null;
   usage?: UsageType | null;
+  context_events?: ContextEvent[] | null;
 };
 
 export type ChatOutputType = {

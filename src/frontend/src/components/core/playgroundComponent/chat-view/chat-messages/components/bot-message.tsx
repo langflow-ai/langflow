@@ -6,6 +6,7 @@ import IconComponent, {
 } from "@/components/common/genericIconComponent";
 import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
+import { ContextEventDisplay } from "@/components/core/chatComponents/ContextEventDisplay";
 import HumanInputCard from "@/components/core/chatComponents/HumanInputCard";
 import { findHumanInputContent } from "@/controllers/API/agui/human-input-card";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
@@ -241,6 +242,14 @@ export const BotMessage = memo(
                     ) : null}
                   </span>
                 </div>
+
+                {(chat.properties?.context_events?.length ?? 0) > 0 && (
+                  <div className="mt-2 flex flex-col gap-1">
+                    {chat.properties?.context_events?.map((event) => (
+                      <ContextEventDisplay key={event.id} event={event} />
+                    ))}
+                  </div>
+                )}
 
                 {humanInputContent && (
                   <div className="mt-2">

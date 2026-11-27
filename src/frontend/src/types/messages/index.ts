@@ -1,4 +1,4 @@
-import type { ContentBlockItem, UsageType } from "../chat";
+import type { ContentBlockItem, ContextEvent, UsageType } from "../chat";
 
 type Message = {
   flow_id: string;
@@ -29,6 +29,7 @@ type Message = {
     positive_feedback?: boolean | null;
     build_duration?: number | null;
     usage?: UsageType | null;
+    context_events?: ContextEvent[] | null;
     [key: string]: unknown;
   };
   content_blocks?: ContentBlockItem[];
