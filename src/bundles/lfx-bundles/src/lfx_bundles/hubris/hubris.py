@@ -6,7 +6,7 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput
 from pydantic.v1 import SecretStr
 
-HUBRIS_BASE_URL = "https://api.hubris.pw/v1"
+HUBRIS_BASE_URL = "https://api.hubris.pro/v1"
 
 
 class HubrisComponent(LCModelComponent):
@@ -22,7 +22,7 @@ class HubrisComponent(LCModelComponent):
         SecretStrInput(
             name="api_key",
             display_name="Hubris API Key",
-            info="Create one at https://hubris.pw/keys.",
+            info="Create one at https://hubris.pro/keys.",
             value="HUBRIS_API_KEY",
             required=True,
             real_time_refresh=True,
