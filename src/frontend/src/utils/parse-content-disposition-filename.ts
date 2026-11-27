@@ -11,6 +11,6 @@ export function parseContentDispositionFilename(
       // fall through to legacy filename=
     }
   }
-  const legacyMatch = header.match(/filename="?([^";\n]+)"?/);
-  return legacyMatch?.[1]?.trim() ?? fallback;
+  const legacyMatch = header.match(/filename="([^"\n]+)"|filename=([^";\n]+)/);
+  return legacyMatch?.[1]?.trim() ?? legacyMatch?.[2]?.trim() ?? fallback;
 }
