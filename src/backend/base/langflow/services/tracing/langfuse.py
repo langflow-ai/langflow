@@ -658,6 +658,7 @@ class LangFuseTracer(BaseTracer):
         self._root_span.update(
             input={"input": trace_input},
             output={"output": trace_output},
+            metadata=metadata_ser,
         )
         self._update_trace_metadata(metadata_ser)
         self._root_span.set_trace_io(input={"input": trace_input}, output={"output": trace_output})
