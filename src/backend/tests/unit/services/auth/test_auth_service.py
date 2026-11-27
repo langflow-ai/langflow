@@ -806,9 +806,18 @@ def test_create_user_api_key(auth_service: AuthService):
 
 
 def _login_session_db():
-    """Async execution returns a synchronous SQLAlchemy result."""
+    """Async execution returns a synchronous SQLAlchemy result.
+
+    Both access paths are stubbed because the auth service reaches the database
+    through two of them: ``exec`` for the session lookup, and ``execute`` for the
+    maintenance flag, which stays on the plain SQLAlchemy call so a caller holding
+    its own engine can ask the same question.
+    """
     db = AsyncMock()
-    db.execute.return_value = SimpleNamespace(scalar_one_or_none=lambda: "registered-session")
+    db.execute.return_value = SimpleNamespace(
+        scalar_one_or_none=lambda: "registered-session",
+        scalars=lambda: SimpleNamespace(first=lambda: None),
+    )
     db.exec.return_value = SimpleNamespace(first=lambda: _dummy_user(uuid4()))
     return db
 
@@ -1338,9 +1347,9 @@ async def test_materialize_external_user_rechecks_profile_after_concurrent_admis
         details={"resource": "builders", "limit": 1, "current": 1, "tier": "essentials"},
     )
     db = AsyncMock()
+    db.execute.return_value = SimpleNamespace(scalars=lambda: SimpleNamespace(first=lambda: False))
     db.exec = AsyncMock(
         side_effect=[
-            SimpleNamespace(first=lambda: False),
             SimpleNamespace(first=lambda: None),
             SimpleNamespace(first=lambda: profile),
         ]
