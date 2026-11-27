@@ -485,15 +485,15 @@ class TestFlowNameParsing:
 
         assert tracer.flow_name == expected_name
         assert tracer.flow_id == expected_flow_id
-        assert client.start_observation.call_args.kwargs["name"] == expected_name
-        assert client.start_observation.call_args.kwargs["metadata"]["flow_id"] == expected_flow_id
+        assert client.start_as_current_observation.call_args.kwargs["name"] == expected_name
+        assert client.start_as_current_observation.call_args.kwargs["metadata"]["flow_id"] == expected_flow_id
 
     def test_unnamed_flow_falls_back_to_flow_id(self):
         # An unnamed graph formats its run name as "None - <id>"; the trace must not be called "None".
         tracer, client = self._make_tracer("None - flow-xyz")
 
         assert tracer.flow_id == "flow-xyz"
-        assert client.start_observation.call_args.kwargs["name"] == "flow-xyz"
+        assert client.start_as_current_observation.call_args.kwargs["name"] == "flow-xyz"
 
 
 class TestGraphRunNamesTraceAfterFlow:
