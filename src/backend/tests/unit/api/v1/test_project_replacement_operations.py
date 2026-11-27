@@ -272,12 +272,17 @@ async def test_replacement_deadlock_retry_recovers_from_a_real_transaction(
     }
 
     original_flush = AsyncSession.flush
-    flush_calls = 0
+    target_session_ids: set[int] = set()
+    target_flush_calls = 0
+    deadlock_injected = False
 
     async def flush_with_one_deadlock(self, *args, **kwargs):
-        nonlocal flush_calls
-        flush_calls += 1
-        if flush_calls == 1:
+        nonlocal deadlock_injected, target_flush_calls
+        if id(self) not in target_session_ids:
+            return await original_flush(self, *args, **kwargs)
+        target_flush_calls += 1
+        if not deadlock_injected:
+            deadlock_injected = True
             statement, message = "UPDATE flow", "simulated deadlock on first flush"
             raise _deadlock_error(statement, message)
         return await original_flush(self, *args, **kwargs)
@@ -294,6 +299,7 @@ async def test_replacement_deadlock_retry_recovers_from_a_real_transaction(
     async def counting_replace_once(**kwargs):
         nonlocal attempt_calls
         attempt_calls += 1
+        target_session_ids.add(id(kwargs["session"]))
         return await original_replace_once(**kwargs)
 
     monkeypatch.setattr(projects_module, "_replace_project_operation_once", counting_replace_once)
@@ -301,7 +307,7 @@ async def test_replacement_deadlock_retry_recovers_from_a_real_transaction(
     replaced = await client.put(url, json=body, headers=logged_in_headers)
 
     assert replaced.status_code == 200, replaced.text
-    assert flush_calls >= 2, "the first flush must have raised and the attempt retried"
+    assert target_flush_calls >= 2, "the first flush must have raised and the attempt retried"
     assert attempt_calls == 2, "the whole operation must run exactly twice: the deadlocked attempt, then recovery"
     assert replaced.json()["flows"][0]["name"] == body["flows"][0]["name"]
     assert replaced.json()["flows"][0]["data"] == body["flows"][0]["data"]
