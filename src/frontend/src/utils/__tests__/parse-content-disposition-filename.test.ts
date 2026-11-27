@@ -91,4 +91,13 @@ describe("parseContentDispositionFilename", () => {
       ),
     ).toBe("report; final.csv");
   });
+
+  it("unescapes quoted quotes in a legacy filename", () => {
+    expect(
+      parseContentDispositionFilename(
+        'attachment; filename="report; final \\"v2\\".csv"',
+        "fallback.txt",
+      ),
+    ).toBe('report; final "v2".csv');
+  });
 });

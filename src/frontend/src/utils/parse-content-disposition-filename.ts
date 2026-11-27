@@ -11,6 +11,12 @@ export function parseContentDispositionFilename(
       // fall through to legacy filename=
     }
   }
-  const legacyMatch = header.match(/filename="([^"\n]+)"|filename=([^";\n]+)/);
-  return legacyMatch?.[1]?.trim() ?? legacyMatch?.[2]?.trim() ?? fallback;
+  const legacyMatch = header.match(
+    /filename="((?:[^"\\\n]|\\.)*)"|filename=([^";\n]+)/i,
+  );
+  const quoted = legacyMatch?.[1];
+  if (quoted !== undefined) {
+    return quoted.replace(/\\(["\\])/g, "$1").trim();
+  }
+  return legacyMatch?.[2]?.trim() ?? fallback;
 }
