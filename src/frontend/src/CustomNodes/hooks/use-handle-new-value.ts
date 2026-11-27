@@ -36,6 +36,28 @@ export type handleOnNewValueType = (
   },
 ) => void;
 
+// The request goes out after the store already holds the new server, so the
+// backend cannot read the node's previous server anywhere else. Request-only:
+// the stored node never carries this field.
+const withPreviousMcpServer = (
+  requestNode: APIClassType,
+  previousNode: APIClassType,
+  name: string,
+): APIClassType => {
+  if (name !== "mcp_server") return requestNode;
+  const previous = previousNode.template?.mcp_server?.value;
+  return {
+    ...requestNode,
+    template: {
+      ...requestNode.template,
+      _frontend_node_previous_mcp_server: {
+        value:
+          typeof previous === "string" ? previous : (previous?.name ?? null),
+      },
+    },
+  } as APIClassType;
+};
+
 const useHandleOnNewValue = ({
   node,
   nodeId,
@@ -178,7 +200,7 @@ const useHandleOnNewValue = ({
         }
         debouncedMutateRef.current(
           changes.value,
-          newNode,
+          withPreviousMcpServer(newNode, node, name),
           setNodeClass,
           postTemplateValue,
           setErrorData,
