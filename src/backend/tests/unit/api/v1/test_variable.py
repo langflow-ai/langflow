@@ -67,6 +67,61 @@ async def test_create_variable(client: AsyncClient, generic_variable, logged_in_
     assert generic_variable["value"] == result["value"]
 
 
+@pytest.fixture
+def post_creation_registry():
+    from langflow.services import creation_hooks
+
+    saved = {resource: list(hooks) for resource, hooks in creation_hooks._post_creation_hooks.items()}
+    yield creation_hooks
+    for resource, hooks in saved.items():
+        creation_hooks._post_creation_hooks[resource][:] = hooks
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_create_variable_runs_post_creation_hooks_after_the_row_is_committed(
+    post_creation_registry, client: AsyncClient, generic_variable, logged_in_headers, active_user
+):
+    seen = []
+
+    async def hook(context):
+        # A separate session sees the row only if the route committed before calling the hook.
+        from langflow.services.database.models.variable.model import Variable
+        from langflow.services.deps import session_scope
+
+        async with session_scope() as other:
+            seen.append((context, await other.get(Variable, context.resource_id) is not None))
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_VARIABLE, hook)
+
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert len(seen) == 1
+    context, row_was_visible = seen[0]
+    assert row_was_visible is True
+    assert context.resource == "variable"
+    assert context.owner_id == active_user.id
+    assert str(context.resource_id) == response.json()["id"]
+    assert context.name == generic_variable["name"]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_create_variable_keeps_the_row_when_a_hook_fails_the_request(
+    post_creation_registry, client: AsyncClient, generic_variable, logged_in_headers
+):
+    async def hook(_context):
+        raise HTTPException(status_code=500, detail="follow-up failed")
+
+    post_creation_registry.register_post_creation_hook(post_creation_registry.RESOURCE_VARIABLE, hook)
+
+    response = await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
+
+    assert response.status_code == 500
+    assert response.json()["detail"] == "follow-up failed"
+    listed = await client.get("api/v1/variables/", headers=logged_in_headers)
+    assert generic_variable["name"] in [item["name"] for item in listed.json()]
+
+
 @pytest.mark.usefixtures("active_user")
 async def test_create_variable__variable_name_already_exists(client: AsyncClient, generic_variable, logged_in_headers):
     await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)
@@ -306,6 +361,68 @@ async def test_delete_variable(client: AsyncClient, generic_variable, logged_in_
     response = await client.delete(f"api/v1/variables/{saved.get('id')}", headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_204_NO_CONTENT
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_delete_variable_runs_the_deletion_hooks(
+    deletion_registry, client: AsyncClient, generic_variable, logged_in_headers, active_user
+):
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    seen = []
+
+    async def pre(context):
+        from langflow.services.database.models.variable.model import Variable
+
+        seen.append(("pre", context, await context.session.get(Variable, context.resource_id) is not None))
+
+    async def post(context):
+        from langflow.services.database.models.variable.model import Variable
+        from langflow.services.deps import session_scope
+
+        # No session is handed over, and the row is already gone for everyone else: the delete committed.
+        async with session_scope() as other:
+            seen.append(("post", context, await other.get(Variable, context.resource_id) is not None))
+
+    deletion_registry.register_pre_deletion_hook("variable", pre)
+    deletion_registry.register_post_deletion_hook("variable", post)
+    response = await client.delete(f"api/v1/variables/{saved['id']}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    await deletion_registry.wait_for_post_deletion_runs()
+
+    assert [(phase, row_visible) for phase, _, row_visible in seen] == [("pre", True), ("post", False)]
+    _, pre_context, _ = seen[0]
+    _, post_context, _ = seen[1]
+    assert pre_context.session is not None
+    assert post_context.session is None
+    for context in (pre_context, post_context):
+        assert context.resource == "variable"
+        assert str(context.resource_id) == saved["id"]
+        assert context.owner_id == active_user.id
+        assert context.name == generic_variable["name"]
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_a_pre_deletion_refusal_keeps_the_variable(
+    deletion_registry, client: AsyncClient, generic_variable, logged_in_headers
+):
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    post_ran = []
+
+    async def refuse(_context):
+        raise HTTPException(status_code=409, detail="in use")
+
+    async def post(context):
+        post_ran.append(context)
+
+    deletion_registry.register_pre_deletion_hook("variable", refuse)
+    deletion_registry.register_post_deletion_hook("variable", post)
+    response = await client.delete(f"api/v1/variables/{saved['id']}", headers=logged_in_headers)
+    await deletion_registry.wait_for_post_deletion_runs()
+
+    assert response.status_code == status.HTTP_409_CONFLICT
+    listed = await client.get("api/v1/variables/", headers=logged_in_headers)
+    assert generic_variable["name"] in [item["name"] for item in listed.json()]
+    assert post_ran == []
 
 
 @pytest.mark.usefixtures("active_user")

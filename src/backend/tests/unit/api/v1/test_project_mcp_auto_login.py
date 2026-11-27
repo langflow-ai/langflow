@@ -5,13 +5,49 @@ import pytest
 from fastapi import HTTPException
 from httpx import AsyncClient
 from langflow.api.v1.mcp_projects import init_mcp_servers, verify_project_auth
+from langflow.api.v1.schemas import MCPProjectUpdateRequest
 from langflow.api.v2.mcp import get_server
+from langflow.schema.project_auth import stored_project_auth_type
 from langflow.services.database.models.api_key.model import ApiKey
-from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.folder.model import Folder, FolderCreate, FolderUpdate
 from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.base.mcp.util import project_mcp_server_name
 from lfx.base.mcp.uvx import mcp_sdk_constraint_args
+from pydantic import ValidationError
 from sqlmodel import select
+
+
+@pytest.mark.parametrize(
+    ("model", "fields"),
+    [(FolderCreate, {"name": "Project"}), (FolderUpdate, {}), (MCPProjectUpdateRequest, {"settings": []})],
+)
+@pytest.mark.parametrize("incomplete", [{}, {"oauth_port": "8000"}, {"auth_type": "unknown"}])
+def test_project_auth_settings_require_an_explicit_mode(model, fields, incomplete):
+    with pytest.raises(ValidationError):
+        model.model_validate({**fields, "auth_settings": incomplete})
+    assert model.model_validate(fields).auth_settings is None
+    explicit = {"auth_type": "none"}
+    assert (
+        model.model_validate({**fields, "auth_settings": explicit}).model_dump(exclude_none=True)["auth_settings"]
+        == explicit
+    )
+
+
+@pytest.mark.parametrize(
+    ("settings", "expected"),
+    [
+        (None, None),
+        ({}, "apikey"),
+        ({"oauth_port": "8000"}, "apikey"),
+        ({"auth_type": "unknown"}, "unknown"),
+        ({"auth_type": None}, "invalid"),
+        ({"auth_type": "none"}, "none"),
+        ({"auth_type": "oauth"}, "oauth"),
+        ({"auth_type": "apikey"}, "apikey"),
+    ],
+)
+def test_stored_project_auth_type(settings, expected):
+    assert stored_project_auth_type(settings) == expected
 
 
 def _set_auto_login(monkeypatch, *, skip_auth: bool, superuser: str) -> None:

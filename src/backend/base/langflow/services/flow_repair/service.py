@@ -9,12 +9,14 @@ from typing import TYPE_CHECKING, Any, Literal
 from uuid import UUID, uuid4
 
 from fastapi import HTTPException
+from lfx.base.models.provider_registry import provider_name_for_id
 from lfx.log import logger
+from lfx.services.model_provider_policy import ModelProviderPolicyError
 from lfx.utils.flow_validation import CustomComponentValidationError
 from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import col, select, update
 
-from langflow.api.utils.migration_pause import is_paused
+from langflow.api.utils.migration_pause import REPAIR_REFUSAL, is_paused
 from langflow.services.audit import vocabulary as audit_vocab
 from langflow.services.audit.attribution import resolve_audit_actor
 from langflow.services.audit.writer import AuditEventDraft, stage_audit_event
@@ -47,7 +49,7 @@ async def target_registry() -> dict[str, Any]:
 
 async def require_repair_window(session: AsyncSession) -> None:
     if is_paused():
-        raise HTTPException(status_code=503, detail="The instance migration pause does not permit repairs")
+        raise HTTPException(status_code=503, detail=REPAIR_REFUSAL)
     state = await maintenance_status(session)
     if not state.maintenance:
         raise HTTPException(status_code=409, detail="Enable database maintenance before applying repairs")
@@ -104,6 +106,7 @@ async def _plan_selected(
         result.data_sha256 = data_digest(flow.data)
         plan = plan_flow_repair(flow.data, all_types)
         result.reason_codes = plan.reason_codes
+        result.reason_detail = plan.reason_detail
         if plan.data is not None:
             await validate_owner_policy(flow, owner, plan.data, all_types)
             result.updated_nodes = plan.updated_nodes
@@ -126,8 +129,21 @@ def _failed_result(flow_id: UUID, exc: Exception) -> RepairResult:
         return RepairResult(flow_id=flow_id, status="failed", reason_codes=["repair_prerequisite_unavailable"])
     if isinstance(exc, ProviderSelectionUnverifiableError):
         return RepairResult(flow_id=flow_id, status="manual", reason_codes=["provider_selection_unverifiable"])
+    if isinstance(exc, ModelProviderPolicyError):
+        provider = provider_name_for_id(exc.provider_id) or exc.provider_id
+        return RepairResult(
+            flow_id=flow_id,
+            status="manual",
+            reason_codes=["owner_policy_denied"],
+            reason_detail=f"The flow owner's model provider policy does not allow {provider}.",
+        )
     if isinstance(exc, PermissionError | CustomComponentValidationError):
-        return RepairResult(flow_id=flow_id, status="manual", reason_codes=["owner_policy_denied"])
+        return RepairResult(
+            flow_id=flow_id,
+            status="manual",
+            reason_codes=["owner_policy_denied"],
+            reason_detail=str(exc) if isinstance(exc, CustomComponentValidationError) else None,
+        )
     if isinstance(exc, ValueError | TypeError):
         return RepairResult(flow_id=flow_id, status="manual", reason_codes=["malformed_flow"])
     if isinstance(exc, SQLAlchemyError) and is_database_lock_error(exc):

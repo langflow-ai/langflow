@@ -55,6 +55,13 @@ from langflow.services.auth.external import (
     set_current_external_access_context,
 )
 from langflow.services.auth.refresh_tokens import create_refresh_session, refresh_session_id, register_refresh_session
+from langflow.services.auth.user_admission import admit_user_creation
+from langflow.services.creation_hooks import (
+    ERROR_CODE_TIER_LIMIT_REACHED,
+    PreCreationDenied,
+    is_tier_limit_http_denial,
+    pre_creation_denied_to_http,
+)
 from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -579,6 +586,10 @@ class AuthService(BaseAuthService):
             msg = "User not found"
             raise InvalidCredentialsError(msg)
 
+        if payload.get("session_version") != user.session_version:
+            msg = "Invalid token"
+            raise AuthInvalidTokenError(msg)
+
         if not user.is_active:
             logger.info("User is inactive")
             msg = "User account is inactive"
@@ -975,26 +986,30 @@ class AuthService(BaseAuthService):
             SSOUserProfile.sso_provider == identity.provider,
             SSOUserProfile.sso_user_id == identity.subject,
         )
-        profile = (await db.exec(profile_stmt)).first()
 
-        if profile is not None:
-            user = await get_user_by_id(db, profile.user_id)
-            if user is None:
+        async def refresh_existing_profile(existing_profile: SSOUserProfile) -> User:
+            existing_user = await get_user_by_id(db, existing_profile.user_id)
+            if existing_user is None:
                 msg = "Mapped external user was not found"
-                raise AuthInvalidTokenError(msg)
-            if not user.is_active:
+                raise AuthInvalidTokenError(msg) from None
+            if not existing_user.is_active:
                 msg = "User account is inactive"
-                raise InactiveUserError(msg)
+                raise InactiveUserError(msg) from None
             now = datetime.now(timezone.utc)
             # Only overwrite the stored email when the token carries one; a later
             # token that omits the email claim must not erase a previously stored
             # address.
             if identity.email is not None:
-                profile.email = identity.email
-            profile.sso_last_login_at = now
-            profile.updated_at = now
-            await update_user_last_login_at(user.id, db)
-            return user
+                existing_profile.email = identity.email
+            existing_profile.sso_last_login_at = now
+            existing_profile.updated_at = now
+            await update_user_last_login_at(existing_user.id, db)
+            return existing_user
+
+        profile = (await db.exec(profile_stmt)).first()
+
+        if profile is not None:
+            return await refresh_existing_profile(profile)
 
         username = await self._unique_external_username(db, identity)
         random_password = secrets.token_urlsafe(48)
@@ -1006,8 +1021,15 @@ class AuthService(BaseAuthService):
             is_superuser=False,
             last_login_at=now,
         )
-        db.add(user)
         try:
+            from langflow.services.deps import get_authorization_service
+
+            await admit_user_creation(
+                db,
+                authorization_service=get_authorization_service(),
+                candidate=user,
+            )
+            db.add(user)
             # Flush `user` on its own before constructing `new_profile`.
             # SSOUserProfile.user_id is a bare FK column - no SQLModel
             # Relationship() ties User and SSOUserProfile together - so
@@ -1029,6 +1051,25 @@ class AuthService(BaseAuthService):
             await db.flush()
             await db.refresh(user)
             await self._initialize_jit_user_defaults(user, db)
+        except HTTPException as denied:
+            # Enterprise tier hooks deliberately raise the canonical structured
+            # denial here rather than at a FastAPI route boundary. Roll back the
+            # request transaction before letting the response reach auth.
+            await db.rollback()
+            if not is_tier_limit_http_denial(denied):
+                raise
+            profile = (await db.exec(profile_stmt)).first()
+            if profile is not None:
+                return await refresh_existing_profile(profile)
+            raise
+        except PreCreationDenied as denied:
+            await db.rollback()
+            if denied.error_code != ERROR_CODE_TIER_LIMIT_REACHED:
+                raise pre_creation_denied_to_http(denied) from denied
+            profile = (await db.exec(profile_stmt)).first()
+            if profile is not None:
+                return await refresh_existing_profile(profile)
+            raise pre_creation_denied_to_http(denied) from denied
         except IntegrityError:
             await db.rollback()
             profile = (await db.exec(profile_stmt)).first()
@@ -1506,17 +1547,41 @@ class AuthService(BaseAuthService):
                 last_login_at=None,
             )
 
-            db.add(super_user)
+            async def recover_committed_superuser() -> User | None:
+                committed_user = await get_user_by_username_case_insensitive(db, username)
+                return committed_user if committed_user is not None and committed_user.is_superuser else None
+
+            from langflow.services.deps import get_authorization_service
+
             try:
+                # Keep caller-owned writes and locks when a concurrent creation wins.
+                async with db.begin_nested():
+                    await admit_user_creation(
+                        db,
+                        authorization_service=get_authorization_service(),
+                        candidate=super_user,
+                    )
+                    db.add(super_user)
+                    await db.flush()
+            except PreCreationDenied as denied:
+                if denied.error_code != ERROR_CODE_TIER_LIMIT_REACHED:
+                    raise pre_creation_denied_to_http(denied) from denied
+                if committed_user := await recover_committed_superuser():
+                    return committed_user
+                raise pre_creation_denied_to_http(denied) from denied
+            except HTTPException as denied:
+                if not is_tier_limit_http_denial(denied):
+                    raise
+                if committed_user := await recover_committed_superuser():
+                    return committed_user
+                raise
+            except IntegrityError:
+                if committed_user := await recover_committed_superuser():
+                    return committed_user
+                raise
+            else:
                 await db.commit()
                 await db.refresh(super_user)
-            except IntegrityError:
-                await db.rollback()
-                super_user = await get_user_by_username(db, username)
-                if not super_user:
-                    raise
-            except Exception:  # noqa: BLE001
-                logger.debug("Error creating superuser.", exc_info=True)
 
         return super_user
 
@@ -1586,12 +1651,16 @@ class AuthService(BaseAuthService):
             return UUID(int=0)
 
     async def create_user_tokens(self, user_id: UUID, db: AsyncSession, *, update_last_login: bool = False) -> dict:
+        user = await get_user_by_id(db, user_id)
+        if user is None or not user.is_active:
+            raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
+        session_version = user.session_version
         session_id = secrets.token_urlsafe(32)
-        tokens = self._create_session_tokens(user_id, session_id)
+        tokens = self._create_session_tokens(user_id, session_id, session_version)
         expires_at = datetime.now(timezone.utc) + timedelta(
             seconds=self.settings.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS
         )
-        if not await create_refresh_session(session_id, str(user_id), expires_at, db):
+        if not await create_refresh_session(session_id, str(user_id), expires_at, db, session_version):
             raise HTTPException(status_code=401, detail="User account is inactive or no longer exists")
         from langflow.services.maintenance.state import maintenance_enabled
 
@@ -1599,19 +1668,25 @@ class AuthService(BaseAuthService):
             await update_user_last_login_at(user_id, db)
         return tokens
 
-    def _create_session_tokens(self, user_id: UUID, session_id: str) -> dict:
+    def _create_session_tokens(self, user_id: UUID, session_id: str, session_version: str | None) -> dict:
         """Issue a token pair belonging to one native login session."""
         settings_service = self.settings
 
         access_token_expires = timedelta(seconds=settings_service.auth_settings.ACCESS_TOKEN_EXPIRE_SECONDS)
         access_token = self.create_token(
-            data={"sub": str(user_id), "type": "access"},
+            data={"sub": str(user_id), "type": "access", "session_version": session_version},
             expires_delta=access_token_expires,
         )
 
         refresh_token_expires = timedelta(seconds=settings_service.auth_settings.REFRESH_TOKEN_EXPIRE_SECONDS)
         refresh_token = self.create_token(
-            data={"sub": str(user_id), "type": "refresh", "jti": secrets.token_urlsafe(32), "sid": session_id},
+            data={
+                "sub": str(user_id),
+                "type": "refresh",
+                "jti": secrets.token_urlsafe(32),
+                "sid": session_id,
+                "session_version": session_version,
+            },
             expires_delta=refresh_token_expires,
         )
 
@@ -1659,7 +1734,10 @@ class AuthService(BaseAuthService):
             if not user_exists.is_active:
                 raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account is inactive")
 
-            tokens = self._create_session_tokens(user_id, session_id)
+            if payload.get("session_version") != user_exists.session_version:
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
+
+            tokens = self._create_session_tokens(user_id, session_id, user_exists.session_version)
             # Compute this upper bound after minting to cover the replacement's
             # full lifetime, including when the configured TTL changes.
             expires_at = max(

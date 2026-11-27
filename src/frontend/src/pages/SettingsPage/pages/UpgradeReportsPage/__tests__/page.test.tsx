@@ -1,13 +1,16 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import { migrationKeys } from "@/controllers/API/queries/migration";
+import * as checkApi from "@/controllers/API/queries/upgrade-reports/use-upgrade-check";
 import useAuthStore from "@/stores/authStore";
 import type { Users } from "@/types/api";
 import { axe } from "@/utils/a11y-test";
 import UpgradeReportsPage from "..";
+import FlowList from "../FlowList";
+import { reportReason } from "../format";
 import { history, preview, report } from "./fixture";
 
 function open(admin: boolean | null = true) {
@@ -70,6 +73,242 @@ beforeEach(() => {
 });
 afterEach(() => jest.restoreAllMocks());
 
+it("shows the palette label in archived retirement findings and preserves other text", () => {
+  const message =
+    "retired in 1.13.0. Replace with files_and_knowledge.Knowledge";
+  expect(reportReason({ code: "retired", message })).toBe(
+    "retired in 1.13.0. Replace with Knowledge",
+  );
+  expect(reportReason({ code: "customized", message })).toBe(message);
+});
+
+it("distinguishes repeated imports of the same report even in the same minute", async () => {
+  const repeated = {
+    ...history,
+    total: 3,
+    items: [
+      report,
+      {
+        ...report,
+        id: "import-two",
+        source_database: "qa_prod",
+        incomplete: true,
+      },
+      { ...report, id: "import-three" },
+    ],
+  };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith(report.id)
+      ? report
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : repeated,
+  }));
+  open();
+
+  const historySelect = await screen.findByLabelText("Choose a report");
+  const labels = within(historySelect)
+    .getAllByRole("option")
+    .filter((option) => option.getAttribute("value"))
+    .map((option) => option.textContent);
+
+  expect(labels[1]).toContain("qa_prod · Assessment incomplete");
+  expect(new Set(labels).size).toBe(3);
+  expect(labels.every((label) => label?.includes("Imported"))).toBe(true);
+});
+
+it("uses the database name when an imported locator has a numeric path", async () => {
+  const source = {
+    ...report.document.source,
+    identity: {
+      kind: "database",
+      sha256: "a".repeat(64),
+      locator: { path: 3, database: "qa_reports" },
+    },
+  };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith(report.id)
+      ? { ...report, document: { ...report.document, source } }
+      : history,
+  }));
+  open();
+  expect(await screen.findByText("sqlite · qa_reports")).toBeInTheDocument();
+});
+
+it("opens and focuses the completed check after another history entry was selected", async () => {
+  const other = { ...report, id: "older-report" };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith(report.id)
+      ? report
+      : url.endsWith(other.id)
+        ? other
+        : url.endsWith("/releases")
+          ? { current: "1.14.0", package: "langflow", releases: [] }
+          : url.endsWith("/repairs")
+            ? { items: [], total: 0 }
+            : { items: [report, other], total: 2 },
+  }));
+  jest.spyOn(checkApi, "runUpgradeCheck").mockResolvedValue({
+    kind: "imported",
+    reportId: report.id,
+    flows: null,
+    incomplete: null,
+  });
+  const scroll = jest.fn();
+  open();
+  await userEvent.type(
+    await screen.findByLabelText("Target release"),
+    "1.14.0",
+  );
+  await userEvent.click(screen.getByRole("button", { name: "Check upgrade" }));
+  const view = await screen.findByRole("button", { name: "View report" });
+  const historySelect = await screen.findByLabelText("Choose a report");
+  await userEvent.selectOptions(historySelect, other.id);
+  await waitFor(() => expect(historySelect).toHaveValue(other.id));
+  const oldHeading = await screen.findByRole("heading", {
+    name: "Report details",
+  });
+  Element.prototype.scrollIntoView ??= jest.fn();
+  jest.spyOn(Element.prototype, "scrollIntoView").mockImplementation(scroll);
+  await userEvent.click(view);
+  await waitFor(() => expect(historySelect).toHaveValue(report.id));
+  await waitFor(() =>
+    expect(document.getElementById("upgrade-report-title")).toHaveFocus(),
+  );
+  expect(oldHeading).not.toHaveFocus();
+  expect(scroll).toHaveBeenCalled();
+});
+
+it("explains flow-level counts on running versions without claiming they are unavailable", async () => {
+  const flow = report.document.flows[0];
+  const usage = {
+    ...flow.usage!.editor,
+    limitations: ["usage_is_flow_level_not_version_specific"],
+  };
+  render(
+    <FlowList
+      flows={[
+        {
+          ...flow,
+          kind: "flow_version",
+          usage: { editor: usage, serving: usage },
+        },
+      ]}
+      selected={new Set()}
+      onSelect={jest.fn()}
+    />,
+  );
+  await userEvent.click(screen.getByText("Usage, deployments, and findings"));
+
+  expect(screen.getAllByText(/Retained runs 0/)).toHaveLength(2);
+  expect(
+    screen.queryByText(/Execution history is unavailable/),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getAllByText(/Counts cover the flow, not this specific version/),
+  ).toHaveLength(2);
+});
+
+it.each([
+  [
+    { deployments: ["deployment-1"], triggers: ["trigger-1"] },
+    "Deployments: deployment-1 · Triggers: trigger-1",
+  ],
+  [{ deployments: [], triggers: [] }, "None"],
+  [{}, "None"],
+])(
+  "labels deployment and trigger usage, including empty lists %#",
+  async (usedBy, expected) => {
+    render(
+      <FlowList
+        flows={[{ ...report.document.flows[0], used_by: usedBy }]}
+        selected={new Set()}
+        onSelect={jest.fn()}
+      />,
+    );
+    await userEvent.click(screen.getByText("Usage, deployments, and findings"));
+
+    expect(
+      screen.getByText(`Deployments and triggers ${expected}`),
+    ).toBeVisible();
+  },
+);
+
+it("shows old report age in weeks", async () => {
+  jest.spyOn(Date, "now").mockReturnValue(Date.parse("2026-11-18T19:00:00Z"));
+  open();
+
+  expect(await screen.findByText(/2 weeks ago/)).toBeVisible();
+  expect(screen.queryByText(/336 hours ago/)).not.toBeInTheDocument();
+});
+
+it.each(["preview", "apply", "saved"])(
+  "shows the blocking node detail in %s results",
+  async (stage) => {
+    const reasonDetail =
+      "Flow build blocked: custom components are not allowed: Edited prompt (Example-edited)";
+    const blocked = {
+      ...preview,
+      results: [
+        {
+          ...preview.results[0],
+          status: "manual",
+          reason_codes: ["owner_policy_denied"],
+          reason_detail: reasonDetail,
+        },
+      ],
+    };
+    jest.spyOn(api, "get").mockImplementation(async (url) => ({
+      data: url.endsWith("/maintenance/status")
+        ? { maintenance: true, migration: false, running_jobs: 0 }
+        : url.endsWith("/repairs")
+          ? {
+              total: stage === "saved" ? 1 : 0,
+              items:
+                stage === "saved"
+                  ? [
+                      {
+                        id: "blocked-1",
+                        created_at: report.created_at,
+                        result: blocked.results[0],
+                      },
+                    ]
+                  : [],
+            }
+          : url.endsWith(report.id)
+            ? report
+            : history,
+    }));
+    jest.spyOn(api, "post").mockImplementation(async (url) => ({
+      data: stage === "preview" || url.endsWith("/apply") ? blocked : preview,
+    }));
+    open();
+
+    if (stage === "saved") {
+      await userEvent.click(await screen.findByText("Saved update outcomes"));
+    } else if (stage === "apply") {
+      const apply = await reviewUpdate();
+      await userEvent.click(apply);
+    } else {
+      await userEvent.click(
+        await screen.findByRole("checkbox", {
+          name: "Select Customer support for preview",
+        }),
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: "Preview selected updates" }),
+      );
+    }
+
+    expect(await screen.findByText(reasonDetail)).toBeVisible();
+    expect(
+      screen.getByText(
+        "Current permissions or owner policy prevent this update.",
+      ),
+    ).toBeVisible();
+  },
+);
+
 it("waits for the signed-in profile before deciding admin access", async () => {
   open(null);
   expect(screen.queryByText("Home")).not.toBeInTheDocument();
@@ -123,11 +362,10 @@ it("redirects non-admins without reading reports", async () => {
 
 it("explains the first action and keeps incomplete checks distinct from success", async () => {
   open();
+  await screen.findByRole("heading", { name: "Assessment incomplete" });
+  await userEvent.click(screen.getByText("Start an upgrade review"));
   expect(
-    screen.getByRole("heading", { name: "Start an upgrade review" }),
-  ).toBeVisible();
-  expect(
-    screen.getByText(/Importing a report does not change any flows/),
+    screen.getByText(/Pick a target release under "Check an upgrade"/),
   ).toBeVisible();
   expect(
     await screen.findByRole("heading", { name: "Assessment incomplete" }),
@@ -419,6 +657,103 @@ it("explains maintenance against the live database and links its instructions", 
   ).toHaveAttribute("href", "https://docs.langflow.org/maintenance-mode");
 });
 
+it("changes maintenance only after confirmation and refreshes the shared status", async () => {
+  let active = false;
+  const status = () => ({
+    maintenance: active,
+    migration: false,
+    paused: active,
+    running_jobs: 0,
+    reason: active ? "Repair review" : null,
+    set_at: active ? "2026-11-24T12:00:00Z" : null,
+  });
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? status()
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : url.endsWith(report.id)
+          ? report
+          : history,
+  }));
+  const post = jest.spyOn(api, "post").mockImplementation(async (url) => {
+    active = url.endsWith("/on");
+    return { data: status() };
+  });
+  open();
+  const start = await screen.findByRole("button", {
+    name: "Turn maintenance on",
+  });
+  await userEvent.click(start);
+  let dialog = screen.getByRole("dialog");
+  await userEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(post).not.toHaveBeenCalled();
+  await userEvent.click(start);
+  dialog = screen.getByRole("dialog");
+  await userEvent.type(
+    within(dialog).getByLabelText("Reason (optional)"),
+    "Repair review",
+  );
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Turn maintenance on" }),
+  );
+  expect(post).toHaveBeenCalledWith(expect.stringMatching(/maintenance\/on$/), {
+    reason: "Repair review",
+  });
+  expect(await screen.findByText("Repair review")).toBeVisible();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Turn maintenance off" }),
+  );
+  await userEvent.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Turn maintenance off",
+    }),
+  );
+  expect(await screen.findByText("Maintenance is off.")).toBeVisible();
+});
+
+it.each([false, true])(
+  "blocks maintenance changes during a migration pause (maintenance %s)",
+  async (maintenance) => {
+    const { client } = open();
+    await screen.findByRole("button", { name: "Turn maintenance on" });
+    const status = { maintenance, migration: false, running_jobs: 0 };
+    act(() => client.setQueryData(migrationKeys.pause, status));
+    const toggle = await screen.findByRole("button", {
+      name: maintenance ? "Turn maintenance off" : "Turn maintenance on",
+    });
+    await userEvent.click(toggle);
+    expect(screen.getByRole("dialog")).toBeVisible();
+    act(() =>
+      client.setQueryData(migrationKeys.pause, { ...status, migration: true }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+    );
+    expect(toggle).toBeDisabled();
+    expect(screen.getByText(/before changing maintenance mode/)).toBeVisible();
+    expect(api.post).not.toHaveBeenCalled();
+  },
+);
+
+it("shows a failed maintenance change and leaves the admin able to retry", async () => {
+  jest.spyOn(api, "post").mockRejectedValue(new Error("offline"));
+  open();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Turn maintenance on" }),
+  );
+  const dialog = within(screen.getByRole("dialog"));
+  await userEvent.click(
+    dialog.getByRole("button", { name: "Turn maintenance on" }),
+  );
+  expect(await dialog.findByRole("alert")).toHaveTextContent(
+    "Could not change maintenance mode",
+  );
+  expect(
+    dialog.getByRole("button", { name: "Turn maintenance on" }),
+  ).toBeEnabled();
+});
+
 it.each([
   [report.document.flows, "Customer support"],
   [
@@ -553,4 +888,103 @@ it("explains an unsupported imported format", async () => {
       /This report format is not supported by this server/,
     ),
   ).toBeVisible();
+});
+
+it("explains the migration pause when preview is refused", async () => {
+  jest.spyOn(api, "post").mockRejectedValue({
+    isAxiosError: true,
+    response: {
+      status: 503,
+      data: { detail: "The instance migration pause does not permit repairs" },
+    },
+  });
+  open();
+  await userEvent.click(
+    await screen.findByRole("checkbox", {
+      name: "Select Customer support for preview",
+    }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Preview selected updates" }),
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "The instance migration pause is on",
+  );
+});
+
+it("does not offer an editor link for a deleted flow", async () => {
+  jest.spyOn(api, "post").mockResolvedValue({
+    data: {
+      ...preview,
+      results: [
+        {
+          ...preview.results[0],
+          status: "not_found",
+          reason_codes: ["flow_not_found"],
+        },
+      ],
+    },
+  });
+  open();
+  await userEvent.click(
+    await screen.findByRole("checkbox", {
+      name: "Select Customer support for preview",
+    }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: "Preview selected updates" }),
+  );
+  expect(
+    await screen.findByText(
+      "This flow was deleted or is missing from this instance.",
+    ),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: /open Customer support/i }),
+  ).not.toBeInTheDocument();
+});
+
+it("shows the row range when moving to a partial last page", async () => {
+  const flows = Array.from({ length: 25 }, (_, index) => ({
+    ...report.document.flows[0],
+    id: String(index),
+  }));
+  render(<FlowList flows={flows} selected={new Set()} onSelect={jest.fn()} />);
+  expect(screen.getByText("Rows 1–20 of 25")).toBeVisible();
+  await userEvent.click(screen.getByRole("button", { name: "Next" }));
+  expect(screen.getByText("Rows 21–25 of 25")).toBeVisible();
+});
+
+it("names only the database in the summary and keeps its full location in the identity details", async () => {
+  const located = {
+    ...report,
+    document: {
+      ...report.document,
+      source: {
+        ...report.document.source,
+        identity: {
+          kind: "sqlite",
+          locator: { path: "/srv/langflow/data/langflow.db" },
+          sha256: "a".repeat(64),
+        },
+      },
+    },
+  };
+  jest.spyOn(api, "get").mockImplementation(async (url) => ({
+    data: url.endsWith("/maintenance/status")
+      ? { maintenance: false, migration: false, running_jobs: 0 }
+      : url.endsWith("/repairs")
+        ? { items: [], total: 0 }
+        : url.endsWith(report.id)
+          ? located
+          : history,
+  }));
+  open();
+  expect(await screen.findByText("sqlite · langflow.db")).toBeVisible();
+  const location = screen.getByText(
+    "Source location /srv/langflow/data/langflow.db",
+  );
+  expect(location).not.toBeVisible();
+  await userEvent.click(screen.getByText("Source and target identity"));
+  expect(location).toBeVisible();
 });

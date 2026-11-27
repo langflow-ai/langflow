@@ -139,6 +139,55 @@ def test_google_tool_filter_checks_each_candidate_without_skipping() -> None:
     assert model_ids == ["gemini-c", "gemini-a"]
 
 
+class _GeminiListClient:
+    def __init__(self, *, api_key: str) -> None:  # noqa: ARG002
+        self.models = SimpleNamespace(
+            list=lambda: [
+                SimpleNamespace(name=f"models/{name}", supported_actions=["generateContent"])
+                for name in (
+                    "gemini-2.5-flash",
+                    "gemini-2.5-pro",
+                    "gemini-2.5-flash-preview-tts",
+                    "gemini-3.1-flash-image-preview",
+                )
+            ]
+        )
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        return None
+
+
+def _refresh_tool_models(build_config: dotdict) -> dotdict:
+    component = GoogleGenerativeAIComponent()
+    component.api_key = TEST_API_KEY
+    component.tool_model_enabled = True
+    with patch.object(genai, "Client", _GeminiListClient):
+        return component.update_build_config(build_config, field_value=True, field_name="tool_model_enabled")
+
+
+def test_google_tool_model_list_keeps_gemini_models_with_the_real_chat_model() -> None:
+    """Gemini models that call tools stay listed; TTS and image models, which cannot, are dropped."""
+    updated = _refresh_tool_models(dotdict({"model_name": {}}))
+
+    assert updated["model_name"]["options"] == ["gemini-2.5-pro", "gemini-2.5-flash"]
+
+
+@pytest.mark.parametrize("selected", ["gemini-2.5-flash-preview-tts", "gemini-3.1-flash-image-preview"])
+def test_google_tool_model_refresh_clears_a_selected_model_that_cannot_call_tools(selected: str) -> None:
+    updated = _refresh_tool_models(dotdict({"model_name": {"value": selected}}))
+
+    assert updated["model_name"]["value"] == "gemini-2.5-pro"
+
+
+def test_google_tool_model_refresh_keeps_a_custom_selected_model() -> None:
+    updated = _refresh_tool_models(dotdict({"model_name": {"value": "my-tuned-gemini"}}))
+
+    assert updated["model_name"]["value"] == "my-tuned-gemini"
+
+
 def test_google_model_config_handles_no_tool_capable_models() -> None:
     component = GoogleGenerativeAIComponent()
     component.api_key = TEST_API_KEY

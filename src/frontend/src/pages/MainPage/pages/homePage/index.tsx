@@ -91,9 +91,19 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   // route omits the id), so permission checks must scope to the same project.
   const permissionsFolderId = folderId ?? myCollectionId;
 
+  // Each project opens at its first page. The reset runs during render, not in
+  // an effect, and the render that notices the switch already asks for page 1,
+  // so the old project's page number is never requested for the new project.
+  const [pagedFolderId, setPagedFolderId] = useState(currentFolderId);
+  const projectChanged = pagedFolderId !== currentFolderId;
+  if (projectChanged) {
+    setPagedFolderId(currentFolderId);
+    setPageIndex(1);
+  }
+
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: folderId ?? myCollectionId,
-    page: pageIndex,
+    page: projectChanged ? 1 : pageIndex,
     size: pageSize,
     is_component: flowType === "components",
     is_flow: flowType === "flows",

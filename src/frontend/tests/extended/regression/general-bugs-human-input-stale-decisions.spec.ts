@@ -66,9 +66,7 @@ test(
     await expect
       .poll(
         async () => {
-          const response = await page.request.get(
-            `http://localhost:7860/api/v1/flows/${flowId}`,
-          );
+          const response = await page.request.get(`/api/v1/flows/${flowId}`);
           const flow = await response.json();
           const node = flow?.data?.nodes?.find((candidate) =>
             candidate?.id?.toLowerCase().includes("humaninput"),

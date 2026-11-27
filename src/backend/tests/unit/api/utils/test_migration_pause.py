@@ -22,10 +22,13 @@ import pytest
 from fastapi import APIRouter
 from fastapi.routing import iter_route_contexts
 from httpx import ASGITransport, AsyncClient
+from langflow.api.router import include_evals_routers, router_v1
 from langflow.api.utils import migration_pause
 from langflow.api.utils.migration_jobs import live_listeners
 from langflow.api.utils.migration_pause import MigrationPauseMiddleware, changes_the_instance, is_paused
+from langflow.api.v1.datasets import router as dataset_router
 from langflow.api.v1.deployments import router as deployment_router
+from langflow.api.v1.evaluations import router as evaluation_router
 from langflow.initial_setup import setup as flow_sync
 from langflow.initial_setup.setup import sync_flows_from_fs
 from langflow.main import create_app
@@ -41,6 +44,7 @@ from langflow.services.database.models.data_subject_request import (
     DataSubjectRequestStatus,
     DataSubjectType,
 )
+from langflow.services.database.models.evaluation import EvaluationRun
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.transactions.model import TransactionTable
@@ -62,6 +66,7 @@ from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from sqlmodel import select
 
 from tests.unit.api.v1 import test_connection_oauth as oauth
+from tests.unit.api.v1.evals.conftest import create_dataset, create_evaluation, create_flow
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Awaitable, Callable
@@ -77,6 +82,12 @@ CHANGES = {
     # Each adds a row to the audit log, which says who read a person's data.
     "/api/v1/data-subjects/end-users",
     "/api/v1/data-subjects/requests/{request_id}/export",
+    # These reconcile stale evaluation runs and can persist status changes.
+    "/api/v1/evaluation-runs/{run_id}",
+    "/api/v1/evaluation-runs/{run_id}/export",
+    "/api/v1/evaluation-runs/{run_id}/results",
+    "/api/v1/evaluation-runs/{run_id}/results/{result_id}",
+    "/api/v1/evaluations/{evaluation_id}/runs",
     "/api/v1/upgrade-reports/{report_id}/export",
     "/api/v1/users/me/data-export",
 }
@@ -147,6 +158,11 @@ READS = frozenset(
         "/api/v1/data-subjects/requests",
         "/api/v1/data-subjects/requests/{request_id}",
         "/api/v1/data-subjects/requests/{request_id}/dry-run",
+        "/api/v1/datasets/",
+        "/api/v1/datasets/examples",
+        "/api/v1/datasets/{dataset_id}",
+        "/api/v1/datasets/{dataset_id}/export",
+        "/api/v1/datasets/{dataset_id}/items",
         "/api/v1/deployments",
         "/api/v1/deployments/configs",
         "/api/v1/deployments/llms",
@@ -157,6 +173,9 @@ READS = frozenset(
         "/api/v1/deployments/{deployment_id}",
         "/api/v1/deployments/{deployment_id}/flows",
         "/api/v1/deployments/{deployment_id}/runs/{run_id}",
+        "/api/v1/evaluations",
+        "/api/v1/evaluations/check",
+        "/api/v1/evaluations/{evaluation_id}",
         "/api/v1/extensions/events",
         "/api/v1/files/download/{flow_id}/{file_name}",
         "/api/v1/files/images/{flow_id}/{file_name}",
@@ -254,6 +273,8 @@ READS = frozenset(
         # These return stored reports/results; export only emits the allowed
         # authorization audit record and never executes the imported report.
         "/api/v1/upgrade-reports",
+        # Lists the releases that PyPI offers. It reads nothing of the instance and writes nothing.
+        "/api/v1/upgrade-reports/checks/releases",
         "/api/v1/upgrade-reports/{report_id}",
         "/api/v1/upgrade-reports/{report_id}/export",
         "/api/v1/upgrade-reports/{report_id}/repairs",
@@ -307,6 +328,14 @@ def config_dir(client, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """The record is read from CONFIG_DIR, so keep it out of the real one."""
     monkeypatch.setattr(get_settings_service().settings, "config_dir", str(tmp_path))
     return tmp_path
+
+
+@pytest.fixture
+def evaluation_routes(monkeypatch: pytest.MonkeyPatch) -> None:
+    if not FEATURE_FLAGS.evals:
+        monkeypatch.setattr(FEATURE_FLAGS, "evals", True)
+        monkeypatch.setattr(router_v1, "routes", list(router_v1.routes))
+        include_evals_routers(router_v1)
 
 
 @pytest.fixture
@@ -591,12 +620,49 @@ async def test_the_desktop_browser_handoff_is_refused_while_paused(client, logge
     assert await browser_digest() != before
 
 
+@pytest.mark.usefixtures("evaluation_routes")
+async def test_evaluation_run_reconciliation_waits_for_the_pause_to_end(client, logged_in_headers, config_dir):
+    flow = await create_flow(client, logged_in_headers)
+    dataset = await create_dataset(client, logged_in_headers, "pause-eval", [("a", "a")])
+    evaluation = await create_evaluation(client, logged_in_headers, flow["id"], dataset["id"])
+    async with session_scope() as session:
+        stale_run = EvaluationRun(
+            evaluation_id=UUID(evaluation["id"]),
+            user_id=UUID(flow["user_id"]),
+            flow_id=UUID(flow["id"]),
+            flow_name=flow["name"],
+            dataset_name=dataset["name"],
+            dataset_revision=1,
+            status="running",
+            created_at=datetime.now(timezone.utc) - timedelta(minutes=5),
+        )
+        session.add(stale_run)
+        await session.flush()
+        run_id = stale_run.id
+
+    _write_record(config_dir, PAUSED)
+    path = f"api/v1/evaluation-runs/{run_id}"
+    response = await client.get(path, headers=logged_in_headers)
+    assert response.status_code == 503, response.text
+    assert response.json() == REFUSAL
+    assert (await client.get(f"api/v1/datasets/{dataset['id']}", headers=logged_in_headers)).status_code == 200
+    async with session_scope() as session:
+        assert (await session.get(EvaluationRun, run_id)).status == "running"
+
+    _write_record(config_dir, RECORD)
+    response = await client.get(path, headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["status"] == "failed"
+
+
 def test_every_get_route_says_whether_it_changes_the_instance():
-    # Deployments are disabled by default, but their reads need the same classification when enabled.
-    deployments = APIRouter(prefix="/api/v1")
-    deployments.include_router(deployment_router)
+    # Feature-gated routes need classification even when their feature is disabled.
+    optional = APIRouter(prefix="/api/v1")
+    optional.include_router(deployment_router)
+    optional.include_router(dataset_router)
+    optional.include_router(evaluation_router)
     served: dict[str, bool] = {}
-    for route in iter_route_contexts([*create_app().routes, *deployments.routes]):
+    for route in iter_route_contexts([*create_app().routes, *optional.routes]):
         # Only what Langflow's own code serves is asked about. The API docs are FastAPI's, and a route that a
         # plugin mounts is the plugin's to answer for.
         ours = getattr(route.endpoint, "__module__", "").startswith(("langflow.", "lfx."))
@@ -691,6 +757,20 @@ async def test_an_upgrade_report_export_is_refused_without_an_audit_write_while_
     assert exported.status_code == 200, exported.text
     assert exported.content == document
     assert await exports_recorded() == 1
+
+
+async def test_an_upgrade_check_is_refused_while_paused(client, logged_in_headers_super_user, config_dir):
+    from langflow.services.upgrade_reports.run import running_version
+
+    body = {"target_version": str(running_version())}
+    _write_record(config_dir, PAUSED)
+    refused = await client.post("api/v1/upgrade-reports/checks", json=body, headers=logged_in_headers_super_user)
+    assert refused.status_code == 503, refused.text
+    assert refused.json() == REFUSAL
+    assert not any(
+        change["kind"] == "request" and change["path"] == "/api/v1/upgrade-reports/checks"
+        for change in migration_pause.under_way()["changes"]
+    )
 
 
 async def test_a_lock_that_cannot_be_taken_stops_no_change(client, logged_in_headers, config_dir):
@@ -955,8 +1035,9 @@ async def test_a_record_that_says_paused_changes_nothing_while_the_feature_is_of
     try:
         await listener.reconcile()
         queue.start_job(job_id, asyncio.sleep(0))
-        # Long enough for the flow sync to begin a pass.
-        await asyncio.sleep(0)
+        task = queue.get_queue_data(job_id)[2]
+        assert task is not None
+        await asyncio.wait_for(task, timeout=5)
     finally:
         await listener.stop()
         sync.cancel()

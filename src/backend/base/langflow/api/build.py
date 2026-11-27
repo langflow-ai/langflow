@@ -3,8 +3,9 @@ import json
 import time
 import traceback
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from functools import partial, wraps
+from typing import Any
 
 from fastapi import BackgroundTasks, HTTPException, Response
 from lfx.exceptions.tweaks import TweakRefusedError
@@ -16,6 +17,7 @@ from lfx.processing.process import process_tweaks_on_graph, validate_targeted_in
 from lfx.schema.legacy_render import project_payload_to_v1
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.file_path_security import LocalFileAccessError
+from lfx.utils.flow_validation import prepare_flow_build_for_user
 from sqlmodel import select
 
 from langflow.api.disconnect import DisconnectHandlerStreamingResponse
@@ -227,6 +229,48 @@ async def _execute_admitted_build(job_service, job_id: uuid.UUID, **kwargs) -> N
         return
 
 
+async def _run_background_tasks_isolated(background_tasks: BackgroundTasks) -> None:
+    """Run every queued callback once; a failing callback does not stop the ones after it."""
+    while background_tasks.tasks:
+        # Take the batch first so a callback that queues more work is picked up by the next pass.
+        batch, background_tasks.tasks = background_tasks.tasks, []
+        for task in batch:
+            try:
+                await task()
+            except Exception:  # noqa: BLE001 - one optional side effect must not discard the rest
+                await logger.aexception("Flow build background callback failed")
+
+
+async def _drain_job_background_tasks(background_tasks: BackgroundTasks) -> None:
+    """Finish the job's queued callbacks even if the job is cancelled while they run.
+
+    Cancelling the job during the drain (more than once, if need be) does not
+    interrupt the callbacks; the job still ends cancelled once they finish.
+    """
+    drain = asyncio.create_task(_run_background_tasks_isolated(background_tasks))
+    cancelled: asyncio.CancelledError | None = None
+    while not drain.done():
+        try:
+            # asyncio.wait, unlike awaiting the task, does not forward a cancel into it.
+            await asyncio.wait({drain})
+        except asyncio.CancelledError as exc:
+            cancelled = exc
+    if cancelled is not None:
+        raise cancelled
+
+
+async def _run_build_with_job_background_tasks(
+    build_task: Callable[..., Awaitable[None]],
+    background_tasks: BackgroundTasks,
+    **kwargs: Any,
+) -> None:
+    """Run a detached build with a callback queue whose lifetime is the job's, not the request's."""
+    try:
+        await build_task(background_tasks=background_tasks, **kwargs)
+    finally:
+        await _drain_job_background_tasks(background_tasks)
+
+
 async def start_flow_build(
     *,
     flow_id: uuid.UUID,
@@ -251,7 +295,10 @@ async def start_flow_build(
 
     Args:
         flow_id: The flow ID used for tracking, sessions, and messages.
-        background_tasks: FastAPI background tasks for async operations.
+        background_tasks: The request's FastAPI background tasks. The build runs
+            after the response is sent, when FastAPI has already executed this
+            queue, so the job gets its own queue of the same class (keeping
+            per-vertex log limiting) and drains it when the job ends.
         inputs: Optional input values for the flow.
         data: Optional flow data request.
         files: Optional list of file paths.
@@ -306,9 +353,10 @@ async def start_flow_build(
                 durable_job_id,
             )
         _, event_manager = queue_service.create_queue(job_id)
-        task_coro = build_task(
+        task_coro = _run_build_with_job_background_tasks(
+            build_task,
+            type(background_tasks)() if background_tasks is not None else BackgroundTasks(),
             flow_id=flow_id,
-            background_tasks=background_tasks,
             event_manager=event_manager,
             inputs=inputs,
             data=data,
@@ -613,6 +661,11 @@ async def _generate_flow_events(
             # Why: re-dispatching here (resume/job_id still set) recurses to RecursionError; a missing
             # or expired checkpoint is unrecoverable, so surface a clean 404 instead.
             raise HTTPException(status_code=404, detail="Checkpoint expired or not found; cannot resume this run.")
+        sanitized_payload = await prepare_flow_build_for_user(
+            checkpoint.flow_payload, is_superuser=current_user.is_superuser
+        )
+        if sanitized_payload is not None:
+            checkpoint = checkpoint.model_copy(update={"flow_payload": sanitized_payload})
         graph = LfxGraph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
         # A background checkpoint holds the untweaked flow, so re-apply the run's tweaks as the fresh path does.
         if tweaks:
@@ -1092,8 +1145,8 @@ async def _generate_flow_events(
     event_manager.on_build_start(data={})
 
     # Strong references for fire-and-forget cleanup tasks created outside the
-    # FastAPI background_tasks queue (which is already drained by the time we
-    # reach the cancel path below). Each task removes itself on completion.
+    # background_tasks queue on the cancel path below. Each task removes itself
+    # on completion.
     cleanup_tasks: set[asyncio.Task] = set()
 
     async def _run_vertex_build() -> None:
@@ -1104,9 +1157,9 @@ async def _generate_flow_events(
         try:
             await asyncio.gather(*tasks)
         except asyncio.CancelledError:
-            # background_tasks is already drained after the POST /build response
-            # is sent; add_task() is silently dropped here. Use create_task()
-            # so the trace cleanup runs independently of background_tasks lifecycle.
+            # Callers drain background_tasks on their own schedule, and a
+            # cancelled v2 stream relies on a response queue that may never
+            # run. Use create_task() so trace cleanup does not depend on it.
             cleanup_task = asyncio.create_task(graph.end_all_traces_in_context()())
             cleanup_tasks.add(cleanup_task)
             cleanup_task.add_done_callback(cleanup_tasks.discard)
@@ -1172,10 +1225,8 @@ async def _generate_flow_events(
     await graph.end_all_traces()
 
     # Fire memory-base auto-capture hook — non-blocking background effect.
-    # Must use fire_and_forget_task (not background_tasks.add_task) because
-    # generate_flow_events runs as an asyncio task; by the time the flow
-    # finishes, FastAPI has already drained the background_tasks queue and any
-    # tasks added after that point are silently dropped.
+    # Uses fire_and_forget_task (not background_tasks.add_task) so the hook
+    # does not wait on, or depend on, whichever queue the caller drains.
     # Gated on ``track_job_status`` for the same reason as the job row above:
     # when a caller owns the run's lifecycle (the v2 durable background path
     # passes ``track_job_status=False`` and fires this hook itself with the

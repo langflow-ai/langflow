@@ -2,8 +2,8 @@
 
 Milestones (run/vertex start+end, outputs, tool_call, error, STATE, run_finished)
 are durable so a reattaching client can rebuild state from the durable log.
-Token deltas (TEXT_MESSAGE_CONTENT / langflow ``token``) are ephemeral: high
-volume, only useful live.
+AG-UI text deltas are durable so replay can reconstruct assistant messages.
+Langflow token deltas stay ephemeral because its output events carry the result.
 """
 
 from __future__ import annotations
@@ -46,6 +46,6 @@ class TestAguiDurability:
         ):
             assert adapter.is_durable(event_type) is True, event_type
 
-    def test_token_delta_is_ephemeral(self):
+    def test_text_content_is_durable(self):
         adapter = get_stream_adapter("agui", _ctx())
-        assert adapter.is_durable("TEXT_MESSAGE_CONTENT") is False
+        assert adapter.is_durable("TEXT_MESSAGE_CONTENT") is True

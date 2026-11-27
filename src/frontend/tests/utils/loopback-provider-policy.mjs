@@ -1,4 +1,5 @@
-export const LOOPBACK_OPENAI_BASE_URL = "http://127.0.0.1:8787/v1";
+// Follows the mock server port, so a second stack can use its own port.
+export const LOOPBACK_OPENAI_BASE_URL = `http://127.0.0.1:${process.env.LANGFLOW_TEST_OPENAI_PORT ?? "8787"}/v1`;
 export const LOOPBACK_OPENAI_API_KEY = "langflow-loopback-test-key"; // pragma: allowlist secret
 
 export const LOOPBACK_MODEL = {
