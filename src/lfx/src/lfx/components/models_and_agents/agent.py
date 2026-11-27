@@ -252,6 +252,15 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             info="The reviewed PermissionGate flow applied before tool execution.",
         ),
         MultilineInput(
+            name="loop_binding",
+            display_name="Reviewed loop flow",
+            value="",
+            advanced=True,
+            show=False,
+            override_skip=True,
+            info="The reviewed AgenticLoop flow that runs this Agent's loop. Empty runs the packaged loop.",
+        ),
+        MultilineInput(
             name="hook_bindings",
             display_name="Reviewed hook flows",
             value="[]",
@@ -644,6 +653,13 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 raise NotImplementedError(msg) from exc
 
         middleware = self._build_middleware(llm, allow_interrupts=allow_interrupts)
+        from lfx.projects.loop import loop_flow_runnable, parse_loop_binding
+
+        if loop_binding := parse_loop_binding(getattr(self, "loop_binding", "")):
+            # The reviewed loop flow runs this Agent's loop under the same middleware. It cannot pause yet.
+            return loop_flow_runnable(
+                self, loop_binding, llm=llm, tools=tools, system_prompt=self.system_prompt or "", middleware=middleware
+            )
         checkpointer = self._build_agent_checkpointer() if allow_interrupts else None
         if self._gated_interrupt_on() and checkpointer is None:
             msg = "Tool approvals require a resumable run. Run the Agent through a flow with Agent message output."
@@ -1055,6 +1071,7 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             or getattr(self, "compaction_binding", "").strip() not in {"", "null", "{}"}
             or getattr(self, "permission_binding", "").strip() not in {"", "null", "{}"}
             or getattr(self, "skill_bindings", "").strip() not in {"", "null", "{}"}
+            or getattr(self, "loop_binding", "").strip() not in {"", "null", "{}"}
         )
 
         async def _run_agent_for_fallback(augmented_prompt: str) -> str:

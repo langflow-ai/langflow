@@ -76,18 +76,23 @@ class ReviewedFlowRunner:
         self.field_name = field_name
         self.definitions = {}
 
-    async def __call__(self, binding, context: dict):
+    async def __call__(self, binding, context: dict, *, live: dict | None = None, quiet: bool = False):
+        """Run the reviewed output.
+
+        `live` puts objects in the child's context without the deepcopy `context` gets, for objects that hold a
+        lock or a client. `quiet` stops the child from persisting chat messages.
+        """
         active = _ACTIVE_FLOWS.get()
         if binding.flow_id in active:
             msg = "A harness flow cannot recursively invoke itself."
             raise ValueError(msg)
         token = _ACTIVE_FLOWS.set((*active, binding.flow_id))
         try:
-            return await self._invoke(binding, context)
+            return await self._invoke(binding, context, live=live, quiet=quiet)
         finally:
             _ACTIVE_FLOWS.reset(token)
 
-    async def _invoke(self, binding, context):
+    async def _invoke(self, binding, context, *, live=None, quiet=False):
         from lfx.base.tools.run_flow import _model_provider_policy, get_user_is_superuser
         from lfx.graph.graph.base import Graph
         from lfx.helpers.flow import run_flow
@@ -125,6 +130,10 @@ class ReviewedFlowRunner:
             graph.frozen_tool_flows = source.get("dependencies")
             if candidate:
                 candidate.inherit(parent, graph)
+            graph.context.update(live or {})
+            if quiet:
+                # After inherit, which copies the parent's flag. No event manager reaches arun either.
+                graph.persist_messages = False
             await run_flow(
                 graph=graph,
                 inputs={},

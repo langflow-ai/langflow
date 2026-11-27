@@ -130,11 +130,8 @@ def validate_instruction_result(value):
     return value
 
 
-def contract_outputs(data: dict, output_types: set[str], *, require_output_component: bool = True) -> list[dict]:
-    """Inspect declared terminal types and configured inputs without loading component code."""
-    from lfx.graph.graph.base import Graph
-
-    graph = Graph.from_payload(deepcopy(data), instantiate_components=False, emit_extension_events=False)
+def check_required_inputs(data: dict) -> None:
+    """Raise when a node leaves a required input without a value or an edge. Loads no component code."""
     connected = {
         (edge.get("target"), edge.get("data", {}).get("targetHandle", {}).get("fieldName"))
         for edge in data.get("edges", [])
@@ -149,6 +146,14 @@ def contract_outputs(data: dict, output_types: set[str], *, require_output_compo
                 display_name = node.get("data", {}).get("node", {}).get("display_name", node["id"])
                 msg = f"Configure {display_name}: {entry.get('display_name', name)}."
                 raise ValueError(msg)
+
+
+def contract_outputs(data: dict, output_types: set[str], *, require_output_component: bool = True) -> list[dict]:
+    """Inspect declared terminal types and configured inputs without loading component code."""
+    from lfx.graph.graph.base import Graph
+
+    graph = Graph.from_payload(deepcopy(data), instantiate_components=False, emit_extension_events=False)
+    check_required_inputs(data)
     choices = []
     for vertex in graph.vertices:
         if (require_output_component and not vertex.is_output) or graph.successor_map.get(vertex.id):

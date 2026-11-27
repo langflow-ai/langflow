@@ -36,6 +36,7 @@ class ProjectFlowBindings(BaseModel):
     context_strategy: ContextBinding | None = None
     compaction: CompactionBinding | None = None
     tool_policy: PermissionBinding | None = None
+    agentic_loop: FlowBinding | None = None
 
     def entries(self) -> list[tuple[str, FlowBinding]]:
         return (
@@ -44,6 +45,7 @@ class ProjectFlowBindings(BaseModel):
             + ([("context_strategy", self.context_strategy)] if self.context_strategy else [])
             + ([("compaction", self.compaction)] if self.compaction else [])
             + ([("tool_policy", self.tool_policy)] if self.tool_policy else [])
+            + ([("agentic_loop", self.agentic_loop)] if self.agentic_loop else [])
         )
 
 
