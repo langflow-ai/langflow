@@ -1,6 +1,8 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import VersionLabel from "@/components/common/versionLabelComponent";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +12,7 @@ import {
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import type { FlowVersionEntry } from "@/types/flow/version";
 import { cn } from "@/utils/utils";
-import { formatTimestamp } from "../utils";
+import { formatTimestamp, protectedReasonText } from "../utils";
 
 interface VersionListItemProps {
   entry: FlowVersionEntry;
@@ -21,6 +23,8 @@ interface VersionListItemProps {
   onDeleteClick: (entry: FlowVersionEntry) => void;
 }
 
+/** One saved version in the history sidebar. A retained version shows a
+ * "Protected" badge and cannot be deleted. */
 export default function VersionListItem({
   entry,
   isSelected,
@@ -30,6 +34,24 @@ export default function VersionListItem({
   onDeleteClick,
 }: VersionListItemProps) {
   const { t } = useTranslation();
+  const isProtected = entry.retained === true;
+  const protectedReason = isProtected
+    ? protectedReasonText(entry.retained_reason, t)
+    : "";
+
+  const deleteItem = (
+    <DropdownMenuItem
+      disabled={isProtected}
+      // onSelect, not onClick: Radix never fires it for a disabled item.
+      onSelect={() => onDeleteClick(entry)}
+      className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
+      data-testid="version-delete-item"
+    >
+      <ForwardedIconComponent name="Trash2" className="mr-2 h-3.5 w-3.5" />
+      {t("flow.menu.delete")}
+    </DropdownMenuItem>
+  );
+
   return (
     <SidebarMenuItem
       className={cn(
@@ -46,11 +68,29 @@ export default function VersionListItem({
         )}
       >
         <div className="flex min-w-0 flex-col items-start">
-          <VersionLabel
-            versionTag={entry.version_tag}
-            description={entry.description}
-            className="w-full truncate font-medium text-sm pb-1"
-          />
+          <span className="flex w-full min-w-0 items-center gap-2 pb-1">
+            <VersionLabel
+              versionTag={entry.version_tag}
+              description={entry.description}
+              className="truncate font-medium text-sm"
+            />
+            {isProtected && (
+              <ShadTooltip content={protectedReason}>
+                <span className="shrink-0">
+                  <Badge
+                    variant="secondaryStatic"
+                    size="tag"
+                    data-testid="version-protected-badge"
+                  >
+                    {t("version.protected")}
+                  </Badge>
+                  {/* The tooltip needs a pointer; this gives the reason to
+                      screen readers when the row is focused. */}
+                  <span className="sr-only">{protectedReason}</span>
+                </span>
+              </ShadTooltip>
+            )}
+          </span>
           <span className="w-full truncate text-xs text-muted-foreground">
             {entry.username
               ? t("version.lastModifiedBy", {
@@ -95,16 +135,14 @@ export default function VersionListItem({
                 />
                 {t("flow.menu.export")}
               </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => onDeleteClick(entry)}
-                className="cursor-pointer text-destructive focus:bg-destructive/10 focus:text-destructive"
-              >
-                <ForwardedIconComponent
-                  name="Trash2"
-                  className="mr-2 h-3.5 w-3.5"
-                />
-                {t("flow.menu.delete")}
-              </DropdownMenuItem>
+              {isProtected ? (
+                // A disabled item ignores the pointer, so the wrapper takes the hover.
+                <ShadTooltip content={protectedReason} side="right">
+                  <div>{deleteItem}</div>
+                </ShadTooltip>
+              ) : (
+                deleteItem
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

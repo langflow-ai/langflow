@@ -189,3 +189,4 @@ class UpgradeReportMetadata(BaseModel):
 class ReportHistorySummary(UpgradeReportMetadata):
     source_database: str | None
     incomplete: bool
+    duplicate: bool

@@ -291,6 +291,9 @@ test(
         },
       ];
       await page.goto(routePath);
+      await page
+        .getByRole("button", { name: "Import report", exact: true })
+        .click();
       await page.getByLabel("Checker report file").setInputFiles({
         name: "real-repair-report.json",
         mimeType: "application/json",
@@ -302,6 +305,7 @@ test(
           response.request().method() === "POST",
       );
       await page
+        .getByRole("dialog")
         .getByRole("button", { name: "Import report", exact: true })
         .click();
       const importedResponse = await imported;
@@ -313,7 +317,7 @@ test(
         }),
       ).toBeVisible();
       await page
-        .getByText("How to enable maintenance", { exact: true })
+        .getByText("Manage maintenance from the terminal", { exact: true })
         .click();
       await expect(
         page.getByRole("link", { name: "Maintenance instructions" }),
@@ -333,7 +337,7 @@ test(
         fullPage: true,
       });
       await page
-        .getByText("How to enable maintenance", { exact: true })
+        .getByText("Manage maintenance from the terminal", { exact: true })
         .click();
       await page
         .getByRole("checkbox", { name: `Select ${flow.name} for preview` })
@@ -353,11 +357,11 @@ test(
       });
       expect((await unchanged.json()).data).toEqual(graph);
       await page.setViewportSize({ width: 320, height: 800 });
-      const toggle = page.getByRole("button", { name: "Turn maintenance on" });
+      const toggle = page.getByRole("button", { name: "Enable maintenance" });
       await toggle.focus();
       await toggle.press("Enter");
       const enableDialog = page.getByRole("dialog", {
-        name: "Turn maintenance on",
+        name: "Enable database maintenance?",
       });
       const bounds = await enableDialog.boundingBox();
       expect(bounds).toBeTruthy();
@@ -371,12 +375,14 @@ test(
         .getByLabel("Reason (optional)")
         .fill("Disposable upgrade workflow test");
       await enableDialog
-        .getByRole("button", { name: "Turn maintenance on" })
+        .getByRole("button", { name: "Enable maintenance" })
         .click();
       await expect(enableDialog).toBeHidden();
-      await expect(page.getByText("No jobs are running.")).toBeVisible();
       await expect(
-        page.getByRole("button", { name: "Turn maintenance off" }),
+        page.getByText("Maintenance requirements met", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Disable maintenance" }),
       ).toBeFocused();
       await page.setViewportSize({ width: 1280, height: 900 });
       await page
@@ -435,12 +441,12 @@ test(
         "href",
         `/flow/${flow.id}?version=${recoveryId}`,
       );
-      await page.getByRole("button", { name: "Turn maintenance off" }).click();
+      await page.getByRole("button", { name: "Disable maintenance" }).click();
       const disableDialog = page.getByRole("dialog", {
-        name: "Turn maintenance off",
+        name: "Disable database maintenance?",
       });
       await disableDialog
-        .getByRole("button", { name: "Turn maintenance off" })
+        .getByRole("button", { name: "Disable maintenance" })
         .click();
       await expect(disableDialog).toBeHidden();
       await expect(page.getByTestId("changes-paused-notice")).toBeEmpty({

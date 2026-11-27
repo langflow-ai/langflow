@@ -1,15 +1,39 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
+import {
+  type FormEvent,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
+import {
+  Trans as TransComponent,
+  type TransProps,
+  useTranslation,
+} from "react-i18next";
+import { type Location, useBlocker } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   runUpgradeCheck,
   type UpgradeCheckProgress,
   useGetUpgradeReleases,
 } from "@/controllers/API/queries/upgrade-reports";
+import ReleaseField from "./ReleaseField";
+
+const Trans = TransComponent as unknown as React.FC<TransProps<string>>;
 
 type Run =
   | { kind: "idle" }
+  | { kind: "cancelled" }
   | {
       kind: "running";
       target: string;
@@ -34,7 +58,7 @@ function Progress({ run }: { run: Extract<Run, { kind: "running" }> }) {
   const { checked, total } = run;
   const measured = total !== null && checked > 0 && checked <= total;
   return (
-    <div className="space-y-2">
+    <div className="min-w-0 flex-1 space-y-2">
       <div
         className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
         role="progressbar"
@@ -143,10 +167,21 @@ export function Failure({ run }: { run: Extract<Run, { kind: "failed" }> }) {
   );
 }
 
+const ABOUT_KEYS = [
+  "index",
+  "current",
+  "offline",
+  "package",
+  "disk",
+  "load",
+] as const;
+
 export default function RunCheck({
   onSelectReport,
+  children,
 }: {
   onSelectReport: (reportId: string, focus?: boolean) => void;
+  children?: ReactNode;
 }) {
   const { t } = useTranslation();
   const client = useQueryClient();
@@ -154,6 +189,16 @@ export default function RunCheck({
   const [target, setTarget] = useState("");
   const [run, setRun] = useState<Run>({ kind: "idle" });
   const controller = useRef<AbortController | null>(null);
+  const startButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
+  const nextFocus = useRef<"start" | "cancel" | null>(null);
+  const running = run.kind === "running";
+
+  useLayoutEffect(() => {
+    if (nextFocus.current === "cancel") cancelButton.current?.focus();
+    if (nextFocus.current === "start") startButton.current?.focus();
+    nextFocus.current = null;
+  }, [running]);
   // Leaving the page cancels the check on the server.
   // A refusal also ends in an abort, so only dropping the ref marks a run as cancelled.
   const stop = () => {
@@ -163,8 +208,30 @@ export default function RunCheck({
   };
   useEffect(() => stop, []);
 
-  const start = async () => {
+  const leavesPage = ({
+    currentLocation,
+    nextLocation,
+  }: {
+    currentLocation: Location;
+    nextLocation: Location;
+  }) => currentLocation.pathname !== nextLocation.pathname;
+  const blocker = useBlocker((transition) => running && leavesPage(transition));
+  useEffect(() => {
+    if (!running) return;
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [running]);
+  useEffect(() => {
+    if (!running) blocker.reset?.();
+  }, [running, blocker]);
+
+  const start = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     const version = target.trim();
+    if (!version || controller.current) return;
+
+    nextFocus.current = "cancel";
     const abort = new AbortController();
     controller.current = abort;
     setRun({
@@ -178,6 +245,7 @@ export default function RunCheck({
       targetVersion: version,
       controller: abort,
       onEvent: (event: UpgradeCheckProgress) => {
+        if (controller.current !== abort) return;
         if (event.event === "started") {
           setRun({
             kind: "running",
@@ -196,6 +264,9 @@ export default function RunCheck({
     // A cancel or leaving the page replaced the ref, and the run no longer owns the page.
     if (controller.current !== abort) return;
     controller.current = null;
+    if (document.activeElement === cancelButton.current) {
+      nextFocus.current = "start";
+    }
     switch (outcome.kind) {
       case "imported":
         client.invalidateQueries({ queryKey: ["useGetUpgradeReports"] });
@@ -222,7 +293,6 @@ export default function RunCheck({
     }
   };
 
-  const running = run.kind === "running";
   return (
     <section
       aria-labelledby="upgrade-check-title"
@@ -232,59 +302,121 @@ export default function RunCheck({
         {t("settings.upgrade.check.title")}
       </h3>
       <p className="text-sm text-muted-foreground">
-        {t("settings.upgrade.check.help")}
+        {releases.data?.current ? (
+          <Trans
+            i18nKey="settings.upgrade.check.helpCurrent"
+            values={{ version: releases.data.current }}
+            components={{ 1: <strong className="font-semibold" /> }}
+          />
+        ) : (
+          t("settings.upgrade.check.help")
+        )}
       </p>
-      <label className="flex flex-col gap-2">
-        {t("settings.upgrade.check.target")}
-        <input
-          list="upgrade-check-releases"
-          value={target}
-          disabled={running}
-          aria-invalid={run.kind === "failed"}
-          aria-describedby="upgrade-check-feedback"
-          autoComplete="off"
-          spellCheck={false}
-          className="w-full min-w-0 max-w-full rounded-md border border-input bg-background p-2 text-sm"
-          onChange={(event) => {
-            setTarget(event.target.value);
-            if (run.kind === "failed" || run.kind === "done")
-              setRun({ kind: "idle" });
-          }}
-        />
-        <datalist id="upgrade-check-releases">
-          {(releases.data?.releases ?? []).map((version) => (
-            <option key={version} value={version} />
-          ))}
-        </datalist>
-      </label>
-      <div className="flex gap-2">
+      <form
+        className="grid gap-2 sm:grid-cols-[minmax(0,20rem)_max-content] sm:items-end sm:justify-start"
+        onSubmit={start}
+      >
+        <div className="flex min-w-0 flex-col gap-2">
+          <label htmlFor="upgrade-check-target">
+            {t("settings.upgrade.check.target")}
+          </label>
+          <ReleaseField
+            id="upgrade-check-target"
+            value={target}
+            releases={releases.data?.releases ?? []}
+            installed={releases.data?.current}
+            disabled={running}
+            invalid={
+              run.kind === "failed" && run.code === "invalid_target_version"
+            }
+            describedBy="upgrade-check-feedback"
+            onChange={(value) => {
+              setTarget(value);
+              if (run.kind !== "running") setRun({ kind: "idle" });
+            }}
+          />
+        </div>
         <Button
+          ref={startButton}
+          type="submit"
           disabled={running || !target.trim()}
-          onClick={start}
           ignoreTitleCase
         >
           {t("settings.upgrade.check.run")}
         </Button>
-        {running && (
+      </form>
+      {run.kind === "running" && (
+        <div className="flex max-w-xl flex-col gap-3 rounded-md border bg-muted/40 p-3 sm:flex-row sm:items-center">
+          <Progress run={run} />
           <Button
+            ref={cancelButton}
             variant="outline"
+            className="shrink-0"
             onClick={() => {
+              nextFocus.current = "start";
               stop();
-              setRun({ kind: "idle" });
+              setRun({ kind: "cancelled" });
             }}
             ignoreTitleCase
           >
             {t("settings.upgrade.check.cancel")}
           </Button>
-        )}
-      </div>
+        </div>
+      )}
       <div id="upgrade-check-feedback">
-        {run.kind === "running" && <Progress run={run} />}
         {run.kind === "done" && (
           <Done run={run} onView={() => onSelectReport(run.reportId, true)} />
         )}
         {run.kind === "failed" && <Failure run={run} />}
+        {run.kind === "cancelled" && (
+          <p role="status">{t("settings.upgrade.check.cancelled")}</p>
+        )}
       </div>
+      {children}
+      <details className="text-sm">
+        <summary className="cursor-pointer">
+          {t("settings.upgrade.check.about.title")}
+        </summary>
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-muted-foreground">
+          {ABOUT_KEYS.map((key) => (
+            <li key={key}>{t(`settings.upgrade.check.about.${key}`)}</li>
+          ))}
+        </ul>
+      </details>
+      <Dialog
+        open={blocker.state === "blocked"}
+        onOpenChange={(open) => {
+          if (!open) blocker.reset?.();
+        }}
+      >
+        <DialogContent className="w-[calc(100%_-_2rem)] max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("settings.upgrade.check.leave.title")}</DialogTitle>
+            <DialogDescription>
+              {t("settings.upgrade.check.leave.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => blocker.reset?.()}
+              ignoreTitleCase
+            >
+              {t("settings.upgrade.check.leave.stay")}
+            </Button>
+            <Button
+              onClick={() => {
+                stop();
+                setRun({ kind: "idle" });
+                blocker.proceed?.();
+              }}
+              ignoreTitleCase
+            >
+              {t("settings.upgrade.check.leave.confirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

@@ -258,6 +258,8 @@ async def execute_public_workflow(
             # asks for it is rejected by ``extra="forbid"`` rather than silently
             # ignored.
             expose_graph_state=False,
+            # The visitor has no node status, so a failed component must fail the run.
+            fail_run_on_component_error=True,
         ),
     )
 

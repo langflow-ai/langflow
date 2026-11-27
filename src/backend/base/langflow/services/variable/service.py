@@ -15,6 +15,12 @@ from sqlmodel import col, false, func, select, update
 from langflow.services.auth import utils as auth_utils
 from langflow.services.base import Service
 from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
+from langflow.services.deletion_hooks import (
+    RESOURCE_VARIABLE,
+    DeletionContext,
+    run_post_deletion_after_commit,
+    run_pre_deletion_hooks,
+)
 from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import (
     CREDENTIAL_TYPE,
@@ -154,9 +160,11 @@ class DatabaseVariableService(VariableService, Service):
             var_to_provider = {}
             provider_variables = {}
             metadata = get_model_provider_metadata()
-            # Serialize imports for the same user across PostgreSQL workers so
-            # concurrent startup/login imports cannot create duplicate rows.
-            principal = await session.get(User, UUID(str(user_id)), with_for_update=True)
+            # FOR NO KEY UPDATE serializes same-user imports and account
+            # writes, while allowing the foreign-key lock of a concurrent
+            # login's refresh-session insert. FOR UPDATE can deadlock with
+            # that insert and the login's subsequent last-login update.
+            principal = await session.get(User, UUID(str(user_id)), with_for_update={"key_share": True})
             for provider, meta in metadata.items():
                 for var in meta.get("variables", []):
                     var_key = var.get("variable_key")
@@ -748,7 +756,7 @@ class DatabaseVariableService(VariableService, Service):
         if not variable:
             msg = f"{name} variable not found."
             raise ValueError(msg)
-        await session.delete(variable)
+        await self._delete_row(session, variable)
 
     async def delete_variable_by_id(self, user_id: UUID | str, variable_id: UUID, session: AsyncSession) -> None:
         """Delete an owned user-variable row only after checking its reserved storage name."""
@@ -763,7 +771,21 @@ class DatabaseVariableService(VariableService, Service):
             msg = f"{variable_id} variable not found."
             raise ValueError(msg)
         _ensure_user_variable(variable.name)
+        await self._delete_row(session, variable)
+
+    @staticmethod
+    async def _delete_row(session: AsyncSession, variable: Variable) -> None:
+        """The one place a variable row is deleted: deletion hooks see it before, and after the session commits."""
+        context = DeletionContext(
+            resource=RESOURCE_VARIABLE,
+            resource_id=variable.id,
+            owner_id=variable.user_id,
+            name=variable.name,
+            session=session,
+        )
+        await run_pre_deletion_hooks(context)
         await session.delete(variable)
+        run_post_deletion_after_commit(session, context)
 
     async def create_variable(
         self,

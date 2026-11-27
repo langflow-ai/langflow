@@ -74,6 +74,15 @@ export function Usage({ usage }: { usage?: JobUsage }) {
   );
 }
 
+const COLUMNS =
+  "lg:grid-cols-[2rem_minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_8rem_8rem]";
+
+export const STATUS_TONE: Record<ReportFlow["status"], string> = {
+  ok: "bg-accent-emerald text-accent-emerald-foreground",
+  warn: "bg-accent-amber text-accent-amber-foreground",
+  fail: "bg-destructive text-destructive-foreground",
+};
+
 export default function FlowList({
   flows,
   selected,
@@ -114,7 +123,10 @@ export default function FlowList({
     Math.max(0, Math.ceil(filtered.length / 20) - 1),
   );
   return (
-    <section aria-labelledby="upgrade-flows-title" className="space-y-4">
+    <section
+      aria-labelledby="upgrade-flows-title"
+      className="min-w-0 space-y-4 rounded-lg border p-3 sm:p-5"
+    >
       <h3 id="upgrade-flows-title" className="font-medium">
         {t("settings.upgrade.flows")}
       </h3>
@@ -160,122 +172,147 @@ export default function FlowList({
         </label>
       </div>
 
-      {filtered.slice(currentPage * 20, currentPage * 20 + 20).map((flow) => (
-        <article
-          key={`${flow.kind}-${flow.id}`}
-          className="min-w-0 rounded border p-3 [overflow-wrap:anywhere]"
+      <div className="min-w-0 overflow-hidden rounded-md border">
+        <div
+          aria-hidden="true"
+          className={`hidden gap-3 bg-muted/50 px-3 py-2 text-xs font-medium text-muted-foreground lg:grid ${COLUMNS}`}
         >
-          <div className="mb-2 flex items-start gap-2">
-            {flow.kind === "flow" && (
-              <input
-                type="checkbox"
-                aria-label={t("settings.upgrade.selectFlow", {
-                  name: flow.name ?? flow.id,
-                })}
-                checked={selected.has(flow.id)}
-                disabled={!selected.has(flow.id) && selected.size >= 100}
-                onChange={(event) => onSelect(flow.id, event.target.checked)}
-              />
-            )}
-            <h4 className="min-w-0 flex-1 font-medium">
-              {flow.name ?? unknown}
-            </h4>
-            <span className="rounded bg-muted px-2 py-0.5 text-xs font-medium">
-              {t(`settings.upgrade.status.${flow.status}`)}
-            </span>
-          </div>
-          <dl className="grid grid-cols-1 gap-x-4 gap-y-1 text-sm sm:grid-cols-2">
-            <div>
-              <dt className="text-muted-foreground">
-                {t("settings.upgrade.owner")}
-              </dt>
-              <dd>{flow.owner?.username ?? flow.owner?.id ?? unknown}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {t("settings.upgrade.project")}
-              </dt>
-              <dd>{flow.project?.name ?? unknown}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {t("settings.upgrade.lastEdited")}
-              </dt>
-              <dd>{reportTime(flow.last_edited_at, i18n.language, unknown)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {t("settings.upgrade.version")}
-              </dt>
-              <dd>{flow.version_number ?? unknown}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {t("settings.upgrade.kind")}
-              </dt>
-              <dd>{t(`settings.upgrade.kind.${flow.kind}`)}</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">
-                {t("settings.upgrade.labels")}
-              </dt>
-              <dd>{flow.labels?.join(", ") || unknown}</dd>
-            </div>
-          </dl>
-          <details className="mt-3 text-sm">
-            <summary className="cursor-pointer">
-              {t("settings.upgrade.flowDetails")}
-            </summary>
-            {flow.error && <p>{flow.error}</p>}
-            <ul className="mt-2 space-y-2">
-              {flow.nodes.map((node) => (
-                <li key={`${node.group_path.join("/")}/${node.id}`}>
-                  <p>
-                    {node.display_name} ·{" "}
-                    {t(`settings.upgrade.nodeStatus.${node.status}`, {
-                      defaultValue: node.status,
-                    })}
-                  </p>
-                  {node.reasons.map((reason, index) => (
-                    <p key={`${reason.code}-${index}`}>
-                      {reportReason(reason)}
-                    </p>
+          <span />
+          <span>{t("settings.upgrade.flowColumn")}</span>
+          <span>{t("settings.upgrade.owner")}</span>
+          <span>{t("settings.upgrade.project")}</span>
+          <span>{t("settings.upgrade.lastEdited")}</span>
+          <span>{t("settings.upgrade.compatibility")}</span>
+        </div>
+        {filtered
+          .slice(currentPage * 20, currentPage * 20 + 20)
+          .map((flow, row) => (
+            <article
+              key={`${flow.kind}-${flow.id}`}
+              className={`min-w-0 px-3 py-3 text-sm [overflow-wrap:anywhere] ${row ? "border-t" : ""}`}
+            >
+              <div
+                className={`grid grid-cols-[2rem_minmax(0,1fr)] items-start gap-x-3 gap-y-1 lg:items-center ${COLUMNS}`}
+              >
+                <span className="pt-0.5">
+                  {flow.kind === "flow" && (
+                    <input
+                      type="checkbox"
+                      aria-label={t("settings.upgrade.selectFlow", {
+                        name: flow.name ?? flow.id,
+                      })}
+                      checked={selected.has(flow.id)}
+                      disabled={!selected.has(flow.id) && selected.size >= 100}
+                      onChange={(event) =>
+                        onSelect(flow.id, event.target.checked)
+                      }
+                    />
+                  )}
+                </span>
+                <h4 className="min-w-0 font-medium">{flow.name ?? unknown}</h4>
+                <p className="col-start-2 text-muted-foreground lg:col-auto">
+                  <span className="lg:sr-only">
+                    {t("settings.upgrade.owner")}:{" "}
+                  </span>
+                  {flow.owner?.username ?? flow.owner?.id ?? unknown}
+                </p>
+                <p className="col-start-2 text-muted-foreground lg:col-auto">
+                  <span className="lg:sr-only">
+                    {t("settings.upgrade.project")}:{" "}
+                  </span>
+                  {flow.project?.name ?? unknown}
+                </p>
+                <p className="col-start-2 text-muted-foreground lg:col-auto">
+                  <span className="lg:sr-only">
+                    {t("settings.upgrade.lastEdited")}:{" "}
+                  </span>
+                  {reportTime(flow.last_edited_at, i18n.language, unknown)}
+                </p>
+                <span className="col-start-2 lg:col-auto">
+                  <span
+                    className={`inline-block rounded px-2 py-0.5 text-xs font-medium ${STATUS_TONE[flow.status]}`}
+                  >
+                    {t(`settings.upgrade.status.${flow.status}`)}
+                  </span>
+                </span>
+              </div>
+              <details className="ml-11 mt-2">
+                <summary className="cursor-pointer">
+                  {t("settings.upgrade.flowDetails")}
+                </summary>
+                <dl className="mt-2 grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-3">
+                  <div>
+                    <dt className="text-muted-foreground">
+                      {t("settings.upgrade.version")}
+                    </dt>
+                    <dd>{flow.version_number ?? unknown}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">
+                      {t("settings.upgrade.kind")}
+                    </dt>
+                    <dd>{t(`settings.upgrade.kind.${flow.kind}`)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-muted-foreground">
+                      {t("settings.upgrade.labels")}
+                    </dt>
+                    <dd>{flow.labels?.join(", ") || unknown}</dd>
+                  </div>
+                </dl>
+                {flow.error && <p>{flow.error}</p>}
+                <ul className="mt-2 space-y-2">
+                  {flow.nodes.map((node) => (
+                    <li key={`${node.group_path.join("/")}/${node.id}`}>
+                      <p>
+                        {node.display_name} ·{" "}
+                        {t(`settings.upgrade.nodeStatus.${node.status}`, {
+                          defaultValue: node.status,
+                        })}
+                      </p>
+                      {node.reasons.map((reason, index) => (
+                        <p key={`${reason.code}-${index}`}>
+                          {reportReason(reason)}
+                        </p>
+                      ))}
+                    </li>
                   ))}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-2">
-              {t("settings.upgrade.flowId", { id: flow.flow_id ?? flow.id })}
-            </p>
-            <p>
-              {t("settings.upgrade.deployments", {
-                deployments: flow.used_by
-                  ? ["deployments", "triggers"]
-                      .flatMap((kind) => {
-                        const ids = flow.used_by?.[kind];
-                        return ids?.length
-                          ? [
-                              t(`settings.upgrade.usedBy.${kind}`, {
-                                ids: ids.join(", "),
-                              }),
-                            ]
-                          : [];
-                      })
-                      .join(" · ") || t("settings.upgrade.none")
-                  : unknown,
-              })}
-            </p>
-            <h5 className="mt-2 font-medium">
-              {t("settings.upgrade.editorUsage")}
-            </h5>
-            <Usage usage={flow.usage?.editor} />
-            <h5 className="mt-2 font-medium">
-              {t("settings.upgrade.servingUsage")}
-            </h5>
-            <Usage usage={flow.usage?.serving} />
-          </details>
-        </article>
-      ))}
+                </ul>
+                <p className="mt-2">
+                  {t("settings.upgrade.flowId", {
+                    id: flow.flow_id ?? flow.id,
+                  })}
+                </p>
+                <p>
+                  {t("settings.upgrade.deployments", {
+                    deployments: flow.used_by
+                      ? ["deployments", "triggers"]
+                          .flatMap((kind) => {
+                            const ids = flow.used_by?.[kind];
+                            return ids?.length
+                              ? [
+                                  t(`settings.upgrade.usedBy.${kind}`, {
+                                    ids: ids.join(", "),
+                                  }),
+                                ]
+                              : [];
+                          })
+                          .join(" · ") || t("settings.upgrade.none")
+                      : unknown,
+                  })}
+                </p>
+                <h5 className="mt-2 font-medium">
+                  {t("settings.upgrade.editorUsage")}
+                </h5>
+                <Usage usage={flow.usage?.editor} />
+                <h5 className="mt-2 font-medium">
+                  {t("settings.upgrade.servingUsage")}
+                </h5>
+                <Usage usage={flow.usage?.serving} />
+              </details>
+            </article>
+          ))}
+      </div>
       <div className="flex flex-wrap items-center gap-2">
         <p role="status" className="mr-auto text-sm text-muted-foreground">
           {filtered.length

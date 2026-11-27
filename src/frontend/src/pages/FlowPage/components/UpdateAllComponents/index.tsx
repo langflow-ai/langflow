@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cloneDeep } from "lodash";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { updateDropsSavedFields } from "@/CustomNodes/helpers/check-code-validity";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
 import useUpdateAllNodes, {
   type UpdateNodesType,
@@ -47,6 +48,7 @@ export default function UpdateAllComponents() {
 
   const [loadingUpdate, setLoadingUpdate] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [rebuildWarnings, setRebuildWarnings] = useState<string[]>([]);
 
   const dismissedNodes = useFlowStore((state) => state.dismissedNodes);
   const addDismissedNodes = useFlowStore((state) => state.addDismissedNodes);
@@ -92,12 +94,19 @@ export default function UpdateAllComponents() {
   );
 
   const updatableComponents = useMemo(
-    () => componentsToUpdateFiltered.filter((component) => !component.blocked),
-    [componentsToUpdateFiltered],
+    () =>
+      componentsToUpdateFiltered
+        .filter((component) => !component.blocked)
+        .map((component) =>
+          rebuildWarnings.includes(component.id)
+            ? { ...component, breakingChange: true }
+            : component,
+        ),
+    [componentsToUpdateFiltered, rebuildWarnings],
   );
 
   const breakingChanges = updatableComponents.filter(
-    (component) => component.breakingChange,
+    (component) => component.breakingChange || component.userEdited,
   );
 
   const handleUpdateAllComponents = async (
@@ -119,8 +128,6 @@ export default function UpdateAllComponents() {
     setLoadingUpdate(true);
 
     try {
-      takeSnapshot();
-
       // Register all pending updates so buildFlow will wait for them.
       for (const nodeUpdate of nodesToUpdate) {
         registerNodeUpdate(nodeUpdate.id);
@@ -157,17 +164,20 @@ export default function UpdateAllComponents() {
           throw new Error(`Validation returned no update for ${nodeUpdate.id}`);
         }
 
+        const newNode = processNodeAdvancedFields(
+          resData,
+          context!.edges ?? [],
+          nodeUpdate.id,
+        );
         return {
           nodeId: nodeUpdate.id,
-          newNode: processNodeAdvancedFields(
-            resData,
-            context!.edges ?? [],
-            nodeUpdate.id,
-          ),
+          newNode,
+          dropsSavedFields:
+            !confirmed && updateDropsSavedFields(node.data.node!, newNode),
           code: currentCode,
           name: "code",
           type,
-        } satisfies UpdateNodesType;
+        } satisfies UpdateNodesType & { dropsSavedFields: boolean };
       });
 
       const results = await Promise.allSettled(updatePromises);
@@ -176,7 +186,15 @@ export default function UpdateAllComponents() {
       );
       const updatedNodeIds = updates.map(({ nodeId }) => nodeId);
 
+      const warnings = updates.filter((update) => update.dropsSavedFields);
+      if (!confirmed && warnings.length > 0) {
+        setRebuildWarnings(warnings.map((update) => update.nodeId));
+        setIsOpen(true);
+        return;
+      }
+
       if (updatedNodeIds.length > 0) {
+        takeSnapshot();
         const before = useFlowStore.getState();
         const edgesBefore = countFlowEdges(before.nodes, before.edges);
         updateAllNodes(updates);
@@ -343,7 +361,10 @@ export default function UpdateAllComponents() {
           <UpdateComponentModal
             isMultiple={true}
             open={isOpen}
-            setOpen={setIsOpen}
+            setOpen={(open) => {
+              setIsOpen(open);
+              if (!open) setRebuildWarnings([]);
+            }}
             onUpdateNode={(ids) => handleUpdateAllComponents(true, ids)}
             components={updatableComponents}
           />

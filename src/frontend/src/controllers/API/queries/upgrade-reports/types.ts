@@ -78,6 +78,7 @@ export type ReportHistory = {
   items: (ReportEntry & {
     source_database?: string | null;
     incomplete?: boolean;
+    duplicate?: boolean;
   })[];
   total: number;
   offset: number;

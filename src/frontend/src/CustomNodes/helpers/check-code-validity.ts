@@ -1,3 +1,4 @@
+import { isEqual } from "lodash";
 import {
   componentsToIgnoreUpdate,
   TYPE_MIGRATIONS,
@@ -398,5 +399,34 @@ const templateKeysCompatible = (
   }
   return true;
 };
+
+// Compare the returned template too: component rebuilds can drop a value even
+// when the saved and catalog declarations have the same shape.
+export const updateDropsSavedFields = (
+  saved: APIClassType,
+  rebuilt: APIClassType,
+): boolean =>
+  Object.entries(saved.template).some(([name, before]) => {
+    // Tool metadata does not define the component's shape, but it can hold
+    // saved tool choices and descriptions that the rebuild must preserve.
+    const isToolMetadata = name === "tools_metadata";
+    if (
+      name === "code" ||
+      (!isToolMetadata && !isStructuralTemplateKey(name)) ||
+      !before
+    ) {
+      return false;
+    }
+    const after = rebuilt.template[name];
+    if (!after) {
+      return !isToolMetadata || holdsValue(before.value);
+    }
+    return (
+      (Boolean(before.file_path) &&
+        !isEqual(before.file_path, after.file_path)) ||
+      Boolean(before.load_from_db) !== Boolean(after.load_from_db) ||
+      (holdsValue(before.value) && !isEqual(before.value, after.value))
+    );
+  });
 
 export default checkCodeValidity;
