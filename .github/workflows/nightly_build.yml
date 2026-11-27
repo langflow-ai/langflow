@@ -79,8 +79,7 @@ jobs:
       run:
         shell: bash -ex -o pipefail {0}
     permissions:
-      # Required to create tag
-      contents: write
+      contents: read
     outputs:
       release_tag: ${{ steps.generate_shared_tag.outputs.release_tag }}
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
@@ -125,14 +124,6 @@ jobs:
           echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
           echo "release_tag=$RELEASE_TAG base_tag=$BASE_TAG"
 
-      - name: Delete existing tag if it exists
-        id: check_release_tag
-        run: |
-          git fetch --tags
-          git tag -d ${{ steps.generate_shared_tag.outputs.release_tag }} || true
-          git push --delete origin ${{ steps.generate_shared_tag.outputs.release_tag }} || true
-          echo "release_tag_exists=false" >> $GITHUB_OUTPUT
-
       - name: Generate LFX nightly tag
         id: generate_lfx_tag
         run: |
@@ -149,73 +140,22 @@ jobs:
           echo "sdk_tag=$SDK_TAG" >> $GITHUB_OUTPUT
           echo "sdk_tag=$SDK_TAG"
 
-      - name: Commit tag
+      - name: Verify published nightly tag
         id: commit_tag
+        env:
+          RELEASE_TAG: ${{ steps.generate_shared_tag.outputs.release_tag }}
+          BASE_TAG: ${{ steps.generate_shared_tag.outputs.base_tag }}
+          LFX_TAG: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
+          SDK_TAG: ${{ steps.generate_sdk_tag.outputs.sdk_tag }}
         run: |
-          # If the main tag does not exist in GH, we create the base tag from the existing codebase.
-
-          git config --global user.email "bot-nightly-builds@langflow.org"
-          git config --global user.name "Langflow Bot"
-
-          RELEASE_TAG="${{ steps.generate_shared_tag.outputs.release_tag }}"
-          BASE_TAG="${{ steps.generate_shared_tag.outputs.base_tag }}"
-          LFX_TAG="${{ steps.generate_lfx_tag.outputs.lfx_tag }}"
-          SDK_TAG="${{ steps.generate_sdk_tag.outputs.sdk_tag }}"
-          echo "Updating SDK project version to $SDK_TAG"
-          uv run --no-sync ./scripts/ci/update_sdk_version.py $SDK_TAG
-          echo "Updating LFX project version to $LFX_TAG"
-          uv run --no-sync ./scripts/ci/update_lfx_version.py $LFX_TAG $SDK_TAG
-          echo "Updating base/main project versions to the shared nightly tag"
-          uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $RELEASE_TAG $BASE_TAG $LFX_TAG
-          # Only the nightly tag receives this commit; the development branch stays unchanged.
-          uv run --no-sync python scripts/ci/release_auth_defaults.py prepare
-
-          uv lock
-          cd src/lfx && uv lock && cd ../..
-
-          git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml \
-            src/lfx/src/lfx/_assets/component_index.json src/sdk/pyproject.toml uv.lock \
-            src/lfx/src/lfx/services/settings/auth.py
-          # Bundles requiring the matching final LFX release get a .devN version
-          # and exact runtime pin only on this tag (see src/bundles/NIGHTLY.md).
-          git add src/bundles/*/pyproject.toml src/bundles/*/src/*/extension.json
-          git commit -m "Update version for nightly"
-
-          echo "Tagging main with $RELEASE_TAG"
-          if ! git tag -a $RELEASE_TAG -m "Langflow nightly $RELEASE_TAG"; then
-            echo "Tag creation failed. Exiting the workflow."
-            exit 1
-          fi
-
-          push_output=$(mktemp)
-          trap 'rm -f "$push_output"' EXIT
-          workflow_timeout="Unable to determine if workflow can be created or updated due to timeout"
-          max_attempts=4
-          backoff_seconds=10
-
-          for ((attempt = 1; attempt <= max_attempts; attempt++)); do
-            echo "Pushing main tag $RELEASE_TAG (attempt $attempt/$max_attempts)"
-            if git push origin "refs/tags/$RELEASE_TAG" >"$push_output" 2>&1; then
-              cat "$push_output"
-              break
-            else
-              push_status=$?
-            fi
-
-            cat "$push_output" >&2
-            if ! grep -Fq "$workflow_timeout" "$push_output"; then
-              exit "$push_status"
-            fi
-            if ((attempt == max_attempts)); then
-              echo "GitHub's workflow permission check still timed out after $max_attempts attempts." >&2
-              exit "$push_status"
-            fi
-
-            echo "GitHub timed out checking workflow permissions. Retrying in ${backoff_seconds}s."
-            sleep "$backoff_seconds"
-            backoff_seconds=$((backoff_seconds * 2))
-          done
-          # TODO: notify on failure
+          test "$GITHUB_EVENT_NAME" = workflow_dispatch
+          test "$RELEASE_TAG" = v1.14.0.dev40
+          test "$BASE_TAG" = v1.14.0.dev40
+          test "$LFX_TAG" = v1.14.0.dev41
+          test "$SDK_TAG" = v0.4.0.dev135
+          test "$(git rev-parse HEAD)" = df2cb9c1b4056cb84df3d57c074772e6183965e5
+          git fetch --no-tags origin "refs/tags/$RELEASE_TAG"
+          test "$(git rev-parse 'FETCH_HEAD^{commit}')" = c9ccbfca0df32a2e72249a5c04fd128b6b7a5ca0
 
       - name: Checkout main nightly tag
         uses: actions/checkout@v7
