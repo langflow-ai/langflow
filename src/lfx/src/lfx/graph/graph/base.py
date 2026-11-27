@@ -3310,6 +3310,7 @@ class Graph:
             get_vertex_predecessors=self.get_vertex_predecessors_ids,
             get_vertex_successors=self.get_vertex_successors_ids,
             is_cyclic=self.is_cyclic,
+            cycle_start_id=self._loop_entry_vertex_id() if self.is_cyclic else None,
         )
 
         # A run that explicitly targets the tool-mode node (the node's play button sets
@@ -3328,6 +3329,24 @@ class Graph:
         self.build_run_map()
         self._first_layer = first_layer
         return first_layer
+
+    def _loop_entry_vertex_id(self) -> str | None:
+        """The Loop whose only incoming edges are its own feedback, as in a loop-body subgraph.
+
+        Such a Loop received its items from outside the graph, so a run must start there. Without it,
+        a graph in which every vertex has a predecessor would start at an arbitrary vertex.
+        """
+        for vertex in self.vertices:
+            feedback_inputs = {output["name"] for output in vertex.outputs if output.get("allows_loop")}
+            if (
+                feedback_inputs
+                and vertex.incoming_edges
+                and all(
+                    getattr(edge.target_handle, "field_name", None) in feedback_inputs for edge in vertex.incoming_edges
+                )
+            ):
+                return vertex.id
+        return None
 
     @staticmethod
     def sort_interface_components_first(vertices_layers: list[list[str]]) -> list[list[str]]:

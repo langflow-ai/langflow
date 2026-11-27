@@ -881,6 +881,7 @@ def get_sorted_vertices(
     get_vertex_successors: Callable[[str], list[str]] | None = None,
     *,
     is_cyclic: bool = False,
+    cycle_start_id: str | None = None,
 ) -> tuple[list[str], list[list[str]]]:
     """Get sorted vertices in a graph.
 
@@ -897,6 +898,8 @@ def get_sorted_vertices(
         get_vertex_predecessors: Function to get predecessors of a vertex
         get_vertex_successors: Function to get successors of a vertex
         is_cyclic: Whether the graph is cyclic
+        cycle_start_id: Where to start when every vertex has a predecessor and no start component is given.
+            Unlike start_component_id, it does not filter the vertices.
 
     Returns:
         Tuple of (first layer vertices, remaining layer vertices)
@@ -976,7 +979,7 @@ def get_sorted_vertices(
         in_degree_map=in_degree_map,
         successor_map=successor_map,
         predecessor_map=predecessor_map,
-        start_id=start_component_id,
+        start_id=start_component_id if start_component_id is not None else cycle_start_id,
         is_input_vertex=is_input_vertex,
         cycle_vertices=cycle_vertices,
         is_cyclic=is_cyclic,
