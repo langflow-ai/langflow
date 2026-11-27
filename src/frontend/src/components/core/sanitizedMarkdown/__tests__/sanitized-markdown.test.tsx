@@ -7,7 +7,11 @@ import { SanitizedMarkdown } from "../index";
 
 // These plugins are unrelated to link rendering and keep the integration
 // focused on the Markdown/raw HTML/sanitizer path.
-jest.mock("@/components/core/codeTabsComponent", () => () => null);
+jest.mock(
+  "@/components/core/codeTabsComponent",
+  () =>
+    ({ code }: { code: string }) => <pre>{code}</pre>,
+);
 jest.mock("rehype-mathjax/browser", () => () => {});
 jest.mock("remark-gfm", () => () => {});
 
@@ -27,4 +31,28 @@ describe("SanitizedMarkdown", () => {
     expect(link).toHaveAttribute("target", "_blank");
     expect(link).toHaveAttribute("rel", "noopener noreferrer");
   });
+});
+
+it("keeps pipe prose, inline code, and fenced code in a response with a table", () => {
+  render(
+    <SanitizedMarkdown
+      chatMessage={[
+        "Choose red | blue.",
+        "",
+        "Use `left | right` to combine values.",
+        "",
+        "```sh",
+        "printf hello | cat",
+        "```",
+        "",
+        "| Name | Value |",
+        "| --- | --- |",
+        "| A | B |",
+      ].join("\n")}
+      isEmpty={false}
+    />,
+  );
+  expect(screen.getByText("Choose red | blue.")).toBeInTheDocument();
+  expect(screen.getByText("left | right")).toBeInTheDocument();
+  expect(screen.getByText("printf hello | cat")).toBeInTheDocument();
 });
