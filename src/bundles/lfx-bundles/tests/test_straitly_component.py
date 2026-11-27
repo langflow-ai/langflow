@@ -131,6 +131,79 @@ def test_failed_refresh_preserves_selection(component, build_config, monkeypatch
     assert component.build_model().model_name == "deepseek/deepseek-v4-1-flash-1017"
 
 
+@pytest.mark.parametrize(
+    "bad_model",
+    [
+        {"id": "m", "context_length": "128000"},
+        {"id": "m", "context_length": True},
+        {"id": "m", "context_length": False},
+        {"id": "m", "context_length": -1},
+        {"id": "m", "context_length": {"tokens": 128000}},
+        {"id": "m", "name": 123},
+        {"id": 123, "name": "Numeric Id"},
+        {"id": False, "name": "Bool Id"},
+        "not-a-dict",
+    ],
+)
+def test_malformed_model_metadata_preserves_selection(component, build_config, monkeypatch, bad_model):
+    def respond(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == f"{STRAITLY_API_BASE}/key":
+            return httpx.Response(200, json={"ok": True})
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {"id": "valid-model", "name": "Valid Model", "context_length": 64000},
+                    bad_model,
+                ]
+            },
+        )
+
+    original = deepcopy(build_config["model_name"])
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        monkeypatch.setattr("lfx_bundles.straitly.straitly.httpx.get", client.get)
+        result = component.update_build_config(build_config, "deepseek/deepseek-v4-1-flash-1017", "model_name")
+
+    for field in ("value", "options", "tooltips"):
+        assert result["model_name"][field] == original[field]
+    assert MODELS_LOAD_FAILED in result["model_name"]["info"]
+
+
+def test_build_model_raises_helpful_import_error_when_langchain_openai_missing(component, monkeypatch):
+    real_import = __import__
+
+    def fake_import(name, *args, **kwargs):
+        if name == "langchain_openai":
+            msg = "No module named 'langchain_openai'"
+            raise ModuleNotFoundError(msg)
+        return real_import(name, *args, **kwargs)
+
+    monkeypatch.setattr("builtins.__import__", fake_import)
+    with pytest.raises(ImportError, match="lfx-bundles\\[straitly\\]"):
+        component.build_model()
+
+
+def test_update_build_config_supports_numeric_float_context_length(component, build_config, monkeypatch):
+    def respond(request: httpx.Request) -> httpx.Response:
+        if str(request.url) == f"{STRAITLY_API_BASE}/key":
+            return httpx.Response(200, json={"ok": True})
+        return httpx.Response(
+            200,
+            json={"data": [{"id": "float-ctx", "name": "Float Context", "context_length": 128000.0}]},
+        )
+
+    with httpx.Client(transport=httpx.MockTransport(respond)) as client:
+        monkeypatch.setattr("lfx_bundles.straitly.straitly.httpx.get", client.get)
+        result = component.update_build_config(build_config, "float-ctx", "model_name")
+
+    assert result["model_name"] == {
+        "value": "deepseek/deepseek-v4-1-flash-1017",
+        "options": ["float-ctx"],
+        "tooltips": {"float-ctx": "Float Context (128,000.0 tokens)"},
+        "info": "",
+    }
+
+
 def test_refresh_recovers_and_clears_error(component, build_config, monkeypatch):
     build_config["model_name"]["info"] = MODELS_LOAD_FAILED
 
