@@ -11,12 +11,31 @@ from fastapi import HTTPException
 from lfx.log.logger import logger
 from lfx.services.deps import get_settings_service
 from sqlalchemy import exc as sqlalchemy_exc
-from sqlmodel import select
+from sqlalchemy import update
+from sqlmodel import col, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_variable_service
+from langflow.services.variable.base import VariableService
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
+
+
+async def _missing_variable_names(
+    variable_service: VariableService, user_id: UUID | str, names: list[str], session: AsyncSession
+) -> set[str]:
+    """Return names the user lacks, re-checked under a per-user lock so concurrent workers insert once.
+
+    There is no unique constraint on (user_id, name), so the lock is what keeps two
+    workers from both inserting. Users that already have every name are never locked.
+    """
+    existing = await variable_service.list_variables(user_id, session)
+    if not set(names).difference(existing):
+        return set()
+    # A no-op write of a non-key column locks the user row on both dialects: FOR NO KEY UPDATE on
+    # PostgreSQL (inserts that reference the user still go through), the database write lock on SQLite.
+    await session.exec(update(User).where(col(User.id) == UUID(str(user_id))).values(is_active=User.is_active))
+    return set(names).difference(await variable_service.list_variables(user_id, session))
 
 
 async def initialize_agentic_global_variables(session: AsyncSession) -> None:
@@ -40,7 +59,8 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
 
     try:
         # Get all users in the system
-        users = (await session.exec(select(User))).all()
+        # Plain columns: a per-user rollback expires loaded ORM objects, and a lazy refresh fails in async.
+        users = (await session.exec(select(User.id, User.username))).all()
         await logger.adebug(f"Found {len(users)} users for agentic variables initialization")
 
         if not users:
@@ -64,12 +84,13 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
             try:
                 await logger.adebug(f"Initializing agentic variables for user: {user.username}")
 
-                # Get existing variables for this user
-                existing_vars = await variable_service.list_variables(user.id, session)
+                missing_vars = await _missing_variable_names(
+                    variable_service, user.id, list(agentic_variables), session
+                )
 
                 for var_name, default_value in agentic_variables.items():
                     try:
-                        if var_name not in existing_vars:
+                        if var_name in missing_vars:
                             # Create variable with default value
                             await variable_service.create_variable(
                                 user_id=user.id,
@@ -101,6 +122,8 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
                         )
                         continue
 
+                # One transaction per user, so the row lock is released before the next user.
+                await session.commit()
             except (
                 HTTPException,
                 sqlalchemy_exc.SQLAlchemyError,
@@ -111,6 +134,7 @@ async def initialize_agentic_global_variables(session: AsyncSession) -> None:
                 ValueError,
                 AttributeError,
             ) as e:
+                await session.rollback()
                 await logger.aexception(f"Failed to initialize agentic variables for user {user.username}: {e}")
                 continue
 
@@ -160,11 +184,11 @@ async def initialize_agentic_user_variables(user_id: UUID | str, session: AsyncS
         agentic_variables = dict.fromkeys(AGENTIC_VARIABLES, DEFAULT_AGENTIC_VARIABLE_VALUE)
         await logger.adebug(f"Agentic variables: {list(agentic_variables.keys())}")
 
-        existing_vars = await variable_service.list_variables(user_id, session)
+        missing_vars = await _missing_variable_names(variable_service, user_id, list(agentic_variables), session)
 
         for var_name, default_value in agentic_variables.items():
             await logger.adebug(f"Checking if agentic variable {var_name} exists for user {user_id}")
-            if var_name not in existing_vars:
+            if var_name in missing_vars:
                 try:
                     await variable_service.create_variable(
                         user_id=user_id,
