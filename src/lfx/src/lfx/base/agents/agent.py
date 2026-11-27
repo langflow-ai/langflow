@@ -22,6 +22,7 @@ from lfx.memory import delete_message
 from lfx.schema.data import Data
 from lfx.schema.log import OnTokenFunctionType
 from lfx.schema.message import Message
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.template.field.base import Output
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
@@ -281,25 +282,27 @@ class LCAgentComponent(Component):
             on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
 
         token_usage_handler = TokenUsageCallbackHandler()
+        callbacks = [
+            AgentAsyncHandler(self.log),
+            token_usage_handler,
+            *self._get_shared_callbacks(),
+        ]
 
         try:
-            result = await process_agent_events(
-                runnable.astream_events(
-                    input_dict,
-                    # here we use the shared callbacks because the AgentExecutor uses the tools
-                    config={
-                        "callbacks": [
-                            AgentAsyncHandler(self.log),
-                            token_usage_handler,
-                            *self._get_shared_callbacks(),
-                        ]
-                    },
-                    version="v2",
-                ),
-                agent_message,
-                cast("SendMessageFunctionType", self.send_message),
-                on_token_callback,
-            )
+            # Keep the lexical tracing scope open while process_agent_events
+            # consumes the full astream_events iterator.
+            with callback_invocation_scope(callbacks):
+                result = await process_agent_events(
+                    runnable.astream_events(
+                        input_dict,
+                        # here we use the shared callbacks because the AgentExecutor uses the tools
+                        config={"callbacks": callbacks},
+                        version="v2",
+                    ),
+                    agent_message,
+                    cast("SendMessageFunctionType", self.send_message),
+                    on_token_callback,
+                )
         except ExceptionWithMessageError as e:
             # Only delete message from database if it has an ID (was stored)
             if hasattr(e, "agent_message"):

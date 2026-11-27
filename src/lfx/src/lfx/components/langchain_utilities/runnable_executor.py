@@ -3,6 +3,7 @@ from langchain_classic.agents import AgentExecutor
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import BoolInput, HandleInput, MessageTextInput
 from lfx.schema.message import Message
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.template.field.base import Output
 
 
@@ -123,7 +124,9 @@ class RunnableExecComponent(Component):
 
         if self.use_stream:
             return self.astream_events(input_dict)
-        result = await self.runnable.ainvoke(input_dict, config={"callbacks": self.get_langchain_callbacks()})
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            result = await self.runnable.ainvoke(input_dict, config={"callbacks": callbacks})
         result_value, status_ = self.get_output(result, self.input_key, self.output_key)
         status += status_
         status += f"\n\nOutput: {result_value}\n\nRaw Output: {result}"
@@ -132,10 +135,12 @@ class RunnableExecComponent(Component):
 
     async def astream_events(self, runnable_input):
         """Yield chat model chunks from the agent with workflow callbacks attached."""
-        async for event in self.runnable.astream_events(
-            runnable_input, config={"callbacks": self.get_langchain_callbacks()}, version="v1"
-        ):
-            if event.get("event") != "on_chat_model_stream":
-                continue
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            async for event in self.runnable.astream_events(
+                runnable_input, config={"callbacks": callbacks}, version="v1"
+            ):
+                if event.get("event") != "on_chat_model_stream":
+                    continue
 
-            yield event.get("data").get("chunk")
+                yield event.get("data").get("chunk")

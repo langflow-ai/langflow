@@ -5,6 +5,7 @@ from typing import Any
 from langchain_core.callbacks.base import Callbacks
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import messages_from_dict
+from lfx.services.tracing.base import callback_invocation_scope
 from toolguard.buildtime.llm import LanguageModelBase
 
 
@@ -134,10 +135,11 @@ class LangchainModelWrapper(LanguageModelBase):
 
         # Call the language model
         try:
-            response = await self.langchain_model.agenerate(
-                messages=[lc_messages],
-                callbacks=self.callbacks,
-            )
+            with callback_invocation_scope(self.callbacks or []):
+                response = await self.langchain_model.agenerate(
+                    messages=[lc_messages],
+                    callbacks=self.callbacks,
+                )
         except Exception as exc:
             msg = f"Language model API call failed: {exc}"
             raise RuntimeError(msg) from exc

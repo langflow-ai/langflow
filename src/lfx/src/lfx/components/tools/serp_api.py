@@ -9,6 +9,7 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import DictInput, IntInput, MultilineInput, SecretStrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class SerpAPISchema(BaseModel):
@@ -100,15 +101,17 @@ class SerpAPIComponent(LCToolComponent):
         """Run a SerpAPI search with workflow callbacks and return results or an error."""
         tool = self.build_tool()
         try:
-            results = tool.run(
-                {
-                    "query": self.input_value,
-                    "params": self.search_params or {},
-                    "max_results": self.max_results,
-                    "max_snippet_length": self.max_snippet_length,
-                },
-                callbacks=self.get_langchain_callbacks(),
-            )
+            callbacks = self.get_langchain_callbacks()
+            with callback_invocation_scope(callbacks):
+                results = tool.run(
+                    {
+                        "query": self.input_value,
+                        "params": self.search_params or {},
+                        "max_results": self.max_results,
+                        "max_snippet_length": self.max_snippet_length,
+                    },
+                    callbacks=callbacks,
+                )
 
             data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
 

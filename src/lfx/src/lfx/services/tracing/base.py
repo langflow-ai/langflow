@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from contextlib import asynccontextmanager
+from contextlib import ExitStack, asynccontextmanager, contextmanager
 from typing import TYPE_CHECKING, Any
 
 from lfx.services.base import Service
@@ -14,6 +14,54 @@ if TYPE_CHECKING:
     from langchain_core.callbacks.base import BaseCallbackHandler
 
     from lfx.custom.custom_component.component import Component
+
+
+@contextmanager
+def callback_invocation_scope(callbacks: list[BaseCallbackHandler]):
+    """Enter optional tracer scopes for the duration of a model invocation."""
+    with ExitStack() as stack:
+        for callback in callbacks:
+            scope_factory = getattr(callback, "langflow_invocation_scope", None)
+            if scope_factory is not None:
+                stack.enter_context(scope_factory())
+        yield
+
+
+class ScopedAsyncIterator:
+    """Keep callback invocation scopes open while an async stream is consumed."""
+
+    def __init__(self, iterator, callbacks: list[BaseCallbackHandler]):
+        self._iterator = iterator
+        self._callbacks = callbacks
+        self._stack: ExitStack | None = None
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        if self._stack is None:
+            self._stack = ExitStack()
+            for callback in self._callbacks:
+                scope_factory = getattr(callback, "langflow_invocation_scope", None)
+                if scope_factory is not None:
+                    self._stack.enter_context(scope_factory())
+        try:
+            return await self._iterator.__anext__()
+        except BaseException:
+            self._stack.close()
+            self._stack = None
+            raise
+
+    async def aclose(self):
+        """Close the wrapped iterator and restore any active callback scopes."""
+        try:
+            aclose = getattr(self._iterator, "aclose", None)
+            if aclose is not None:
+                await aclose()
+        finally:
+            if self._stack is not None:
+                self._stack.close()
+                self._stack = None
 
 
 class BaseTracingService(Service, ABC):
