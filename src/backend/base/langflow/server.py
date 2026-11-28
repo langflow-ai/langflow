@@ -124,13 +124,14 @@ class Logger(glogging.Logger):
 
 
 class LangflowApplication(BaseApplication):
-    def __init__(self, app_factory: Callable[[], Any], options=None) -> None:
+    def __init__(self, app_factory: Callable[[], Any], options=None, *, shutdown_grace_s: int = 0) -> None:
         self.options = options or {}
 
         self.options["worker_class"] = "langflow.server.LangflowUvicornWorker"
         self.options["logger_class"] = Logger
         self.options["pre_fork"] = self.pre_fork
         self._app_factory = app_factory
+        self._shutdown_grace_s = shutdown_grace_s
         self.application = None
         super().__init__()
 
@@ -195,6 +196,11 @@ class LangflowApplication(BaseApplication):
         config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
         for key, value in config.items():
             self.cfg.set(key.lower(), value)
+
+        # A stopping worker first waits this long for its background jobs, so it gets that time
+        # on top of whatever graceful timeout is configured for the rest of its shutdown.
+        if self._shutdown_grace_s > 0:
+            self.cfg.set("graceful_timeout", self.cfg.graceful_timeout + self._shutdown_grace_s)
 
     def load(self):
         if self.application is None:

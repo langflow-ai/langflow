@@ -94,6 +94,9 @@ class DBBackgroundQueue:
     async def start(self) -> None:
         """Nothing to start: workers run in their own processes."""
 
+    async def drain(self, timeout_s: float) -> None:
+        """Nothing to wait for: the API runs no jobs, and a stopping worker finishes its current one."""
+
     async def teardown(self) -> None:
         """Nothing to close: the backend holds no connection of its own."""
 

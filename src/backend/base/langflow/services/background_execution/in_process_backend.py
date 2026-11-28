@@ -53,6 +53,9 @@ class InProcessBackend:
     async def start(self) -> None:
         await self._executor.start()
 
+    async def drain(self, timeout_s: float) -> None:
+        await self._executor.drain(timeout_s)
+
     async def teardown(self) -> None:
         await self._executor.stop()
 

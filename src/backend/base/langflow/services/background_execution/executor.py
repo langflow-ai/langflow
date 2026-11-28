@@ -86,6 +86,29 @@ class InProcessExecutor:
         task.cancel()
         return True
 
+    async def drain(self, timeout_s: float) -> None:
+        """Wait up to ``timeout_s`` for the jobs submitted so far, running and queued, to finish.
+
+        Shutdown calls this before ``stop()``, which cancels whatever is still running.
+        """
+        if not self._workers:
+            # Nothing runs a queued job before the next start(), so waiting would only use up the timeout.
+            return
+        pending = len(self._in_flight) + self._queue.qsize()
+        if pending:
+            await logger.ainfo(f"Waiting up to {timeout_s}s for {pending} background job(s) before stopping")
+        loop = asyncio.get_running_loop()
+        started = loop.time()
+        try:
+            # join() also counts a job a worker has taken off the queue but not started yet.
+            await asyncio.wait_for(self._queue.join(), timeout_s)
+        except asyncio.TimeoutError:
+            left = len(self._in_flight) + self._queue.qsize()
+            await logger.awarning(f"{left} background job(s) still running after {timeout_s}s; stopping cancels them")
+            return
+        if pending:
+            await logger.ainfo(f"Background jobs finished {loop.time() - started:.1f}s into shutdown")
+
     @staticmethod
     async def _await_task(task: asyncio.Task) -> None:
         # A bare ``await task`` relies on the task's own wakeup of its awaiter. On

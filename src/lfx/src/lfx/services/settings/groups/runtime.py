@@ -148,6 +148,14 @@ class RuntimeSettings(BaseModel):
     horizontally. No broker is needed — the database is the queue. Every worker
     must reach that one database: use Postgres for multi-host fleets (SQLite's
     WAL is host-local, so scaled + SQLite only works on a single machine)."""
+    background_shutdown_grace_s: float = Field(default=0.0, ge=0)
+    """Seconds a stopping API worker waits for the background jobs it accepted, running
+    and queued, to finish before it cancels them. ``0`` (default) cancels the running ones
+    at once. The wait runs first in the shutdown, while the services the jobs use are still
+    up, and ``langflow run`` adds it, rounded up, to gunicorn's graceful timeout and to its
+    own wait for gunicorn. Keep the orchestrator's stop timeout (Kubernetes
+    ``terminationGracePeriodSeconds``) above this plus 30 seconds. Only the default backend
+    uses it: a ``langflow worker`` already finishes its current job when it is stopped."""
     background_poll_interval_s: float = Field(default=0.5, gt=0)
     """How often a scaled-mode event tail polls ``job_events`` for new durable
     frames while a job is live. Bounds the added reattach latency per milestone.

@@ -19,7 +19,7 @@ class BackgroundBackend(Protocol):
     """Contract every background-execution backend satisfies.
 
     The facade owns submit/resume/validate semantics and the durable job row;
-    a backend supplies execution transport: lifecycle (``start``/``teardown``),
+    a backend supplies execution transport: lifecycle (``start``/``drain``/``teardown``),
     how a persisted job runs (``dispatch`` in-process, or ``enqueue``/``claim``
     across worker processes), how a resumed row travels back to execution
     (``hand_back``), how a stop request reaches the run (``stop``), how lost
@@ -34,6 +34,8 @@ class BackgroundBackend(Protocol):
     external_workers: bool
 
     async def start(self) -> None: ...
+
+    async def drain(self, timeout_s: float) -> None: ...
 
     async def teardown(self) -> None: ...
 
