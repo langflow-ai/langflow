@@ -605,6 +605,7 @@ module.exports = {
             "Components/bundles-icosacomputing",
             "Components/bundles-jira",
             "Components/bundles-keenable",
+            "Components/bundles-ktemia",
             "Components/bundles-langchain",
             "Components/bundles-lite-llm",
             "Components/bundles-lmstudio",
