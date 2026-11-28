@@ -6,6 +6,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DefaultPromptField, SecretStrInput, StrInput
 from lfx.io import Output
 from lfx.schema.message import Message
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class LangChainHubPromptComponent(Component):
@@ -102,7 +103,9 @@ class LangChainHubPromptComponent(Component):
         # Get the parameters from the attributes
         params_dict = {param: getattr(self, "param_" + param, f"{{{param}}}") for param in template.input_variables}
         original_params = {k: v.text if hasattr(v, "text") else v for k, v in params_dict.items() if v is not None}
-        prompt_value = template.invoke(original_params, config={"callbacks": self.get_langchain_callbacks()})
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            prompt_value = template.invoke(original_params, config={"callbacks": callbacks})
 
         # Update the template with the new value
         original_params["template"] = prompt_value.to_string()

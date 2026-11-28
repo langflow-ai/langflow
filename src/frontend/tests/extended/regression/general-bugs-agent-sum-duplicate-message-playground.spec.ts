@@ -25,9 +25,10 @@ test(
     await page.getByTestId(TID.playgroundBtnFlowIo).click();
     await sendPlaygroundMessage(page, "2+2");
 
-    const calculatorTrigger = page.getByRole("button", {
-      name: /calculator|evaluate expression/i,
-    });
+    const calculatorTrigger = page
+      .getByRole("button")
+      .filter({ hasText: /calculator|evaluate expression/i })
+      .filter({ has: page.getByTestId("tool-status-done") });
     await expect(calculatorTrigger).toBeVisible({
       timeout: TIMEOUTS.buildComplete,
     });

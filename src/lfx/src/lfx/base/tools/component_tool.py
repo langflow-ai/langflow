@@ -22,6 +22,7 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
 from lfx.services.auth.utils import run_sync_auth_validation
+from lfx.services.tracing.base import callback_invocation_scope
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -109,8 +110,10 @@ class ComponentStructuredTool(StructuredTool):
         run_manager: CallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> tuple[Any, Any | None]:
+        config = config or {}
         run_sync_auth_validation(self.validate_runtime_authorization)
-        content = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
+        with callback_invocation_scope(config.get("callbacks") or []):
+            content = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
         return self._content_and_artifact(content)
 
     @override
@@ -121,12 +124,15 @@ class ComponentStructuredTool(StructuredTool):
         run_manager: AsyncCallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> tuple[Any, Any | None]:
+        config = config or {}
         if self.coroutine is None:
             # StructuredTool falls back to self._run, which already returns the
             # content-and-artifact tuple. Wrapping it again would nest the tuple.
-            return await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+            with callback_invocation_scope(config.get("callbacks") or []):
+                return await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
         await self.validate_runtime_authorization()
-        content = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
+        with callback_invocation_scope(config.get("callbacks") or []):
+            content = await super()._arun(*args, config=config, run_manager=run_manager, **kwargs)
         return self._content_and_artifact(content)
 
 

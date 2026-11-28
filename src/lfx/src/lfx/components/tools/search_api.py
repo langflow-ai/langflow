@@ -8,6 +8,7 @@ from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.field_typing import Tool
 from lfx.inputs.inputs import DictInput, IntInput, MessageTextInput, MultilineInput, SecretStrInput
 from lfx.schema.data import Data
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class SearchAPIComponent(LCToolComponent):
@@ -74,15 +75,17 @@ class SearchAPIComponent(LCToolComponent):
     def run_model(self) -> list[Data]:
         """Run the search with workflow callbacks and return the result snippets as data."""
         tool = self.build_tool()
-        results = tool.run(
-            {
-                "query": self.input_value,
-                "params": self.search_params or {},
-                "max_results": self.max_results,
-                "max_snippet_length": self.max_snippet_length,
-            },
-            callbacks=self.get_langchain_callbacks(),
-        )
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            results = tool.run(
+                {
+                    "query": self.input_value,
+                    "params": self.search_params or {},
+                    "max_results": self.max_results,
+                    "max_snippet_length": self.max_snippet_length,
+                },
+                callbacks=callbacks,
+            )
 
         data_list = [Data(data=result, text=result.get("snippet", "")) for result in results]
 

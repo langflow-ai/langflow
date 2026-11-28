@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import contextlib
+import contextvars
+import hashlib
 import os
 import threading
 from collections import OrderedDict
+from dataclasses import dataclass
 from functools import cache
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
@@ -27,6 +30,55 @@ if TYPE_CHECKING:
 
 
 LANGFUSE_FEEDBACK_SCORE_NAME = "user-feedback"
+LANGFUSE_MAX_ATTRIBUTE_LENGTH = 200
+_LANGFUSE_PROPAGATION_CONTEXT_KEYS = {
+    "user_id": "langfuse.propagated.user_id",
+    "session_id": "langfuse.propagated.session_id",
+    "metadata": "langfuse.propagated.metadata",
+    "trace_name": "langfuse.propagated.trace_name",
+}
+
+
+def _normalize_vendor_session_id(session_id: str | None) -> str | None:
+    """Keep Langflow session IDs intact while making oversized vendor values valid."""
+    if session_id is None or (session_id.isascii() and len(session_id) <= LANGFUSE_MAX_ATTRIBUTE_LENGTH):
+        return session_id
+    digest = hashlib.sha256(session_id.encode("utf-8")).hexdigest()
+    return f"langflow-session-{digest}"
+
+
+def _context_without_langfuse_attributes(context: Any) -> Any:
+    """Copy an OTel context without inherited Langfuse propagation values."""
+    from opentelemetry import baggage
+
+    clean_context = context.copy()
+    for key in list(clean_context):
+        if isinstance(key, str) and key.startswith("langfuse.propagated."):
+            del clean_context[key]
+    inherited_baggage = baggage.get_all(context=clean_context)
+    clean_context = baggage.clear(context=clean_context)
+    for key, value in inherited_baggage.items():
+        if not key.startswith("langfuse_"):
+            clean_context = baggage.set_baggage(key, value, context=clean_context)
+    return clean_context
+
+
+@dataclass
+class _CallbackPropagationScope:
+    """One callback observation's active propagation context."""
+
+    observation: Any
+    context_token: Any = None
+
+
+@dataclass
+class _CallbackPropagationState:
+    """Callback scopes owned by one execution context."""
+
+    owner: Any
+    caller_context: Any
+    scopes: dict[UUID, _CallbackPropagationScope]
+    active_run_id: UUID | None = None
 
 
 def _normalize_boundary_messages(value: Any) -> Any:
@@ -235,122 +287,161 @@ def delete_feedback_score(*, message_id: UUID | str) -> None:
 
     Used when a user clears their thumbs up/down so Langfuse stays in sync
     with Langflow's UI state. Callers must gate on tracing being enabled
-    and Langfuse being configured.
+    and Langfuse being configured. Langfuse v4 moved the legacy score-delete
+    endpoint under ``client.api.legacy.score_v1``.
     """
     client = _get_langfuse_client()
-    client.api.score.delete(score_id=feedback_score_id(message_id))
-
-
-def _build_otel_parent_span(trace_id: str | None, parent_span_id: str | None):
-    """Build a non-recording OpenTelemetry span pointing at an existing Langfuse span.
-
-    Mirrors the SDK's private ``Langfuse._create_remote_parent_span`` using only
-    public values we already hold — the flow ``trace_id`` and the parent span id.
-    The returned span is suitable for ``opentelemetry.trace.use_span(...)`` so a
-    subsequently created span nests under it and inherits the same trace id.
-
-    Returns ``None`` when either id is missing or not valid hex (e.g. under unit
-    tests that use mock span ids) so callers degrade to the SDK's default behavior
-    instead of raising.
-    """
-    if not trace_id or not parent_span_id:
-        return None
-
-    from opentelemetry import trace as otel_trace_api
-
-    try:
-        int_trace_id = int(trace_id, 16)
-        int_span_id = int(parent_span_id, 16)
-    except (TypeError, ValueError):
-        return None
-
-    span_context = otel_trace_api.SpanContext(
-        trace_id=int_trace_id,
-        span_id=int_span_id,
-        is_remote=False,
-        trace_flags=otel_trace_api.TraceFlags(0x01),  # mark span as sampled
-    )
-    return otel_trace_api.NonRecordingSpan(span_context)
+    legacy_api = getattr(getattr(client.api, "legacy", None), "score_v1", None)
+    score_api = legacy_api or getattr(client.api, "score", None)
+    delete_score = getattr(score_api, "delete", None)
+    if delete_score is None:
+        logger.warning(
+            "Langfuse does not support deleting feedback scores in this SDK; leaving score {} unchanged",
+            feedback_score_id(message_id),
+        )
+        return
+    delete_score(score_id=feedback_score_id(message_id))
 
 
 @cache
-def _root_run_reparenting_handler_cls(base_cls: type) -> type:
-    """Build a langfuse ``CallbackHandler`` subclass that re-parents root LLM runs.
+def _langchain_handler_cls(base_cls: type) -> type:
+    """Add flow attributes to the observations activated by the Langfuse v4 handler."""
 
-    Why this exists
-    ---------------
-    The langfuse v3 LangChain ``CallbackHandler`` only applies its constructor
-    ``trace_context`` on the chain path (``on_chain_start``). When a model runs as
-    the *root* LangChain run — e.g. a bare Ollama / chat-model call with no wrapping
-    chain — the generation path calls ``start_observation`` without that
-    ``trace_context``. With no active OpenTelemetry span in context, the generation
-    starts a brand-new root trace, orphaned from the flow trace and therefore
-    missing ``userId`` / ``sessionId`` and its token-usage metrics.
-    See https://github.com/langflow-ai/langflow/issues/13429.
-
-    The fix
-    -------
-    For root LLM runs we activate the flow's component (or root) span as the current
-    OpenTelemetry span while the SDK creates the generation span. The generation then
-    inherits the flow ``trace_id`` and nests under that span, restoring user/session
-    attribution. The handler sets ``run_inline = True``, so these callbacks execute
-    synchronously inside the model invocation and the activation reliably wraps span
-    creation. Non-root runs (wrapping chain/agent present) are left untouched — the
-    SDK already nests those correctly under the chain span.
-
-    Cached per ``base_cls`` so repeated callbacks reuse a single class object.
-    """
-    from opentelemetry import trace as otel_trace_api
-
-    class _RootRunReparentingCallbackHandler(base_cls):  # type: ignore[misc, valid-type]
-        def __init__(self, *, otel_parent: Any = None, **kwargs: Any) -> None:
+    class _FlowCallbackHandler(base_cls):  # type: ignore[misc, valid-type]
+        def __init__(self, *, trace_attributes: dict[str, Any], **kwargs: Any) -> None:
             super().__init__(**kwargs)
-            self._otel_parent = otel_parent
+            # Langflow owns a lexical invocation scope around model calls. Keep
+            # callbacks inline so the model task inherits active attribution;
+            # the lexical scope, not callback completion, restores the caller.
+            self.run_inline = True
+            self._trace_attributes = trace_attributes
+            self._attribute_state: contextvars.ContextVar[_CallbackPropagationState | None] = contextvars.ContextVar(
+                "langflow_langfuse_callback_state", default=None
+            )
+            self._states_by_run: dict[UUID, _CallbackPropagationState] = {}
 
         def __deepcopy__(self, memo: dict[int, Any]) -> Any:
-            """Return self instead of a copy.
-
-            The base CallbackHandler holds a LangfuseResourceManager whose
-            keyword-only ``__new__`` cannot be reconstructed during deepcopy
-            (raises ``__new__() missing required keyword arguments``), and
-            langflow deep-copies flow state around the Agent build. The handler
-            keeps no per-invocation mutable state, so sharing it across
-            concurrent calls is safe. See issues #13965 / #13429 (same
-            workaround in flow_loader.py).
-            """
+            # Component snapshots must reuse the callback and its SDK client (#13965).
             memo[id(self)] = self
             return self
 
         def __copy__(self) -> Any:
             return self
 
-        def _reparent(self, method_name: str, args: tuple, kwargs: dict, parent_run_id: UUID | None):
-            bound = getattr(super(), method_name)
-            if parent_run_id is None and self._otel_parent is not None:
-                # end_on_exit/record_exception False so the parent span is never
-                # mutated or closed by activating it as the current context.
-                with otel_trace_api.use_span(
-                    self._otel_parent,
-                    end_on_exit=False,
-                    record_exception=False,
-                    set_status_on_exception=False,
-                ):
-                    return bound(*args, parent_run_id=parent_run_id, **kwargs)
-            return bound(*args, parent_run_id=parent_run_id, **kwargs)
+        @contextlib.contextmanager
+        def langflow_invocation_scope(self):
+            """Keep this handler's Langfuse attributes active for one invocation."""
+            from langfuse import propagate_attributes
+            from opentelemetry import context, trace
 
-        def on_chat_model_start(self, *args: Any, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
-            return self._reparent("on_chat_model_start", args, kwargs, parent_run_id)
+            clean_context = _context_without_langfuse_attributes(context.get_current())
+            clean_context = trace.set_span_in_context(trace.INVALID_SPAN, clean_context)
+            token = context.attach(clean_context)
+            try:
+                with propagate_attributes(**self._trace_attributes):
+                    yield
+            finally:
+                context.detach(token)
 
-        def on_llm_start(self, *args: Any, parent_run_id: UUID | None = None, **kwargs: Any) -> Any:
-            return self._reparent("on_llm_start", args, kwargs, parent_run_id)
+        @staticmethod
+        def _execution_owner() -> Any:
+            try:
+                import asyncio
 
-    return _RootRunReparentingCallbackHandler
+                return asyncio.current_task()
+            except RuntimeError:
+                return threading.get_ident()
+
+        def _state(self) -> _CallbackPropagationState:
+            state = self._attribute_state.get()
+            owner = self._execution_owner()
+            if state is None or state.owner != owner:
+                from opentelemetry import context
+
+                state = _CallbackPropagationState(owner, context.get_current(), {})
+                self._attribute_state.set(state)
+            return state
+
+        def _deactivate_attribute_scope(self) -> None:
+            state = self._state()
+            if state.active_run_id is None:
+                return
+            scope = state.scopes[state.active_run_id]
+            if scope.context_token is not None:
+                from opentelemetry import context
+
+                # AsyncCallbackManager may run start/end in different copied
+                # contextvars contexts. Detach only in the owning context; the
+                # lexical invocation scope owns caller-task restoration.
+                with contextlib.suppress(Exception):
+                    context.detach(scope.context_token)
+                scope.context_token = None
+            state.active_run_id = None
+
+        def _activate_attribute_scope(self, run_id: UUID) -> None:
+            from opentelemetry import context, trace
+
+            state = self._state()
+            scope = state.scopes[run_id]
+            base_context = _context_without_langfuse_attributes(state.caller_context)
+            observation_span = getattr(scope.observation, "_otel_span", None)
+            if observation_span is not None:
+                base_context = trace.set_span_in_context(observation_span, base_context)
+            for key in ("user_id", "session_id", "trace_name"):
+                value = self._trace_attributes.get(key)
+                if value is not None:
+                    base_context = context.set_value(
+                        _LANGFUSE_PROPAGATION_CONTEXT_KEYS[key], value, context=base_context
+                    )
+            metadata = self._trace_attributes.get("metadata")
+            if metadata:
+                base_context = context.set_value(
+                    _LANGFUSE_PROPAGATION_CONTEXT_KEYS["metadata"], metadata, context=base_context
+                )
+            if observation_span is not None and observation_span.is_recording():
+                if (user_id := self._trace_attributes.get("user_id")) is not None:
+                    observation_span.set_attribute("user.id", user_id)
+                if (session_id := self._trace_attributes.get("session_id")) is not None:
+                    observation_span.set_attribute("session.id", session_id)
+                if (trace_name := self._trace_attributes.get("trace_name")) is not None:
+                    observation_span.set_attribute("langfuse.trace.name", trace_name)
+                for key, value in (metadata or {}).items():
+                    observation_span.set_attribute(f"langfuse.observation.metadata.{key}", str(value))
+            scope.context_token = context.attach(base_context)
+            state.active_run_id = run_id
+
+        def _attach_observation(self, run_id: UUID, observation: Any) -> None:
+            state = self._state()
+            # Keep one SDK propagation token active at a time. LangChain can
+            # complete sibling runs out of order, for which nested SDK tokens
+            # cannot be detached safely.
+            self._deactivate_attribute_scope()
+            super()._attach_observation(run_id, observation)
+            state.scopes[run_id] = _CallbackPropagationScope(observation=observation)
+            self._states_by_run[run_id] = state
+            self._activate_attribute_scope(run_id)
+
+        def _detach_observation(self, run_id: UUID) -> Any:
+            # Deactivate before the base handler detaches its observation token;
+            # this keeps the SDK token and attribute scope paired.
+            state = self._states_by_run.pop(run_id, None) or self._state()
+            if state.owner == self._execution_owner():
+                self._deactivate_attribute_scope()
+            result = super()._detach_observation(run_id)
+            state.scopes.pop(run_id, None)
+            if state.scopes and state.owner == self._execution_owner():
+                self._activate_attribute_scope(next(reversed(state.scopes)))
+            elif state.owner == self._execution_owner():
+                self._attribute_state.set(None)
+            return result
+
+    return _FlowCallbackHandler
 
 
 class LangFuseTracer(BaseTracer):
-    """LangFuse tracer implementation using langfuse v3 API.
+    """LangFuse tracer implementation using the Langfuse v4 API.
 
-    The v3 API uses OpenTelemetry-based spans instead of the v2 trace/span pattern.
+    The v4 API uses OpenTelemetry-based observations instead of the v2 trace/span pattern.
     See: https://langfuse.com/docs/observability/sdk/upgrade-path
     """
 
@@ -359,6 +450,7 @@ class LangFuseTracer(BaseTracer):
     flow_display_name: str
     _trace_context: TraceContext
     langfuse_trace_id: str | None
+    _trace_metadata: dict[str, str]
 
     def __init__(
         self,
@@ -390,6 +482,7 @@ class LangFuseTracer(BaseTracer):
         self._input_trace_names: dict[str, str] = {}
         self._output_trace_names: dict[str, str] = {}
         self.langfuse_trace_id = None
+        self._trace_metadata = {}
 
         config = self._get_config()
         self._ready: bool = self._setup_langfuse(config) if config else False
@@ -401,7 +494,7 @@ class LangFuseTracer(BaseTracer):
     def _setup_langfuse(self, config: dict) -> bool:
         """Initialize langfuse client and create root span for the flow.
 
-        Uses langfuse v3 API which requires creating spans with trace_context
+        Uses the Langfuse v4 observation API with trace_context
         instead of using the removed trace() method.
 
         Setup failures are logged at WARNING level so users see why traces
@@ -428,37 +521,37 @@ class LangFuseTracer(BaseTracer):
                 logger.warning(f"Cannot connect to Langfuse at {config.get('host')!r}: {e}")
                 return False
 
-            # Create a deterministic trace ID from the UUID (v3 requires 32-char hex)
+            # Create a deterministic trace ID from the UUID (Langfuse requires 32-char hex)
             langfuse_trace_id = Langfuse.create_trace_id(seed=str(self.trace_id))
             self.langfuse_trace_id = langfuse_trace_id
             # parent_span_id is NotRequired but ty doesn't fully support this yet
             self._trace_context = TraceContext(trace_id=langfuse_trace_id)  # type: ignore[call-arg]
 
-            # Create root span for the flow - this also creates the trace implicitly. It is named
-            # after the flow so traces can be found by name in Langfuse; the id stays in metadata.
-            self._root_span = self._client.start_span(
-                name=self.flow_display_name,
-                trace_context=self._trace_context,
-                metadata={"flow_id": self.flow_id, "project_name": self.project_name},
-            )
-
-            # ``trace.userId`` stays the authenticated Langflow user so existing
-            # Langfuse consumers keep getting the same identity. When a caller
-            # provides an override via ``tracing_user_id``, stamp it under
-            # ``langflow.tracing_user_id`` so it is still recoverable from trace
-            # metadata without changing the meaning of ``trace.userId``.
-            # ``flow_id`` is stamped on the trace up front so traces stay filterable
-            # by flow now that the trace name is the display name; ``end()`` later
-            # merges the graph metadata (which also carries it) on top.
-            trace_metadata: dict[str, Any] = {"flow_id": self.flow_id}
+            # Langfuse v4 propagates trace-level attributes while observations
+            # are created. Keep the metadata string-valued as required by the
+            # SDK so every child observation receives the same attributes.
+            self._trace_metadata = {"flow_id": self.flow_id, "project_name": self.project_name}
             if self.tracing_user_id and self.tracing_user_id != self.user_id:
-                trace_metadata["langflow.tracing_user_id"] = self.tracing_user_id
-            self._root_span.update_trace(
-                name=self.flow_display_name,
-                user_id=self.user_id,
-                session_id=self.session_id,
-                metadata=trace_metadata,
-            )
+                self._trace_metadata["langflow.tracing_user_id"] = self.tracing_user_id
+
+            # Create the root observation for the flow. This also creates the
+            # trace implicitly, and replaces the removed ``update_trace`` calls.
+            # It is named after the flow so traces can be found by name in
+            # Langfuse; the id stays in metadata.
+            from opentelemetry import trace
+
+            with (
+                self._observation_attributes(),
+                self._client.start_as_current_observation(
+                    name=self.flow_display_name,
+                    as_type="span",
+                    trace_context=self._trace_context,
+                    metadata=self._trace_metadata,
+                    end_on_exit=False,
+                ) as root_span,
+            ):
+                self._root_span = root_span
+                self._root_otel_span = trace.get_current_span()
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
@@ -498,12 +591,16 @@ class LangFuseTracer(BaseTracer):
             if vertex.is_output:
                 self._output_trace_names[trace_id] = trace_name
 
-        # Create child span under the root span
-        span = self._root_span.start_span(
-            name=name,
-            input=serialize(inputs),
-            metadata=serialize(metadata_),
-        )
+        # Create a child observation under the root observation. Re-enter the
+        # propagation context for each observation because flow callbacks may
+        # run in different async contexts.
+        with self._observation_attributes():
+            span = self._root_span.start_observation(
+                name=name,
+                as_type="span",
+                input=serialize(inputs),
+                metadata=serialize(metadata_),
+            )
 
         self.spans[trace_id] = span
 
@@ -541,15 +638,14 @@ class LangFuseTracer(BaseTracer):
         if not self._ready:
             return
 
-        # Keep the complete component aggregates on the root observation.
+        # Keep the evaluator-facing graph-boundary contract that the v3
+        # integration exposed through ``update_trace``. In v4 the root
+        # observation is the trace-level record, so write the selected
+        # boundary values directly to it instead of dropping that distinction.
         inputs_ser = serialize(inputs)
         outputs_ser = serialize(outputs)
         metadata_ser = serialize(metadata) if metadata else None
 
-        # Input components emit the normalized external request as their output;
-        # output components emit the final graph result. If a custom graph has no
-        # boundary marker, retain the full aggregate rather than guessing from
-        # concurrent component completion order.
         dual_role_trace_ids = self._input_trace_names.keys() & self._output_trace_names.keys()
         input_found, trace_input = _trace_boundary_value(
             outputs,
@@ -564,19 +660,15 @@ class LangFuseTracer(BaseTracer):
         if not output_found:
             trace_output = outputs_ser
 
-        # Update the root span with final input/output
+        # Langfuse v4 no longer exposes a separate ``update_trace`` API; the
+        # root observation is the trace-level record.
         self._root_span.update(
-            input=inputs_ser,
-            output=outputs_ser,
-            metadata=metadata_ser,
-        )
-
-        # Update trace-level data
-        self._root_span.update_trace(
             input={"input": trace_input},
             output={"output": trace_output},
             metadata=metadata_ser,
         )
+        self._update_trace_metadata(metadata_ser)
+        self._root_span.set_trace_io(input={"input": trace_input}, output={"output": trace_output})
 
         # End the root span
         self._root_span.end()
@@ -588,6 +680,70 @@ class LangFuseTracer(BaseTracer):
             self._client.flush()
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error flushing Langfuse client: {e}")
+
+    def _update_trace_metadata(self, metadata: dict[str, Any] | None) -> None:
+        """Apply final metadata to the existing root trace through the SDK API.
+
+        ``LangfuseSpan.update(metadata=...)`` writes observation metadata. The
+        v4 SDK's public ``propagate_attributes`` API writes trace metadata, but
+        only on its current OTel span. Temporarily making the existing root
+        current preserves the trace-level contract without changing the caller's
+        context or the root's boundary input/output attributes.
+        """
+        if not metadata:
+            return
+
+        from langfuse import propagate_attributes
+        from opentelemetry import trace
+
+        root_otel_span = getattr(self, "_root_otel_span", None)
+        if root_otel_span is None or not root_otel_span.is_recording():
+            return
+
+        with trace.use_span(root_otel_span), propagate_attributes(metadata=metadata):
+            pass
+
+    def _attributes(self) -> dict[str, Any]:
+        return {
+            "user_id": self.user_id,
+            "session_id": _normalize_vendor_session_id(self.session_id),
+            "metadata": self._trace_metadata,
+            "trace_name": self.flow_display_name,
+        }
+
+    @contextlib.contextmanager
+    def _observation_attributes(self):
+        from langfuse import propagate_attributes
+        from opentelemetry import context, trace
+
+        # Start from a copy without inherited Langfuse attributes. The SDK
+        # merges metadata and ignores None values, so entering directly from an
+        # ambient flow can otherwise leak its user/session into this flow.
+        clean_context = _context_without_langfuse_attributes(context.get_current())
+        clean_context = trace.set_span_in_context(trace.INVALID_SPAN, clean_context)
+        context_token = context.attach(clean_context)
+        try:
+            # Explicit trace_context parents on the observation keep the flow
+            # linked while the invalid active span prevents caller-span mutation.
+            with propagate_attributes(**self._attributes()):
+                yield
+        finally:
+            context.detach(context_token)
+
+    @contextlib.contextmanager
+    def langflow_invocation_scope(self):
+        """Keep Langfuse attributes active for one caller-owned model invocation."""
+        from langfuse import propagate_attributes
+        from opentelemetry import context, trace
+
+        clean_context = _context_without_langfuse_attributes(context.get_current())
+        clean_context = trace.set_span_in_context(trace.INVALID_SPAN, clean_context)
+        token = context.attach(clean_context)
+        try:
+            with propagate_attributes(**self._attributes()):
+                yield
+        finally:
+            context.detach(token)
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
@@ -605,14 +761,10 @@ class LangFuseTracer(BaseTracer):
                 "parent_span_id": parent_span.id,
             }
 
-            # ``trace_context`` alone keeps chain/agent runs nested (the SDK honors
-            # it on the chain path). ``otel_parent`` additionally re-parents *root*
-            # LLM runs (a bare model with no wrapping chain), which the SDK would
-            # otherwise emit as an orphan trace with no user/session and detached
-            # token usage. See https://github.com/langflow-ai/langflow/issues/13429.
-            otel_parent = _build_otel_parent_span(self._trace_context["trace_id"], parent_span.id)
-            handler_cls = _root_run_reparenting_handler_cls(CallbackHandler)
-            handler = handler_cls(trace_context=trace_ctx, otel_parent=otel_parent)
+            # Langfuse v4 honors the explicit parent for bare LLMs and wrapped chains.
+            handler = _langchain_handler_cls(CallbackHandler)(
+                trace_context=trace_ctx, trace_attributes=self._attributes()
+            )
 
         except (ImportError, ValueError, TypeError) as e:
             logger.debug(f"Error creating LangChain callback handler: {e}")

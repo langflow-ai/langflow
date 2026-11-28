@@ -2,6 +2,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import DropdownInput, FloatInput, IntInput, MessageTextInput, Output, SecretStrInput, StrInput
 from lfx.schema.message import Message
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class VectaraRagComponent(Component):
@@ -157,7 +158,9 @@ class VectaraRagComponent(Component):
             rerank_config=rerank_config,
         )
         rag = vectara.as_rag(config)
-        response = rag.invoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()})
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            response = rag.invoke(self.search_query, config={"callbacks": callbacks})
 
         text_output = response["answer"]
 

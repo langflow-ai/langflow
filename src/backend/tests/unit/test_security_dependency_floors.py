@@ -381,10 +381,10 @@ def test_standalone_lfx_bundles_extra_requires_patched_legacy_metadata() -> None
     legacy_bundle = _requirement(extras["bundles"], "lfx-bundles")
     assert "1.3.9" not in legacy_bundle.specifier
     assert "1.3.10" not in legacy_bundle.specifier
-    assert "1.3.11" in legacy_bundle.specifier
-    assert "1.3.11rc1" in legacy_bundle.specifier
+    assert "1.3.12" in legacy_bundle.specifier
+    assert "1.3.12rc1" in legacy_bundle.specifier
 
     toolguard = _requirement(extras["toolguard"], "lfx-toolguard")
     assert "0.3.3" not in toolguard.specifier
-    assert "0.3.4" in toolguard.specifier
-    assert "0.3.4rc1" in toolguard.specifier
+    assert "0.3.5" in toolguard.specifier
+    assert "0.3.5rc1" in toolguard.specifier

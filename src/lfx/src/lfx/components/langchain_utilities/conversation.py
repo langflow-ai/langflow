@@ -1,6 +1,7 @@
 from lfx.base.chains.model import LCChainComponent
 from lfx.inputs.inputs import HandleInput, MultilineInput
 from lfx.schema.message import Message
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class ConversationChainComponent(LCChainComponent):
@@ -45,10 +46,12 @@ class ConversationChainComponent(LCChainComponent):
         else:
             chain = ConversationChain(llm=self.llm, memory=self.memory)
 
-        result = chain.invoke(
-            {"input": self.input_value},
-            config={"callbacks": self.get_langchain_callbacks()},
-        )
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            result = chain.invoke(
+                {"input": self.input_value},
+                config={"callbacks": callbacks},
+            )
         if isinstance(result, dict):
             result = result.get(chain.output_key, "")
 

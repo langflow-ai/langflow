@@ -30,6 +30,7 @@ from lfx.io import (
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
+from lfx.services.tracing.base import callback_invocation_scope
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -393,12 +394,13 @@ class BatchRunComponent(Component):
             # Configure the model with project info and callbacks
             # Some models (e.g., ChatWatsonx) may have serialization issues with with_config()
             # due to SecretStr or other non-serializable attributes
+            callbacks = self.get_langchain_callbacks()
             try:
                 model = model.with_config(
                     {
                         "run_name": self.display_name,
                         "project_name": self.get_project_name(),
-                        "callbacks": self.get_langchain_callbacks(),
+                        "callbacks": callbacks,
                     }
                 )
             except (TypeError, ValueError, AttributeError) as e:
@@ -409,8 +411,9 @@ class BatchRunComponent(Component):
                 )
             # Process bounded batches and track progress. Provider rate-limit responses
             # shrink the active batch size and retry only the requests that were limited.
-            batch_responses = await self._run_conversations(model, conversations)
-            responses_with_idx = list(zip(range(len(conversations)), batch_responses, strict=True))
+            with callback_invocation_scope(callbacks):
+                batch_responses = await self._run_conversations(model, conversations)
+                responses_with_idx = list(zip(range(len(conversations)), batch_responses, strict=True))
 
             # Sort by index to maintain order
             responses_with_idx.sort(key=lambda x: x[0])

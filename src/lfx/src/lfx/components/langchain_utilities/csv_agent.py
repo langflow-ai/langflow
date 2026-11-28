@@ -18,6 +18,7 @@ from lfx.inputs.inputs import (
 from lfx.io import BoolInput, SecretStrInput, StrInput
 from lfx.schema.message import Message
 from lfx.services.deps import get_settings_service
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.template.field.base import Output
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.file_path_security import component_file_access_scopes, enforce_local_file_access
@@ -176,7 +177,9 @@ class CSVAgentComponent(LCAgentComponent):
                 **agent_kwargs,
             )
 
-            result = agent_csv.invoke({"input": self.input_value}, config={"callbacks": self.get_langchain_callbacks()})
+            callbacks = self.get_langchain_callbacks()
+            with callback_invocation_scope(callbacks):
+                result = agent_csv.invoke({"input": self.input_value}, config={"callbacks": callbacks})
             return Message(text=str(result["output"]))
 
         finally:

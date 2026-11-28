@@ -14,6 +14,7 @@ from lfx.inputs.inputs import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 def traversal_strategies() -> list[str]:
@@ -114,7 +115,10 @@ class GraphRAGComponent(LCVectorStoreComponent):
             strategy=strategy_class(**additional_params),
         )
 
-        return docs_to_data(retriever.invoke(self.search_query, config={"callbacks": self.get_langchain_callbacks()}))
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            result = retriever.invoke(self.search_query, config={"callbacks": callbacks})
+        return docs_to_data(result)
 
     def _edge_definition_from_input(self) -> tuple:
         """Generates the edge definition from the input data.

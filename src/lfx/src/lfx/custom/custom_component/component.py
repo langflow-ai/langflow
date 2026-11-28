@@ -5,6 +5,7 @@ import asyncio
 import inspect
 import logging
 from collections.abc import AsyncIterator, Iterator, Mapping
+from contextlib import aclosing
 from copy import deepcopy
 from functools import WRAPPER_ASSIGNMENTS, update_wrapper
 from pathlib import Path
@@ -2551,17 +2552,21 @@ class Component(CustomComponent):
         complete_message = ""
         first_chunk = True
         usage_data: Usage | None = None
-        async for chunk in iterator:
-            complete_message = await self._process_chunk(
-                chunk.text if isinstance(chunk, BaseMessage) else chunk.content,
-                complete_message,
-                message_id,
-                message,
-                first_chunk=first_chunk,
-            )
-            first_chunk = False
-            chunk_usage = extract_usage_from_chunk(chunk)
-            usage_data = accumulate_usage(usage_data, chunk_usage)
+        # Async iteration does not automatically call ``aclose`` when a consumer
+        # breaks early.  Close the iterator here so scoped tracing callbacks (and
+        # any provider-owned stream resources) are released on every exit path.
+        async with aclosing(iterator):
+            async for chunk in iterator:
+                complete_message = await self._process_chunk(
+                    chunk.text if isinstance(chunk, BaseMessage) else chunk.content,
+                    complete_message,
+                    message_id,
+                    message,
+                    first_chunk=first_chunk,
+                )
+                first_chunk = False
+                chunk_usage = extract_usage_from_chunk(chunk)
+                usage_data = accumulate_usage(usage_data, chunk_usage)
         return complete_message, usage_data
 
     async def _process_chunk(

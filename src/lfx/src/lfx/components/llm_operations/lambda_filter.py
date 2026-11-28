@@ -15,6 +15,7 @@ from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.schema.token_usage import extract_usage_from_message
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.utils.constants import MESSAGE_SENDER_AI
 from lfx.utils.python_repl_security import safe_builtins, validate_code_safety
 
@@ -263,7 +264,9 @@ class LambdaFilterComponent(Component):
             prompt = self._build_data_prompt(data)
 
         llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
-        response = await llm.ainvoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            response = await llm.ainvoke(prompt, config={"callbacks": callbacks})
         self._token_usage = extract_usage_from_message(response)
         response_text = response.content if hasattr(response, "content") else str(response)
 
