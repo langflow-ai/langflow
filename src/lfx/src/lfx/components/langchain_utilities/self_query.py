@@ -6,6 +6,7 @@ from lfx.inputs.inputs import HandleInput, MessageTextInput
 from lfx.io import Output
 from lfx.schema.data import Data
 from lfx.schema.message import Message
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class SelfQueryRetrieverComponent(Component):
@@ -74,7 +75,9 @@ class SelfQueryRetrieverComponent(Component):
             msg = f"Query type {type(self.query)} not supported."
             raise TypeError(msg)
 
-        documents = self_query_retriever.invoke(input=input_text, config={"callbacks": self.get_langchain_callbacks()})
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            documents = self_query_retriever.invoke(input=input_text, config={"callbacks": callbacks})
         data = [Data.from_document(document) for document in documents]
         self.status = data
         return data

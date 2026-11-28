@@ -3,6 +3,7 @@ from langchain_core.prompts import PromptTemplate
 
 from lfx.custom.custom_component.custom_component import CustomComponent
 from lfx.field_typing import LanguageModel, Text
+from lfx.services.tracing.base import callback_invocation_scope
 
 
 class ShouldRunNextComponent(CustomComponent):
@@ -23,10 +24,12 @@ class ShouldRunNextComponent(CustomComponent):
         chain = prompt | llm
         error_message = ""
         for _i in range(retries):
-            result = chain.invoke(
-                {"question": question, "context": context, "error_message": error_message},
-                config={"callbacks": self.get_langchain_callbacks()},
-            )
+            callbacks = self.get_langchain_callbacks()
+            with callback_invocation_scope(callbacks):
+                result = chain.invoke(
+                    {"question": question, "context": context, "error_message": error_message},
+                    config={"callbacks": callbacks},
+                )
             if isinstance(result, BaseMessage):
                 content = result.content
             elif isinstance(result, str):

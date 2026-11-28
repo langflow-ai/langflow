@@ -6,6 +6,7 @@ from langchain_core.prompts import PromptTemplate
 from lfx.base.chains.model import LCChainComponent
 from lfx.inputs.inputs import HandleInput, IntInput, MultilineInput
 from lfx.schema import Message
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.template.field.base import Output
 
 if TYPE_CHECKING:
@@ -69,10 +70,12 @@ class SQLGeneratorComponent(LCChainComponent):
                 raise ValueError(msg)
             sql_query_chain = create_sql_query_chain(llm=self.llm, db=self.db, prompt=prompt_template, k=self.top_k)
         query_writer: Runnable = sql_query_chain | {"query": lambda x: x.replace("SQLQuery:", "").strip()}
-        response = query_writer.invoke(
-            {"question": self.input_value},
-            config={"callbacks": self.get_langchain_callbacks()},
-        )
+        callbacks = self.get_langchain_callbacks()
+        with callback_invocation_scope(callbacks):
+            response = query_writer.invoke(
+                {"question": self.input_value},
+                config={"callbacks": callbacks},
+            )
         query = response.get("query")
         self.status = query
         return query

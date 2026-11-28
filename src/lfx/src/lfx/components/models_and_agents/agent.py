@@ -64,6 +64,7 @@ from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.schema.message import Message
 from lfx.schema.table import EditMode
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 
@@ -735,13 +736,14 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
             agent.astream_events(stream_input, config=agent_config, version="v2")
         )
         try:
-            result = await process_agent_events(
-                stream,
-                agent_message,
-                cast("SendMessageFunctionType", self.send_message),
-                on_token_callback,
-                get_pending_interrupt=get_pending_interrupt,
-            )
+            with callback_invocation_scope(self._get_shared_callbacks()):
+                result = await process_agent_events(
+                    stream,
+                    agent_message,
+                    cast("SendMessageFunctionType", self.send_message),
+                    on_token_callback,
+                    get_pending_interrupt=get_pending_interrupt,
+                )
         except AgentPausedError as e:
             # Why: retract the empty partial bubble (leaks as "[]"); the HITL card supersedes it, resume re-emits it.
             paused_message = e.agent_message or agent_message
@@ -982,17 +984,19 @@ class AgentComponent(ToolApprovalMixin, ToolCallingAgentComponent):
                 result = await self._run_agent_with_model_remediation(_run_once)
             return _extract_text_content(result)
 
+        callbacks = self.get_langchain_callbacks()
         try:
-            return await orchestrate_structured_output(
-                llm=llm_model,
-                output_schema=output_schema,
-                system_prompt=injected_system_prompt,
-                format_instructions=format_instructions,
-                input_value=_extract_text_content(self.input_value),
-                run_prompt_fallback=_run_agent_for_fallback,
-                prefer_native=not has_tools,
-                config={"callbacks": self.get_langchain_callbacks()},
-            )
+            with callback_invocation_scope(callbacks):
+                return await orchestrate_structured_output(
+                    llm=llm_model,
+                    output_schema=output_schema,
+                    system_prompt=injected_system_prompt,
+                    format_instructions=format_instructions,
+                    input_value=_extract_text_content(self.input_value),
+                    run_prompt_fallback=_run_agent_for_fallback,
+                    prefer_native=not has_tools,
+                    config={"callbacks": callbacks},
+                )
         except (
             ExceptionWithMessageError,
             ValueError,

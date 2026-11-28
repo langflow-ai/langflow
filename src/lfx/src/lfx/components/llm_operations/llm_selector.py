@@ -12,6 +12,7 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, M
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
+from lfx.services.tracing.base import callback_invocation_scope
 from lfx.template.field.base import Output
 
 
@@ -363,9 +364,9 @@ Return ONLY the index number:"""
             self.log("Requesting model selection from judge LLM...")
             self.status = "Judge LLM analyzing options..."
 
-            response = await self.judge_llm.ainvoke(
-                [system_message, user_message], config={"callbacks": self.get_langchain_callbacks()}
-            )
+            callbacks = self.get_langchain_callbacks()
+            with callback_invocation_scope(callbacks):
+                response = await self.judge_llm.ainvoke([system_message, user_message], config={"callbacks": callbacks})
             self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
             selected_index, chosen_model_instance = self._parse_judge_response(response.content.strip())
             self._selected_model_name = get_model_name(chosen_model_instance)

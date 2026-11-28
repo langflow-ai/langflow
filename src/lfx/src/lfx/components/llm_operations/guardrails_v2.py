@@ -59,6 +59,7 @@ from lfx.io import (
 )
 from lfx.schema import Data, Message
 from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
+from lfx.services.tracing.base import callback_invocation_scope
 
 # ---------------------------------------------------------------------------
 # Environment helpers
@@ -1801,7 +1802,9 @@ JSON:"""
         try:
             prompt = self._build_llm_prompt()
             if hasattr(llm, "invoke"):
-                response = llm.invoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
+                callbacks = self.get_langchain_callbacks()
+                with callback_invocation_scope(callbacks):
+                    response = llm.invoke(prompt, config={"callbacks": callbacks})
                 self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
                 # LangChain messages may carry text alongside non-text blocks.
                 # Its text accessor joins only text content, excluding reasoning.

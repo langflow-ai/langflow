@@ -12,6 +12,7 @@ from lfx.field_typing.range_spec import RangeSpec
 from lfx.io import BoolInput, ModelInput, MultilineInput, MultiselectInput, Output, SecretStrInput, SliderInput
 from lfx.schema import Data, Message
 from lfx.schema.token_usage import accumulate_usage, extract_usage_from_message
+from lfx.services.tracing.base import callback_invocation_scope
 
 guardrail_descriptions = {
     "PII": (
@@ -329,7 +330,9 @@ Now analyze the user input above and respond according to the instructions:"""
         try:
             # Use the LLM to check
             if hasattr(llm, "invoke"):
-                response = llm.invoke(prompt, config={"callbacks": self.get_langchain_callbacks()})
+                callbacks = self.get_langchain_callbacks()
+                with callback_invocation_scope(callbacks):
+                    response = llm.invoke(prompt, config={"callbacks": callbacks})
                 self._token_usage = accumulate_usage(self._token_usage, extract_usage_from_message(response))
                 # Gemini 3 returns content as a list of blocks. The text accessor joins
                 # only text blocks, so model reasoning never reaches the YES/NO parser.
