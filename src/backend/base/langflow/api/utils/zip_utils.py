@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import io
 import zipfile
+import zlib
+from copy import copy
 from dataclasses import dataclass, field
 
 import orjson
@@ -17,6 +19,7 @@ MAX_ENTRY_UNCOMPRESSED_BYTES = 50 * 1024 * 1024  # 50 MB per file
 # allow up to ~25 GB of aggregate expansion (500 x 50 MB), which is enough to
 # exhaust the worker's memory from a small compressed upload.
 MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES = 100 * 1024 * 1024  # 100 MB across all entries
+_ZIP_READ_CHUNK_BYTES = 64 * 1024
 
 
 @dataclass
@@ -25,6 +28,34 @@ class _ZipExtractionResult:
 
     flows: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+
+
+def _read_zip_entry(archive: zipfile.ZipFile, info: zipfile.ZipInfo) -> bytearray:
+    # These methods bound decompression on every supported Python version.
+    if info.compress_type not in (zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED):
+        msg = f"Unsupported compression method for ZIP entry '{info.filename}'"
+        raise ValueError(msg)
+
+    # ZipExtFile stops at ZipInfo.file_size. Give it room to detect an extra
+    # byte while keeping the original size and CRC for validation.
+    read_info = copy(info)
+    read_info.file_size += 1
+    raw = bytearray()
+    try:
+        with archive.open(read_info) as entry:
+            while len(raw) < read_info.file_size:
+                chunk = entry.read(min(_ZIP_READ_CHUNK_BYTES, read_info.file_size - len(raw)))
+                if not chunk:
+                    break
+                raw.extend(chunk)
+    except (zipfile.BadZipFile, EOFError, RuntimeError, zlib.error) as exc:
+        msg = f"Invalid ZIP entry '{info.filename}'"
+        raise ValueError(msg) from exc
+
+    if len(raw) != info.file_size:
+        msg = f"Uncompressed size does not match the declared size for ZIP entry '{info.filename}'"
+        raise ValueError(msg)
+    return raw
 
 
 def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
@@ -59,7 +90,6 @@ def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
             )
             raise ValueError(msg)
 
-        total_uncompressed = 0
         for info in json_entries:
             if info.file_size > MAX_ENTRY_UNCOMPRESSED_BYTES:
                 result.warnings.append(
@@ -67,30 +97,12 @@ def _extract_flows_sync(contents: bytes) -> _ZipExtractionResult:
                     f"{info.file_size} exceeds limit of {MAX_ENTRY_UNCOMPRESSED_BYTES} bytes"
                 )
                 continue
+            # Each read verifies the entry's budget, including for invalid JSON.
+            raw = _read_zip_entry(zf, info)
             try:
-                # Read by ZipInfo, not filename: with duplicate names a
-                # filename lookup resolves to the last matching entry, which
-                # could be oversized and fully decompressed before any check.
-                raw = zf.read(info)
-                if len(raw) > MAX_ENTRY_UNCOMPRESSED_BYTES:
-                    result.warnings.append(
-                        f"Skipping ZIP entry '{info.filename}': actual size "
-                        f"{len(raw)} exceeds limit of {MAX_ENTRY_UNCOMPRESSED_BYTES} bytes"
-                    )
-                    continue
-                # Do not trust declared metadata alone: track the actual expanded
-                # bytes read so far and abort once the aggregate limit is exceeded.
-                total_uncompressed += len(raw)
-                if total_uncompressed > MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES:
-                    msg = (
-                        f"ZIP entries expanded beyond the aggregate limit of "
-                        f"{MAX_ZIP_TOTAL_UNCOMPRESSED_BYTES} bytes while reading '{info.filename}'"
-                    )
-                    raise ValueError(msg)
                 result.flows.append(orjson.loads(raw))
             except orjson.JSONDecodeError:
                 result.warnings.append(f"Skipping ZIP entry '{info.filename}': invalid JSON")
-                continue
 
     return result
 
