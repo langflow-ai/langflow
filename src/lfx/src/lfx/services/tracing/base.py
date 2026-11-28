@@ -16,11 +16,19 @@ if TYPE_CHECKING:
     from lfx.custom.custom_component.component import Component
 
 
+def _callback_handlers(callbacks: Any) -> Any:
+    """Return handlers from either a callback list or LangChain manager."""
+    if callbacks is None:
+        return ()
+    handlers = getattr(callbacks, "handlers", None)
+    return callbacks if handlers is None else handlers
+
+
 @contextmanager
-def callback_invocation_scope(callbacks: list[BaseCallbackHandler]):
+def callback_invocation_scope(callbacks: Any):
     """Enter optional tracer scopes for the duration of a model invocation."""
     with ExitStack() as stack:
-        for callback in callbacks:
+        for callback in _callback_handlers(callbacks):
             scope_factory = getattr(callback, "langflow_invocation_scope", None)
             if scope_factory is not None:
                 stack.enter_context(scope_factory())
@@ -41,7 +49,7 @@ class ScopedAsyncIterator:
     async def __anext__(self):
         if self._stack is None:
             self._stack = ExitStack()
-            for callback in self._callbacks:
+            for callback in _callback_handlers(self._callbacks):
                 scope_factory = getattr(callback, "langflow_invocation_scope", None)
                 if scope_factory is not None:
                     self._stack.enter_context(scope_factory())
