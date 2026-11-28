@@ -105,6 +105,7 @@ it.each([
   ["ja", "1 個のスコープ", "2 個のスコープ"],
   ["ko", "권한 범위 1개", "권한 범위 2개"],
   ["pt", "1 escopo", "2 escopos"],
+  ["tr", "1 kapsam", "2 kapsam"],
   ["zh-Hans", "1 个权限范围", "2 个权限范围"],
 ])(
   "uses the real scope plural rules for %s",

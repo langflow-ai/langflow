@@ -76,7 +76,7 @@ export function PlaygroundAuthGate({
   return (
     <>
       {children}
-      {isAuthenticated && <ChangesPausedNotice />}
+      {isAuthenticated && <ChangesPausedNotice aboveComposer />}
     </>
   );
 }

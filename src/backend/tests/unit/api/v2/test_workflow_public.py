@@ -863,6 +863,41 @@ async def test_public_default_protocol_stream_carries_no_graph_state(client: Asy
     assert '"event": "output"' in body
 
 
+async def test_public_agui_stream_fails_the_run_when_a_component_fails(
+    client: AsyncClient, public_flow_id, monkeypatch
+):
+    """A visitor has no node status, so a failed component must not end the run as a success."""
+    import time
+
+    from langflow.api.v2 import workflow_execution
+
+    async def _fake_generate_flow_events(**kwargs: Any) -> None:
+        event_manager = kwargs["event_manager"]
+        failed = {
+            "id": "Knowledge-1",
+            "valid": False,
+            "data": {"outputs": {"out": {"message": {"errorMessage": "Workflow execution failed."}}}},
+        }
+        event_manager.on_end_vertex(data={"build_data": failed})
+        event_manager.on_end(data={})
+        await event_manager.queue.put((None, None, time.time()))
+
+    monkeypatch.setattr(workflow_execution, "generate_flow_events", _fake_generate_flow_events)
+    _send_unauthenticated(client, "failed-component-client")
+    async with client.stream(
+        "POST",
+        "api/v2/workflows/public",
+        json={"flow_id": str(public_flow_id), "input_value": "Hi", "stream_protocol": "agui"},
+        headers={"Content-Type": "application/json"},
+    ) as response:
+        assert response.status_code == codes.OK
+        body = "".join([chunk async for chunk in response.aiter_text()])
+
+    assert "RUN_ERROR" in body
+    assert "RUN_FINISHED" not in body
+    assert "Knowledge-1" not in body
+
+
 @pytest.mark.benchmark
 @pytest.mark.security
 async def test_public_agui_stream_carries_no_graph_state(client: AsyncClient, public_flow_id):

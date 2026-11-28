@@ -8,6 +8,7 @@ import fr from "@/locales/fr.json";
 import ja from "@/locales/ja.json";
 import ko from "@/locales/ko.json";
 import pt from "@/locales/pt.json";
+import tr from "@/locales/tr.json";
 import zh from "@/locales/zh-Hans.json";
 import FlowList from "../FlowList";
 import { Failure } from "../RunCheck";
@@ -23,6 +24,7 @@ const locales = [
   ["ja", ja, "デプロイ: deployment-1 · トリガー: trigger-1"],
   ["ko", ko, "배포: deployment-1 · 트리거: trigger-1"],
   ["pt", pt, "Implantações: deployment-1 · Gatilhos: trigger-1"],
+  ["tr", tr, "Dağıtımlar: deployment-1 · Tetikleyiciler: trigger-1"],
   ["zh-Hans", zh, "部署：deployment-1 · 触发器：trigger-1"],
 ] as const;
 

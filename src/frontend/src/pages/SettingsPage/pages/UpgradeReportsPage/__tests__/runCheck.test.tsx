@@ -1,7 +1,9 @@
 import { TextEncoder } from "node:util";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactElement } from "react";
+import { createMemoryRouter, RouterProvider } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import type { UpgradeCheckEvent } from "@/controllers/API/queries/upgrade-reports";
 import RunCheck from "../RunCheck";
@@ -55,6 +57,18 @@ function refuse(body: object) {
   finish();
 }
 
+/** The leave guard needs a data router, so every render goes through one. */
+function inRouter(element: ReactElement) {
+  const router = createMemoryRouter(
+    [
+      { path: "/settings/upgrade-reports", element },
+      { path: "/flows", element: <p>Flows</p> },
+    ],
+    { initialEntries: ["/settings/upgrade-reports"] },
+  );
+  return { router, element: <RouterProvider router={router} /> };
+}
+
 function open() {
   const onImported = jest.fn();
   const client = new QueryClient({
@@ -62,17 +76,21 @@ function open() {
   });
   const invalidate = jest.spyOn(client, "invalidateQueries");
   const view = render(
-    <QueryClientProvider client={client}>
-      <RunCheck onSelectReport={onImported} />
-    </QueryClientProvider>,
+    inRouter(
+      <QueryClientProvider client={client}>
+        <RunCheck onSelectReport={onImported} />
+      </QueryClientProvider>,
+    ).element,
   );
   return { onImported, invalidate, view };
 }
 
 let status = 200;
 async function start(version = "1.15.0") {
-  await userEvent.type(screen.getByLabelText("Target release"), version);
-  await userEvent.click(screen.getByRole("button", { name: "Check upgrade" }));
+  await userEvent.type(screen.getByLabelText("Target version"), version);
+  await userEvent.click(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  );
   await waitFor(() => expect(fetch).toHaveBeenCalled());
 }
 
@@ -91,24 +109,42 @@ afterEach(() => jest.restoreAllMocks());
 
 it("starts idle with the check button off until a release is typed", async () => {
   open();
-  const button = screen.getByRole("button", { name: "Check upgrade" });
+  const button = screen.getByRole("button", { name: "Check compatibility" });
   expect(button).toBeDisabled();
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
-  await userEvent.type(screen.getByLabelText("Target release"), "1.15.0");
+  await userEvent.type(screen.getByLabelText("Target version"), "1.15.0");
   expect(button).toBeEnabled();
 });
 
-it("offers fetched releases as suggestions", async () => {
-  const { container } = render(
-    <QueryClientProvider client={new QueryClient()}>
-      <RunCheck onSelectReport={jest.fn()} />
-    </QueryClientProvider>,
-  );
-  await waitFor(() =>
-    expect(
-      container.querySelector('datalist option[value="1.15.0"]'),
-    ).not.toBeNull(),
-  );
+it("offers fetched releases and the installed one when the field gets focus", async () => {
+  open();
+  const field = screen.getByRole("combobox", { name: "Target version" });
+  expect(field).toHaveAttribute("placeholder", "Select or enter a version");
+  await userEvent.click(field);
+  const list = await screen.findByRole("listbox", { name: "Target version" });
+  const options = within(list).getAllByRole("option");
+  expect(options).toHaveLength(2);
+  expect(options[0]).toHaveAccessibleName("Langflow 1.15.0");
+  expect(options[1]).toHaveAccessibleName(/^Langflow 1\.14\.0/);
+  expect(within(options[1]).getByText("Installed")).toBeVisible();
+  await userEvent.click(options[0]);
+  expect(field).toHaveValue("1.15.0");
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+});
+
+it("chooses a suggested release with the keyboard without submitting", async () => {
+  open();
+  const field = screen.getByRole("combobox", { name: "Target version" });
+  // A typed value makes Enter able to submit, so choosing must stop it.
+  await userEvent.type(field, "1.1");
+  await screen.findByRole("listbox");
+  await userEvent.keyboard("{ArrowUp}{Enter}");
+  expect(field).toHaveValue("1.14.0");
+  expect(fetch).not.toHaveBeenCalled();
+  await userEvent.keyboard("{ArrowDown}");
+  expect(screen.getByRole("listbox")).toBeVisible();
+  await userEvent.keyboard("{Escape}");
+  expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
 });
 
 it("still lets the admin type a release when the releases query fails", async () => {
@@ -129,7 +165,9 @@ it("says what is happening, then counts checked flows", async () => {
   emit({ event: "flow", status: "ok" }, { event: "flow", status: "warn" });
   expect(await screen.findByText(/Checked 2 flows\./)).toBeInTheDocument();
   expect(screen.getByRole("status")).toHaveTextContent("Checked 2 flows.");
-  expect(screen.getByRole("button", { name: "Check upgrade" })).toBeDisabled();
+  expect(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  ).toBeDisabled();
 });
 
 it("moves the progress bar toward the total once flows are checked", async () => {
@@ -174,18 +212,23 @@ it("does not say it downloads when the target is the running release", async () 
   expect(screen.queryByText(/Downloading/)).not.toBeInTheDocument();
 });
 
-it("cancel aborts the request and returns to idle", async () => {
+it("cancel aborts the request and says the check was cancelled", async () => {
   open();
   await start();
   emit({ event: "started", target_version: "1.15.0", download: true });
   await userEvent.click(await screen.findByRole("button", { name: "Cancel" }));
   expect(signal.aborted).toBe(true);
   finish();
-  await waitFor(() =>
-    expect(screen.queryByRole("status")).not.toBeInTheDocument(),
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    "Compatibility check canceled.",
   );
+  expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Check upgrade" })).toBeEnabled();
+  await userEvent.type(screen.getByLabelText("Target version"), "1");
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  ).toBeEnabled();
 });
 
 it.each(["target", "button"])(
@@ -193,7 +236,7 @@ it.each(["target", "button"])(
   async (from) => {
     const user = userEvent.setup();
     open();
-    await user.type(screen.getByLabelText("Target release"), "1.15.0");
+    await user.type(screen.getByLabelText("Target version"), "1.15.0");
     if (from === "button") await user.tab();
 
     await user.keyboard("{Enter}");
@@ -201,7 +244,9 @@ it.each(["target", "button"])(
     expect(cancel).toHaveFocus();
 
     await user.keyboard("{Enter}");
-    expect(screen.getByRole("button", { name: "Check upgrade" })).toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: "Check compatibility" }),
+    ).toHaveFocus();
     expect(signal.aborted).toBe(true);
   },
 );
@@ -213,17 +258,23 @@ it("returns focus after a failed check when Cancel had focus", async () => {
   emit({ event: "error", code: "check_running" });
   finish();
   await screen.findByRole("alert");
-  expect(screen.getByRole("button", { name: "Check upgrade" })).toHaveFocus();
+  expect(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  ).toHaveFocus();
 });
 
 it("aborts the request when the page is left", async () => {
   const view = render(
-    <QueryClientProvider client={new QueryClient()}>
-      <RunCheck onSelectReport={jest.fn()} />
-    </QueryClientProvider>,
+    inRouter(
+      <QueryClientProvider client={new QueryClient()}>
+        <RunCheck onSelectReport={jest.fn()} />
+      </QueryClientProvider>,
+    ).element,
   );
-  await userEvent.type(screen.getByLabelText("Target release"), "1.15.0");
-  await userEvent.click(screen.getByRole("button", { name: "Check upgrade" }));
+  await userEvent.type(screen.getByLabelText("Target version"), "1.15.0");
+  await userEvent.click(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  );
   await waitFor(() => expect(fetch).toHaveBeenCalled());
   view.unmount();
   expect(signal.aborted).toBe(true);
@@ -248,11 +299,15 @@ it("says the report is ready, what it found and what comes next", async () => {
   });
   const status = screen.getByRole("status");
   expect(status).toHaveTextContent("The report for Langflow 1.15.0 is ready.");
-  expect(status).toHaveTextContent("OK: 1 · Needs review: 1 · Needs repair: 1");
+  expect(status).toHaveTextContent(
+    "Ready: 1 · Review required: 1 · Needs repair: 1",
+  );
   expect(status).toHaveTextContent(
     "upgrade it to Langflow 1.15.0, and update those flows from the same report.",
   );
-  expect(screen.getByRole("button", { name: "Check upgrade" })).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  ).toBeEnabled();
 });
 
 it("says no flow needs changes when the running release finds nothing", async () => {
@@ -310,7 +365,7 @@ it("clears the finished message when the admin types another release", async () 
   emit({ event: "imported", report_id: "r-1" });
   finish();
   await screen.findByRole("button", { name: "View report" });
-  await userEvent.type(screen.getByLabelText("Target release"), "1");
+  await userEvent.type(screen.getByLabelText("Target version"), "1");
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
 });
 
@@ -334,7 +389,9 @@ it.each([
   emit({ event: "error", code, message: "server said" });
   finish();
   expect(await screen.findByRole("alert")).toHaveTextContent(text);
-  expect(screen.getByRole("button", { name: "Check upgrade" })).toBeEnabled();
+  expect(
+    screen.getByRole("button", { name: "Check compatibility" }),
+  ).toBeEnabled();
 });
 
 it("adds the server message under check_failed and install_failed", async () => {
@@ -367,7 +424,7 @@ it.each([
   emit({ event: "error", code, message: "server said" });
   finish();
   await screen.findByRole("alert");
-  expect(screen.getByLabelText("Target release")).toHaveAttribute(
+  expect(screen.getByLabelText("Target version")).toHaveAttribute(
     "aria-invalid",
     invalid,
   );
@@ -424,6 +481,81 @@ it("clears the error when the admin edits the release", async () => {
   emit({ event: "error", code: "timeout" });
   finish();
   await screen.findByRole("alert");
-  await userEvent.type(screen.getByLabelText("Target release"), "1");
+  await userEvent.type(screen.getByLabelText("Target version"), "1");
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+
+function openWithLink() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
+  const { router, element } = inRouter(
+    <QueryClientProvider client={client}>
+      <RunCheck onSelectReport={jest.fn()} />
+    </QueryClientProvider>,
+  );
+  render(element);
+  return router;
+}
+
+it("asks before leaving a running check, and stays when told to", async () => {
+  const router = openWithLink();
+  await start();
+  emit({ event: "started", target_version: "1.15.0", download: true });
+  await act(() => router.navigate("/flows"));
+  const dialog = await screen.findByRole("dialog", {
+    name: "Leave the compatibility check?",
+  });
+  await userEvent.click(
+    within(dialog).getByRole("button", { name: "Stay on page" }),
+  );
+  expect(router.state.location.pathname).toBe("/settings/upgrade-reports");
+  expect(signal.aborted).toBe(false);
+  expect(screen.getByRole("progressbar")).toBeInTheDocument();
+});
+
+it("cancels the check when the admin chooses to leave", async () => {
+  const router = openWithLink();
+  await start();
+  emit({ event: "started", target_version: "1.15.0", download: true });
+  await act(() => router.navigate("/flows"));
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Cancel check and leave" }),
+  );
+  expect(signal.aborted).toBe(true);
+  expect(await screen.findByText("Flows")).toBeInTheDocument();
+});
+
+it("leaves without asking when no check is running", async () => {
+  const router = openWithLink();
+  await act(() => router.navigate("/flows"));
+  expect(await screen.findByText("Flows")).toBeInTheDocument();
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+});
+
+it("warns the browser before unloading while a check runs", async () => {
+  openWithLink();
+  await start();
+  const event = new Event("beforeunload", { cancelable: true });
+  window.dispatchEvent(event);
+  expect(event.defaultPrevented).toBe(true);
+});
+
+it("stays on the page when the check ends while the leave dialog is open", async () => {
+  const router = openWithLink();
+  await start();
+  emit({ event: "started", target_version: "1.15.0", download: true });
+  await act(() => router.navigate("/flows"));
+  expect(
+    await screen.findByRole("dialog", {
+      name: "Leave the compatibility check?",
+    }),
+  ).toBeVisible();
+  emit({ event: "error", code: "check_failed", message: "boom" });
+  finish();
+  expect(await screen.findByRole("alert")).toBeVisible();
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(router.state.location.pathname).toBe("/settings/upgrade-reports");
 });

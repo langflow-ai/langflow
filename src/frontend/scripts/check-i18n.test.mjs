@@ -27,6 +27,10 @@ test("validates every language enabled by the application", () => {
   assert.deepEqual([...DEFAULT_LOCALES].sort(), enabled.sort());
 });
 
+test("requires Turkish parity by default", () => {
+  assert.ok(DEFAULT_LOCALES.includes("tr"));
+});
+
 /**
  * Materialize a frontend tree and return its root.
  *

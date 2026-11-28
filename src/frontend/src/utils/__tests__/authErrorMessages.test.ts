@@ -5,6 +5,7 @@ import fr from "@/locales/fr.json";
 import ja from "@/locales/ja.json";
 import ko from "@/locales/ko.json";
 import pt from "@/locales/pt.json";
+import tr from "@/locales/tr.json";
 import zhHans from "@/locales/zh-Hans.json";
 import { appendErrorSuggestion, LOGIN_ERROR_KEYS } from "../authErrorMessages";
 
@@ -15,6 +16,7 @@ const TRANSLATED: Record<string, Record<string, string>> = {
   ja,
   ko,
   pt,
+  tr,
   "zh-Hans": zhHans,
 };
 

@@ -49,6 +49,9 @@ class StreamAdapterContext(BaseModel):
     # graph-state events the canvas renders from. Defaults True so a call site
     # that does not thread the request flag keeps today's behavior.
     expose_graph_state: bool = True
+    # AG-UI only. True closes a run whose component failed with RUN_ERROR, for a
+    # client that has no node status to show it (the shared playground).
+    fail_run_on_component_error: bool = False
 
 
 @runtime_checkable
