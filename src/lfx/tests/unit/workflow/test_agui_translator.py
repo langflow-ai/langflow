@@ -1515,6 +1515,87 @@ def test_warning_survives_opt_out():
     assert [e.name for e in events] == ["langflow.warning"]
 
 
+_FAILED_VERTEX = {
+    "build_data": {
+        "id": "Knowledge-y8gm2",
+        "valid": False,
+        "data": {
+            "outputs": {
+                "dataframe_output": {
+                    "message": {"errorMessage": "Workflow execution failed.", "stackTrace": ""},
+                    "type": "error",
+                }
+            }
+        },
+    }
+}
+
+
+def test_failed_component_ends_a_shared_playground_stream_with_run_error():
+    """A visitor's stream has no node status, so a failed run must not read as success."""
+    translator = AGUITranslator(
+        run_id="run-1", thread_id="session-1", expose_graph_state=False, fail_run_on_component_error=True
+    )
+    events = translator.start()
+    events += translator.translate("end_vertex", _FAILED_VERTEX)
+    events += translator.translate("end", {})
+
+    assert not [e for e in events if isinstance(e, RunFinishedEvent)]
+    assert isinstance(events[-1], RunErrorEvent)
+    assert events[-1].message == "Workflow execution failed."
+    assert "Knowledge-y8gm2" not in "\n".join(e.model_dump_json(by_alias=True) for e in events)
+
+
+def test_failed_component_keeps_finishing_other_conversation_only_streams():
+    """Background and API runs keep their outcome contract; only the shared playground opts in."""
+    translator = AGUITranslator(run_id="run-1", thread_id="session-1", expose_graph_state=False)
+    translator.start()
+    translator.translate("end_vertex", _FAILED_VERTEX)
+    events = translator.translate("end", {})
+
+    assert isinstance(events[-1], RunFinishedEvent)
+
+
+def test_run_error_from_a_failed_component_keeps_the_integration_code():
+    """The code drives the visitor's 'reconnect' call to action, so it must survive."""
+    translator = AGUITranslator(
+        run_id="run-1", thread_id="session-1", expose_graph_state=False, fail_run_on_component_error=True
+    )
+    translator.start()
+    failed = {
+        "build_data": {
+            "id": "Gmail-1",
+            "valid": False,
+            "data": {
+                "outputs": {
+                    "out": {
+                        "message": {
+                            "errorMessage": "This flow could not use one of its connections.",
+                            "integrationError": {"error_code": "auth-expired"},
+                        }
+                    }
+                }
+            },
+        }
+    }
+    translator.translate("end_vertex", failed)
+    events = translator.translate("end", {})
+
+    assert isinstance(events[-1], RunErrorEvent)
+    assert events[-1].code == "auth-expired"
+    assert events[-1].message == "This flow could not use one of its connections."
+
+
+def test_failed_component_still_finishes_a_stream_with_graph_state():
+    """The canvas renders the failure from the node status, so its run keeps finishing as before."""
+    translator = AGUITranslator(run_id="run-1", thread_id="session-1")
+    translator.start()
+    translator.translate("end_vertex", _FAILED_VERTEX)
+    events = translator.translate("end", {})
+
+    assert isinstance(events[-1], RunFinishedEvent)
+
+
 def test_end_vertex_sends_the_router_and_taken_outputs_of_each_skipped_vertex():
     """Each skipped vertex names its own router, even with two routers in one delta."""
     t = AGUITranslator(run_id="r1", thread_id="t1")

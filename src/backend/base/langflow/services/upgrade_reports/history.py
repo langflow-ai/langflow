@@ -109,10 +109,16 @@ async def list_reports(
         else sa.type_coerce(archive, sa.JSON)
     )
     locator = document["source"]["identity"]["locator"]
+    other = UpgradeReport.__table__.alias()
+    duplicate = sa.exists().where(
+        other.c.content_sha256 == UpgradeReport.content_sha256,
+        sa.tuple_(other.c.created_at, other.c.id) < sa.tuple_(UpgradeReport.created_at, UpgradeReport.id),
+    )
     rows = await session.execute(
         sa.select(
             *(getattr(UpgradeReport, name) for name in UpgradeReportMetadata.model_fields),
             func.coalesce(locator["database"].as_string(), locator["path"].as_string()).label("source_database"),
+            duplicate.label("duplicate"),
             sa.or_(
                 func.json_array_length(document["errors"]) > 0,
                 func.json_array_length(document["flows"]) < UpgradeReport.flow_count,

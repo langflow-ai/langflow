@@ -136,4 +136,45 @@ describe("Button behavior", () => {
       screen.getByRole("button", { name: "save flow" }),
     ).toBeInTheDocument();
   });
+
+  describe("title case follows <html lang>", () => {
+    afterEach(() => {
+      document.documentElement.lang = "";
+    });
+
+    it.each([
+      ["ilerlemesini görüntüle", "İlerlemesini Görüntüle"],
+      ["IŞIK", "Işık"],
+      ["veritabanını indir", "Veritabanını İndir"],
+    ])("uses Turkish casing for %s in tr", (label, expected) => {
+      document.documentElement.lang = "tr";
+      render(<Button>{label}</Button>);
+      expect(screen.getByRole("button")).toHaveTextContent(expected, {
+        normalizeWhitespace: false,
+      });
+    });
+
+    it.each(["en_US", "x y", "i-klingon", ""])(
+      "falls back to default casing when lang is %j",
+      (lang) => {
+        document.documentElement.lang = lang;
+        render(<Button>save flow</Button>);
+        expect(
+          screen.getByRole("button", { name: "Save Flow" }),
+        ).toBeInTheDocument();
+      },
+    );
+
+    // Other shipped locales must render exactly what the locale-blind casing did.
+    it.each(["en", "de", "es", "fr", "ja", "ko", "pt", "zh-Hans"])(
+      "keeps the default casing in %s",
+      (lang) => {
+        document.documentElement.lang = lang;
+        render(<Button>ilerlemesini IŞIK straße größe</Button>);
+        expect(screen.getByRole("button").textContent).toBe(
+          "Ilerlemesini Işik Straße Größe",
+        );
+      },
+    );
+  });
 });
