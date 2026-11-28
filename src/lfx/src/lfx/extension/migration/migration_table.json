@@ -5312,6 +5312,31 @@
       "added_in": "1.14.0"
     },
     {
+      "bare_class_name": "KtemiaBookingOptionsComponent",
+      "target": "ext:ktemia:KtemiaBookingOptionsComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "KtemiaCarSearchComponent",
+      "target": "ext:ktemia:KtemiaCarSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "KtemiaFlightSearchComponent",
+      "target": "ext:ktemia:KtemiaFlightSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "KtemiaHotelSearchComponent",
+      "target": "ext:ktemia:KtemiaHotelSearchComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
+      "bare_class_name": "KtemiaLookupComponent",
+      "target": "ext:ktemia:KtemiaLookupComponent@official",
+      "added_in": "1.14.0"
+    },
+    {
       "bare_class_name": "SocialScrapePostsComponent",
       "target": "ext:socialscrape:SocialScrapePostsComponent@official",
       "added_in": "1.14.0"

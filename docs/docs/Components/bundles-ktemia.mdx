@@ -1,0 +1,149 @@
+---
+title: Ktemia
+slug: /bundles-ktemia
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialLfxBundlesInstall from '@site/docs/_partial-bundle-lfx-bundles-install.mdx';
+
+<PartialLfxBundlesInstall />
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Ktemia** bundle.
+
+[Ktemia](https://www.ktemia.com) is a travel search API for flights, hotels, and rental cars.
+One search returns results from airlines, booking sites, and rental companies, and each result lists every seller's price with a booking link.
+Ktemia compares prices. It does not book: the traveller books on the seller's site.
+
+All components need a Ktemia API key.
+Create one at [app.ktemia.com](https://app.ktemia.com) and enter it in each component's **Ktemia API Key** field. To reuse it across flows, store it in a [global variable](/configuration-global-variables), such as `KTEMIA_API_KEY`, and select that variable in each **Ktemia API Key** field.
+The Free plan includes 100 requests a month. A search costs two requests: one to start it and one to read the first page.
+
+All components send requests only to `api.ktemia.com`.
+
+For more information, see the [Ktemia API reference](https://www.ktemia.com/docs/api/).
+To compare Ktemia with other travel APIs by access and coverage, see [Best travel API in 2026](https://www.ktemia.com/blog/best-travel-api/).
+
+## How the components fit together
+
+1. Use **Ktemia Lookup** to turn a place name into the code a search needs: an IATA code for flights, or a location id for hotels and cars.
+   Several places can share a name, so check the matches before you search.
+2. Run **Ktemia Flight Search**, **Ktemia Hotel Search**, or **Ktemia Car Search**.
+   Each returns a [`Table`](/data-types#table) with one row per result, its cheapest price and seller, and the `result_id` and `token` of that result.
+3. Pass `result_id` and `token` to **Ktemia Booking Options** to get every seller's price and booking link for that result.
+   Search tokens expire after about an hour.
+
+When the components are used as [tools](/agents-tools), an agent can run the whole sequence itself.
+If a place or a date is missing from the request, the agent should ask for it instead of guessing.
+
+## Ktemia Lookup
+
+This component looks up airports, airlines, hotel locations, or car rental locations by name.
+
+It returns a [`Table`](/data-types#table) with one row per match.
+
+### Ktemia Lookup parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Ktemia API key. |
+| kind | Dropdown | Input parameter. What to look up: **Airport**, **Airline**, **Hotel location**, or **Car rental location**. |
+| query | String | Input parameter. A city, airport, neighborhood, or airline name, such as `London`, `JFK`, or `Lufthansa`. |
+| timeout | Float | Input parameter. How long to wait for Ktemia to answer, in seconds. Default: 60. |
+
+## Ktemia Flight Search
+
+This component searches one-way or round-trip flights across airlines and booking sites.
+
+Each row is one itinerary, with its departure and arrival, stops, airlines, cheapest price, the seller of that price, and how many sellers offer the itinerary.
+
+### Ktemia Flight Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Ktemia API key. |
+| origin | String | Input parameter. IATA airport or city code, such as `JFK` or `NYC`. |
+| destination | String | Input parameter. IATA airport or city code, such as `LAX` or `LON`. |
+| departure_date | String | Input parameter. The departure date, `YYYY-MM-DD`, today or later. |
+| return_date | String | Input parameter. The return date for a round trip. Leave empty for one way. |
+| adults | Integer | Input parameter. Travellers aged 12 and over. Default: 1. |
+| cabin | Dropdown | Input parameter. `economy`, `premiumEconomy`, `business`, or `first`. Default: `economy`. |
+| max_stops | Dropdown | Input parameter. Maximum stops per leg: `any`, `0` (non-stop only), `1`, or `2`. Default: `any`. |
+| airlines | String | Input parameter. Only these airlines, as comma-separated IATA codes such as `UA, DL`. |
+| country | String | Input parameter. Two-letter market country, such as `GB` or `NO`. Prices come back in that country's currency. Default: the US market. |
+| sort_by | Dropdown | Input parameter. `bestValue`, `price`, `duration`, `departure`, or `arrival`. Default: `bestValue`. |
+| timeout | Float | Input parameter. How long to wait for Ktemia to answer, in seconds. Default: 60. |
+
+## Ktemia Hotel Search
+
+This component searches hotels across booking sites, such as Booking.com, Expedia, Hotels.com, and Agoda.
+
+Each row is one hotel, with its stars, guest rating, neighborhood, cheapest price before and after taxes, the seller of that price, and how many sellers offer the hotel.
+The **location** must be a hotel location id from **Ktemia Lookup**.
+
+### Ktemia Hotel Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Ktemia API key. |
+| location | String | Input parameter. A hotel location id from **Ktemia Lookup**. |
+| checkin | String | Input parameter. The check-in date, `YYYY-MM-DD`, today or later. |
+| checkout | String | Input parameter. The check-out date, `YYYY-MM-DD`, after check-in. |
+| adults | Integer | Input parameter. Number of adults. Default: 2. |
+| rooms | Integer | Input parameter. Number of rooms. Default: 1. |
+| min_stars | Integer | Input parameter. Minimum star rating, from 1 to 5. |
+| max_price | Integer | Input parameter. Drop hotels above this price, in the market's currency. |
+| providers | String | Input parameter. Only these booking sites, comma-separated, such as `Booking.com, Expedia`. |
+| country | String | Input parameter. Two-letter market country. Prices come back in that country's currency. Default: the US market. |
+| sort_by | Dropdown | Input parameter. `bestValue`, `price`, `rating`, `stars`, or `distance`. Default: `bestValue`. |
+| timeout | Float | Input parameter. How long to wait for Ktemia to answer, in seconds. Default: 60. |
+
+## Ktemia Car Search
+
+This component searches rental cars across rental companies and booking sites.
+
+Each row is one car, with its class, transmission, seats, rental company, pick-up address, cheapest total and daily price, the seller of that price, and whether cancellation is free.
+The **pickup_location** must be a car rental location id from **Ktemia Lookup**.
+
+### Ktemia Car Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Ktemia API key. |
+| pickup_location | String | Input parameter. A car rental location id from **Ktemia Lookup**. |
+| dropoff_location | String | Input parameter. A different drop-off location id for a one-way rental. Leave empty to return the car where you picked it up. |
+| pickup_date | String | Input parameter. The pick-up date, `YYYY-MM-DD`, today or later. |
+| dropoff_date | String | Input parameter. The drop-off date, `YYYY-MM-DD`, after pick-up. |
+| driver_age | Integer | Input parameter. The driver's age. Under 25 often carries a young-driver surcharge. |
+| agencies | String | Input parameter. Only these rental companies, as comma-separated ids such as `hertz`. |
+| country | String | Input parameter. Two-letter market country. Prices come back in that country's currency. Default: the US market. |
+| timeout | Float | Input parameter. How long to wait for Ktemia to answer, in seconds. Default: 60. |
+
+## Ktemia Booking Options
+
+This component expands one result from a flight, hotel, or car search into every seller that offers it.
+
+It returns a [`Table`](/data-types#table) with one row per seller: the seller's name, price, total price, and `booking_url`.
+Show `booking_url` to the traveller exactly as returned. It opens the seller's site, where the booking happens.
+
+### Ktemia Booking Options parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. Your Ktemia API key. |
+| vertical | Dropdown | Input parameter. The search the result came from: `flights`, `hotels`, or `cars`. |
+| token | String | Input parameter. The `token` column of the search row. |
+| result_id | String | Input parameter. The `result_id` column of the search row. |
+| timeout | Float | Input parameter. How long to wait for Ktemia to answer, in seconds. Default: 60. |
