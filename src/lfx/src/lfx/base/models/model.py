@@ -367,7 +367,7 @@ class LCModelComponent(Component):
         )
         return True
 
-    async def _handle_stream(self, runnable, inputs, callbacks):
+    async def _handle_stream(self, runnable, inputs, callbacks=None):
         """Handle streaming responses from the language model.
 
         Args:
@@ -378,6 +378,7 @@ class LCModelComponent(Component):
         Returns:
             tuple: (Message object if connected to chat output, model result, AIMessage or None)
         """
+        callbacks = callbacks or []
         lf_message = None
         ai_message = None
         if self.is_connected_to_chat_output():
