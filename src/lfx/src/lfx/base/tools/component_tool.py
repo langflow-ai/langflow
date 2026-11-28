@@ -110,6 +110,7 @@ class ComponentStructuredTool(StructuredTool):
         run_manager: CallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> tuple[Any, Any | None]:
+        config = config or {}
         run_sync_auth_validation(self.validate_runtime_authorization)
         with callback_invocation_scope(config.get("callbacks") or []):
             content = super()._run(*args, config=config, run_manager=run_manager, **kwargs)
@@ -123,6 +124,7 @@ class ComponentStructuredTool(StructuredTool):
         run_manager: AsyncCallbackManagerForToolRun | None = None,
         **kwargs: Any,
     ) -> tuple[Any, Any | None]:
+        config = config or {}
         if self.coroutine is None:
             # StructuredTool falls back to self._run, which already returns the
             # content-and-artifact tuple. Wrapping it again would nest the tuple.
