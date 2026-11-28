@@ -374,6 +374,8 @@ def test_fetch_sorts_alphabetically():
         ("http://localhost:8000/v1", "http://localhost:8000/v1/models"),
         ("http://localhost:8000/", "http://localhost:8000/v1/models"),
         ("https://api.groq.com/openai/v1", "https://api.groq.com/openai/v1/models"),
+        ("https://api.sarvam.ai/v2", "https://api.sarvam.ai/v2/models"),
+        ("https://api.sarvam.ai/v2/", "https://api.sarvam.ai/v2/models"),
     ],
 )
 def test_fetch_models_url_normalization(base_url, expected):
