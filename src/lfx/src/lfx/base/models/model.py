@@ -378,7 +378,8 @@ class LCModelComponent(Component):
         Returns:
             tuple: (Message object if connected to chat output, model result, AIMessage or None)
         """
-        callbacks = callbacks or []
+        if callbacks is None:
+            callbacks = self.get_langchain_callbacks()
         lf_message = None
         ai_message = None
         if self.is_connected_to_chat_output():
