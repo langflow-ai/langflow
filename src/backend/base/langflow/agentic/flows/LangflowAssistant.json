@@ -2074,7 +2074,7 @@
             "icon": "folder",
             "legacy": true,
             "metadata": {
-              "code_hash": "4fda54939fd3",
+              "code_hash": "5c0359558c84",
               "component_class_name": "DirectoryComponent",
               "dependencies": {
                 "dependencies": [

@@ -1,22 +1,18 @@
 from collections import Counter
+from contextlib import nullcontext
 from datetime import datetime
 from types import MethodType  # near the imports
 from typing import TYPE_CHECKING, Any
 
-from langflow.helpers.flow import (
-    get_flow_by_id_or_name,
-    get_user_is_superuser,
-    scoped_model_provider_policy_for_target_flow,
-)
-
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
+from lfx.base.tools.served_flows import served_flow
 from lfx.custom.custom_component.component import Component, get_component_toolkit
 from lfx.field_typing import Tool
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
 
 # TODO: switch to lfx
-from lfx.helpers import get_flow_inputs, run_flow
+from lfx.helpers import get_flow_by_id_or_name, get_flow_inputs, run_flow
 from lfx.inputs.inputs import BoolInput, DropdownInput, InputTypes, MessageTextInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
@@ -34,6 +30,31 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from lfx.base.tools.component_tool import ComponentToolkit
+
+
+def _model_provider_policy(user_id, flow_id, flow_name):
+    """Scope model provider credentials to the target flow, when langflow is installed.
+
+    ``scoped_model_provider_policy_for_target_flow`` resolves per-flow provider credentials out
+    of langflow's database. Standalone lfx has no database, so there is nothing to scope and the
+    run proceeds unscoped.
+    """
+    try:
+        from langflow.helpers.flow import scoped_model_provider_policy_for_target_flow
+    except ImportError:
+        return nullcontext()
+    return scoped_model_provider_policy_for_target_flow(user_id=user_id, flow_id=flow_id, flow_name=flow_name)
+
+
+async def get_user_is_superuser(user_id: str | None) -> bool:
+    """Resolve Langflow privileges lazily; standalone callers get no admin exemption."""
+    try:
+        from langflow.helpers.flow import get_user_is_superuser as resolve_superuser
+    except ModuleNotFoundError as exc:
+        if exc.name == "langflow" or (exc.name and exc.name.startswith("langflow.")):
+            return False
+        raise
+    return await resolve_superuser(user_id)
 
 
 class RunFlowBaseComponent(Component):
@@ -138,6 +159,8 @@ class RunFlowBaseComponent(Component):
     ################################################################
     async def get_flow(self, flow_name_selected: str | None = None, flow_id_selected: str | None = None) -> Data:
         """Get a flow's data by name or id."""
+        if (served := served_flow(self.graph, flow_name_selected, flow_id_selected)) is not None:
+            return served
         flow = await get_flow_by_id_or_name(
             user_id=self.user_id,
             flow_id=flow_id_selected,
@@ -159,7 +182,7 @@ class RunFlowBaseComponent(Component):
         if not (flow_name_selected or flow_id_selected):
             msg = "Flow name or id is required"
             raise ValueError(msg)
-        async with scoped_model_provider_policy_for_target_flow(
+        async with _model_provider_policy(
             user_id=self.user_id,
             flow_id=flow_id_selected,
             flow_name=flow_name_selected,
@@ -194,7 +217,14 @@ class RunFlowBaseComponent(Component):
                 else:
                     self._flow_cache_call("delete", flow_id=flow_id_selected)  # stale, delete it
 
-            flow = target_flow.to_data()
+            if target_flow is not None:
+                flow = target_flow.to_data()
+            else:
+                # Standalone lfx has no database row to authorize; resolve from the served folder.
+                flow = await self.get_flow(flow_name_selected=flow_name_selected, flow_id_selected=flow_id_selected)
+                if not flow.data:
+                    msg = "Flow not found"
+                    raise ValueError(msg)
 
             payload = flow.data.get("data", {})
             sanitized_payload = await prepare_flow_build_for_user(payload, is_superuser=is_superuser)
