@@ -28,6 +28,8 @@ from lfx.services.schema import ServiceType
 from lfx.utils.concurrency import KeyedMemoryLockManager
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from lfx.services.base import Service
     from lfx.services.connection.base import BaseConnectionResolverService
     from lfx.services.factory import ServiceFactory
@@ -120,20 +122,38 @@ class ServiceManager:
         service_name = service_factory.service_class.name
         self.factories[service_name] = service_factory
 
-    def get(self, service_name: ServiceType, default: ServiceFactory | None = None) -> Service:
-        """Get (or create) a service by its name."""
+    def get(
+        self,
+        service_name: ServiceType,
+        default: ServiceFactory | None = None,
+        *,
+        default_factory: Callable[[], ServiceFactory] | None = None,
+    ) -> Service:
+        """Get a managed service, creating its fallback only on a cache miss.
+
+        A zero-argument ``default_factory`` supplies a factory only if discovery
+        finds neither a service class nor a registered factory. Existing
+        ``default`` instances take precedence over the lazy fallback. The
+        provider runs under the requested service's existing keyed lock.
+        """
         with self.keyed_lock.lock(service_name):
             if service_name not in self.services:
-                self._create_service(service_name, default)
+                self._create_service(service_name, default, default_factory=default_factory)
             return self.services[service_name]
 
-    def _create_service(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
+    def _create_service(
+        self,
+        service_name: ServiceType,
+        default: ServiceFactory | None = None,
+        *,
+        default_factory: Callable[[], ServiceFactory] | None = None,
+    ) -> None:
         """Create a new service given its name, handling dependencies."""
         logger.debug(f"Create service {service_name}")
 
         # Settings service is special - always use factory, never from plugins
         if service_name == ServiceType.SETTINGS_SERVICE:
-            self._create_service_from_factory(service_name, default)
+            self._create_service_from_factory(service_name, default, default_factory=default_factory)
             return
 
         # Try plugin discovery first (if not already done)
@@ -153,7 +173,7 @@ class ServiceManager:
             return
 
         # Fall back to factory-based creation (old system)
-        self._create_service_from_factory(service_name, default)
+        self._create_service_from_factory(service_name, default, default_factory=default_factory)
 
     def _create_service_from_class(self, service_name: ServiceType) -> None:
         """Create a service from a registered service class (new plugin system)."""
@@ -239,9 +259,15 @@ class ServiceManager:
 
         return None
 
-    def _create_service_from_factory(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
+    def _create_service_from_factory(
+        self,
+        service_name: ServiceType,
+        default: ServiceFactory | None = None,
+        *,
+        default_factory: Callable[[], ServiceFactory] | None = None,
+    ) -> None:
         """Create a service from a factory (old system)."""
-        self._validate_service_creation(service_name, default)
+        self._validate_service_creation(service_name, default, default_factory=default_factory)
 
         if service_name == ServiceType.SETTINGS_SERVICE:
             from lfx.services.settings.factory import SettingsServiceFactory
@@ -252,6 +278,9 @@ class ServiceManager:
         else:
             factory = self.factories.get(service_name)
 
+        # Resolve the fallback only after plugin/registered-factory selection.
+        if factory is None and default is None and default_factory is not None:
+            default = default_factory()
         # Create dependencies first
         if factory is None and default is not None:
             self.register_factory(default)
@@ -273,11 +302,17 @@ class ServiceManager:
         if callable(set_ready):
             set_ready()
 
-    def _validate_service_creation(self, service_name: ServiceType, default: ServiceFactory | None = None) -> None:
+    def _validate_service_creation(
+        self,
+        service_name: ServiceType,
+        default: ServiceFactory | None = None,
+        *,
+        default_factory: Callable[[], ServiceFactory] | None = None,
+    ) -> None:
         """Validate whether the service can be created."""
         if service_name == ServiceType.SETTINGS_SERVICE:
             return
-        if service_name not in self.factories and default is None:
+        if service_name not in self.factories and default is None and default_factory is None:
             msg = f"No factory registered for the service class '{service_name.name}'"
             raise NoFactoryRegisteredError(msg)
 

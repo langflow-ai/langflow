@@ -37,13 +37,14 @@ from langflow.services.telemetry.service import TelemetryService  # noqa: TC001
 from langflow.services.triggers.service import TriggerService  # noqa: TC001
 
 
-def get_service(service_type: ServiceType, default=None):
+def get_service(service_type: ServiceType, default=None, *, default_factory=None):
     """Retrieves the service instance for the given service type.
 
     Args:
         service_type (ServiceType): The type of service to retrieve.
         default (ServiceFactory, optional): The default ServiceFactory to use if the service is not found.
             Defaults to None.
+        default_factory: Zero-argument provider used only when no registered factory or default instance exists.
 
     Returns:
         Any: The service instance.
@@ -59,7 +60,9 @@ def get_service(service_type: ServiceType, default=None):
         from langflow.services.manager import ServiceManager
 
         service_manager.register_factories(ServiceManager.get_factories())
-    return service_manager.get(service_type, default)
+    if default_factory is None:
+        return service_manager.get(service_type, default)
+    return service_manager.get(service_type, default, default_factory=default_factory)
 
 
 def get_telemetry_service() -> TelemetryService:
@@ -70,7 +73,7 @@ def get_telemetry_service() -> TelemetryService:
     """
     from langflow.services.telemetry.factory import TelemetryServiceFactory
 
-    return get_service(ServiceType.TELEMETRY_SERVICE, TelemetryServiceFactory())
+    return get_service(ServiceType.TELEMETRY_SERVICE, default_factory=TelemetryServiceFactory)
 
 
 def get_tracing_service() -> TracingService:
@@ -81,7 +84,7 @@ def get_tracing_service() -> TracingService:
     """
     from langflow.services.tracing.factory import TracingServiceFactory
 
-    return get_service(ServiceType.TRACING_SERVICE, TracingServiceFactory())
+    return get_service(ServiceType.TRACING_SERVICE, default_factory=TracingServiceFactory)
 
 
 def get_state_service() -> StateService:
@@ -92,7 +95,7 @@ def get_state_service() -> StateService:
     """
     from langflow.services.state.factory import StateServiceFactory
 
-    return get_service(ServiceType.STATE_SERVICE, StateServiceFactory())
+    return get_service(ServiceType.STATE_SERVICE, default_factory=StateServiceFactory)
 
 
 def get_storage_service() -> StorageService:
@@ -103,7 +106,7 @@ def get_storage_service() -> StorageService:
     """
     from langflow.services.storage.factory import StorageServiceFactory
 
-    return get_service(ServiceType.STORAGE_SERVICE, default=StorageServiceFactory())
+    return get_service(ServiceType.STORAGE_SERVICE, default_factory=StorageServiceFactory)
 
 
 def get_variable_service() -> VariableService:
@@ -115,7 +118,7 @@ def get_variable_service() -> VariableService:
     """
     from langflow.services.variable.factory import VariableServiceFactory
 
-    return get_service(ServiceType.VARIABLE_SERVICE, VariableServiceFactory())
+    return get_service(ServiceType.VARIABLE_SERVICE, default_factory=VariableServiceFactory)
 
 
 def is_settings_service_initialized() -> bool:
@@ -142,7 +145,7 @@ def get_settings_service() -> SettingsService:
     """
     from lfx.services.settings.factory import SettingsServiceFactory
 
-    return get_service(ServiceType.SETTINGS_SERVICE, SettingsServiceFactory())
+    return get_service(ServiceType.SETTINGS_SERVICE, default_factory=SettingsServiceFactory)
 
 
 def get_db_service() -> DatabaseService:
@@ -154,7 +157,7 @@ def get_db_service() -> DatabaseService:
     """
     from langflow.services.database.factory import DatabaseServiceFactory
 
-    return get_service(ServiceType.DATABASE_SERVICE, DatabaseServiceFactory())
+    return get_service(ServiceType.DATABASE_SERVICE, default_factory=DatabaseServiceFactory)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:
@@ -191,7 +194,7 @@ def get_cache_service() -> Union[CacheService, AsyncBaseCacheService]:  # noqa: 
     """
     from langflow.services.cache.factory import CacheServiceFactory
 
-    return get_service(ServiceType.CACHE_SERVICE, CacheServiceFactory())
+    return get_service(ServiceType.CACHE_SERVICE, default_factory=CacheServiceFactory)
 
 
 def get_shared_component_cache_service() -> CacheService:
@@ -202,7 +205,7 @@ def get_shared_component_cache_service() -> CacheService:
     """
     from langflow.services.shared_component_cache.factory import SharedComponentCacheServiceFactory
 
-    return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
+    return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, default_factory=SharedComponentCacheServiceFactory)
 
 
 def get_session_service() -> SessionService:
@@ -213,7 +216,7 @@ def get_session_service() -> SessionService:
     """
     from langflow.services.session.factory import SessionServiceFactory
 
-    return get_service(ServiceType.SESSION_SERVICE, SessionServiceFactory())
+    return get_service(ServiceType.SESSION_SERVICE, default_factory=SessionServiceFactory)
 
 
 def get_task_service() -> TaskService:
@@ -225,7 +228,7 @@ def get_task_service() -> TaskService:
     """
     from langflow.services.task.factory import TaskServiceFactory
 
-    return get_service(ServiceType.TASK_SERVICE, TaskServiceFactory())
+    return get_service(ServiceType.TASK_SERVICE, default_factory=TaskServiceFactory)
 
 
 def get_chat_service() -> ChatService:
@@ -250,7 +253,7 @@ def get_queue_service() -> JobQueueService:
     """Retrieves the QueueService instance from the service manager."""
     from langflow.services.job_queue.factory import JobQueueServiceFactory
 
-    return get_service(ServiceType.JOB_QUEUE_SERVICE, JobQueueServiceFactory())
+    return get_service(ServiceType.JOB_QUEUE_SERVICE, default_factory=JobQueueServiceFactory)
 
 
 def _is_lfx_no_op_auth_service(service: object) -> bool:
@@ -281,7 +284,7 @@ def get_auth_service() -> BaseAuthService:
     """
     from langflow.services.auth.factory import AuthServiceFactory
 
-    service = get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+    service = get_service(ServiceType.AUTH_SERVICE, default_factory=AuthServiceFactory)
     if not _is_lfx_no_op_auth_service(service):
         return service
 
@@ -292,28 +295,28 @@ def get_auth_service() -> BaseAuthService:
     service_manager = get_service_manager()
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.update(ServiceType.AUTH_SERVICE)
-    return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
+    return get_service(ServiceType.AUTH_SERVICE, default_factory=AuthServiceFactory)
 
 
 def get_authorization_service() -> BaseAuthorizationService:
     """Retrieve the authorization service."""
     from langflow.services.authorization.factory import AuthorizationServiceFactory
 
-    return get_service(ServiceType.AUTHORIZATION_SERVICE, AuthorizationServiceFactory())
+    return get_service(ServiceType.AUTHORIZATION_SERVICE, default_factory=AuthorizationServiceFactory)
 
 
 def get_connection_resolver_service() -> BaseConnectionResolverService:
     """Retrieve Langflow's active host-pluggable connection resolver."""
     from langflow.services.connection.factory import ConnectionResolverServiceFactory
 
-    return get_service(ServiceType.CONNECTION_RESOLVER_SERVICE, ConnectionResolverServiceFactory())
+    return get_service(ServiceType.CONNECTION_RESOLVER_SERVICE, default_factory=ConnectionResolverServiceFactory)
 
 
 def get_trigger_service() -> TriggerService:
     """Retrieve the trigger persistence service."""
     from langflow.services.triggers.factory import TriggerServiceFactory
 
-    return get_service(ServiceType.TRIGGER_SERVICE, TriggerServiceFactory())
+    return get_service(ServiceType.TRIGGER_SERVICE, default_factory=TriggerServiceFactory)
 
 
 def get_catalog_policy_service() -> BaseCatalogPolicyService:
@@ -338,31 +341,31 @@ def get_job_service():
     """
     from langflow.services.jobs.factory import JobServiceFactory
 
-    return get_service(ServiceType.JOB_SERVICE, JobServiceFactory())
+    return get_service(ServiceType.JOB_SERVICE, default_factory=JobServiceFactory)
 
 
 def get_flow_events_service():
     from langflow.services.flow_events.factory import FlowEventsServiceFactory
 
-    return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())
+    return get_service(ServiceType.FLOW_EVENTS_SERVICE, default_factory=FlowEventsServiceFactory)
 
 
 def get_memory_base_service():
     """Retrieves the MemoryBaseService instance from the service manager."""
     from langflow.services.memory_base.factory import MemoryBaseServiceFactory
 
-    return get_service(ServiceType.MEMORY_BASE_SERVICE, MemoryBaseServiceFactory())
+    return get_service(ServiceType.MEMORY_BASE_SERVICE, default_factory=MemoryBaseServiceFactory)
 
 
 def get_background_execution_service():
     """Retrieves the BackgroundExecutionService instance from the service manager."""
     from langflow.services.background_execution.factory import BackgroundExecutionServiceFactory
 
-    return get_service(ServiceType.BACKGROUND_EXECUTION_SERVICE, BackgroundExecutionServiceFactory())
+    return get_service(ServiceType.BACKGROUND_EXECUTION_SERVICE, default_factory=BackgroundExecutionServiceFactory)
 
 
 def get_telemetry_writer_service():
     """Return the TelemetryWriterService instance (always registered when langflow is installed)."""
     from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory
 
-    return get_service(ServiceType.TELEMETRY_WRITER_SERVICE, TelemetryWriterServiceFactory())
+    return get_service(ServiceType.TELEMETRY_WRITER_SERVICE, default_factory=TelemetryWriterServiceFactory)

@@ -37,12 +37,13 @@ if TYPE_CHECKING:
     from lfx.services.policy_bundle.base import BasePolicyBundleService
 
 
-def get_service(service_type: ServiceType, default=None):
+def get_service(service_type: ServiceType, default=None, *, default_factory=None):
     """Retrieves the service instance for the given service type.
 
     Args:
         service_type: The type of service to retrieve.
-        default: The default ServiceFactory to use if the service is not found.
+        default: The default ServiceFactory instance to use if the service is not found.
+        default_factory: Zero-argument factory provider, resolved only if no registered factory exists.
 
     Returns:
         The service instance or None if not available.
@@ -63,7 +64,9 @@ def get_service(service_type: ServiceType, default=None):
         service_manager.register_factory(service_factory=SettingsServiceFactory())
 
     try:
-        return service_manager.get(service_type, default)
+        if default_factory is None:
+            return service_manager.get(service_type, default)
+        return service_manager.get(service_type, default, default_factory=default_factory)
     except Exception:  # noqa: BLE001
         # Preserve the traceback in logs so callers seeing a None return have something to grep
         # for. Returning None remains the contract because several callers (e.g. get_db_service)
