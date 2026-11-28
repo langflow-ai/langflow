@@ -267,7 +267,8 @@ async def test_authenticated_run_preserves_response_with_less_factory_work(
                 await session.delete(flow)
 
 
-def test_lfx_dependency_wrapper_forwards_lazy_provider(manager):
+@pytest.mark.usefixtures("manager")
+def test_lfx_dependency_wrapper_forwards_lazy_provider():
     """Standalone dependency resolution uses the same manager-owned lazy fallback."""
     from lfx.services.deps import get_service
 
