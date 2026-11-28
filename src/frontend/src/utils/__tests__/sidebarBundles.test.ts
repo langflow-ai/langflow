@@ -128,6 +128,14 @@ describe("SIDEBAR_BUNDLES", () => {
   });
 });
 
+it("registers the Fortytwo bundle", () => {
+  expect(SIDEBAR_BUNDLES).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: "fortytwo", icon: "Fortytwo" }),
+    ]),
+  );
+});
+
 it("uses the Salesforce logo for its integration palette group", () => {
   expect(SIDEBAR_BUNDLES).toContainEqual({
     display_name: "Salesforce",
