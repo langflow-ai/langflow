@@ -90,8 +90,10 @@ def main() -> int:
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--acknowledgments", type=Path, default=Path("scripts/ci/component_breaks.json"))
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[2]
-    exporter = Path(__file__).with_name("component_registry_snapshot.py")
+    script = Path(__file__).resolve()
+    root = script.parents[2]
+    exporter = script.with_name("component_registry_snapshot.py")
+    baseline_constraints = script.with_name("component_baseline_constraints.txt")
     args.output_dir.mkdir(parents=True, exist_ok=True)
     plan = json.loads(args.plan.read_text())
     changes = []
@@ -114,7 +116,20 @@ def main() -> int:
                 )
                 if package == "lfx-bundles":
                     requirement = f"{package}[all-no-torch]=={previous}"
-                run(["uv", "pip", "install", "--python", str(python), requirement])
+                # Published baselines resolve their own dependency metadata independently of the checkout.
+                run(
+                    [
+                        "uv",
+                        "pip",
+                        "install",
+                        "--no-config",
+                        "--constraint",
+                        str(baseline_constraints),
+                        "--python",
+                        str(python),
+                        requirement,
+                    ]
+                )
                 baseline = snapshot(
                     python, exporter, args.output_dir / f"{package}-previous.json", work / f"{package}-home"
                 )

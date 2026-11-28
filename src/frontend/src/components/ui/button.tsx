@@ -76,11 +76,24 @@ export interface ButtonProps
   shouldScale?: boolean;
 }
 
+// i18n.ts keeps <html lang> on the active locale; Turkish needs it for i/İ and I/ı.
+// An invalid tag (e.g. "en_US") would make the casing calls throw, so it falls back.
+function getCasingLocale(): string | undefined {
+  try {
+    return Intl.getCanonicalLocales(document.documentElement.lang)[0];
+  } catch {
+    return undefined;
+  }
+}
+
 function toTitleCase(text: string) {
+  const lang = getCasingLocale();
   return text
     ?.split(" ")
     ?.map(
-      (word) => word?.charAt(0)?.toUpperCase() + word?.slice(1)?.toLowerCase(),
+      (word) =>
+        word?.charAt(0)?.toLocaleUpperCase(lang) +
+        word?.slice(1)?.toLocaleLowerCase(lang),
     )
     ?.join(" ");
 }

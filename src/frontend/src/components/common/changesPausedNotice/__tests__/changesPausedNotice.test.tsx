@@ -3,7 +3,9 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { api } from "@/controllers/API/api";
 import { migrationKeys } from "@/controllers/API/queries/migration";
+import useAuthStore from "@/stores/authStore";
 import { useUtilityStore } from "@/stores/utilityStore";
+import type { Users } from "@/types/api";
 import { axe } from "@/utils/a11y-test";
 import { ChangesPausedNotice } from "..";
 
@@ -11,6 +13,7 @@ jest.mock("@/controllers/API/api", () => ({ api: { get: jest.fn() } }));
 
 const clients: QueryClient[] = [];
 afterEach(() => {
+  useAuthStore.setState({ userData: null });
   clients.forEach((client) => client.clear());
   clients.length = 0;
   jest.clearAllMocks();
@@ -65,6 +68,53 @@ function showWith(
 }
 
 describe("ChangesPausedNotice", () => {
+  it("links an admin to the maintenance controls", () => {
+    useAuthStore.setState({ userData: { is_superuser: true } as Users });
+    showWith(true, true, "/flows", true, false);
+
+    expect(
+      screen.getByRole("link", { name: "Manage maintenance" }),
+    ).toHaveAttribute("href", "/settings/upgrade-reports#upgrade-maintenance");
+  });
+
+  it.each([
+    [false, "/flows"],
+    [true, "/settings/upgrade-reports"],
+  ])(
+    "does not link an admin (%s) on %s to maintenance controls",
+    (admin, page) => {
+      useAuthStore.setState({ userData: { is_superuser: admin } as Users });
+      showWith(true, true, page, true, false);
+
+      expect(
+        screen.queryByRole("link", { name: "Manage maintenance" }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it("says maintenance was last known on when the status stops answering", async () => {
+    const client = showWith(true, true, "/flows", true, false);
+    jest.mocked(api.get).mockRejectedValue(new Error("offline"));
+    await act(() =>
+      client.refetchQueries({ queryKey: migrationKeys.pause }).catch(() => {}),
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Database maintenance was last known to be on. Its current status could not be verified.",
+      ),
+    );
+  });
+
+  it("does not offer maintenance controls during a migration pause", () => {
+    useAuthStore.setState({ userData: { is_superuser: true } as Users });
+    showWith(true);
+
+    expect(
+      screen.queryByRole("link", { name: "Manage maintenance" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("tells every signed-in user, on every page, that changes are paused", () => {
     showWith(true);
 

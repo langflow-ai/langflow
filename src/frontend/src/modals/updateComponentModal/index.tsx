@@ -31,7 +31,11 @@ export default function UpdateComponentModal({
   const [backupFlow, setBackupFlow] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(false);
   const [selectedComponents, setSelectedComponents] = useState<Set<string>>(
-    new Set(components.filter((c) => !c.breakingChange).map((c) => c.id)),
+    new Set(
+      components
+        .filter((c) => !c.breakingChange && !c.userEdited)
+        .map((c) => c.id),
+    ),
   );
   const agGrid = useRef<AgGridReact>(null);
   const currentFlow = useFlowStore((state) => state.currentFlow);
@@ -98,9 +102,13 @@ export default function UpdateComponentModal({
       flex: 1,
       cellClass: "text-muted-foreground",
       cellRenderer: (params) => {
-        return params.value ? (
+        return params.data.userEdited || params.value ? (
           <span className="font-semibold text-accent-amber-foreground">
-            {t("updateComponent.breaking")}
+            {t(
+              params.data.userEdited
+                ? "settings.upgrade.nodeStatus.customized"
+                : "updateComponent.breaking",
+            )}
           </span>
         ) : (
           <span>{t("updateComponent.standard")}</span>
@@ -113,7 +121,11 @@ export default function UpdateComponentModal({
     if (open) {
       setBackupFlow(true);
       setSelectedComponents(
-        new Set(components.filter((c) => !c.breakingChange).map((c) => c.id)),
+        new Set(
+          components
+            .filter((c) => !c.breakingChange && !c.userEdited)
+            .map((c) => c.id),
+        ),
       );
     }
   }, [open]);
@@ -155,6 +167,9 @@ export default function UpdateComponentModal({
       <BaseModal.Content overflowHidden>
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-3 text-sm text-muted-foreground">
+            {components.some((component) => component.userEdited) && (
+              <p>{t("updateComponent.customizedUpdateDesc")}</p>
+            )}
             {isMultiple ? (
               <p>{t("updateComponent.breakingUpdateDesc")}</p>
             ) : (

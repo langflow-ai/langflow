@@ -337,7 +337,9 @@ def check_nodes(
         status = classify_node(node, target.lookup, connected_fields)
         if status is None:
             continue
-        runs, refusal = _runs(node, target, is_superuser=is_superuser)
+        runs, refusal = (
+            ("refused", None) if status.status == "retired" else _runs(node, target, is_superuser=is_superuser)
+        )
         # Inline components have no editor update prompt. Their implementation still
         # matters when the target substitutes its own code for the saved class.
         if status.component_type == "CustomComponent" and runs != "saved_code":

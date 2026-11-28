@@ -43,11 +43,8 @@ PLACEHOLDER_PATTERN = re.compile(r"^\{\{\s*[A-Za-z_][A-Za-z0-9_\-]*\s*\}\}$")
 MCP_SECRET_CONFIG_MAPS = ("env", "headers")
 
 # A Langflow project's own MCP endpoint, as ``_build_project_url`` composes it in
-# ``langflow.api.utils.mcp.config_utils``. Anchored at the start and matched against the
-# parsed *path* only: searching the raw URL let a query string carry the shape, so
-# ``https://elsewhere.example/?next=/api/v1/mcp/project/<id>/x`` read as one of our own
-# projects and would have been rebuilt with a key minted for this plane. The id must be a
-# UUID so a path that merely contains the word cannot be read as a project reference.
+# ``langflow.api.utils.mcp.config_utils``. Match only the parsed path, at the root or
+# after the configured public MCP base path, so a query string cannot supply the route.
 _PROJECT_MCP_PATH = re.compile(
     r"^/api/v1/mcp/project/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:/|$)"
 )
@@ -78,13 +75,12 @@ def _is_variable_reference(value: str) -> bool:
     return variable_reference_name(value) is not None
 
 
-def project_id_from_mcp_url(url: object) -> str | None:
+def project_id_from_mcp_url(url: object, *, base_url: str = "") -> str | None:
     """The Langflow project a server URL points at, or None when it points elsewhere.
 
-    This is what separates the two kinds of MCP server a flow can call. An external one
-    belongs to somebody else, so its credential has to be supplied where the flow runs.
-    One of our own projects can be rebuilt at deploy instead, with a key minted on the
-    target and that target's own address.
+    Both kinds of server are deployed the same way: credentials become variables the target
+    supplies. One of our own projects also has its address made a variable, because the one it
+    was authored with names the plane it was authored on.
 
     Returns None rather than raising for anything it cannot read, including a URL held in
     a variable: ``{{MCP_SERVER_URL}}`` resolves at run time and names no project now, so
@@ -92,14 +88,8 @@ def project_id_from_mcp_url(url: object) -> str | None:
     be wrong about it.
 
     **This answers a path question, not a trust question.** Any host can serve this path
-    shape, so a match means "names project X" and never "is one of ours". The caller has
-    to confirm the id names a project it actually holds before treating it as a sibling;
-    one that does not is an external server whose path happens to rhyme with ours.
-
-    The host it was served from is not that confirmation and is not worth checking. A
-    rebuilt connection carries the deploy target's own address, so the configured origin
-    is discarded rather than trusted, and comparing it would only add a way to stop
-    recognising a real sibling after an operator changes the advertised base URL.
+    shape, so a match means "names project X" and never "is one of ours". Being wrong asks
+    the target for an address it could have been given, which is harmless.
     """
     if not isinstance(url, str):
         return None
@@ -108,6 +98,12 @@ def project_id_from_mcp_url(url: object) -> str | None:
     except ValueError:  # malformed authority, e.g. a bad IPv6 literal
         return None
     match = _PROJECT_MCP_PATH.match(path)
+    if match is None and base_url:
+        try:
+            base_path = urlparse(base_url.strip()).path.rstrip("/")
+        except ValueError:
+            return None
+        match = _PROJECT_MCP_PATH.match(path.removeprefix(base_path))
     return match.group(1).lower() if match else None
 
 
@@ -140,6 +136,51 @@ def variable_name_for(server_name: str, key: str) -> str:
     slug = re.sub(r"[^A-Za-z0-9]+", "_", f"{server_name}_{key}").strip("_").upper()
     digest = hashlib.sha256(f"{server_name}\0{key}".encode()).hexdigest()[:8].upper()
     return f"{VARIABLE_PREFIX}{slug}_{digest}"
+
+
+def mcp_url_variable_name(server_name: str) -> str:
+    """The variable a deploy target supplies one of our own projects' address in.
+
+    The key is not a header name, so it cannot land on a variable a header was given.
+    """
+    return variable_name_for(server_name, "project url")
+
+
+def url_reads_a_variable(url: object) -> bool:
+    """Whether an address is already resolved from a variable where it runs, so it is portable as it stands."""
+    return isinstance(url, str) and (
+        PLACEHOLDER_PATTERN.match(url) is not None or "{{" in url or url.startswith(VARIABLE_PREFIX)
+    )
+
+
+def project_server_http_config(config: dict[str, Any], *, base_url: str = "") -> dict[str, Any] | None:
+    """An entry pointing at a Langflow project as a plain HTTP config, or None for any other entry.
+
+    Auto-install writes these as an ``mcp-proxy`` command with the URL and the headers among its
+    arguments. A deploy target cannot start that command, so both are read back out into the shape
+    every other server uses. Values are copied as they stand: literal, reference or stored ciphertext.
+    """
+    url = config.get("url")
+    headers = dict(config["headers"]) if isinstance(config.get("headers"), dict) else {}
+    args = config.get("args")
+    if url is None and isinstance(args, list):
+        url = next((item for item in args if project_id_from_mcp_url(item, base_url=base_url) is not None), None)
+        for index, item in enumerate(args[:-2]):
+            if item == HEADER_ARG_FLAG and isinstance(args[index + 1], str):
+                headers[args[index + 1]] = args[index + 2]
+    if project_id_from_mcp_url(url, base_url=base_url) is None:
+        return None
+
+    http_config = {"url": url}
+    if headers:
+        http_config["headers"] = headers
+    if config.get("url") is not None:
+        if config.get("mode") in ("SSE", "Streamable_HTTP"):
+            http_config["mode"] = config["mode"]
+        for option in ("verify_ssl", "allow_sse_fallback"):
+            if isinstance(config.get(option), bool):
+                http_config[option] = config[option]
+    return http_config
 
 
 def strip_config_secrets(config: dict[str, Any], server_name: str) -> tuple[dict[str, Any], dict[str, str], bool]:
@@ -198,8 +239,11 @@ __all__ = [
     "PLACEHOLDER_PATTERN",
     "SECRET_CONFIG_FIELDS",
     "VARIABLE_PREFIX",
+    "mcp_url_variable_name",
     "project_id_from_mcp_url",
+    "project_server_http_config",
     "strip_config_secrets",
+    "url_reads_a_variable",
     "variable_name_for",
     "variable_reference_name",
 ]

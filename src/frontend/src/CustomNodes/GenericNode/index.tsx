@@ -7,6 +7,7 @@ import { useShallow } from "zustand/react/shallow";
 import {
   blockedStopsExecution,
   isBlockedByCatalogPolicy,
+  updateDropsSavedFields,
 } from "@/CustomNodes/helpers/check-code-validity";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TriggerNodeControls from "@/components/core/triggers/TriggerNodeControls";
@@ -221,7 +222,7 @@ function GenericNode({
   const handleUpdateCode = useCallback(
     async (confirmed: boolean = false): Promise<void> => {
       if (isReadOnly) return;
-      if (!confirmed && hasBreakingChange) {
+      if (!confirmed && (hasBreakingChange || isUserEdited)) {
         setOpenUpdateModal(true);
         return;
       }
@@ -240,7 +241,6 @@ function GenericNode({
 
       const currentCode = thisNodeTemplate.code.value;
       setLoadingUpdate(true);
-      takeSnapshot();
       registerNodeUpdate(data.id);
 
       try {
@@ -255,6 +255,11 @@ function GenericNode({
         }
 
         const newNode = processNodeAdvancedFields(resData, edges, data.id);
+        if (!confirmed && updateDropsSavedFields(data.node, newNode)) {
+          setOpenUpdateModal(true);
+          return;
+        }
+        takeSnapshot();
         updateNodeCode(newNode, currentCode, "code", type);
         removeDismissedNodes([data.id]);
       } catch (error) {
@@ -276,6 +281,7 @@ function GenericNode({
       data,
       templates,
       hasBreakingChange,
+      isUserEdited,
       edges,
       updateNodeCode,
       validateComponentCode,
@@ -638,6 +644,7 @@ function GenericNode({
         {shouldShowUpdateComponent ? (
           <NodeUpdateComponent
             hasBreakingChange={hasBreakingChange}
+            customized={isUserEdited}
             blocked={isBlocked && blockedIsFatal}
             blockedByCatalogPolicy={
               // Restricted mode blocks every unknown code-bearing node on its

@@ -59,6 +59,7 @@ from langflow.api.v1.mcp_utils import (
     current_request_headers_ctx,
     current_request_variables_ctx,
     current_user_ctx,
+    ensure_project_reachable,
     filter_mcp_flows,
     get_active_project_owner,
     handle_call_tool,
@@ -66,6 +67,7 @@ from langflow.api.v1.mcp_utils import (
     handle_list_tools_result,
     handle_mcp_errors,
     handle_read_resource,
+    project_flow_owner,
     protect_mcp_operation_handlers,
     raise_if_sse_disabled,
     snapshot_mcp_metadata,
@@ -212,11 +214,11 @@ async def verify_project_auth(
             raise HTTPException(status_code=401, detail="Invalid API key")
         user = api_key_result.user
 
-        # Verify user has access to the project
-        if project_user_id != user.id:
-            raise HTTPException(status_code=404, detail="Project not found")
-
+        # The credential context goes first: the reachability check below may consult the
+        # authorization plugin, which reads it for API-key scopes.
         set_current_auth_context(AuthCredentialContext.from_api_key_result(api_key_result))
+        await ensure_project_reachable(user, project_id, project_user_id)
+
         set_authenticated_telemetry_user(user)
         authenticated_caller_ctx.set(user.id)
         return user
@@ -311,8 +313,7 @@ async def verify_project_auth_conditional(
             db=session,
         )
 
-    if project_user_id != user.id:
-        raise HTTPException(status_code=404, detail="Project not found")
+    await ensure_project_reachable(user, project_id, project_user_id)
 
     if project_auth_type == "apikey":
         credential = get_current_auth_context()
@@ -478,8 +479,11 @@ async def handle_project_sse(
 ):
     """Handle SSE connections for a specific project."""
     async with session_scope() as session:
+        # The same owner scope tools/list uses: the caller's own, or the project owner's
+        # when auth admitted a non-owner through a cross-user authorization plugin.
+        owner_id = await project_flow_owner(session, project_id, current_user.id)
         project = (
-            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+            await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == owner_id))
         ).first()
 
     if not project:
