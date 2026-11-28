@@ -167,6 +167,12 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
                 "SocialScrapeTranscriptComponent",
             },
         ),
+        (
+            "straitly",
+            {
+                "StraitlyComponent",
+            },
+        ),
     ],
 )
 def test_checked_in_provider_loads_with_production_bundle_loader(
