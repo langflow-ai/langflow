@@ -24,6 +24,8 @@ from lfx_bundles.ktemia.ktemia_common import (
 
 CABINS = ["economy", "premiumEconomy", "business", "first"]
 SORTS = ["bestValue", "price", "duration", "departure", "arrival"]
+# IntInput defaults to 0, which the API reads as non-stop only, so "any" needs its own value.
+MAX_STOPS = ["any", "0", "1", "2"]
 
 
 class KtemiaFlightSearchComponent(Component):
@@ -70,10 +72,12 @@ class KtemiaFlightSearchComponent(Component):
         ),
         IntInput(name="adults", display_name="Adults", value=1, info="Travellers aged 12 and over.", tool_mode=True),
         DropdownInput(name="cabin", display_name="Cabin", options=CABINS, value="economy", advanced=True),
-        IntInput(
+        DropdownInput(
             name="max_stops",
             display_name="Max Stops",
-            info="Maximum stops per leg. 0 is non-stop only. Leave empty for any.",
+            options=MAX_STOPS,
+            value="any",
+            info="Maximum stops per leg. 0 is non-stop only.",
             advanced=True,
         ),
         MessageTextInput(
@@ -104,7 +108,7 @@ class KtemiaFlightSearchComponent(Component):
             "returnDate": text_value(self.return_date) or None,
             "passengers": {"adults": int(self.adults)} if self.adults else None,
             "cabin": self.cabin,
-            "maxStops": self.max_stops if self.max_stops not in (None, "") else None,
+            "maxStops": int(self.max_stops) if str(self.max_stops) in MAX_STOPS[1:] else None,
             "airlines": [code.upper() for code in split_list(self.airlines)] or None,
             "country": text_value(self.country).upper() or None,
             "sortBy": self.sort_by,
@@ -118,10 +122,10 @@ class KtemiaFlightSearchComponent(Component):
             self.status = str(exc)
             return [Data(text=str(exc), data={"error": str(exc)})]
         data = [Data(text=summarize(row), data=row) for row in flight_rows(page)]
+        self.status = f"{len(data)} itineraries. {EXPIRY_NOTE}"
         if not data:
             note = "No flights matched this search."
             data = [Data(text=note, data={"note": note})]
-        self.status = f"{len(data)} itineraries. {EXPIRY_NOTE}"
         return data
 
     def search_dataframe(self) -> DataFrame:

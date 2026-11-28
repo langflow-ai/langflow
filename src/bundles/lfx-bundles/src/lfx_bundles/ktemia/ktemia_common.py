@@ -163,6 +163,16 @@ def search_first_page(
 # ── Result shaping: one flat row per result, plus a one-line summary as text ──
 
 
+def _obj(value: Any) -> dict[str, Any]:
+    """Return value when it is a JSON object, else an empty dict, so a malformed field cannot raise."""
+    return value if isinstance(value, dict) else {}
+
+
+def _list(value: Any) -> list[dict[str, Any]]:
+    """Return the JSON objects in value when it is a list, else an empty list."""
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
 def _formatted(value: Any) -> str | None:
     """Return ``formatted`` from a price object, or None."""
     return value.get("formatted") if isinstance(value, dict) else None
@@ -170,28 +180,27 @@ def _formatted(value: Any) -> str | None:
 
 def _names(page: dict[str, Any]) -> dict[str, str]:
     """Map provider and airline codes to display names from the page's ``providers`` table."""
-    table = page.get("providers") or {}
-    return {code: info.get("name") or code for code, info in table.items() if isinstance(info, dict)}
+    return {
+        code: info.get("name") or code for code, info in _obj(page.get("providers")).items() if isinstance(info, dict)
+    }
 
 
 def flight_rows(page: dict[str, Any]) -> list[dict[str, Any]]:
     """Flatten a flights results page into one row per itinerary."""
     names = _names(page)
     rows = []
-    for flight in page.get("flights") or []:
-        if not isinstance(flight, dict):
-            continue
-        legs = [leg for leg in flight.get("legs") or [] if isinstance(leg, dict)]
-        options = [option for option in flight.get("bookingOptions") or [] if isinstance(option, dict)]
+    for flight in _list(page.get("flights")):
+        legs = _list(flight.get("legs"))
+        options = _list(flight.get("bookingOptions"))
         cheapest = min(options, key=lambda o: o.get("totalPrice") or o.get("price") or 0, default={})
         airlines = []
         for leg in legs:
-            for segment in leg.get("segments") or []:
+            for segment in _list(leg.get("segments")):
                 code = segment.get("airline")
                 if code and names.get(code, code) not in airlines:
                     airlines.append(names.get(code, code))
         first = legs[0] if legs else {}
-        segments = first.get("segments") or [{}]
+        segments = _list(first.get("segments")) or [{}]
         rows.append(
             {
                 "result_id": flight.get("id"),
@@ -215,12 +224,10 @@ def flight_rows(page: dict[str, Any]) -> list[dict[str, Any]]:
 def hotel_rows(page: dict[str, Any]) -> list[dict[str, Any]]:
     """Flatten a hotels results page into one row per hotel."""
     rows = []
-    for hotel in page.get("hotels") or []:
-        if not isinstance(hotel, dict):
-            continue
-        best = hotel.get("bestOption") or {}
-        rating = hotel.get("rating") or {}
-        location = hotel.get("location") or {}
+    for hotel in _list(page.get("hotels")):
+        best = _obj(hotel.get("bestOption"))
+        rating = _obj(hotel.get("rating"))
+        location = _obj(hotel.get("location"))
         rows.append(
             {
                 "result_id": hotel.get("id"),
@@ -242,13 +249,11 @@ def hotel_rows(page: dict[str, Any]) -> list[dict[str, Any]]:
 def car_rows(page: dict[str, Any]) -> list[dict[str, Any]]:
     """Flatten a cars results page into one row per car."""
     rows = []
-    for car in page.get("cars") or []:
-        if not isinstance(car, dict):
-            continue
-        vehicle = car.get("car") or {}
-        best = car.get("bestOption") or {}
-        pickup = car.get("pickup") or {}
-        options = [option for option in car.get("bookingOptions") or [] if isinstance(option, dict)]
+    for car in _list(page.get("cars")):
+        vehicle = _obj(car.get("car"))
+        best = _obj(car.get("bestOption"))
+        pickup = _obj(car.get("pickup"))
+        options = _list(car.get("bookingOptions"))
         seller_names = {o.get("provider"): o.get("providerName") for o in options if o.get("providerName")}
         rows.append(
             {
@@ -258,7 +263,7 @@ def car_rows(page: dict[str, Any]) -> list[dict[str, Any]]:
                 "class": vehicle.get("class"),
                 "transmission": vehicle.get("transmission"),
                 "passengers": vehicle.get("passengers"),
-                "agency": (car.get("agency") or {}).get("name"),
+                "agency": _obj(car.get("agency")).get("name"),
                 "pickup": pickup.get("address") or pickup.get("city"),
                 "price": _formatted(best.get("price")) or _formatted(car.get("price")),
                 "per_day": _formatted(best.get("perDay")),
@@ -274,9 +279,7 @@ def booking_option_rows(vertical: str, details: dict[str, Any]) -> list[dict[str
     """Flatten a details response into one row per seller, with its booking link."""
     names = _names(details)
     rows = []
-    for option in details.get("bookingOptions") or []:
-        if not isinstance(option, dict):
-            continue
+    for option in _list(details.get("bookingOptions")):
         if vertical == "flights":
             seller = names.get(option.get("providerCode"), option.get("providerCode"))
             price = option.get("formattedPrice")

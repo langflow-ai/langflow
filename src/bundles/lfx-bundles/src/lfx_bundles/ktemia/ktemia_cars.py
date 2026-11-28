@@ -113,10 +113,10 @@ class KtemiaCarSearchComponent(Component):
             self.status = str(exc)
             return [Data(text=str(exc), data={"error": str(exc)})]
         data = [Data(text=summarize(row), data=row) for row in car_rows(page)]
+        self.status = f"{len(data)} cars. {EXPIRY_NOTE}"
         if not data:
             note = "No cars matched this search."
             data = [Data(text=note, data={"note": note})]
-        self.status = f"{len(data)} cars. {EXPIRY_NOTE}"
         return data
 
     def search_dataframe(self) -> DataFrame:

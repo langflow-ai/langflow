@@ -18,7 +18,7 @@ One search returns results from airlines, booking sites, and rental companies, a
 Ktemia compares prices. It does not book: the traveller books on the seller's site.
 
 All components need a Ktemia API key.
-Create one at [app.ktemia.com](https://app.ktemia.com) and enter it in the **Ktemia API Key** field, or store it in a [global variable](/configuration-global-variables) named `KTEMIA_API_KEY`.
+Create one at [app.ktemia.com](https://app.ktemia.com) and enter it in each component's **Ktemia API Key** field. To reuse it across flows, store it in a [global variable](/configuration-global-variables), such as `KTEMIA_API_KEY`, and select that variable in each **Ktemia API Key** field.
 The Free plan includes 100 requests a month. A search costs two requests: one to start it and one to read the first page.
 
 All components send requests only to `api.ktemia.com`.
@@ -74,7 +74,7 @@ Each row is one itinerary, with its departure and arrival, stops, airlines, chea
 | return_date | String | Input parameter. The return date for a round trip. Leave empty for one way. |
 | adults | Integer | Input parameter. Travellers aged 12 and over. Default: 1. |
 | cabin | Dropdown | Input parameter. `economy`, `premiumEconomy`, `business`, or `first`. Default: `economy`. |
-| max_stops | Integer | Input parameter. Maximum stops per leg. `0` is non-stop only. |
+| max_stops | Dropdown | Input parameter. Maximum stops per leg: `any`, `0` (non-stop only), `1`, or `2`. Default: `any`. |
 | airlines | String | Input parameter. Only these airlines, as comma-separated IATA codes such as `UA, DL`. |
 | country | String | Input parameter. Two-letter market country, such as `GB` or `NO`. Prices come back in that country's currency. Default: the US market. |
 | sort_by | Dropdown | Input parameter. `bestValue`, `price`, `duration`, `departure`, or `arrival`. Default: `bestValue`. |

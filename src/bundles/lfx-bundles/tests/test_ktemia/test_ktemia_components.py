@@ -329,3 +329,97 @@ def test_timeouts_become_a_readable_error() -> None:
     with patch.object(httpx.Client, "request", fake_request):
         message = component.lookup()[0].data["error"]
     assert "timed out after 5 seconds" in message
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(("max_stops", "sent"), [("any", None), ("0", 0), ("1", 1)])
+def test_max_stops_defaults_to_any_and_sends_zero_only_when_chosen(max_stops: str, sent: int | None) -> None:
+    payloads: list[dict] = []
+
+    def fake_request(self, method, url, **kwargs):  # noqa: ARG001
+        if url.endswith("/flights/search"):
+            payloads.append(kwargs["json"])
+            return _response(json_body={"searchToken": "tok"})
+        return _response(json_body=FLIGHT_PAGE)
+
+    component = _make(
+        KtemiaFlightSearchComponent, origin="JFK", destination="LAX", departure_date="2026-12-19", max_stops=max_stops
+    )
+    with patch.object(httpx.Client, "request", fake_request):
+        component.search()
+    assert payloads[0].get("maxStops") == sent
+
+
+@pytest.mark.unit
+def test_max_stops_default_is_any() -> None:
+    assert KtemiaFlightSearchComponent().max_stops == "any"
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("component_class", "values", "empty_page", "noun"),
+    [
+        (
+            KtemiaFlightSearchComponent,
+            {"origin": "JFK", "destination": "LAX", "departure_date": "2026-12-19"},
+            {"flights": []},
+            "itineraries",
+        ),
+        (
+            KtemiaHotelSearchComponent,
+            {"location": "1", "checkin": "2026-12-19", "checkout": "2026-12-21"},
+            {"hotels": []},
+            "hotels",
+        ),
+        (
+            KtemiaCarSearchComponent,
+            {"pickup_location": "1", "pickup_date": "2026-12-19", "dropoff_date": "2026-12-22"},
+            {"cars": []},
+            "cars",
+        ),
+    ],
+)
+def test_empty_search_reports_zero_results(component_class, values, empty_page, noun) -> None:
+    def fake_request(self, method, url, **kwargs):  # noqa: ARG001
+        if url.endswith("/search"):
+            return _response(json_body={"searchToken": "tok"})
+        return _response(json_body=empty_page)
+
+    component = _make(component_class, **values)
+    with patch.object(httpx.Client, "request", fake_request):
+        rows = component.search()
+    assert str(component.status).startswith(f"0 {noun}.")
+    assert "note" in rows[0].data
+
+
+@pytest.mark.unit
+@pytest.mark.parametrize(
+    ("component_class", "values", "page"),
+    [
+        (
+            KtemiaFlightSearchComponent,
+            {"origin": "JFK", "destination": "LAX", "departure_date": "2026-12-19"},
+            {"flights": [{"id": "f", "legs": "x", "bookingOptions": [1]}], "providers": []},
+        ),
+        (
+            KtemiaHotelSearchComponent,
+            {"location": "1", "checkin": "2026-12-19", "checkout": "2026-12-21"},
+            {"hotels": [{"id": "h", "rating": 5, "bestOption": "x", "location": None}]},
+        ),
+        (
+            KtemiaCarSearchComponent,
+            {"pickup_location": "1", "pickup_date": "2026-12-19", "dropoff_date": "2026-12-22"},
+            {"cars": [{"id": "c", "car": "x", "agency": 3, "pickup": [], "bookingOptions": {}}]},
+        ),
+    ],
+)
+def test_malformed_nested_fields_do_not_raise(component_class, values, page) -> None:
+    def fake_request(self, method, url, **kwargs):  # noqa: ARG001
+        if url.endswith("/search"):
+            return _response(json_body={"searchToken": "tok"})
+        return _response(json_body=page)
+
+    component = _make(component_class, **values)
+    with patch.object(httpx.Client, "request", fake_request):
+        rows = component.search()
+    assert rows[0].data["result_id"] in {"f", "h", "c"}
