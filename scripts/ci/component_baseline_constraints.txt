@@ -1,0 +1,4 @@
+# Let published baselines keep their own LiteLLM maintenance caps while allowing
+# the 1.103.x backport for GHSA-w4c7-34wj-hqm8. Keep the workspace exclusions
+# for 1.104.0rc1 and 1.107.0, and exclude 1.109.0 (GHSA-2rwg-2wh4-7c4f).
+litellm>=1.103.10,!=1.104.0rc1,!=1.107.0,!=1.109.0

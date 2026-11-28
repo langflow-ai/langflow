@@ -10,6 +10,7 @@ import {
   report,
 } from "../../src/pages/SettingsPage/pages/UpgradeReportsPage/__tests__/fixture";
 import { expect, test } from "../fixtures";
+import { awaitBootstrapTest } from "../utils/await-bootstrap-test";
 import { TIMEOUTS } from "../utils/constants/timeouts";
 
 const routePath = "/settings/upgrade-reports";
@@ -18,11 +19,19 @@ test(
   "imports, reloads, and exports a persisted report",
   { tag: ["@release", "@database"] },
   async ({ page }) => {
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+      seedFlowIfEmpty: false,
+    });
     await page.goto(routePath);
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await page
+      .getByRole("button", { name: "Import report", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
       .getByLabel("Checker report file")
       .setInputFiles(
         path.resolve(
@@ -31,6 +40,7 @@ test(
         ),
       );
     await page
+      .getByRole("dialog")
       .getByRole("button", { name: "Import report", exact: true })
       .click();
     await expect(
@@ -39,7 +49,7 @@ test(
     await expect(page).toHaveURL(/report=/);
     await page.reload();
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
       page.getByRole("heading", { name: "MCP flow", exact: true }),
@@ -105,9 +115,13 @@ test(
       ];
       return route.fulfill({ json: { ...preview, results: [updated] } });
     });
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+      seedFlowIfEmpty: false,
+    });
     await page.goto(routePath);
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
       page.getByRole("heading", { name: "Customer support" }),
@@ -168,14 +182,21 @@ test(
     await page.route("**/api/v1/upgrade-reports**", (route) =>
       route.fulfill({ json: { items: [], total: 0, offset: 0, limit: 20 } }),
     );
+    await awaitBootstrapTest(page, {
+      skipModal: true,
+      seedFlowIfEmpty: false,
+    });
     await page.goto(routePath);
     await expect(
-      page.getByRole("heading", { name: "Upgrade reports", exact: true }),
+      page.getByRole("heading", { name: "Upgrade compatibility", exact: true }),
     ).toBeVisible({ timeout: TIMEOUTS.standard });
     await expect(
-      page.getByText("No upgrade reports have been imported."),
+      page.getByText("No compatibility reports yet", { exact: true }),
     ).toBeVisible();
     await page.runA11yScan("upgrade-reports-empty");
+    await page
+      .getByRole("button", { name: "Import an existing report", exact: true })
+      .click();
     await page.getByLabel("Checker report file").setInputFiles({
       name: "large.json",
       mimeType: "application/json",

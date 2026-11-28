@@ -156,7 +156,7 @@ async def test_filtered_tool_names_still_resolve_to_the_advertised_flow(
             stored.name = "Collision" if index == 0 else "COLLISION"
             stored.action_name = "collision"
 
-    async def allow_later(_user, candidates):
+    async def allow_later(_user, candidates, **_):
         return [flow for flow in candidates if flow.id == allowed_id]
 
     monkeypatch.setattr(mcp_utils, "filter_mcp_flows", allow_later)

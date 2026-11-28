@@ -1,3 +1,5 @@
+import type { MaintenancePauseStatus } from "@/controllers/API/queries/migration";
+
 export function reportAssessment(
   incomplete: boolean,
   failures: number,
@@ -75,4 +77,29 @@ export function reportReason({
     /[\w]+\.[\w]+/g,
     (reference) => archivedReplacements[reference] ?? reference,
   );
+}
+
+type VerifiedStatus = MaintenancePauseStatus & {
+  maintenance: boolean;
+  migration: boolean;
+  running_jobs: number;
+};
+
+/** The maintenance status, or null when the server answer cannot be trusted. */
+export function verifiedStatus({
+  data,
+  isError,
+}: {
+  data?: MaintenancePauseStatus;
+  isError: boolean;
+}): VerifiedStatus | null {
+  const jobs = data?.running_jobs;
+  return !isError &&
+    typeof data?.maintenance === "boolean" &&
+    typeof data.migration === "boolean" &&
+    typeof jobs === "number" &&
+    Number.isSafeInteger(jobs) &&
+    jobs >= 0
+    ? (data as VerifiedStatus)
+    : null;
 }

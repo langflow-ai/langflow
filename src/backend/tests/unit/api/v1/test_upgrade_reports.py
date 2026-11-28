@@ -176,6 +176,22 @@ async def test_pagination_target_filter_and_missing_report(client, admin_headers
     assert (await client.get(f"{URL}/{uuid4()}", headers=admin_headers)).status_code == 404
 
 
+async def test_duplicate_imports_are_visible_across_history_pages(client, admin_headers):
+    original = FIXTURE.read_bytes()
+    ids = []
+    for content in (original, original, original + b"\n"):
+        response = await client.post(URL, content=content, headers=admin_headers)
+        assert response.status_code == 201, response.text
+        ids.append(response.json()["id"])
+
+    for offset, (report_id, duplicate) in enumerate(zip(reversed(ids), (False, True, False), strict=True)):
+        response = await client.get(URL, params={"offset": offset, "limit": 1}, headers=admin_headers)
+        assert response.status_code == 200, response.text
+        [report] = response.json()["items"]
+        assert report["id"] == report_id
+        assert report["duplicate"] is duplicate
+
+
 async def test_admin_reports_work_during_database_maintenance(client, logged_in_headers, admin_headers):
     assert (await client.post("/api/v1/maintenance/on", json={}, headers=admin_headers)).status_code == 200
     response = await client.post(URL, content=FIXTURE.read_bytes(), headers=admin_headers)

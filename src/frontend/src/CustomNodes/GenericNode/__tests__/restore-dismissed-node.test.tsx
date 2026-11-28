@@ -59,25 +59,6 @@ jest.mock("@/components/common/genericIconComponent", () => ({
   default: () => null,
 }));
 
-jest.mock("@/components/ui/button", () => ({
-  Button: ({
-    children,
-    onClick,
-    "data-testid": dataTestId,
-    unstyled: _unstyled,
-    ...props
-  }: {
-    children: React.ReactNode;
-    onClick?: (event?: React.MouseEvent<HTMLButtonElement>) => void;
-    "data-testid"?: string;
-    unstyled?: boolean;
-  }) => (
-    <button onClick={onClick} data-testid={dataTestId} {...props}>
-      {children}
-    </button>
-  ),
-}));
-
 jest.mock(
   "@/controllers/API/queries/nodes/use-post-validate-component-code",
   () => ({
@@ -193,11 +174,6 @@ jest.mock("../components/NodeOutputParameter/NodeOutputs", () => ({
   default: () => null,
 }));
 
-jest.mock("../components/NodeUpdateComponent", () => ({
-  __esModule: true,
-  default: () => null,
-}));
-
 jest.mock("../components/NodeLegacyComponent", () => ({
   __esModule: true,
   default: () => null,
@@ -222,7 +198,12 @@ jest.mock("@/customization/components/custom-NodeStatus", () => ({
 
 jest.mock("@/modals/updateComponentModal", () => ({
   __esModule: true,
-  default: () => null,
+  default: ({ open, onUpdateNode }) =>
+    open ? (
+      <button type="button" onClick={() => void onUpdateNode()}>
+        Confirm restore
+      </button>
+    ) : null,
 }));
 
 jest.mock("@/utils/reactflowUtils", () => ({
@@ -328,6 +309,8 @@ describe("GenericNode dismissed update recovery", () => {
     expect(screen.getByText("Restore")).toBeInTheDocument();
 
     await user.click(screen.getByTestId("restore-node-button"));
+    expect(mockValidateComponentCode).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Confirm restore" }));
 
     await waitFor(() => {
       expect(mockTakeSnapshot).toHaveBeenCalled();
@@ -341,6 +324,51 @@ describe("GenericNode dismissed update recovery", () => {
       expect(mockRemoveDismissedNodes).toHaveBeenCalledWith(["node-1"]);
       expect(mockCompleteNodeUpdate).toHaveBeenCalledWith("node-1");
     });
+  });
+
+  it("requires confirmation when an update drops saved tool settings", async () => {
+    const user = userEvent.setup();
+    mockFlowStoreState.dismissedNodes = [];
+    mockFlowStoreState.componentsToUpdate[0].userEdited = false;
+    const toolField = {
+      type: "table",
+      required: false,
+      list: false,
+      show: false,
+      readonly: false,
+      value: [{ name: "search", description: "Search my memory" }],
+    };
+    mockProcessNodeAdvancedFields.mockReturnValue({
+      template: { tools_metadata: { ...toolField, value: [] } },
+      outputs: [],
+    });
+
+    render(
+      <GenericNode
+        selected={true}
+        data={{
+          id: "node-1",
+          type: "Prompt",
+          node: {
+            display_name: "Memory Base",
+            description: "Memory node",
+            documentation: "",
+            template: { tools_metadata: toolField },
+            outputs: [],
+          },
+        }}
+      />,
+    );
+
+    await user.click(screen.getByTestId("update-button"));
+    const confirm = await screen.findByRole("button", {
+      name: "Confirm restore",
+    });
+    expect(mockTakeSnapshot).not.toHaveBeenCalled();
+    expect(mockUpdateNodeCode).not.toHaveBeenCalled();
+
+    await user.click(confirm);
+    await waitFor(() => expect(mockUpdateNodeCode).toHaveBeenCalledTimes(1));
   });
 
   it("offers no update for a retired component, from the toolbar or the shortcut", () => {

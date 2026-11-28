@@ -65,6 +65,7 @@ class AGUIAdapter:
             run_id=context.run_id,
             thread_id=context.thread_id,
             expose_graph_state=context.expose_graph_state,
+            fail_run_on_component_error=context.fail_run_on_component_error,
         )
 
     def initial_events(self) -> Iterable[StreamEvent]:
